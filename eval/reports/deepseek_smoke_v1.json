@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "provider": "deepseek",
+  "model": "deepseek-v4-pro",
+  "endpoint": "https://api.deepseek.com/chat/completions",
+  "status_code": 200,
+  "first_token_ms": 2609.6538999991026,
+  "total_ms": 2612.155700000585,
+  "finish_reason": "stop",
+  "prompt_tokens": 12,
+  "completion_tokens": 20,
+  "total_tokens": 32,
+  "response_preview": "连接成功",
+  "error_type": null,
+  "error_message": null
+}

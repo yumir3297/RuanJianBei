@@ -1,0 +1,74 @@
+<div class="flex h-screen" style="font-family: var(--font-sans)">
+  <aside class="flex flex-col shrink-0" style="width: 240px; background-color: var(--sidebar-accent); border-right: 1px solid var(--sidebar-border)">
+    <div class="flex items-center gap-3 px-4 py-5">
+      <div class="flex items-center justify-center shrink-0" style="width: 42px; height: 42px; border-radius: 14px; background: linear-gradient(160deg, var(--primary), color-mix(in srgb, var(--primary) 72%, black)); color: var(--primary-foreground); font-family: var(--font-serif); font-weight: 700; font-size: 22px; line-height: 1">灵</div>
+      <div class="flex-1 min-w-0">
+        <div class="truncate font-semibold" style="font-size: 15px; font-family: var(--font-serif); color: var(--sidebar-accent-foreground)">灵山导游</div>
+        <div class="truncate" style="font-size: 12px; color: var(--sidebar-foreground); opacity: 0.55">AI智慧导览</div>
+      </div>
+    </div>
+    <div class="px-4 pt-1 pb-2" style="font-family: var(--font-mono); font-weight: 700; font-size: 11px; letter-spacing: 0.12em; color: var(--sidebar-foreground); opacity: 0.42; text-transform: uppercase">导航</div>
+    <nav class="flex flex-col gap-1.5 px-3">
+      <a href="#" data-nav-key="dashboard" data-active="true" class="flex items-center gap-3 py-3 px-3.5 w-full no-underline" style="border-radius: 18px; border: 1px solid color-mix(in srgb, var(--sidebar-border) 28%, transparent); background: color-mix(in srgb, var(--sidebar-accent-foreground) 10%, transparent); color: var(--sidebar-accent-foreground); font-size: 14px; transition: background 0.16s ease, border-color 0.16s ease">
+        <i data-lucide="layout-dashboard" class="flex items-center justify-center shrink-0" style="width: 28px; height: 28px; font-size: 16px; border-radius: 12px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 12%, transparent)"></i>
+        <span class="truncate">总览</span>
+      </a>
+      <a href="#" data-nav-key="tourist-chat" class="flex items-center gap-3 py-3 px-3.5 w-full no-underline" style="border-radius: 18px; border: 1px solid transparent; color: color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent); font-size: 14px; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease">
+        <i data-lucide="message-circle" class="flex items-center justify-center shrink-0" style="width: 28px; height: 28px; font-size: 16px; border-radius: 12px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)"></i>
+        <span class="truncate">游客对话</span>
+      </a>
+      <a href="#" data-nav-key="knowledge" class="flex items-center gap-3 py-3 px-3.5 w-full no-underline" style="border-radius: 18px; border: 1px solid transparent; color: color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent); font-size: 14px; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease">
+        <i data-lucide="book-open" class="flex items-center justify-center shrink-0" style="width: 28px; height: 28px; font-size: 16px; border-radius: 12px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)"></i>
+        <span class="truncate">知识管理</span>
+      </a>
+      <a href="#" data-nav-key="analytics" class="flex items-center gap-3 py-3 px-3.5 w-full no-underline" style="border-radius: 18px; border: 1px solid transparent; color: color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent); font-size: 14px; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease">
+        <i data-lucide="bar-chart-3" class="flex items-center justify-center shrink-0" style="width: 28px; height: 28px; font-size: 16px; border-radius: 12px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)"></i>
+        <span class="truncate">数据大屏</span>
+      </a>
+    </nav>
+    <div class="mt-auto mx-3 mb-4 flex items-center gap-3 p-3" style="border-radius: 20px; border: 1px solid var(--sidebar-border); background: color-mix(in srgb, var(--sidebar-accent-foreground) 4%, transparent)">
+      <div class="flex items-center justify-center shrink-0 font-bold" style="width: 42px; height: 42px; border-radius: 14px; background: var(--secondary); color: var(--secondary-foreground); font-size: 15px">管</div>
+      <div class="flex-1 min-w-0">
+        <div class="truncate font-semibold" style="font-size: 14px; color: var(--sidebar-accent-foreground)">管理员</div>
+        <div class="truncate" style="font-size: 12px; color: var(--sidebar-foreground); opacity: 0.55">系统管理</div>
+      </div>
+    </div>
+  </aside>
+  <main class="flex-1 min-w-0 overflow-auto" style="background-color: var(--background); padding: 28px">
+    <!-- SLOT: pageTitle -->
+    <!-- SLOT: pageContent -->
+  </main>
+</div>
+<script>
+(function(){
+  var navItems = document.querySelectorAll('[data-nav-key]');
+  function applyActive(item, isActive) {
+    if (isActive) {
+      item.style.background = 'color-mix(in srgb, var(--sidebar-accent-foreground) 10%, transparent)';
+      item.style.borderColor = 'color-mix(in srgb, var(--sidebar-border) 28%, transparent)';
+      item.style.color = 'var(--sidebar-accent-foreground)';
+      var icon = item.querySelector('i');
+      if (icon) icon.style.background = 'color-mix(in srgb, var(--sidebar-accent-foreground) 12%, transparent)';
+    } else {
+      item.style.background = 'transparent';
+      item.style.borderColor = 'transparent';
+      item.style.color = 'color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent)';
+      var icon = item.querySelector('i');
+      if (icon) icon.style.background = 'color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)';
+    }
+  }
+  navItems.forEach(function(item) {
+    var isActive = item.getAttribute('data-active') === 'true';
+    applyActive(item, isActive);
+    item.addEventListener('mouseenter', function() {
+      if (item.getAttribute('data-active') !== 'true') {
+        item.style.background = 'color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)';
+        item.style.color = 'var(--sidebar-accent-foreground)';
+      }
+    });
+    item.addEventListener('mouseleave', function() {
+      applyActive(item, item.getAttribute('data-active') === 'true');
+    });
+  });
+})();
+</script>

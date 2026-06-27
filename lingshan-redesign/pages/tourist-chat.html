@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游览中</title>
+    <style id="theme-vars">
+:root {
+  /* brand — 深青绿 */
+  --brand-50: #edf5f1;
+  --brand-100: #d4e8dc;
+  --brand-200: #a9d1b9;
+  --brand-300: #7eba96;
+  --brand-400: #53a373;
+  --brand-500: #398c5a;
+  --brand-600: #2D5A4B;
+  --brand-700: #1f4638;
+  --brand-800: #163226;
+  --brand-900: #0d1e14;
+
+  /* surface — 中式温润纸面 */
+  --background: #F5F2EC;
+  --muted: #EDEAE4;
+  --card: #FAF8F4;
+  --popover: #FFFDF9;
+
+  /* text — 墨色体系 */
+  --foreground: #2C3A33;
+  --muted-foreground: #6B7A72;
+  --card-foreground: #2C3A33;
+  --popover-foreground: #2C3A33;
+  --accent-foreground: #2C3A33;
+  --secondary-foreground: #FFFFFF;
+
+  /* action */
+  --primary: var(--brand-600);
+  --primary-foreground: #FFFFFF;
+  --accent: #C49B4C;
+  --accent-foreground: #3D2E14;
+  --input: #E8E4DC;
+  --border: #D8D2C7;
+  --secondary: #2C3A33;
+  --ring: var(--brand-500);
+
+  /* feedback */
+  --destructive: #C5534B;
+  --destructive-foreground: #FFFFFF;
+
+  /* chart — 山水色系 */
+  --chart-1: #2D5A4B;
+  --chart-2: #C49B4C;
+  --chart-3: #7EAD89;
+  --chart-4: #8B7355;
+  --chart-5: #4A8C7C;
+
+  /* sidebar — 深墨绿 */
+  --sidebar: #D8D4CA;
+  --sidebar-foreground: #2C3A33;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: #1B2E25;
+  --sidebar-accent-foreground: #EDEAE4;
+  --sidebar-border: #C4BFB0;
+  --sidebar-ring: var(--ring);
+
+  /* compatibility aliases */
+  --bg-background: var(--background);
+  --bg-card: var(--card);
+  --bg-popover: var(--popover);
+  --bg-muted: var(--muted);
+  --text-foreground: var(--foreground);
+  --text-card-foreground: var(--card-foreground);
+  --text-popover-foreground: var(--popover-foreground);
+  --text-primary-foreground: var(--primary-foreground);
+  --text-secondary-foreground: var(--secondary-foreground);
+  --text-muted-foreground: var(--muted-foreground);
+  --text-accent-foreground: var(--accent-foreground);
+  --text-destructive-foreground: var(--destructive-foreground);
+  --accent-primary: var(--primary);
+  --accent-secondary: var(--secondary);
+  --accent-input: var(--input);
+  --accent-ring: var(--ring);
+  --status-destructive: var(--destructive);
+
+  /* === Typography === */
+  --font-sans: Geist, "PingFang SC", "Microsoft YaHei", ui-sans-serif, sans-serif;
+  --font-serif: "Noto Serif SC", "STSong", Georgia, ui-serif, serif;
+  --font-mono: Roboto Mono, "SF Mono", monospace;
+  --tracking-normal: 0em;
+
+  /* === Radius === */
+  --radius: 16px;
+
+  /* === Spacing === */
+  --spacing: 4px;
+
+  /* === Shadow === */
+  --shadow-2xs: transparent;
+  --shadow-xs: 0 1px 2px rgba(44, 58, 51, 0.04);
+  --shadow-sm: 0 2px 8px rgba(44, 58, 51, 0.06);
+  --shadow: 0 4px 16px rgba(44, 58, 51, 0.08);
+  --shadow-md: 0 8px 24px rgba(44, 58, 51, 0.1);
+  --shadow-lg: 0 12px 36px rgba(44, 58, 51, 0.12);
+  --shadow-xl: 0 16px 48px rgba(44, 58, 51, 0.14);
+  --shadow-2xl: 0 24px 64px rgba(44, 58, 51, 0.18);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  
+  @layer base {
+    body { background: var(--brand-background); color: var(--brand-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main class="relative flex flex-col h-screen overflow-hidden" style="background:var(--background)">
+      <!-- 景区背景层 (可替换: 修改 colors_and_type.css 中 --bg-scenic 的路径即可换背景) -->
+      <div class="absolute inset-0 pointer-events-none z-0" aria-hidden="true">
+        <div class="absolute inset-0 bg-cover bg-center" style="background-image:var(--bg-scenic);filter:blur(5px) saturate(0.6) brightness(0.5)"></div>
+        <div class="absolute inset-0" style="background:radial-gradient(ellipse 60% 50% at 50% 55%, transparent 0%, rgba(45,90,75,0.35) 70%, rgba(20,40,28,0.55) 100%)"></div>
+      </div>
+      <!-- Misty mountain background suggestion -->
+      <div class="absolute inset-0 pointer-events-none overflow-hidden opacity-[0.04]" aria-hidden="true">
+        <svg viewBox="0 0 1440 600" preserveAspectRatio="none" class="absolute bottom-0 w-full h-[50%]" style="color:var(--foreground)">
+          <path d="M0 600 L0 380 Q90 340 180 370 Q270 300 360 350 Q450 280 540 330 Q630 260 720 310 Q810 240 900 290 Q990 250 1080 300 Q1170 270 1260 310 Q1350 280 1440 320 L1440 600 Z" fill="currentColor" opacity="0.5"/>
+          <path d="M0 600 L0 440 Q120 400 240 430 Q360 370 480 420 Q600 360 720 400 Q840 340 960 380 Q1080 340 1200 370 Q1320 350 1440 380 L1440 600 Z" fill="currentColor" opacity="0.3"/>
+        </svg>
+      </div>
+
+      <!-- ===== TOP BAR ===== -->
+      <div class="relative z-20 shrink-0 flex items-center justify-between px-6 py-3" style="background:color-mix(in srgb, var(--card) 55%, transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)">
+        <span class="text-sm tracking-[0.08em]" style="font-family:var(--font-serif);color:var(--foreground)">灵山智慧导游</span>
+        <span class="inline-flex items-center px-3 h-7 text-xs font-medium rounded-full" style="background:color-mix(in srgb, var(--accent) 15%, transparent);color:var(--accent-foreground);border:1px solid color-mix(in srgb, var(--accent) 30%, transparent)">休闲游</span>
+      </div>
+
+      <!-- ===== THREE-COLUMN BODY ===== -->
+      <div class="relative z-10 flex-1 min-h-0 flex items-stretch gap-4 px-4 pb-3">
+
+        <!-- LEFT: Chat Bubble Zone (~280px) -->
+        <div class="shrink-0 flex flex-col gap-3 overflow-y-auto no-scrollbar" style="width:280px;background:color-mix(in srgb, var(--card) 78%, transparent);border-radius:var(--radius);padding:16px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid color-mix(in srgb, var(--border) 60%, transparent)">
+          <!-- AI Message -->
+          <div class="flex items-start gap-2">
+            <span class="shrink-0 inline-flex items-center justify-center text-xs font-semibold" style="width:28px;height:28px;border-radius:10px;background:linear-gradient(160deg, var(--primary), var(--brand-700));color:var(--primary-foreground)">灵</span>
+            <div class="flex-1 min-w-0">
+              <div class="p-3" style="background:var(--card);border-radius:14px;border-left:3px solid var(--primary)">
+                <p class="text-[13px] leading-relaxed truncate" style="color:var(--foreground);text-wrap:balance;word-break:keep-all">灵山大佛始建于唐代开元年间，高88米，是江南最大的摩崖石刻佛像之一。</p>
+                <p class="text-[11px] mt-1.5 truncate" style="color:var(--muted-foreground)">小灵</p>
+              </div>
+            </div>
+          </div>
+          <!-- User Message -->
+          <div class="flex items-start gap-2 flex-row-reverse">
+            <span class="shrink-0 inline-flex items-center justify-center text-xs font-semibold" style="width:28px;height:28px;border-radius:10px;background:var(--accent);color:var(--accent-foreground)">游</span>
+            <div class="flex-1 min-w-0">
+              <div class="p-3" style="background:color-mix(in srgb, var(--accent) 8%, var(--card));border-radius:14px">
+                <p class="text-[13px] leading-relaxed truncate" style="color:var(--foreground);text-wrap:balance;word-break:keep-all">还有其他景点吗？</p>
+                <p class="text-[11px] mt-1.5 truncate text-right" style="color:var(--muted-foreground)">游客</p>
+              </div>
+            </div>
+          </div>
+          <!-- AI Message -->
+          <div class="flex items-start gap-2">
+            <span class="shrink-0 inline-flex items-center justify-center text-xs font-semibold" style="width:28px;height:28px;border-radius:10px;background:linear-gradient(160deg, var(--primary), var(--brand-700));color:var(--primary-foreground)">灵</span>
+            <div class="flex-1 min-w-0">
+              <div class="p-3" style="background:var(--card);border-radius:14px;border-left:3px solid var(--primary)">
+                <p class="text-[13px] leading-relaxed" style="color:var(--foreground);text-wrap:balance;word-break:keep-all">有的。沿山路上行可参观观音阁、藏经楼，山顶还有千年古银杏。</p>
+                <p class="text-[11px] mt-1.5 truncate" style="color:var(--muted-foreground)">小灵</p>
+              </div>
+            </div>
+          </div>
+          <!-- Source Evidence Card -->
+          <div style="background:color-mix(in srgb, var(--muted) 50%, transparent);border-radius:12px;padding:10px 12px">
+            <button data-dom-id="source-toggle" class="flex items-center justify-between w-full text-left cursor-pointer" style="background:none;border:none;font-size:12px;color:var(--muted-foreground)" onclick="var t=this.nextElementSibling;t.classList.toggle('hidden');var s=this.querySelector('span:last-child');s.textContent=t.classList.contains('hidden')?'展开':'收起'">
+              <span>本次回答基于 3 条资料</span>
+              <span class="text-[11px]" style="color:var(--primary)">展开</span>
+            </button>
+            <div class="hidden flex flex-col gap-2" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+              <div class="flex items-start gap-2">
+                <span style="width:5px;height:5px;border-radius:999px;background:var(--primary);margin-top:6px;flex-shrink:0"></span>
+                <div class="min-w-0">
+                  <p class="text-[11px] truncate" style="color:var(--foreground)">灵山寺志·卷三</p>
+                  <p class="text-[10px] truncate" style="color:var(--muted-foreground)">寺院历史文献</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-2">
+                <span style="width:5px;height:5px;border-radius:999px;background:var(--chart-2);margin-top:6px;flex-shrink:0"></span>
+                <div class="min-w-0">
+                  <p class="text-[11px] truncate" style="color:var(--foreground)">大藏经·相应部</p>
+                  <p class="text-[10px] truncate" style="color:var(--muted-foreground)">佛教经典</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-2">
+                <span style="width:5px;height:5px;border-radius:999px;background:var(--chart-5);margin-top:6px;flex-shrink:0"></span>
+                <div class="min-w-0">
+                  <p class="text-[11px] truncate" style="color:var(--foreground)">景区导览手册2024</p>
+                  <p class="text-[10px] truncate" style="color:var(--muted-foreground)">官方资料</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CENTER: Digital Person -->
+        <div class="flex-1 flex items-center justify-center min-w-0">
+          <div class="relative flex items-center justify-center" style="width:320px;height:480px">
+            <!-- Golden glow behind -->
+            <div class="absolute rounded-full" style="width:280px;height:280px;background:radial-gradient(circle, color-mix(in srgb, var(--accent) 18%, transparent) 0%, transparent 70%);top:50%;left:50%;transform:translate(-50%,-55%)"></div>
+            <div class="absolute rounded-full" style="width:200px;height:200px;background:radial-gradient(circle, color-mix(in srgb, var(--primary) 10%, transparent) 0%, transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%)"></div>
+            <!-- Digital Person SVG -->
+            <svg class="relative" width="320" height="480" viewBox="0 0 320 480" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="数字人导游形象">
+              <defs>
+                <linearGradient id="fig-grad" x1="160" y1="0" x2="160" y2="480" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="var(--primary)"/>
+                  <stop offset="100%" stop-color="var(--brand-800)"/>
+                </linearGradient>
+              </defs>
+              <ellipse cx="160" cy="54" rx="26" ry="30" fill="url(#fig-grad)"/>
+              <ellipse cx="160" cy="24" rx="18" ry="14" fill="url(#fig-grad)"/>
+              <path d="M134 38Q126 48 130 68Q134 54 140 44" fill="url(#fig-grad)"/>
+              <path d="M186 38Q194 48 190 68Q186 54 180 44" fill="url(#fig-grad)"/>
+              <rect x="152" y="80" width="16" height="14" rx="3" fill="url(#fig-grad)"/>
+              <path d="M130 94Q116 94 108 104L100 140Q94 166 80 200L88 204Q106 176 120 150L126 134Q132 120 140 112L160 104L180 112Q188 120 194 134L200 150Q214 176 232 204L240 200Q226 166 220 140L212 104Q204 94 190 94Z" fill="url(#fig-grad)"/>
+              <path d="M80 200Q76 232 72 280Q68 340 66 380L64 420Q62 444 66 460L80 458Q78 448 80 420L84 370Q88 320 94 280Q100 240 108 210Z" fill="url(#fig-grad)"/>
+              <path d="M240 200Q244 232 248 280Q252 340 254 380L256 420Q258 444 254 460L240 458Q242 448 240 420L236 370Q232 320 226 280Q220 240 212 210Z" fill="url(#fig-grad)"/>
+              <path d="M108 210Q100 240 98 300Q96 380 100 440Q104 456 108 460L212 460Q216 456 220 440Q224 380 222 300Q220 240 212 210Q200 190 184 178Q168 170 160 168Q152 170 136 178Q120 190 108 210Z" fill="url(#fig-grad)" opacity="0.85"/>
+              <path d="M112 250Q140 242 160 240Q180 242 208 250Q212 254 208 258Q180 250 160 248Q140 250 112 258Q108 254 112 250Z" fill="var(--brand-500)" opacity="0.6"/>
+              <path d="M80 200Q64 196 54 210Q44 230 48 260Q52 278 62 282Q70 284 74 278Q70 264 68 248Q66 230 72 216Q78 204 88 204Z" fill="url(#fig-grad)"/>
+              <path d="M240 200Q256 196 266 210Q276 230 272 260Q268 278 258 282Q250 284 246 278Q250 264 252 248Q254 230 248 216Q242 204 232 204Z" fill="url(#fig-grad)"/>
+              <ellipse cx="68" cy="256" rx="10" ry="7" fill="var(--brand-200)" opacity="0.5"/>
+              <ellipse cx="252" cy="256" rx="10" ry="7" fill="var(--brand-200)" opacity="0.5"/>
+              <path d="M104 460L100 476Q98 480 104 480L130 480Q136 480 134 476L128 460Z" fill="url(#fig-grad)"/>
+              <path d="M216 460L192 476Q188 480 192 480L220 480Q226 480 222 478L216 460Z" fill="url(#fig-grad)"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- RIGHT: Quick Actions Panel (~200px) -->
+        <div class="shrink-0 flex flex-col gap-4 overflow-y-auto no-scrollbar" style="width:200px;background:color-mix(in srgb, var(--card) 78%, transparent);border-radius:var(--radius);padding:16px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid color-mix(in srgb, var(--border) 60%, transparent)">
+          <!-- Section A: Quick Questions -->
+          <div class="flex flex-col gap-1">
+            <p class="text-[11px] font-semibold tracking-[0.08em] mb-2" style="font-family:var(--font-mono);color:var(--muted-foreground);text-transform:uppercase">常用提问</p>
+            <button data-dom-id="quick-spots" class="flex items-center gap-2 w-full py-2.5 px-3 text-[13px] text-left whitespace-nowrap truncate cursor-pointer transition-colors duration-150" style="border-radius:12px;background:transparent;border:1px solid transparent;color:var(--foreground)" onmouseenter="this.style.background='color-mix(in srgb, var(--primary) 8%, transparent)';this.style.borderColor='color-mix(in srgb, var(--primary) 15%, transparent)'" onmouseleave="this.style.background='transparent';this.style.borderColor='transparent'" onfocus="this.style.outline='none';this.style.boxShadow='0 0 0 2px var(--background), 0 0 0 4px var(--ring)'" onblur="this.style.boxShadow='none'">
+              <i data-lucide="map-pin" style="width:16px;height:16px;flex-shrink:0"></i>
+              <span>热门景点</span>
+            </button>
+            <button data-dom-id="quick-history" class="flex items-center gap-2 w-full py-2.5 px-3 text-[13px] text-left whitespace-nowrap truncate cursor-pointer transition-colors duration-150" style="border-radius:12px;background:transparent;border:1px solid transparent;color:var(--foreground)" onmouseenter="this.style.background='color-mix(in srgb, var(--primary) 8%, transparent)';this.style.borderColor='color-mix(in srgb, var(--primary) 15%, transparent)'" onmouseleave="this.style.background='transparent';this.style.borderColor='transparent'" onfocus="this.style.outline='none';this.style.boxShadow='0 0 0 2px var(--background), 0 0 0 4px var(--ring)'" onblur="this.style.boxShadow='none'">
+              <i data-lucide="book-open" style="width:16px;height:16px;flex-shrink:0"></i>
+              <span>历史文化</span>
+            </button>
+            <button data-dom-id="quick-routes" class="flex items-center gap-2 w-full py-2.5 px-3 text-[13px] text-left whitespace-nowrap truncate cursor-pointer transition-colors duration-150" style="border-radius:12px;background:transparent;border:1px solid transparent;color:var(--foreground)" onmouseenter="this.style.background='color-mix(in srgb, var(--primary) 8%, transparent)';this.style.borderColor='color-mix(in srgb, var(--primary) 15%, transparent)'" onmouseleave="this.style.background='transparent';this.style.borderColor='transparent'" onfocus="this.style.outline='none';this.style.boxShadow='0 0 0 2px var(--background), 0 0 0 4px var(--ring)'" onblur="this.style.boxShadow='none'">
+              <i data-lucide="signpost" style="width:16px;height:16px;flex-shrink:0"></i>
+              <span>游览路线</span>
+            </button>
+            <button data-dom-id="quick-food" class="flex items-center gap-2 w-full py-2.5 px-3 text-[13px] text-left whitespace-nowrap truncate cursor-pointer transition-colors duration-150" style="border-radius:12px;background:transparent;border:1px solid transparent;color:var(--foreground)" onmouseenter="this.style.background='color-mix(in srgb, var(--primary) 8%, transparent)';this.style.borderColor='color-mix(in srgb, var(--primary) 15%, transparent)'" onmouseleave="this.style.background='transparent';this.style.borderColor='transparent'" onfocus="this.style.outline='none';this.style.boxShadow='0 0 0 2px var(--background), 0 0 0 4px var(--ring)'" onblur="this.style.boxShadow='none'">
+              <i data-lucide="utensils-crossed" style="width:16px;height:16px;flex-shrink:0"></i>
+              <span>美食推荐</span>
+            </button>
+          </div>
+          <!-- Section B: Current Mode -->
+          <div style="margin-top:auto">
+            <div style="height:1px;background:var(--border);margin-bottom:12px"></div>
+            <p class="text-[11px] font-semibold tracking-[0.08em] mb-2" style="font-family:var(--font-mono);color:var(--muted-foreground);text-transform:uppercase">当前模式</p>
+            <div class="flex items-center justify-between">
+              <span class="text-[13px] font-semibold" style="color:var(--foreground)">休闲游</span>
+              <a data-dom-id="switch-mode" href="#" class="text-[12px] no-underline cursor-pointer transition-colors duration-150 hover:opacity-80" style="color:var(--primary)" onclick="event.preventDefault();var e=new CustomEvent('navigate',{detail:{targetPageId:'page-mode-select',sourceDomId:'switch-mode',hideEdge:true}});window.dispatchEvent(e)">切换</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== BOTTOM INPUT BAR ===== -->
+      <div class="relative z-20 shrink-0 flex items-center gap-3 px-5 py-3.5" style="background:color-mix(in srgb, var(--card) 88%, transparent);border-top:1px solid var(--border);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)">
+        <!-- Camera button -->
+        <button data-dom-id="btn-camera" class="shrink-0 inline-flex flex-col items-center justify-center gap-0.5 cursor-pointer transition-opacity duration-150 hover:opacity-70" style="background:none;border:none;color:var(--muted-foreground)" aria-label="拍照">
+          <i data-lucide="camera" style="width:20px;height:20px"></i>
+          <span class="text-[10px]">拍照</span>
+        </button>
+        <!-- Text input -->
+        <div class="flex-1 min-w-0 flex items-center px-4" style="height:44px;border:1px solid var(--border);border-radius:22px;background:color-mix(in srgb, var(--card) 90%, var(--background))">
+          <input type="text" placeholder="想了解什么？我来为您讲解…" aria-label="输入问题" class="flex-1 min-w-0 bg-transparent border-0 outline-none text-[13px]" style="color:var(--foreground);font-family:var(--font-sans)" onfocus="this.parentElement.style.borderColor='var(--primary)';this.parentElement.style.boxShadow='0 0 0 2px color-mix(in srgb, var(--primary) 15%, transparent)'" onblur="this.parentElement.style.borderColor='var(--border)';this.parentElement.style.boxShadow='none'">
+        </div>
+        <!-- Send button -->
+        <button data-dom-id="btn-send" class="shrink-0 inline-flex items-center justify-center cursor-pointer transition-colors duration-150" style="width:40px;height:40px;border-radius:12px;background:transparent;border:1px solid var(--border);color:var(--muted-foreground)" aria-label="发送" onmouseenter="this.style.background='color-mix(in srgb, var(--primary) 8%, transparent)';this.style.color='var(--primary)'" onmouseleave="this.style.background='transparent';this.style.color='var(--muted-foreground)'" onmousedown="this.style.transform='scale(0.96)'" onmouseup="this.style.transform='scale(1)'" onfocus="this.style.outline='none';this.style.boxShadow='0 0 0 2px var(--background), 0 0 0 4px var(--ring)'" onblur="this.style.boxShadow='none'">
+          <i data-lucide="send" style="width:16px;height:16px"></i>
+        </button>
+        <!-- VOICE button — PRIMARY emphasis, equal weight to text input -->
+        <button data-dom-id="btn-voice" class="shrink-0 inline-flex items-center justify-center gap-2 font-semibold cursor-pointer transition-all duration-160" style="height:48px;padding:0 24px;min-width:120px;border-radius:24px;background:var(--primary);color:var(--primary-foreground);border:2.5px solid var(--accent);box-shadow:0 0 24px color-mix(in srgb, var(--accent) 35%, transparent), 0 0 48px color-mix(in srgb, var(--accent) 12%, transparent);animation:voice-glow 2.5s ease-in-out infinite" aria-label="语音" onmouseenter="this.style.transform='scale(1.04)';this.style.filter='brightness(1.06)'" onmouseleave="this.style.transform='scale(1)';this.style.filter='brightness(1)'" onmousedown="this.style.transform='scale(0.96)'" onmouseup="this.style.transform='scale(1.04)'" onfocus="this.style.outline='none';this.style.boxShadow='0 0 0 2px var(--background), 0 0 0 4px var(--ring), 0 0 24px color-mix(in srgb, var(--accent) 40%, transparent)'" onblur="this.style.boxShadow='0 0 24px color-mix(in srgb, var(--accent) 35%, transparent), 0 0 48px color-mix(in srgb, var(--accent) 12%, transparent)'">
+          <i data-lucide="mic" style="width:22px;height:22px"></i>
+          <span class="text-[15px]">语音</span>
+        </button>
+      </div>
+
+      <!-- ===== PAGE SCRIPTS ===== -->
+      <style>
+        @keyframes voice-glow {
+          0%, 100% { box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 35%, transparent), 0 0 48px color-mix(in srgb, var(--accent) 12%, transparent); }
+          50% { box-shadow: 0 0 32px color-mix(in srgb, var(--accent) 50%, transparent), 0 0 60px color-mix(in srgb, var(--accent) 18%, transparent); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          button, a { transition-duration: 0.01ms !important; }
+          [data-dom-id="btn-voice"] { animation: none !important; }
+        }
+      </style>
+    </main>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

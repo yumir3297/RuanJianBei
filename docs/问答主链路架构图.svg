@@ -1,0 +1,213 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-labelledby="title desc">
+  <title id="title">灵山胜境 AI 数字人导览系统问答主链路架构图</title>
+  <desc id="desc">基于当前项目真实代码结构绘制的问答主链路架构图，突出主链路、分支输入、技术主次和运营闭环，适合直接插入作品说明文档。</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#fffdf9"/>
+      <stop offset="100%" stop-color="#f6f0e5"/>
+    </linearGradient>
+    <linearGradient id="hero" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#305a53"/>
+      <stop offset="100%" stop-color="#406f67"/>
+    </linearGradient>
+    <linearGradient id="mainCard" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#fbf8f2"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#6d7d75" flood-opacity="0.15"/>
+    </filter>
+    <marker id="arrowMain" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#54726b"/>
+    </marker>
+    <marker id="arrowBranch" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#b88d56"/>
+    </marker>
+    <style>
+      .zh { font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif; }
+      .en { font-family: "Georgia", "Times New Roman", serif; }
+      .title { font-size: 34px; font-weight: 700; fill: #153f39; }
+      .subtitle { font-size: 15px; fill: #66736e; }
+      .eyebrow { font-size: 13px; font-weight: 700; letter-spacing: 2px; fill: #f3d9a5; }
+      .legend { font-size: 12px; fill: #52645d; }
+      .panel-title { font-size: 18px; font-weight: 700; fill: #234d46; }
+      .panel-text { font-size: 13px; fill: #5b6a64; }
+      .main-step-title { font-size: 17px; font-weight: 700; fill: #183f39; }
+      .main-step-text { font-size: 12.5px; fill: #5d6b65; }
+      .tech-main { font-size: 12px; font-weight: 700; fill: #31574f; }
+      .tech-sub { font-size: 11px; fill: #7a7d76; }
+      .badge-text { font-size: 13px; font-weight: 700; fill: #ffffff; }
+      .note-title { font-size: 16px; font-weight: 700; fill: #6f5635; }
+      .note-text { font-size: 12.5px; fill: #7b6749; }
+      .white { fill: #ffffff; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1600" height="980" fill="url(#bg)"/>
+
+  <rect x="48" y="36" width="1504" height="120" rx="28" fill="url(#hero)" filter="url(#shadow)"/>
+  <text x="84" y="74" class="zh eyebrow">A5 SCENIC GUIDE SYSTEM</text>
+  <text x="84" y="116" class="zh title">问答主链路架构图</text>
+  <text x="84" y="145" class="zh subtitle">依据当前真实文件架构绘制：突出主链路，弱化支撑层，适配作品说明文档版式</text>
+
+  <g transform="translate(1186 54)">
+    <rect x="0" y="0" width="326" height="82" rx="18" fill="#ffffff" fill-opacity="0.16" stroke="#d8c7a9" stroke-opacity="0.28"/>
+    <rect x="18" y="18" width="18" height="18" rx="4" fill="#2f5a53"/>
+    <text x="46" y="32" class="zh legend white">主链路：运行时问答核心流程</text>
+    <rect x="18" y="48" width="18" height="18" rx="4" fill="#fbf8f2" stroke="#cfae83"/>
+    <text x="46" y="62" class="zh legend white">分支/支撑：多模态输入、知识底座、运营闭环</text>
+  </g>
+
+  <g transform="translate(58 208)">
+    <rect x="0" y="0" width="208" height="280" rx="24" fill="#fffaf1" stroke="#d9c9aa" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="24" y="38" class="zh panel-title">分支输入层</text>
+    <text x="24" y="64" class="zh panel-text">不同入口先汇入游客端，</text>
+    <text x="24" y="83" class="zh panel-text">再统一送入问答主链路。</text>
+
+    <rect x="22" y="108" width="164" height="32" rx="16" fill="#e8f2ee"/>
+    <text x="38" y="129" class="zh main-step-text">文本提问</text>
+    <text x="108" y="129" class="zh tech-sub">Vue 3 / ChatView</text>
+
+    <rect x="22" y="150" width="164" height="32" rx="16" fill="#edf4fb"/>
+    <text x="38" y="171" class="zh main-step-text">浏览器语音识别</text>
+    <text x="136" y="171" class="zh tech-sub" text-anchor="end">Web Speech API</text>
+
+    <rect x="22" y="192" width="164" height="32" rx="16" fill="#fff2de"/>
+    <text x="38" y="213" class="zh main-step-text">图片识别线索</text>
+    <text x="136" y="213" class="zh tech-sub" text-anchor="end">Qwen Vision</text>
+
+    <rect x="22" y="234" width="164" height="32" rx="16" fill="#f2efe8"/>
+    <text x="38" y="255" class="zh main-step-text">主动选择上下文</text>
+    <text x="145" y="255" class="zh tech-sub" text-anchor="end">Quick Select</text>
+  </g>
+
+  <text x="308" y="206" class="zh panel-title">问答运行时主链路</text>
+
+  <g transform="translate(290 226)">
+    <rect x="0" y="0" width="168" height="162" rx="24" fill="url(#mainCard)" stroke="#ccb289" stroke-width="1.6" filter="url(#shadow)"/>
+    <circle cx="28" cy="28" r="16" fill="#b88d56"/>
+    <text x="21" y="33" class="zh badge-text">01</text>
+    <text x="24" y="64" class="zh main-step-title">前端组装请求</text>
+    <text x="24" y="88" class="zh main-step-text">统一封装 query、selection</text>
+    <text x="24" y="106" class="zh main-step-text">与 conversation context</text>
+    <text x="24" y="132" class="zh tech-main">主技术：Vue 3 / Pinia</text>
+    <text x="24" y="150" class="zh tech-sub">ChatView.vue / stores/chat.js</text>
+  </g>
+
+  <g transform="translate(476 226)">
+    <rect x="0" y="0" width="168" height="162" rx="24" fill="url(#mainCard)" stroke="#ccb289" stroke-width="1.6" filter="url(#shadow)"/>
+    <circle cx="28" cy="28" r="16" fill="#b88d56"/>
+    <text x="21" y="33" class="zh badge-text">02</text>
+    <text x="24" y="64" class="zh main-step-title">上下文解析</text>
+    <text x="24" y="88" class="zh main-step-text">校验景点、话题、路线，</text>
+    <text x="24" y="106" class="zh main-step-text">生成可信检索范围</text>
+    <text x="24" y="132" class="zh tech-main">主技术：SelectionContext</text>
+    <text x="24" y="150" class="zh tech-sub">guided_selector.py / QueryRewriter</text>
+  </g>
+
+  <g transform="translate(662 226)">
+    <rect x="0" y="0" width="168" height="162" rx="24" fill="url(#mainCard)" stroke="#ccb289" stroke-width="1.6" filter="url(#shadow)"/>
+    <circle cx="28" cy="28" r="16" fill="#b88d56"/>
+    <text x="21" y="33" class="zh badge-text">03</text>
+    <text x="24" y="64" class="zh main-step-title">FAQ / Cache 快路径</text>
+    <text x="24" y="88" class="zh main-step-text">L1-L3 高频问答先命中，</text>
+    <text x="24" y="106" class="zh main-step-text">未命中才进入 RAG</text>
+    <text x="24" y="132" class="zh tech-main">主技术：FAQMatcher / QACache</text>
+    <text x="24" y="150" class="zh tech-sub">faq_matcher.py / cache.py</text>
+  </g>
+
+  <g transform="translate(848 226)">
+    <rect x="0" y="0" width="168" height="162" rx="24" fill="url(#mainCard)" stroke="#ccb289" stroke-width="1.6" filter="url(#shadow)"/>
+    <circle cx="28" cy="28" r="16" fill="#b88d56"/>
+    <text x="21" y="33" class="zh badge-text">04</text>
+    <text x="24" y="64" class="zh main-step-title">官方知识检索</text>
+    <text x="24" y="88" class="zh main-step-text">Chroma 向量检索，结合</text>
+    <text x="24" y="106" class="zh main-step-text">metadata scope 与重排闸门</text>
+    <text x="24" y="132" class="zh tech-main">主技术：ChromaDB / SQLite</text>
+    <text x="24" y="150" class="zh tech-sub">chroma_retriever.py / reranker_gate.py</text>
+  </g>
+
+  <g transform="translate(1034 226)">
+    <rect x="0" y="0" width="168" height="162" rx="24" fill="url(#mainCard)" stroke="#ccb289" stroke-width="1.6" filter="url(#shadow)"/>
+    <circle cx="28" cy="28" r="16" fill="#b88d56"/>
+    <text x="21" y="33" class="zh badge-text">05</text>
+    <text x="24" y="64" class="zh main-step-title">证据约束生成</text>
+    <text x="24" y="88" class="zh main-step-text">仅基于检索证据生成答案，</text>
+    <text x="24" y="106" class="zh main-step-text">关键事实按 [证据N] 标注</text>
+    <text x="24" y="132" class="zh tech-main">主技术：DeepSeek / Prompt Builder</text>
+    <text x="24" y="150" class="zh tech-sub">openai_compatible.py / prompt_builder.py</text>
+  </g>
+
+  <g transform="translate(1220 226)">
+    <rect x="0" y="0" width="248" height="162" rx="24" fill="url(#mainCard)" stroke="#ccb289" stroke-width="1.6" filter="url(#shadow)"/>
+    <circle cx="28" cy="28" r="16" fill="#b88d56"/>
+    <text x="21" y="33" class="zh badge-text">06</text>
+    <text x="24" y="64" class="zh main-step-title">SSE 流式返回与展示</text>
+    <text x="24" y="88" class="zh main-step-text">按事件返回 text、sources、audio、</text>
+    <text x="24" y="106" class="zh main-step-text">avatar、followups 与 context</text>
+    <text x="24" y="132" class="zh tech-main">主技术：FastAPI SSE / ReadableStream</text>
+    <text x="24" y="150" class="zh tech-sub">useSSEStream.js / useAudioPlayer.js / useAvatar.js</text>
+  </g>
+
+  <line x1="266" y1="307" x2="290" y2="307" stroke="#54726b" stroke-width="3.2" marker-end="url(#arrowMain)"/>
+  <line x1="458" y1="307" x2="476" y2="307" stroke="#54726b" stroke-width="3.2" marker-end="url(#arrowMain)"/>
+  <line x1="644" y1="307" x2="662" y2="307" stroke="#54726b" stroke-width="3.2" marker-end="url(#arrowMain)"/>
+  <line x1="830" y1="307" x2="848" y2="307" stroke="#54726b" stroke-width="3.2" marker-end="url(#arrowMain)"/>
+  <line x1="1016" y1="307" x2="1034" y2="307" stroke="#54726b" stroke-width="3.2" marker-end="url(#arrowMain)"/>
+  <line x1="1202" y1="307" x2="1220" y2="307" stroke="#54726b" stroke-width="3.2" marker-end="url(#arrowMain)"/>
+
+  <g transform="translate(246 500)">
+    <rect x="0" y="0" width="322" height="202" rx="24" fill="#ffffff" stroke="#d7c29c" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="24" y="38" class="zh panel-title">知识与配置底座</text>
+    <text x="24" y="66" class="zh panel-text">主数据：knowledge_entries / faq_entries</text>
+    <text x="24" y="92" class="zh panel-text">上下文配置：quick_topics / route_templates</text>
+    <text x="24" y="118" class="zh panel-text">缓存与日志：qa_cache / chat_logs</text>
+    <text x="24" y="144" class="zh panel-text">盲区闭环：knowledge_blind_spots</text>
+    <text x="24" y="176" class="zh tech-main">主技术：SQLite app.db</text>
+    <text x="24" y="194" class="zh tech-sub">models/* / repositories/* / data/processed/*</text>
+  </g>
+
+  <g transform="translate(604 500)">
+    <rect x="0" y="0" width="356" height="202" rx="24" fill="#ffffff" stroke="#d7c29c" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="24" y="38" class="zh panel-title">检索与模型支撑层</text>
+    <text x="24" y="66" class="zh panel-text">向量索引：kb/chroma_db</text>
+    <text x="24" y="92" class="zh panel-text">Embedding：BAAI/bge-small-zh-v1.5</text>
+    <text x="24" y="118" class="zh panel-text">重排：bge-reranker-base + BM25 fallback</text>
+    <text x="24" y="144" class="zh panel-text">闸门：单候选 / 精确范围可跳过 CrossEncoder</text>
+    <text x="24" y="176" class="zh tech-main">主技术：VectorBackedRAGService</text>
+    <text x="24" y="194" class="zh tech-sub">embedder.py / cross_encoder_reranker.py / resilient_reranker.py</text>
+  </g>
+
+  <g transform="translate(996 500)">
+    <rect x="0" y="0" width="498" height="202" rx="24" fill="#ffffff" stroke="#d7c29c" stroke-width="1.5" filter="url(#shadow)"/>
+    <text x="24" y="38" class="zh panel-title">多模态输入与运营闭环</text>
+    <text x="24" y="66" class="zh panel-text">图片：Qwen 只产出 retrieval_query，再回主链路</text>
+    <text x="24" y="92" class="zh panel-text">语音：Web Speech 优先，后端 ASR 保留降级入口</text>
+    <text x="24" y="118" class="zh panel-text">播报：百炼 TTS / 浏览器播报双通道</text>
+    <text x="24" y="144" class="zh panel-text">数字人：Live2D / SVG Avatar，不阻塞文本问答</text>
+    <text x="24" y="176" class="zh tech-main">次级结构：日志分析 / Dashboard / 盲区处理</text>
+    <text x="24" y="194" class="zh tech-sub">vision.py / voice.py / useSpeechRecognition.js / Dashboard.vue</text>
+  </g>
+
+  <line x1="728" y1="500" x2="728" y2="388" stroke="#b88d56" stroke-width="2.5" stroke-dasharray="8 8" marker-end="url(#arrowBranch)"/>
+  <line x1="782" y1="500" x2="930" y2="388" stroke="#b88d56" stroke-width="2.5" stroke-dasharray="8 8" marker-end="url(#arrowBranch)"/>
+  <line x1="1245" y1="500" x2="1340" y2="388" stroke="#b88d56" stroke-width="2.5" stroke-dasharray="8 8" marker-end="url(#arrowBranch)"/>
+
+  <g transform="translate(58 528)">
+    <rect x="0" y="0" width="156" height="112" rx="18" fill="#edf5f1" stroke="#d1e0d9"/>
+    <text x="18" y="32" class="zh main-step-title">结构特点</text>
+    <text x="18" y="58" class="zh main-step-text">检索优先</text>
+    <text x="84" y="58" class="zh main-step-text">证据回答</text>
+    <text x="18" y="80" class="zh main-step-text">多入口汇流</text>
+    <text x="84" y="80" class="zh main-step-text">全链路降级</text>
+  </g>
+
+  <g transform="translate(48 758)">
+    <rect x="0" y="0" width="1504" height="168" rx="26" fill="#fbf2df" stroke="#e1cfaa" stroke-width="1.5"/>
+    <text x="30" y="40" class="zh note-title">图示说明</text>
+    <text x="30" y="72" class="zh note-text">1. 画法参考了 AWS 官方 RAG 总览图常用的“编号主流程 + 简化组件块”方式，同时吸收系统上下文图强调“边界清晰、语言直白”的表达。</text>
+    <text x="30" y="100" class="zh note-text">2. 图中深色主链路表示运行时核心问答流程；浅色分支表示输入入口、知识底座、模型支撑和运营闭环，不与主链路抢视觉中心。</text>
+    <text x="30" y="128" class="zh note-text">3. 图片识别、语音识别和主动选择都只限定检索范围，不直接充当景区事实来源；最终事实仍以官方知识库与证据链为准。</text>
+    <text x="30" y="156" class="zh note-text">4. 标注的技术与文件均来自当前仓库真实实现，可直接配套作品说明文档中的总体设计、关键技术和实现章节使用。</text>
+  </g>
+</svg>

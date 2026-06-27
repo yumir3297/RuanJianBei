@@ -1,0 +1,14 @@
+[
+  {
+    "id": "faq_001",
+    "category": "景点信息",
+    "query": "灵山大佛有多高",
+    "aliases": ["大佛多高", "灵山大佛高度多少"],
+    "expected_answer": "灵山大佛通高88米",
+    "key_points": ["88米", "灵山大佛"],
+    "must_contain": ["88米"],
+    "must_not_contain": [],
+    "source_doc": "官方景区资料包 - 灵山大佛章节"
+  }
+]
+

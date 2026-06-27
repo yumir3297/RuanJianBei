@@ -1,0 +1,14 @@
+[
+  {
+    "id": "knowledge_001",
+    "category": "文化建筑",
+    "query": "五印坛城是什么",
+    "aliases": ["坛城介绍"],
+    "expected_answer": "五印坛城是景区内的重要文化建筑",
+    "key_points": ["五印坛城", "文化建筑"],
+    "must_contain": ["五印坛城"],
+    "must_not_contain": [],
+    "source_doc": "官方景区资料包 - 五印坛城章节"
+  }
+]
+

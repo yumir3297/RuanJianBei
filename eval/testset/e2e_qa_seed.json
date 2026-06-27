@@ -1,0 +1,127 @@
+[
+  {
+    "id": "B2_FACT_001",
+    "category": "fact_qa",
+    "query": "灵山大佛有多高？",
+    "selection": null,
+    "context": null,
+    "expected_sources": ["灵山大佛"],
+    "required_facts": ["88", "79", "9"],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "核心景点参数题"
+  },
+  {
+    "id": "B2_HISTORY_001",
+    "category": "history_culture",
+    "query": "玄奘为什么把马山命名为小灵山？",
+    "selection": null,
+    "context": null,
+    "expected_sources": ["小灵山的佛教缘起"],
+    "required_facts": ["印度灵鹫山", "大般若经", "小灵山"],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "B1 已验证过的历史文化题"
+  },
+  {
+    "id": "B2_ATTRACTION_001",
+    "category": "attraction_detail",
+    "query": "五印坛城有什么建筑特色？",
+    "selection": null,
+    "context": null,
+    "expected_sources": ["五印坛城"],
+    "required_facts": ["藏式", "四面环水"],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "核心景点特色题"
+  },
+  {
+    "id": "B2_ROUTE_001",
+    "category": "route_planning",
+    "query": "历史文化爱好者应该怎么游览灵山胜境？",
+    "selection": null,
+    "context": null,
+    "expected_sources": ["历史文化爱好者路线"],
+    "required_facts": ["祥符禅寺", "灵山大佛", "灵山梵宫"],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "路线推荐题"
+  },
+  {
+    "id": "B2_PRACTICAL_001",
+    "category": "practical_info",
+    "query": "灵山胜境里面吃素斋大概要多少钱？",
+    "selection": null,
+    "context": null,
+    "expected_sources": ["餐饮"],
+    "required_facts": ["50", "35"],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "实用信息题"
+  },
+  {
+    "id": "B2_GUIDED_001",
+    "category": "guided_selection",
+    "query": "它有什么特色？",
+    "selection": {
+      "mode": "attraction",
+      "attraction_id": 13
+    },
+    "context": null,
+    "expected_sources": ["灵山大佛"],
+    "required_facts": ["灵山大佛"],
+    "forbidden_facts": ["五印坛城"],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "游客主动选择景点后追问"
+  },
+  {
+    "id": "B2_FOLLOWUP_001",
+    "category": "followup_context",
+    "query": "它适合拍照吗？",
+    "selection": null,
+    "context": {
+      "last_subject": "灵山大照壁"
+    },
+    "expected_sources": ["灵山大照壁"],
+    "required_facts": ["打卡", "合影"],
+    "forbidden_facts": ["灵山大佛"],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "连续追问指代消解"
+  },
+  {
+    "id": "B2_BLIND_001",
+    "category": "blind_spot_refusal",
+    "query": "明天灵山胜境会不会下雨？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [],
+    "required_facts": [],
+    "forbidden_facts": ["一定下雨", "一定不下雨"],
+    "expected_behavior": "refuse_without_evidence",
+    "notes": "实时天气盲区题"
+  },
+  {
+    "id": "B2_BLIND_002",
+    "category": "blind_spot_refusal",
+    "query": "现在厕所排队要多久？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [],
+    "required_facts": [],
+    "forbidden_facts": ["5分钟", "10分钟", "半小时"],
+    "expected_behavior": "refuse_without_evidence",
+    "notes": "实时排队盲区题"
+  },
+  {
+    "id": "B2_ROUTE_002",
+    "category": "route_planning",
+    "query": "带孩子游览灵山胜境怎么安排比较轻松？",
+    "selection": null,
+    "context": null,
+    "expected_sources": ["亲子家庭路线"],
+    "required_facts": ["九龙灌浴", "百子戏弥勒", "梵宫"],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "亲子路线题"
+  }
+]

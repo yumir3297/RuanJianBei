@@ -1,0 +1,168 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1880" viewBox="0 0 1200 1880" role="img" aria-labelledby="title desc">
+  <title id="title">问答主链路架构图（论文版）</title>
+  <desc id="desc">采用自上而下单链路排版的问答主链路架构图，突出核心处理流程、关键技术和支撑结构，适合论文与作品说明文档。</desc>
+  <defs>
+    <marker id="arrow-main" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#4d615d"/>
+    </marker>
+    <marker id="arrow-side" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#8f8271"/>
+    </marker>
+    <style>
+      .zh { font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif; }
+      .title { font-size: 28px; font-weight: 700; fill: #1d2c29; }
+      .subtitle { font-size: 14px; fill: #5f6a67; }
+      .box-title { font-size: 18px; font-weight: 700; fill: #243836; }
+      .box-text { font-size: 13px; fill: #495754; }
+      .tech-text { font-size: 11.5px; fill: #6a716f; }
+      .side-title { font-size: 16px; font-weight: 700; fill: #2f403d; }
+      .side-text { font-size: 12.5px; fill: #58635f; }
+      .note-text { font-size: 12px; fill: #5f625f; }
+      .num { font-size: 13px; font-weight: 700; fill: #ffffff; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1200" height="1880" fill="#ffffff"/>
+
+  <text x="600" y="72" text-anchor="middle" class="zh title">问答主链路架构图</text>
+  <text x="600" y="102" text-anchor="middle" class="zh subtitle">自上而下单链路表达；仅保留核心问答流程与必要支撑结构</text>
+
+  <line x1="600" y1="170" x2="600" y2="1608" stroke="#6c7b77" stroke-width="4" stroke-linecap="round"/>
+
+  <g transform="translate(280 160)">
+    <rect x="0" y="0" width="640" height="124" rx="12" fill="#ffffff" stroke="#506562" stroke-width="1.6"/>
+    <circle cx="32" cy="28" r="15" fill="#506562"/>
+    <text x="24" y="33" class="zh num">01</text>
+    <text x="28" y="58" class="zh box-title">多入口输入汇总</text>
+    <text x="28" y="84" class="zh box-text">文本问题、浏览器语音识别结果、图片识别线索与</text>
+    <text x="28" y="104" class="zh box-text">主动选择信息统一进入问答入口。</text>
+  </g>
+
+  <g transform="translate(40 160)">
+    <rect x="0" y="0" width="220" height="156" rx="10" fill="#ffffff" stroke="#9f9486" stroke-width="1.2"/>
+    <text x="18" y="30" class="zh side-title">输入来源</text>
+    <text x="18" y="56" class="zh side-text">1. 文本提问</text>
+    <text x="18" y="80" class="zh side-text">2. 浏览器语音识别</text>
+    <text x="18" y="104" class="zh side-text">3. 图片识别线索</text>
+    <text x="18" y="128" class="zh side-text">4. 主动选择上下文</text>
+  </g>
+  <line x1="260" y1="239" x2="280" y2="239" stroke="#9f9486" stroke-width="1.8" stroke-dasharray="6 6" marker-end="url(#arrow-side)"/>
+
+  <line x1="600" y1="284" x2="600" y2="336" stroke="#4d615d" stroke-width="2.4" marker-end="url(#arrow-main)"/>
+
+  <g transform="translate(280 336)">
+    <rect x="0" y="0" width="640" height="136" rx="12" fill="#ffffff" stroke="#506562" stroke-width="1.6"/>
+    <circle cx="32" cy="28" r="15" fill="#506562"/>
+    <text x="24" y="33" class="zh num">02</text>
+    <text x="28" y="58" class="zh box-title">统一请求封装</text>
+    <text x="28" y="84" class="zh box-text">前端组装 query、SelectionContext 与 conversation context，</text>
+    <text x="28" y="104" class="zh box-text">形成标准化问答请求。</text>
+    <text x="28" y="122" class="zh tech-text">技术：Vue 3、Pinia、ChatView.vue、stores/chat.js</text>
+  </g>
+
+  <line x1="600" y1="472" x2="600" y2="524" stroke="#4d615d" stroke-width="2.4" marker-end="url(#arrow-main)"/>
+
+  <g transform="translate(280 524)">
+    <rect x="0" y="0" width="640" height="136" rx="12" fill="#ffffff" stroke="#506562" stroke-width="1.6"/>
+    <circle cx="32" cy="28" r="15" fill="#506562"/>
+    <text x="24" y="33" class="zh num">03</text>
+    <text x="28" y="58" class="zh box-title">上下文解析与查询规范化</text>
+    <text x="28" y="84" class="zh box-text">服务端校验景点、话题、路线和历史主体，</text>
+    <text x="28" y="104" class="zh box-text">生成可信检索范围，并完成查询改写。</text>
+    <text x="28" y="122" class="zh tech-text">技术：GuidedSelectionResolver、SelectionContext、QueryRewriter</text>
+  </g>
+
+  <line x1="600" y1="660" x2="600" y2="712" stroke="#4d615d" stroke-width="2.4" marker-end="url(#arrow-main)"/>
+
+  <g transform="translate(280 712)">
+    <rect x="0" y="0" width="640" height="136" rx="12" fill="#ffffff" stroke="#506562" stroke-width="1.6"/>
+    <circle cx="32" cy="28" r="15" fill="#506562"/>
+    <text x="24" y="33" class="zh num">04</text>
+    <text x="28" y="58" class="zh box-title">FAQ 与缓存快速通道</text>
+    <text x="28" y="84" class="zh box-text">优先执行 FAQ L1/L2/L3 匹配和问答缓存命中；</text>
+    <text x="28" y="104" class="zh box-text">仅在未命中时进入知识检索链路。</text>
+    <text x="28" y="122" class="zh tech-text">技术：FAQMatcher、FAQSemanticGate、QACache</text>
+  </g>
+
+  <line x1="600" y1="848" x2="600" y2="900" stroke="#4d615d" stroke-width="2.4" marker-end="url(#arrow-main)"/>
+
+  <g transform="translate(280 900)">
+    <rect x="0" y="0" width="640" height="144" rx="12" fill="#ffffff" stroke="#506562" stroke-width="1.6"/>
+    <circle cx="32" cy="28" r="15" fill="#506562"/>
+    <text x="24" y="33" class="zh num">05</text>
+    <text x="28" y="58" class="zh box-title">官方知识检索与条件式重排</text>
+    <text x="28" y="84" class="zh box-text">在限定范围内执行 Chroma 检索；</text>
+    <text x="28" y="104" class="zh box-text">对存在歧义或候选较多的请求再触发条件式重排，输出证据集合。</text>
+    <text x="28" y="126" class="zh tech-text">技术：SQLite、ChromaDB、BGE Embedding、CrossEncoder、BM25 回退</text>
+  </g>
+
+  <g transform="translate(940 894)">
+    <rect x="0" y="0" width="220" height="156" rx="10" fill="#ffffff" stroke="#9f9486" stroke-width="1.2"/>
+    <text x="18" y="30" class="zh side-title">知识底座</text>
+    <text x="18" y="56" class="zh side-text">1. knowledge_entries</text>
+    <text x="18" y="80" class="zh side-text">2. faq_entries</text>
+    <text x="18" y="104" class="zh side-text">3. route_templates</text>
+    <text x="18" y="128" class="zh side-text">4. kb/chroma_db</text>
+  </g>
+  <line x1="920" y1="972" x2="940" y2="972" stroke="#9f9486" stroke-width="1.8" stroke-dasharray="6 6" marker-end="url(#arrow-side)"/>
+
+  <line x1="600" y1="1044" x2="600" y2="1096" stroke="#4d615d" stroke-width="2.4" marker-end="url(#arrow-main)"/>
+
+  <g transform="translate(280 1096)">
+    <rect x="0" y="0" width="640" height="136" rx="12" fill="#ffffff" stroke="#506562" stroke-width="1.6"/>
+    <circle cx="32" cy="28" r="15" fill="#506562"/>
+    <text x="24" y="33" class="zh num">06</text>
+    <text x="28" y="58" class="zh box-title">基于证据的回答生成</text>
+    <text x="28" y="84" class="zh box-text">大模型仅依据检索证据生成回答；</text>
+    <text x="28" y="104" class="zh box-text">关键事实以 [证据N] 形式内联标注，避免脱离资料作答。</text>
+    <text x="28" y="122" class="zh tech-text">技术：DeepSeek（经 OpenAI-compatible 适配层接入）、Prompt Builder</text>
+  </g>
+
+  <line x1="600" y1="1232" x2="600" y2="1284" stroke="#4d615d" stroke-width="2.4" marker-end="url(#arrow-main)"/>
+
+  <g transform="translate(280 1284)">
+    <rect x="0" y="0" width="640" height="136" rx="12" fill="#ffffff" stroke="#506562" stroke-width="1.6"/>
+    <circle cx="32" cy="28" r="15" fill="#506562"/>
+    <text x="24" y="33" class="zh num">07</text>
+    <text x="28" y="58" class="zh box-title">SSE 流式返回与前端展示</text>
+    <text x="28" y="84" class="zh box-text">系统按事件流返回 text、sources、audio、avatar、</text>
+    <text x="28" y="104" class="zh box-text">followups 与 context，并在前端逐步展示。</text>
+    <text x="28" y="122" class="zh tech-text">技术：FastAPI、SSE、ReadableStream、useSSEStream.js</text>
+  </g>
+
+  <g transform="translate(40 1274)">
+    <rect x="0" y="0" width="220" height="156" rx="10" fill="#ffffff" stroke="#9f9486" stroke-width="1.2"/>
+    <text x="18" y="30" class="zh side-title">输出通道</text>
+    <text x="18" y="56" class="zh side-text">1. 文本流式显示</text>
+    <text x="18" y="80" class="zh side-text">2. 百炼 TTS / 浏览器播报</text>
+    <text x="18" y="104" class="zh side-text">3. Live2D / SVG Avatar</text>
+    <text x="18" y="128" class="zh side-text">4. 快捷追问与上下文回传</text>
+  </g>
+  <line x1="260" y1="1352" x2="280" y2="1352" stroke="#9f9486" stroke-width="1.8" stroke-dasharray="6 6" marker-end="url(#arrow-side)"/>
+
+  <line x1="600" y1="1420" x2="600" y2="1472" stroke="#4d615d" stroke-width="2.4" marker-end="url(#arrow-main)"/>
+
+  <g transform="translate(280 1472)">
+    <rect x="0" y="0" width="640" height="136" rx="12" fill="#ffffff" stroke="#506562" stroke-width="1.6"/>
+    <circle cx="32" cy="28" r="15" fill="#506562"/>
+    <text x="24" y="33" class="zh num">08</text>
+    <text x="28" y="58" class="zh box-title">日志记录与知识盲区闭环</text>
+    <text x="28" y="84" class="zh box-text">记录 chat_logs 和 knowledge_blind_spots，</text>
+    <text x="28" y="104" class="zh box-text">为后台分析、知识补录、索引刷新和后续评测提供依据。</text>
+    <text x="28" y="122" class="zh tech-text">技术：ChatLog、BlindSpot、Dashboard、Eval</text>
+  </g>
+
+  <line x1="600" y1="1608" x2="600" y2="1648" stroke="#8f8271" stroke-width="2" stroke-dasharray="7 7" marker-end="url(#arrow-side)"/>
+
+  <g transform="translate(390 1648)">
+    <rect x="0" y="0" width="420" height="72" rx="10" fill="#ffffff" stroke="#9f9486" stroke-width="1.2"/>
+    <text x="20" y="34" class="zh side-title">闭环结果</text>
+    <text x="20" y="58" class="zh side-text">知识更新、FAQ 补录、索引重建与回归评测共同反哺下一轮问答质量提升。</text>
+  </g>
+
+  <g transform="translate(56 1806)">
+    <rect x="0" y="0" width="1088" height="56" rx="10" fill="#ffffff" stroke="#c0c0c0" stroke-width="1"/>
+    <text x="18" y="25" class="zh note-text">注：图片识别结果、浏览器语音识别结果和主动选择信息仅用于限定检索范围，不直接作为景区事实来源。</text>
+    <text x="18" y="44" class="zh note-text">最终事实性回答仍以官方知识库检索证据为准。</text>
+  </g>
+</svg>

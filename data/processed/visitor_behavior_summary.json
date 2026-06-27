@@ -1,0 +1,74 @@
+{
+  "dataset_name": "景点景区旅游数据行为分析数据.xlsx",
+  "intended_usage": "后台游客行为分析示例数据，不作为灵山胜境景区问答事实源。",
+  "row_count": 140447,
+  "column_count": 17,
+  "date_range": {
+    "start": "2025-01-01",
+    "end": "2025-12-31"
+  },
+  "unique_attraction_count": 152,
+  "contains_lingshan_records": false,
+  "attraction_type_distribution_top10": {
+    "古镇水乡": 31564,
+    "风景名胜与休闲度假": 25682,
+    "主题乐园": 17524,
+    "动植物园与水族馆": 16302,
+    "现代地标": 16257,
+    "博物馆与展馆": 12297,
+    "自然公园": 11717,
+    "历史文化": 9104
+  },
+  "top_attractions_by_visit_count": {
+    "同里古镇": 5476,
+    "宁波方特东方神画": 5396,
+    "杭州宋城": 5387,
+    "金茂大厦": 5345,
+    "周庄": 5333,
+    "东方明珠": 5316,
+    "豫园": 5304,
+    "上海科技馆": 5292,
+    "世纪公园": 5277,
+    "西湖风景名胜区": 5273
+  },
+  "average_satisfaction_by_type": {
+    "博物馆与展馆": 4.76,
+    "自然公园": 4.6,
+    "历史文化": 4.2,
+    "现代地标": 3.59,
+    "风景名胜与休闲度假": 3.58,
+    "古镇水乡": 3.48,
+    "动植物园与水族馆": 3.39,
+    "主题乐园": 3.26
+  },
+  "average_total_cost_by_type": {
+    "主题乐园": 1576.02,
+    "动植物园与水族馆": 1068.21,
+    "风景名胜与休闲度假": 651.49,
+    "古镇水乡": 598.26,
+    "现代地标": 512.97,
+    "历史文化": 390.74,
+    "自然公园": 234.93,
+    "博物馆与展馆": 164.05
+  },
+  "average_group_size": 2.62,
+  "columns": [
+    "tourist_id",
+    "user_nickname",
+    "age",
+    "gender",
+    "attraction_name",
+    "attraction_content",
+    "attraction_type",
+    "visit_date",
+    "stay_duration",
+    "ticket_cost",
+    "food_cost",
+    "shopping_cost",
+    "transport_cost",
+    "entertainment_cost",
+    "total_cost",
+    "group_size",
+    "satisfaction"
+  ]
+}

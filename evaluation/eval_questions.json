@@ -1,0 +1,821 @@
+{
+  "_meta": {
+    "title": "A5 景区导览 AI 数字人 — 100 题端到端评测集",
+    "created": "2026-06-22",
+    "description": "覆盖 FAQ 命中、RAG 检索、路线推荐、多轮追问、冲突纠偏、知识盲区六大场景。每道题评估：语义正确性(1-5分)、证据完整性、响应延迟",
+    "scoring": {
+      "semantic_accuracy": {"1": "完全错误或未回答", "2": "严重偏差/关键事实错误", "3": "大致正确但遗漏重要信息", "4": "正确，有少量细节偏差", "5": "完全正确，引用准确"},
+      "pass_threshold": 3
+    }
+  },
+  "categories": [
+    {"key": "faq_hit", "label": "FAQ 高频命中", "count": 30, "weight": 0.25},
+    {"key": "rag_retrieval", "label": "RAG 检索推理", "count": 30, "weight": 0.25},
+    {"key": "route_recommend", "label": "路线推荐", "count": 10, "weight": 0.10},
+    {"key": "context_conflict", "label": "上下文冲突与纠偏", "count": 10, "weight": 0.10},
+    {"key": "followup", "label": "多轮追问", "count": 10, "weight": 0.15},
+    {"key": "blind_spot", "label": "知识盲区拒绝", "count": 10, "weight": 0.15}
+  ],
+  "questions": [
+    {
+      "id": "F01", "category": "faq_hit",
+      "query": "灵山大佛有多高",
+      "expected_topic": "灵山大佛",
+      "ground_truth": ["88米", "79米", "佛体"],
+      "reject_keywords": [],
+      "notes": "最常见 FAQ — 测试 L1 精确命中"
+    },
+    {
+      "id": "F02", "category": "faq_hit",
+      "query": "那尊露天青铜大佛究竟有多高",
+      "expected_topic": "灵山大佛",
+      "ground_truth": ["88米"],
+      "reject_keywords": [],
+      "notes": "口语化改写 — 测试 L2 模糊匹配"
+    },
+    {
+      "id": "F03", "category": "faq_hit",
+      "query": "最高的那个佛像高度是多少米",
+      "expected_topic": "灵山大佛",
+      "ground_truth": ["88米"],
+      "reject_keywords": [],
+      "notes": "不直接点名 — 测试 L3 语义匹配"
+    },
+    {
+      "id": "F04", "category": "faq_hit",
+      "query": "九龙灌浴每天几点可以看",
+      "expected_topic": "九龙灌浴",
+      "ground_truth": ["时间", "场次"],
+      "reject_keywords": [],
+      "notes": "L1 精确命中"
+    },
+    {
+      "id": "F05", "category": "faq_hit",
+      "query": "灵山大佛门票多少钱",
+      "expected_topic": "门票",
+      "ground_truth": ["价格"],
+      "reject_keywords": [],
+      "notes": "票价 FAQ"
+    },
+    {
+      "id": "F06", "category": "faq_hit",
+      "query": "灵山胜境开放时间",
+      "expected_topic": "开放时间",
+      "ground_truth": ["时间"],
+      "reject_keywords": [],
+      "notes": "开放时间 FAQ"
+    },
+    {
+      "id": "F07", "category": "faq_hit",
+      "query": "祥符禅寺有哪些值得看的地方",
+      "expected_topic": "祥符禅寺",
+      "ground_truth": ["大雄宝殿", "禅堂", "历史"],
+      "reject_keywords": [],
+      "notes": "L2 模糊匹配"
+    },
+    {
+      "id": "F08", "category": "faq_hit",
+      "query": "请讲讲灵山大佛的历史背景",
+      "expected_topic": "灵山大佛",
+      "ground_truth": ["建于", "时间", "历史"],
+      "reject_keywords": [],
+      "notes": "L3 语义匹配"
+    },
+    {
+      "id": "F09", "category": "faq_hit",
+      "query": "除了大佛之外灵山还有哪些主要景点",
+      "expected_topic": "景点",
+      "ground_truth": ["梵宫", "五印坛城", "九龙灌浴"],
+      "reject_keywords": [],
+      "notes": "FAQ 多景点"
+    },
+    {
+      "id": "F10", "category": "faq_hit",
+      "query": "一年里哪个季节来灵山游玩比较舒服",
+      "expected_topic": "实用信息",
+      "ground_truth": ["季节", "气候"],
+      "reject_keywords": [],
+      "notes": "L3 语义匹配 — 跨术语改写"
+    },
+    {
+      "id": "F11", "category": "faq_hit",
+      "query": "灵山大照壁在哪里",
+      "expected_topic": "大照壁",
+      "ground_truth": ["位置", "九龙灌浴"],
+      "reject_keywords": [],
+      "notes": "FAQ 位置信息"
+    },
+    {
+      "id": "F12", "category": "faq_hit",
+      "query": "无锡灵山大佛是哪一年建成的",
+      "expected_topic": "灵山大佛",
+      "ground_truth": ["1997", "建成"],
+      "reject_keywords": [],
+      "notes": "FAQ 时间事实"
+    },
+    {
+      "id": "F13", "category": "faq_hit",
+      "query": "灵山大佛到底是什么材料铸造的",
+      "expected_topic": "灵山大佛",
+      "ground_truth": ["青铜", "铜"],
+      "reject_keywords": [],
+      "notes": "L2 模糊匹配"
+    },
+    {
+      "id": "F14", "category": "faq_hit",
+      "query": "灵山大佛是世界第几高佛像",
+      "expected_topic": "灵山大佛",
+      "ground_truth": ["最高", "第一", "世界纪录"],
+      "reject_keywords": [],
+      "notes": "FAQ 排名事实"
+    },
+    {
+      "id": "F15", "category": "faq_hit",
+      "query": "小孩去灵山合适吗",
+      "expected_topic": "实用信息",
+      "ground_truth": ["适合", "亲子"],
+      "reject_keywords": [],
+      "notes": "FAQ 适用人群"
+    },
+    {
+      "id": "F16", "category": "faq_hit",
+      "query": "灵山有老年票吗",
+      "expected_topic": "门票",
+      "ground_truth": ["老人", "优惠"],
+      "reject_keywords": [],
+      "notes": "FAQ 票务"
+    },
+    {
+      "id": "F17", "category": "faq_hit",
+      "query": "景区的停车场位置在哪",
+      "expected_topic": "实用信息",
+      "ground_truth": ["停车"],
+      "reject_keywords": [],
+      "notes": "FAQ 交通"
+    },
+    {
+      "id": "F18", "category": "faq_hit",
+      "query": "梵宫里面可以拍照吗",
+      "expected_topic": "梵宫",
+      "ground_truth": ["拍照", "摄影"],
+      "reject_keywords": [],
+      "notes": "FAQ 规则"
+    },
+    {
+      "id": "F19", "category": "faq_hit",
+      "query": "灵山景区游玩需要多长时间",
+      "expected_topic": "实用信息",
+      "ground_truth": ["小时", "时间"],
+      "reject_keywords": [],
+      "notes": "FAQ 游览时长"
+    },
+    {
+      "id": "F20", "category": "faq_hit",
+      "query": "五印坛城是做什么的",
+      "expected_topic": "五印坛城",
+      "ground_truth": ["佛教", "展览", "艺术"],
+      "reject_keywords": [],
+      "notes": "FAQ 景点介绍"
+    },
+    {
+      "id": "F21", "category": "faq_hit",
+      "query": "灵山附近有什么好吃的饭店",
+      "expected_topic": "周边",
+      "ground_truth": ["餐厅", "餐饮"],
+      "reject_keywords": [],
+      "notes": "FAQ 周边服务"
+    },
+    {
+      "id": "F22", "category": "faq_hit",
+      "query": "大佛的莲花座是什么意思",
+      "expected_topic": "灵山大佛",
+      "ground_truth": ["莲花", "寓意"],
+      "reject_keywords": [],
+      "notes": "FAQ 文化解释"
+    },
+    {
+      "id": "F23", "category": "faq_hit",
+      "query": "九龙灌浴的喷泉效果怎么样",
+      "expected_topic": "九龙灌浴",
+      "ground_truth": ["喷泉", "音乐"],
+      "reject_keywords": [],
+      "notes": "FAQ 特色描述"
+    },
+    {
+      "id": "F24", "category": "faq_hit",
+      "query": "灵山有没有导游服务",
+      "expected_topic": "服务",
+      "ground_truth": ["导游", "讲解"],
+      "reject_keywords": [],
+      "notes": "FAQ 服务"
+    },
+    {
+      "id": "F25", "category": "faq_hit",
+      "query": "梵宫的建筑风格是什么样子的",
+      "expected_topic": "梵宫",
+      "ground_truth": ["建筑", "风格"],
+      "reject_keywords": [],
+      "notes": "FAQ 建筑描述"
+    },
+    {
+      "id": "F26", "category": "faq_hit",
+      "query": "大佛的右手是什么意思",
+      "expected_topic": "灵山大佛",
+      "ground_truth": ["手印", "无畏"],
+      "reject_keywords": [],
+      "notes": "FAQ 佛教手印含义"
+    },
+    {
+      "id": "F27", "category": "faq_hit",
+      "query": "灵山的绿化环境如何",
+      "expected_topic": "景区",
+      "ground_truth": ["绿化"],
+      "reject_keywords": [],
+      "notes": "FAQ 环境"
+    },
+    {
+      "id": "F28", "category": "faq_hit",
+      "query": "有哪些公交车可以到灵山",
+      "expected_topic": "交通",
+      "ground_truth": ["公交", "线路"],
+      "reject_keywords": [],
+      "notes": "FAQ 交通"
+    },
+    {
+      "id": "F29", "category": "faq_hit",
+      "query": "灵山胜境属于哪个区",
+      "expected_topic": "景区",
+      "ground_truth": ["滨湖", "无锡"],
+      "reject_keywords": [],
+      "notes": "FAQ 地理"
+    },
+    {
+      "id": "F30", "category": "faq_hit",
+      "query": "灵山大佛和乐山大佛有什么区别",
+      "expected_topic": "灵山大佛",
+      "ground_truth": ["比较", "区别"],
+      "reject_keywords": [],
+      "notes": "FAQ 对比问题"
+    },
+    {
+      "id": "R01", "category": "rag_retrieval",
+      "query": "灵山大佛像的建造过程是怎样的",
+      "expected_topic": "灵山大佛",
+      "ground_truth": ["铸造", "工程", "建造"],
+      "reject_keywords": [],
+      "notes": "RAG 开放问答"
+    },
+    {
+      "id": "R02", "category": "rag_retrieval",
+      "query": "梵宫有哪些文化意义和宗教价值",
+      "expected_topic": "梵宫",
+      "ground_truth": ["佛教", "文化", "艺术"],
+      "reject_keywords": [],
+      "notes": "RAG 深度推理"
+    },
+    {
+      "id": "R03", "category": "rag_retrieval",
+      "query": "五印坛城和普通佛寺有什么不同",
+      "expected_topic": "五印坛城",
+      "ground_truth": ["藏族", "唐卡", "风格"],
+      "reject_keywords": [],
+      "notes": "RAG 对比分析"
+    },
+    {
+      "id": "R04", "category": "rag_retrieval",
+      "query": "九龙灌浴的佛教典故出自哪部经典",
+      "expected_topic": "九龙灌浴",
+      "ground_truth": ["经典", "佛经", "典故"],
+      "reject_keywords": [],
+      "notes": "RAG 宗教知识"
+    },
+    {
+      "id": "R05", "category": "rag_retrieval",
+      "query": "灵山大佛的81级台阶有什么含义",
+      "expected_topic": "灵山大佛",
+      "ground_truth": ["81", "台阶", "寓意"],
+      "reject_keywords": [],
+      "notes": "RAG 数字事实"
+    },
+    {
+      "id": "R06", "category": "rag_retrieval",
+      "query": "祥符禅寺是哪一年重建的",
+      "expected_topic": "祥符禅寺",
+      "ground_truth": ["重建", "年份"],
+      "reject_keywords": [],
+      "notes": "RAG 时间事实"
+    },
+    {
+      "id": "R07", "category": "rag_retrieval",
+      "query": "灵山景区有哪些佛教遗迹和文物",
+      "expected_topic": "文物",
+      "ground_truth": ["文物", "遗迹"],
+      "reject_keywords": [],
+      "notes": "RAG 实体列举"
+    },
+    {
+      "id": "R08", "category": "rag_retrieval",
+      "query": "灵山大佛和天坛大佛有没有相似之处",
+      "expected_topic": "灵山大佛",
+      "ground_truth": ["比较"],
+      "reject_keywords": [],
+      "notes": "RAG 跨景区对比"
+    },
+    {
+      "id": "R09", "category": "rag_retrieval",
+      "query": "梵宫的内部有哪些核心展示区",
+      "expected_topic": "梵宫",
+      "ground_truth": ["展示", "展区"],
+      "reject_keywords": [],
+      "notes": "RAG 区域划分"
+    },
+    {
+      "id": "R10", "category": "rag_retrieval",
+      "query": "灵山景区的建筑设计理念是什么",
+      "expected_topic": "景区",
+      "ground_truth": ["设计", "理念"],
+      "reject_keywords": [],
+      "notes": "RAG 宏观概括"
+    },
+    {
+      "id": "R11", "category": "rag_retrieval",
+      "query": "灵山大佛总高度包含基座吗",
+      "expected_topic": "灵山大佛",
+      "ground_truth": ["101.5米", "含基座"],
+      "reject_keywords": [],
+      "notes": "RAG 精确事实"
+    },
+    {
+      "id": "R12", "category": "rag_retrieval",
+      "query": "灵山有哪些适合老人慢慢逛的区域",
+      "expected_topic": "实用信息",
+      "ground_truth": ["适合", "老人", "平坦"],
+      "reject_keywords": [],
+      "notes": "RAG 千人千面"
+    },
+    {
+      "id": "R13", "category": "rag_retrieval",
+      "query": "灵山景区内能不能吃素斋",
+      "expected_topic": "餐饮",
+      "ground_truth": ["素斋", "斋饭"],
+      "reject_keywords": [],
+      "notes": "RAG 餐饮信息"
+    },
+    {
+      "id": "R14", "category": "rag_retrieval",
+      "query": "大佛面前可以烧香吗",
+      "expected_topic": "祭祀",
+      "ground_truth": ["烧香", "供奉"],
+      "reject_keywords": [],
+      "notes": "RAG 仪式规则"
+    },
+    {
+      "id": "R15", "category": "rag_retrieval",
+      "query": "灵山景区有哪些世界之最",
+      "expected_topic": "灵山",
+      "ground_truth": ["世界纪录", "首个"],
+      "reject_keywords": [],
+      "notes": "RAG 荣誉事实"
+    },
+    {
+      "id": "R16", "category": "rag_retrieval",
+      "query": "五印坛城的壁画讲述了哪些佛教故事",
+      "expected_topic": "五印坛城",
+      "ground_truth": ["壁画", "故事"],
+      "reject_keywords": [],
+      "notes": "RAG 文化深度"
+    },
+    {
+      "id": "R17", "category": "rag_retrieval",
+      "query": "灵山大佛的基座直径有多大",
+      "expected_topic": "灵山大佛",
+      "ground_truth": ["基座", "直径"],
+      "reject_keywords": [],
+      "notes": "RAG 工程细节"
+    },
+    {
+      "id": "R18", "category": "rag_retrieval",
+      "query": "梵宫前的广场有什么特色",
+      "expected_topic": "梵宫",
+      "ground_truth": ["广场"],
+      "reject_keywords": [],
+      "notes": "RAG 空间描述"
+    },
+    {
+      "id": "R19", "category": "rag_retrieval",
+      "query": "灵山景区曾经举办过哪些重大活动",
+      "expected_topic": "活动",
+      "ground_truth": ["活动", "举办"],
+      "reject_keywords": [],
+      "notes": "RAG 历史事件"
+    },
+    {
+      "id": "R20", "category": "rag_retrieval",
+      "query": "灵山大佛有没有夜游项目",
+      "expected_topic": "服务",
+      "ground_truth": ["夜游"],
+      "reject_keywords": [],
+      "notes": "RAG 特殊服务"
+    },
+    {
+      "id": "R21", "category": "rag_retrieval",
+      "query": "能不能讲讲灵山梵宫的佛教造像艺术",
+      "expected_topic": "梵宫",
+      "ground_truth": ["造像", "雕塑"],
+      "reject_keywords": [],
+      "notes": "RAG 艺术分析"
+    },
+    {
+      "id": "R22", "category": "rag_retrieval",
+      "query": "灵山大佛的周边有哪些关联建筑",
+      "expected_topic": "景区",
+      "ground_truth": ["周边", "建筑"],
+      "reject_keywords": [],
+      "notes": "RAG 空间关系"
+    },
+    {
+      "id": "R23", "category": "rag_retrieval",
+      "query": "九龙灌浴的水从哪里来",
+      "expected_topic": "九龙灌浴",
+      "ground_truth": ["水源"],
+      "reject_keywords": [],
+      "notes": "RAG 设施细节"
+    },
+    {
+      "id": "R24", "category": "rag_retrieval",
+      "query": "灵山景区建筑体现了哪些佛教宗派特色",
+      "expected_topic": "建筑",
+      "ground_truth": ["宗派", "禅宗"],
+      "reject_keywords": [],
+      "notes": "RAG 宗教文化推理"
+    },
+    {
+      "id": "R25", "category": "rag_retrieval",
+      "query": "灵山大佛的建造花了多少钱",
+      "expected_topic": "灵山大佛",
+      "ground_truth": ["投资", "亿元"],
+      "reject_keywords": [],
+      "notes": "RAG 经济数据"
+    },
+    {
+      "id": "R26", "category": "rag_retrieval",
+      "query": "灵山景区有残疾人通道吗",
+      "expected_topic": "无障碍",
+      "ground_truth": ["无障碍", "残疾人"],
+      "reject_keywords": [],
+      "notes": "RAG 无障碍设施"
+    },
+    {
+      "id": "R27", "category": "rag_retrieval",
+      "query": "祥符禅寺的大殿供奉了哪些佛像",
+      "expected_topic": "祥符禅寺",
+      "ground_truth": ["供奉", "佛陀"],
+      "reject_keywords": [],
+      "notes": "RAG 宗教实体"
+    },
+    {
+      "id": "R28", "category": "rag_retrieval",
+      "query": "灵山的生态景观设计有哪些理念",
+      "expected_topic": "景观",
+      "ground_truth": ["生态", "景观"],
+      "reject_keywords": [],
+      "notes": "RAG 环境设计"
+    },
+    {
+      "id": "R29", "category": "rag_retrieval",
+      "query": "梵宫的音乐厅有什么特别之处",
+      "expected_topic": "梵宫",
+      "ground_truth": ["音乐", "演出"],
+      "reject_keywords": [],
+      "notes": "RAG 设施特色"
+    },
+    {
+      "id": "R30", "category": "rag_retrieval",
+      "query": "灵山大佛的面部特征有什么佛教含义",
+      "expected_topic": "灵山大佛",
+      "ground_truth": ["面部", "三十二相"],
+      "reject_keywords": [],
+      "notes": "RAG 宗教学分析"
+    },
+    {
+      "id": "T01", "category": "route_recommend",
+      "query": "给我推荐一条适合带小孩的灵山游览路线",
+      "expected_topic": "路线",
+      "ground_truth": ["亲子", "路线", "景点"],
+      "reject_keywords": [],
+      "notes": "路线推荐 — 亲子游"
+    },
+    {
+      "id": "T02", "category": "route_recommend",
+      "query": "半天时间怎么游览灵山",
+      "expected_topic": "路线",
+      "ground_truth": ["半天", "路线"],
+      "reject_keywords": [],
+      "notes": "路线推荐 — 时间约束"
+    },
+    {
+      "id": "T03", "category": "route_recommend",
+      "query": "我想重点参观灵山的佛教建筑该怎么走",
+      "expected_topic": "路线",
+      "ground_truth": ["建筑", "主题"],
+      "reject_keywords": [],
+      "notes": "路线推荐 — 主题偏好"
+    },
+    {
+      "id": "T04", "category": "route_recommend",
+      "query": "一共只有3个小时请推荐最精华的路线",
+      "expected_topic": "路线",
+      "ground_truth": ["精华", "3小时"],
+      "reject_keywords": [],
+      "notes": "路线推荐 — 时间紧"
+    },
+    {
+      "id": "T05", "category": "route_recommend",
+      "query": "灵山一日游的最佳安排是什么",
+      "expected_topic": "路线",
+      "ground_truth": ["一日", "全天"],
+      "reject_keywords": [],
+      "notes": "路线推荐 — 全天游"
+    },
+    {
+      "id": "T06", "category": "route_recommend",
+      "query": "有没有适合情侣的灵山游览路线",
+      "expected_topic": "路线",
+      "ground_truth": ["情侣", "浪漫"],
+      "reject_keywords": [],
+      "notes": "路线推荐 — 定制"
+    },
+    {
+      "id": "T07", "category": "route_recommend",
+      "query": "信佛的人怎么朝圣灵山",
+      "expected_topic": "路线",
+      "ground_truth": ["朝圣", "宗教"],
+      "reject_keywords": [],
+      "notes": "路线推荐 — 朝圣路线"
+    },
+    {
+      "id": "T08", "category": "route_recommend",
+      "query": "灵山有哪些免费的景点可以走",
+      "expected_topic": "实用信息",
+      "ground_truth": ["免费"],
+      "reject_keywords": [],
+      "notes": "路线推荐 — 预算"
+    },
+    {
+      "id": "T09", "category": "route_recommend",
+      "query": "从大佛到梵宫怎么走最方便",
+      "expected_topic": "路线",
+      "ground_truth": ["从", "到", "路线"],
+      "reject_keywords": [],
+      "notes": "路线推荐 — 点对点"
+    },
+    {
+      "id": "T10", "category": "route_recommend",
+      "query": "带老人玩灵山不走太多路怎么安排",
+      "expected_topic": "路线",
+      "ground_truth": ["老人", "省力"],
+      "reject_keywords": [],
+      "notes": "路线推荐 — 无障碍"
+    },
+    {
+      "id": "C01", "category": "context_conflict",
+      "query": "请告诉我九龙灌浴的故事",
+      "expected_topic": "九龙灌浴",
+      "ground_truth": ["九龙灌浴", "传说"],
+      "reject_keywords": [],
+      "notes": "冲突纠偏 — 纯文字明确实体，不走选择"
+    },
+    {
+      "id": "C02", "category": "context_conflict",
+      "query": "我问的不是大佛，告诉我梵宫的情况",
+      "expected_topic": "梵宫",
+      "ground_truth": ["梵宫"],
+      "reject_keywords": ["大佛"],
+      "notes": "冲突纠偏 — 否定前面说过的实体"
+    },
+    {
+      "id": "C03", "category": "context_conflict",
+      "query": "帮我介绍一下五印坛城的建筑",
+      "expected_topic": "五印坛城",
+      "ground_truth": ["五印坛城", "建筑"],
+      "reject_keywords": [],
+      "notes": "冲突纠偏 — 文字显式点名胜过选择"
+    },
+    {
+      "id": "C04", "category": "context_conflict",
+      "query": "说说这个景点的历史文化背景吧",
+      "expected_topic": "跟随上下文",
+      "ground_truth": ["历史"],
+      "reject_keywords": [],
+      "notes": "冲突纠偏 — 不冲突，跟随选择上下文"
+    },
+    {
+      "id": "C05", "category": "context_conflict",
+      "query": "我想换一个地儿看看，给介绍一下祥符禅寺",
+      "expected_topic": "祥符禅寺",
+      "ground_truth": ["祥符禅寺"],
+      "reject_keywords": [],
+      "notes": "冲突纠偏 — 明确切换景点"
+    },
+    {
+      "id": "C06", "category": "context_conflict",
+      "query": "你说的这些不是我要问的，我就想知道大佛的手势意义",
+      "expected_topic": "灵山大佛",
+      "ground_truth": ["手势", "手印"],
+      "reject_keywords": [],
+      "notes": "冲突纠偏 — 否定系统回答后再问"
+    },
+    {
+      "id": "C07", "category": "context_conflict",
+      "query": "刚才说的地方有什么好玩的",
+      "expected_topic": "保持上文实体",
+      "ground_truth": ["好玩的"],
+      "reject_keywords": [],
+      "notes": "冲突纠偏 — 指代约束回上文"
+    },
+    {
+      "id": "C08", "category": "context_conflict",
+      "query": "我不关心佛教，拿这些建筑当一般景点介绍就行",
+      "expected_topic": "建筑",
+      "ground_truth": ["建筑", "游客"],
+      "reject_keywords": [],
+      "notes": "冲突纠偏 — 观众类型切换"
+    },
+    {
+      "id": "C09", "category": "context_conflict",
+      "query": "灵山和大佛景点是一样的吗",
+      "expected_topic": "灵山",
+      "ground_truth": ["灵山大佛", "关系"],
+      "reject_keywords": [],
+      "notes": "冲突纠偏 — 概念澄清"
+    },
+    {
+      "id": "C10", "category": "context_conflict",
+      "query": "先不讲这个了，九龙灌浴的雕塑有什么看点",
+      "expected_topic": "九龙灌浴",
+      "ground_truth": ["九龙灌浴", "雕塑"],
+      "reject_keywords": [],
+      "notes": "冲突纠偏 — 先否定再指定新实体"
+    },
+    {
+      "id": "S01", "category": "followup",
+      "query": "你是说灵山大佛还是乐山大佛",
+      "expected_topic": "灵山大佛",
+      "ground_truth": ["灵山大佛", "无锡"],
+      "reject_keywords": [],
+      "notes": "多轮追问 — 消除歧义"
+    },
+    {
+      "id": "S02", "category": "followup",
+      "query": "除了大佛之外还有哪些景点",
+      "expected_topic": "景区",
+      "ground_truth": ["梵宫", "五印坛城"],
+      "reject_keywords": [],
+      "notes": "多轮追问 — 扩展范围"
+    },
+    {
+      "id": "S03", "category": "followup",
+      "query": "这几个景点之间远不远，走路可以吗",
+      "expected_topic": "交通",
+      "ground_truth": ["步行", "距离"],
+      "reject_keywords": [],
+      "notes": "多轮追问 — 跟上文的实体追问距离"
+    },
+    {
+      "id": "S04", "category": "followup",
+      "query": "那梵宫的建筑有什么特别的设计吗",
+      "expected_topic": "梵宫",
+      "ground_truth": ["设计", "风格"],
+      "reject_keywords": [],
+      "notes": "多轮追问 — 指名上一轮中的实体"
+    },
+    {
+      "id": "S05", "category": "followup",
+      "query": "你刚才说的那个佛身高88米包括底座吗",
+      "expected_topic": "灵山大佛",
+      "ground_truth": ["88米", "佛体", "不包括"],
+      "reject_keywords": [],
+      "notes": "多轮追问 — 对上轮答案的细节追问"
+    },
+    {
+      "id": "S06", "category": "followup",
+      "query": "有没有什么特别的祈福仪式可以参加",
+      "expected_topic": "仪式",
+      "ground_truth": ["祈福", "仪式"],
+      "reject_keywords": [],
+      "notes": "多轮追问 — 话题扩散"
+    },
+    {
+      "id": "S07", "category": "followup",
+      "query": "这附近是什么时候开放的，几点关门",
+      "expected_topic": "开放时间",
+      "ground_truth": ["时间"],
+      "reject_keywords": [],
+      "notes": "多轮追问 — 隐含指向前文实体"
+    },
+    {
+      "id": "S08", "category": "followup",
+      "query": "有什么文创产品值得买",
+      "expected_topic": "文创",
+      "ground_truth": ["文创", "纪念品"],
+      "reject_keywords": [],
+      "notes": "多轮追问 — 跳转新话题"
+    },
+    {
+      "id": "S09", "category": "followup",
+      "query": "那我们来规划一下路线吧",
+      "expected_topic": "路线",
+      "ground_truth": ["路线"],
+      "reject_keywords": [],
+      "notes": "多轮追问 — 从答疑转为路线规划"
+    },
+    {
+      "id": "S10", "category": "followup",
+      "query": "你说的地方是要买票进去的吗",
+      "expected_topic": "门票",
+      "ground_truth": ["门票", "票价"],
+      "reject_keywords": [],
+      "notes": "多轮追问 — 追问上轮实体的新属性"
+    },
+    {
+      "id": "B01", "category": "blind_spot",
+      "query": "灵山大佛有多少级台阶到达顶部",
+      "expected_topic": "灵山大佛",
+      "ground_truth": ["81", "216", "台阶数"],
+      "reject_keywords": ["暂时没有资料", "暂不确定", "没有足够证据"],
+      "notes": "盲区 — 数据在官方资料中不明确时应拒答"
+    },
+    {
+      "id": "B02", "category": "blind_spot",
+      "query": "灵山景区周边有什么酒店推荐",
+      "expected_topic": "周边",
+      "ground_truth": [],
+      "reject_keywords": [],
+      "notes": "盲区 — 酒店信息不在景区知识库内"
+    },
+    {
+      "id": "B03", "category": "blind_spot",
+      "query": "灵山梵宫的地下是不是真的有宝藏",
+      "expected_topic": "梵宫",
+      "ground_truth": [],
+      "reject_keywords": ["没有足够证据", "资料不足"],
+      "notes": "盲区 — 不可靠猜测应拒答"
+    },
+    {
+      "id": "B04", "category": "blind_spot",
+      "query": "下周三天灵山天气怎么样",
+      "expected_topic": "天气",
+      "ground_truth": [],
+      "reject_keywords": ["天气", "预报"],
+      "notes": "盲区 — 实时天气不在静态知识库"
+    },
+    {
+      "id": "B05", "category": "blind_spot",
+      "query": "大佛建造时的总工程师叫什么名字",
+      "expected_topic": "灵山大佛",
+      "ground_truth": [],
+      "reject_keywords": ["没有", "不明确"],
+      "notes": "盲区 — 过细的工程细节"
+    },
+    {
+      "id": "B06", "category": "blind_spot",
+      "query": "灵山景区的年客流量大概多少",
+      "expected_topic": "数据",
+      "ground_truth": [],
+      "reject_keywords": ["暂时没有", "不详"],
+      "notes": "盲区 — 运营数据不在知识库"
+    },
+    {
+      "id": "B07", "category": "blind_spot",
+      "query": "灵山大佛和新昌大佛哪个更值得看",
+      "expected_topic": "灵山大佛",
+      "ground_truth": [],
+      "reject_keywords": ["无法比较", "没有资料"],
+      "notes": "盲区 — 跨景区比较缺少新昌资料"
+    },
+    {
+      "id": "B08", "category": "blind_spot",
+      "query": "梵宫是谁设计的",
+      "expected_topic": "梵宫",
+      "ground_truth": [],
+      "reject_keywords": ["暂时没有资料"],
+      "notes": "盲区 — 设计者信息"
+    },
+    {
+      "id": "B09", "category": "blind_spot",
+      "query": "灵山景区里可以露营吗",
+      "expected_topic": "规则",
+      "ground_truth": [],
+      "reject_keywords": ["没有足够证据", "暂时没有"],
+      "notes": "盲区 — 不在知识库的特殊规则"
+    },
+    {
+      "id": "B10", "category": "blind_spot",
+      "query": "大佛的铜用了多少吨矿石炼成的",
+      "expected_topic": "灵山大佛",
+      "ground_truth": [],
+      "reject_keywords": ["暂时没有", "资料不足"],
+      "notes": "盲区 — 超细粒度数据"
+    }
+  ]
+}

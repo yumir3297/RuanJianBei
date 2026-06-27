@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Three.js 数字人三角色设计稿</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+    background: #0f1729;
+    color: #e2e8f0;
+    line-height: 1.7;
+    padding: 40px 20px 80px;
+  }
+
+  .container {
+    max-width: 1320px;
+    margin: 0 auto;
+  }
+
+  /* Header */
+  .design-header {
+    text-align: center;
+    margin-bottom: 56px;
+  }
+  .design-header .tag {
+    display: inline-block;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #2dd4bf;
+    border: 1px solid rgba(45,212,191,.3);
+    border-radius: 20px;
+    padding: 4px 16px;
+    margin-bottom: 18px;
+  }
+  .design-header h1 {
+    font-size: 36px;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+  }
+  .design-header .subtitle {
+    font-size: 15px;
+    color: #94a3b8;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+
+  /* Style Baseline Cards */
+  .baseline-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 56px;
+  }
+  .baseline-card {
+    background: rgba(30,41,59,.5);
+    border: 1px solid rgba(148,163,184,.1);
+    border-radius: 14px;
+    padding: 22px 20px;
+  }
+  .baseline-card .card-icon {
+    font-size: 22px;
+    margin-bottom: 10px;
+  }
+  .baseline-card h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #cbd5e1;
+    margin-bottom: 8px;
+  }
+  .baseline-card p {
+    font-size: 13px;
+    color: #94a3b8;
+    line-height: 1.65;
+  }
+
+  /* Section divider */
+  .section-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin-bottom: 28px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(148,163,184,.12);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #2dd4bf;
+    flex-shrink: 0;
+  }
+
+  /* Character cards layout */
+  .characters-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-bottom: 56px;
+  }
+
+  .char-card {
+    background: linear-gradient(180deg, rgba(30,41,59,.7) 0%, rgba(15,23,41,.9) 100%);
+    border: 1px solid rgba(148,163,184,.08);
+    border-radius: 18px;
+    overflow: hidden;
+    transition: transform .25s, box-shadow .25s;
+  }
+  .char-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0,0,0,.35);
+  }
+
+  .char-card .card-img {
+    width: 100%;
+    aspect-ratio: 4/3;
+    object-fit: cover;
+    display: block;
+    background: #1a2235;
+  }
+
+  .char-card .card-body {
+    padding: 24px 20px;
+  }
+  .char-card .card-body .char-key {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #64748b;
+    margin-bottom: 4px;
+  }
+  .char-card .card-body .char-name {
+    font-size: 22px;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin-bottom: 4px;
+  }
+  .char-card .card-body .char-role {
+    font-size: 13px;
+    color: #94a3b8;
+    margin-bottom: 16px;
+  }
+
+  .char-card .spec-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(148,163,184,.06);
+  }
+  .char-card .spec-row .spec-label { color: #64748b; }
+  .char-card .spec-row .spec-value { color: #cbd5e1; font-weight: 500; }
+
+  .char-card .color-swatches {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    align-items: center;
+  }
+  .char-card .color-swatches span.swatch-label {
+    font-size: 11px;
+    color: #64748b;
+    flex-shrink: 0;
+  }
+  .color-dot {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.15);
+    flex-shrink: 0;
+  }
+
+  /* Emotion table */
+  .emotion-matrix {
+    margin-bottom: 56px;
+  }
+  .emotion-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .emotion-table th {
+    text-align: left;
+    padding: 12px 16px;
+    background: rgba(30,41,59,.6);
+    color: #cbd5e1;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 1px;
+    border-bottom: 1px solid rgba(148,163,184,.1);
+  }
+  .emotion-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(148,163,184,.06);
+    color: #94a3b8;
+  }
+  .emotion-table td:first-child {
+    color: #e2e8f0;
+    font-weight: 600;
+    width: 90px;
+  }
+  .emotion-table .emotion-tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .em-tag-neutral { background: rgba(100,116,139,.2); color: #94a3b8; }
+  .em-tag-happy   { background: rgba(45,212,191,.12); color: #2dd4bf; }
+  .em-tag-apology { background: rgba(251,191,36,.12); color: #fbbf24; }
+
+  /* Differentiation matrix */
+  .diff-matrix {
+    margin-bottom: 56px;
+  }
+  .diff-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .diff-table th {
+    text-align: left;
+    padding: 14px 16px;
+    background: rgba(30,41,59,.6);
+    color: #cbd5e1;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 1px;
+    border-bottom: 1px solid rgba(148,163,184,.1);
+  }
+  .diff-table th:first-child { color: #64748b; }
+  .diff-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(148,163,184,.06);
+    color: #cbd5e1;
+  }
+  .diff-table td:first-child {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  /* Footer */
+  .design-footer {
+    text-align: center;
+    padding-top: 40px;
+    border-top: 1px solid rgba(148,163,184,.08);
+    color: #475569;
+    font-size: 12px;
+  }
+
+  @media (max-width: 900px) {
+    .characters-row, .baseline-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <header class="design-header">
+    <span class="tag">Character Design Draft</span>
+    <h1>Three.js 数字人三角色设计稿</h1>
+    <p class="subtitle">风格化类 3D 导览员 · 东方文化气质 · 非写实但可辨 · 胸像式展示</p>
+  </header>
+
+  <!-- Style Baseline -->
+  <div class="baseline-grid">
+    <div class="baseline-card">
+      <div class="card-icon">&#x2726;</div>
+      <h4>视觉基线</h4>
+      <p>半身胸像构图，比例偏写意不做二头身。五官简化但保留眼鼻口眉层次。柔和标准材质，配色饱和度中低，避免廉价塑料感。</p>
+    </div>
+    <div class="baseline-card">
+      <div class="card-icon">&#x25E6;</div>
+      <h4>风格关键词</h4>
+      <p>东方文化气质 · 温和可信可亲近 · 非写实非卡通幼态 · 轮廓清楚便于小窗展示 · 材质干净</p>
+    </div>
+    <div class="baseline-card">
+      <div class="card-icon">&#x25B3;</div>
+      <h4>动效基线</h4>
+      <p>待机轻微呼吸 + 头部微动。口型开合清楚但不过分夸张。眨眼频率自然不做高频卖萌。情绪变化通过眉眼、嘴角、头部姿态表达。</p>
+    </div>
+  </div>
+
+  <!-- Three Characters -->
+  <div class="section-title"><span class="dot"></span>三角色概念图</div>
+
+  <div class="characters-row">
+
+    <!-- 明彻法师 -->
+    <div class="char-card">
+      <img class="card-img" src="../assets/avatar-monk-concept.jpg" alt="明彻法师概念图" loading="lazy">
+      <div class="card-body">
+        <div class="char-key">preset:monk</div>
+        <div class="char-name">明彻法师</div>
+        <div class="char-role">佛教文化讲解型 · 庄重安定慈和</div>
+        <div class="spec-row"><span class="spec-label">脸型</span><span class="spec-value">偏长椭圆</span></div>
+        <div class="spec-row"><span class="spec-label">发型</span><span class="spec-value">净头</span></div>
+        <div class="spec-row"><span class="spec-label">服装</span><span class="spec-value">僧袍 + 披肩层叠</span></div>
+        <div class="spec-row"><span class="spec-label">配饰</span><span class="spec-value">念珠 + 佛珠坠</span></div>
+        <div class="spec-row"><span class="spec-label">音色</span><span class="spec-value">male_calm</span></div>
+        <div class="spec-row"><span class="spec-label">动作节奏</span><span class="spec-value">最慢 · 克制</span></div>
+        <div class="color-swatches">
+          <span class="swatch-label">配色</span>
+          <span class="color-dot" style="background:#A06A2C" title="#A06A2C 赭黄"></span>
+          <span class="color-dot" style="background:#5C3B24" title="#5C3B24 深棕"></span>
+          <span class="color-dot" style="background:#D8C3A5" title="#D8C3A5 暖米"></span>
+          <span class="color-dot" style="background:#8C6A3A" title="#8C6A3A 暗铜金"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 清岚 -->
+    <div class="char-card">
+      <img class="card-img" src="../assets/avatar-hanfu-concept.jpg" alt="清岚概念图" loading="lazy">
+      <div class="card-body">
+        <div class="char-key">preset:hanfu</div>
+        <div class="char-name">清岚</div>
+        <div class="char-role">文化叙事型汉服导游 · 雅致温润书卷气</div>
+        <div class="spec-row"><span class="spec-label">脸型</span><span class="spec-value">鹅蛋脸</span></div>
+        <div class="spec-row"><span class="spec-label">发型</span><span class="spec-value">盘发 + 玉簪</span></div>
+        <div class="spec-row"><span class="spec-label">服装</span><span class="spec-value">交领汉服 + 披帛</span></div>
+        <div class="spec-row"><span class="spec-label">配饰</span><span class="spec-value">玉色发簪 + 流苏</span></div>
+        <div class="spec-row"><span class="spec-label">音色</span><span class="spec-value">female_warm</span></div>
+        <div class="spec-row"><span class="spec-label">动作节奏</span><span class="spec-value">柔和 · 轻缓</span></div>
+        <div class="color-swatches">
+          <span class="swatch-label">配色</span>
+          <span class="color-dot" style="background:#E9E0D1" title="#E9E0D1 米白"></span>
+          <span class="color-dot" style="background:#7DAA92" title="#7DAA92 青绿"></span>
+          <span class="color-dot" style="background:#4F6B63" title="#4F6B63 墨青"></span>
+          <span class="color-dot" style="background:#B9A06A" title="#B9A06A 淡金"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 景行 -->
+    <div class="char-card">
+      <img class="card-img" src="../assets/avatar-modern-concept.jpg" alt="景行概念图" loading="lazy">
+      <div class="card-body">
+        <div class="char-key">preset:modern</div>
+        <div class="char-name">景行</div>
+        <div class="char-role">现代服务型智能导游 · 亲切利落轻科技</div>
+        <div class="spec-row"><span class="spec-label">脸型</span><span class="spec-value">方圆脸</span></div>
+        <div class="spec-row"><span class="spec-label">发型</span><span class="spec-value">干净短发</span></div>
+        <div class="spec-row"><span class="spec-label">服装</span><span class="spec-value">现代制服 + 立领</span></div>
+        <div class="spec-row"><span class="spec-label">配饰</span><span class="spec-value">胸牌 + 耳麦</span></div>
+        <div class="spec-row"><span class="spec-label">音色</span><span class="spec-value">male_enthusiastic</span></div>
+        <div class="spec-row"><span class="spec-label">动作节奏</span><span class="spec-value">最活跃 · 利落</span></div>
+        <div class="color-swatches">
+          <span class="swatch-label">配色</span>
+          <span class="color-dot" style="background:#243447" title="#243447 深藏青"></span>
+          <span class="color-dot" style="background:#2F7F79" title="#2F7F79 青绿"></span>
+          <span class="color-dot" style="background:#E6E2D3" title="#E6E2D3 亮米白"></span>
+          <span class="color-dot" style="background:#E39B43" title="#E39B43 亮琥珀"></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Emotion Mapping -->
+  <div class="section-title"><span class="dot"></span>情绪表情映射</div>
+
+  <div class="emotion-matrix">
+    <table class="emotion-table">
+      <thead>
+        <tr>
+          <th>情绪</th>
+          <th>明彻法师</th>
+          <th>清岚</th>
+          <th>景行</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="emotion-tag em-tag-neutral">neutral</span></td>
+          <td>平静讲述，整体姿态最稳</td>
+          <td>温和讲述，嘴角自然微扬</td>
+          <td>友好说明，目光直接有精神</td>
+        </tr>
+        <tr>
+          <td><span class="emotion-tag em-tag-happy">happy</span></td>
+          <td>嘴角轻扬，眼神更柔和</td>
+          <td>笑意更明显，眼尾稍弯</td>
+          <td>微笑更明显，头部更挺</td>
+        </tr>
+        <tr>
+          <td><span class="emotion-tag em-tag-apology">apology</span></td>
+          <td>眉头微收，头部略低</td>
+          <td>嘴角回收，头部轻微下倾</td>
+          <td>表情收敛，仍保持专业</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Differentiation Matrix -->
+  <div class="section-title"><span class="dot"></span>三角色区分矩阵</div>
+
+  <div class="diff-matrix">
+    <table class="diff-table">
+      <thead>
+        <tr>
+          <th>维度</th>
+          <th>明彻法师</th>
+          <th>清岚</th>
+          <th>景行</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>角色感知</td>
+          <td>稳重可信</td>
+          <td>温雅文化</td>
+          <td>亲和现代</td>
+        </tr>
+        <tr>
+          <td>脸型</td>
+          <td>长椭圆</td>
+          <td>鹅蛋脸</td>
+          <td>方圆脸</td>
+        </tr>
+        <tr>
+          <td>发型</td>
+          <td>净头</td>
+          <td>盘发发簪</td>
+          <td>短发</td>
+        </tr>
+        <tr>
+          <td>服装轮廓</td>
+          <td>僧袍披肩</td>
+          <td>交领汉服</td>
+          <td>现代制服</td>
+        </tr>
+        <tr>
+          <td>主色</td>
+          <td>赭黄棕</td>
+          <td>米白青绿</td>
+          <td>藏青青绿</td>
+        </tr>
+        <tr>
+          <td>动作节奏</td>
+          <td>最慢</td>
+          <td>柔和</td>
+          <td>最利落</td>
+        </tr>
+        <tr>
+          <td>说话感觉</td>
+          <td>平稳</td>
+          <td>温润</td>
+          <td>直接</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Three.js Implementation Notes -->
+  <div class="section-title"><span class="dot"></span>Three.js 实现指导</div>
+
+  <div class="baseline-grid">
+    <div class="baseline-card">
+      <div class="card-icon">&#x25CB;</div>
+      <h4>共用基础网格</h4>
+      <p>头部基础几何、眼球结构、嘴部结构、胸像骨架，三套形象共享同一套基础网格。</p>
+    </div>
+    <div class="baseline-card">
+      <div class="card-icon">&#x2299;</div>
+      <h4>差异化部件（优先实现）</h4>
+      <p>发型 · 服装领口 · 肩部轮廓 · 胸前配饰 · 主配色。通过这五项拉开三角色视觉差异。</p>
+    </div>
+    <div class="baseline-card">
+      <div class="card-icon">&#x2297;</div>
+      <h4>第一阶段不追求</h4>
+      <p>写实手部 · 复杂布料模拟 · 精细耳饰摆动 · 发丝级建模 · 高精法线或贴图</p>
+    </div>
+  </div>
+
+  <footer class="design-footer">
+    基于 d:\桌面\软件杯\docs\2026-06-22-threejs-avatar-character-design-draft.md 生成 · 概念图由 AI 生成 · 仅供设计评审使用
+  </footer>
+
+</div>
+</body>
+</html>

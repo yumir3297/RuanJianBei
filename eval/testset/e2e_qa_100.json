@@ -1,0 +1,1788 @@
+[
+  {
+    "id": "B2_FACT_001",
+    "category": "fact_qa",
+    "query": "灵山大照壁有多大？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "灵山大照壁"
+    ],
+    "required_facts": [
+      "39.8",
+      "7"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "大照壁尺寸"
+  },
+  {
+    "id": "B2_FACT_002",
+    "category": "fact_qa",
+    "query": "五明桥有几座石拱桥？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "五明桥"
+    ],
+    "required_facts": [
+      "5"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "五明桥结构"
+  },
+  {
+    "id": "B2_FACT_003",
+    "category": "fact_qa",
+    "query": "佛足坛的佛足印尺寸是多少？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "佛足坛"
+    ],
+    "required_facts": [
+      "1.2",
+      "0.6",
+      "青铜"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "佛足坛参数"
+  },
+  {
+    "id": "B2_FACT_004",
+    "category": "fact_qa",
+    "query": "五智门有多高多宽？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "五智门"
+    ],
+    "required_facts": [
+      "16.8",
+      "35"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "五智门参数"
+  },
+  {
+    "id": "B2_FACT_005",
+    "category": "fact_qa",
+    "query": "菩提大道大概有多长？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "菩提大道"
+    ],
+    "required_facts": [
+      "250",
+      "10"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "菩提大道尺度"
+  },
+  {
+    "id": "B2_FACT_006",
+    "category": "fact_qa",
+    "query": "九龙灌浴的太子佛有多高？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "九龙灌浴"
+    ],
+    "required_facts": [
+      "7.2",
+      "12吨"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "九龙灌浴参数"
+  },
+  {
+    "id": "B2_FACT_007",
+    "category": "fact_qa",
+    "query": "降魔浮雕的尺寸是多少？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "降魔浮雕"
+    ],
+    "required_facts": [
+      "26",
+      "4.6"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "降魔浮雕参数"
+  },
+  {
+    "id": "B2_FACT_008",
+    "category": "fact_qa",
+    "query": "阿育王柱有多高？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "阿育王柱"
+    ],
+    "required_facts": [
+      "16.9",
+      "180吨"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "阿育王柱参数"
+  },
+  {
+    "id": "B2_FACT_009",
+    "category": "fact_qa",
+    "query": "百子戏弥勒有多大？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "百子戏弥勒"
+    ],
+    "required_facts": [
+      "3m",
+      "7.8m",
+      "9吨"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "百子戏弥勒参数"
+  },
+  {
+    "id": "B2_FACT_010",
+    "category": "fact_qa",
+    "query": "祥符禅寺占地大约多少？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "祥符禅寺"
+    ],
+    "required_facts": [
+      "30亩"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "祥符禅寺参数"
+  },
+  {
+    "id": "B2_FACT_011",
+    "category": "fact_qa",
+    "query": "灵山大佛有多高？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "灵山大佛"
+    ],
+    "required_facts": [
+      "88",
+      "79",
+      "9"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "灵山大佛参数"
+  },
+  {
+    "id": "B2_FACT_012",
+    "category": "fact_qa",
+    "query": "佛教文化博览馆有几层？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "佛教文化博览馆"
+    ],
+    "required_facts": [
+      "三层",
+      "10000"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "博览馆参数"
+  },
+  {
+    "id": "B2_FACT_013",
+    "category": "fact_qa",
+    "query": "灵山梵宫建筑面积和高度是多少？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "灵山梵宫"
+    ],
+    "required_facts": [
+      "72000",
+      "66.5"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "梵宫参数"
+  },
+  {
+    "id": "B2_FACT_014",
+    "category": "fact_qa",
+    "query": "五印坛城大约多高？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "五印坛城"
+    ],
+    "required_facts": [
+      "30",
+      "5000"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "坛城参数"
+  },
+  {
+    "id": "B2_FACT_015",
+    "category": "fact_qa",
+    "query": "曼飞龙塔由几座塔组成？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "曼飞龙塔"
+    ],
+    "required_facts": [
+      "主塔",
+      "八座",
+      "16.9"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "曼飞龙塔参数"
+  },
+  {
+    "id": "B2_FACT_016",
+    "category": "fact_qa",
+    "query": "无尽意斋占地多大？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "无尽意斋"
+    ],
+    "required_facts": [
+      "600",
+      "四合院"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "无尽意斋参数"
+  },
+  {
+    "id": "B2_FACT_017",
+    "category": "fact_qa",
+    "query": "拈花广场中央雕塑有多高？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "拈花广场"
+    ],
+    "required_facts": [
+      "12",
+      "拈花微笑"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "拈花广场参数"
+  },
+  {
+    "id": "B2_FACT_018",
+    "category": "fact_qa",
+    "query": "梵天花海面积和步道长度是多少？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "梵天花海"
+    ],
+    "required_facts": [
+      "30000",
+      "1500"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "梵天花海参数"
+  },
+  {
+    "id": "B2_FACT_019",
+    "category": "fact_qa",
+    "query": "香月花街大概多长多宽？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "香月花街"
+    ],
+    "required_facts": [
+      "800",
+      "8"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "香月花街参数"
+  },
+  {
+    "id": "B2_FACT_020",
+    "category": "fact_qa",
+    "query": "拈花堂开放到几点？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "拈花堂"
+    ],
+    "required_facts": [
+      "9:30",
+      "19:00"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "拈花堂开放"
+  },
+  {
+    "id": "B2_FACT_021",
+    "category": "fact_qa",
+    "query": "五灯湖湖面面积大约是多少？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "五灯湖"
+    ],
+    "required_facts": [
+      "5000",
+      "灯光秀"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "五灯湖参数"
+  },
+  {
+    "id": "B2_FACT_022",
+    "category": "fact_qa",
+    "query": "鹿鸣谷有什么自然特点？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "鹿鸣谷"
+    ],
+    "required_facts": [
+      "20000",
+      "90%"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "鹿鸣谷参数"
+  },
+  {
+    "id": "B2_FACT_023",
+    "category": "fact_qa",
+    "query": "灵山胜境坐落在哪里？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "景区概况与千年历史渊源"
+    ],
+    "required_facts": [
+      "无锡",
+      "太湖",
+      "马山"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "景区位置"
+  },
+  {
+    "id": "B2_FACT_024",
+    "category": "fact_qa",
+    "query": "灵山胜境占地面积约多少？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "景区概况与千年历史渊源"
+    ],
+    "required_facts": [
+      "30万",
+      "5A"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "景区概况"
+  },
+  {
+    "id": "B2_FACT_025",
+    "category": "fact_qa",
+    "query": "九龙灌浴平日有哪些演出时间？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "九龙灌浴"
+    ],
+    "required_facts": [
+      "10:00",
+      "11:30",
+      "13:30",
+      "15:00"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "演出时间"
+  },
+  {
+    "id": "B2_FACT_026",
+    "category": "fact_qa",
+    "query": "灵山梵宫的吉祥颂演出多长时间？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "灵山梵宫"
+    ],
+    "required_facts": [
+      "20分钟",
+      "10:35"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "梵宫演出"
+  },
+  {
+    "id": "B2_FACT_027",
+    "category": "fact_qa",
+    "query": "五印坛城藏香体验什么时候有？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "五印坛城"
+    ],
+    "required_facts": [
+      "10:00",
+      "14:00",
+      "40分钟"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "坛城体验"
+  },
+  {
+    "id": "B2_FACT_028",
+    "category": "fact_qa",
+    "query": "拈花广场开园仪式什么时候举行？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "拈花广场"
+    ],
+    "required_facts": [
+      "9:30",
+      "14:30"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "开园仪式"
+  },
+  {
+    "id": "B2_FACT_029",
+    "category": "fact_qa",
+    "query": "五灯湖灯光秀每天几点开始？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "五灯湖"
+    ],
+    "required_facts": [
+      "19:00",
+      "20:00",
+      "30分钟"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "五灯湖演艺"
+  },
+  {
+    "id": "B2_FACT_030",
+    "category": "fact_qa",
+    "query": "其他实用建议里导游服务多少钱起？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "其他实用建议"
+    ],
+    "required_facts": [
+      "300",
+      "导游"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "导游服务"
+  },
+  {
+    "id": "B2_HISTORY_001",
+    "category": "history_culture",
+    "query": "灵山胜境为什么被称为东方佛国？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "景区概况与千年历史渊源"
+    ],
+    "required_facts": [
+      "东方佛国",
+      "太湖佛国"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "景区定位"
+  },
+  {
+    "id": "B2_HISTORY_002",
+    "category": "history_culture",
+    "query": "玄奘为什么把马山命名为小灵山？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "小灵山的佛教缘起"
+    ],
+    "required_facts": [
+      "印度灵鹫山",
+      "大般若经",
+      "小灵山"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "小灵山缘起"
+  },
+  {
+    "id": "B2_HISTORY_003",
+    "category": "history_culture",
+    "query": "祥符禅寺名称和北宋有什么关系？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "祥符禅寺的千年兴衰"
+    ],
+    "required_facts": [
+      "北宋",
+      "大中祥符",
+      "宋真宗"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "祥符禅寺得名"
+  },
+  {
+    "id": "B2_HISTORY_004",
+    "category": "history_culture",
+    "query": "现代灵山胜境是怎样一步步建成的？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "现代灵山胜境的崛起"
+    ],
+    "required_facts": [
+      "1994",
+      "1997",
+      "2009"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "现代建设历程"
+  },
+  {
+    "id": "B2_HISTORY_005",
+    "category": "history_culture",
+    "query": "灵山大佛和五方五佛理念有什么关系？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "佛教文化的深度传承"
+    ],
+    "required_facts": [
+      "五方五佛",
+      "赵朴初"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "五方五佛"
+  },
+  {
+    "id": "B2_HISTORY_006",
+    "category": "history_culture",
+    "query": "灵山梵宫为什么能体现传统艺术和现代科技融合？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "传统艺术与现代科技的完美融合"
+    ],
+    "required_facts": [
+      "东阳木雕",
+      "敦煌壁画",
+      "现代科技"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "梵宫工艺"
+  },
+  {
+    "id": "B2_HISTORY_007",
+    "category": "history_culture",
+    "query": "九龙灌浴和祈福文化有什么关系？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "祈福文化的特色体验"
+    ],
+    "required_facts": [
+      "九龙灌浴",
+      "吉祥平安"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "祈福文化"
+  },
+  {
+    "id": "B2_HISTORY_008",
+    "category": "history_culture",
+    "query": "灵山胜境和世界佛教论坛有什么关系？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "世界佛教文化的交流平台"
+    ],
+    "required_facts": [
+      "世界佛教论坛",
+      "永久会址"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "论坛会址"
+  },
+  {
+    "id": "B2_HISTORY_009",
+    "category": "history_culture",
+    "query": "赵朴初先生与灵山大照壁有什么关系？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "灵山大照壁"
+    ],
+    "required_facts": [
+      "赵朴初",
+      "题写",
+      "小灵山"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "赵朴初题字"
+  },
+  {
+    "id": "B2_HISTORY_010",
+    "category": "history_culture",
+    "query": "五明桥里的五明是什么意思？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "五明桥"
+    ],
+    "required_facts": [
+      "声明",
+      "因明",
+      "内明"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "五明文化"
+  },
+  {
+    "id": "B2_HISTORY_011",
+    "category": "history_culture",
+    "query": "佛足坛为什么被看作佛教圣迹？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "佛足坛"
+    ],
+    "required_facts": [
+      "佛足",
+      "32种",
+      "吉祥"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "佛足文化"
+  },
+  {
+    "id": "B2_HISTORY_012",
+    "category": "history_culture",
+    "query": "五智门的五门和六柱分别象征什么？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "五智门"
+    ],
+    "required_facts": [
+      "五方五佛",
+      "六度波罗蜜"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "五智门象征"
+  },
+  {
+    "id": "B2_HISTORY_013",
+    "category": "history_culture",
+    "query": "降魔浮雕讲述了什么佛教故事？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "降魔浮雕"
+    ],
+    "required_facts": [
+      "魔王波旬",
+      "觉悟成佛"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "降魔成道"
+  },
+  {
+    "id": "B2_HISTORY_014",
+    "category": "history_culture",
+    "query": "阿育王柱象征什么佛教精神？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "阿育王柱"
+    ],
+    "required_facts": [
+      "和平",
+      "包容",
+      "佛法"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "阿育王柱象征"
+  },
+  {
+    "id": "B2_HISTORY_015",
+    "category": "history_culture",
+    "query": "拈花堂的文化内涵来自什么典故？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "拈花堂"
+    ],
+    "required_facts": [
+      "拈花悟禅",
+      "静心"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "拈花堂文化"
+  },
+  {
+    "id": "B2_ATTRACTION_001",
+    "category": "attraction_detail",
+    "query": "灵山大照壁适合怎么游玩？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "灵山大照壁"
+    ],
+    "required_facts": [
+      "打卡",
+      "合影"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "大照壁玩法"
+  },
+  {
+    "id": "B2_ATTRACTION_002",
+    "category": "attraction_detail",
+    "query": "菩提大道有什么禅意体验？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "菩提大道"
+    ],
+    "required_facts": [
+      "菩提树",
+      "禅意"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "菩提大道体验"
+  },
+  {
+    "id": "B2_ATTRACTION_003",
+    "category": "attraction_detail",
+    "query": "九龙灌浴表演有什么看点？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "九龙灌浴"
+    ],
+    "required_facts": [
+      "花开见佛",
+      "九条飞龙"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "九龙灌浴看点"
+  },
+  {
+    "id": "B2_ATTRACTION_004",
+    "category": "attraction_detail",
+    "query": "百子戏弥勒为什么适合亲子互动？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "百子戏弥勒"
+    ],
+    "required_facts": [
+      "百名",
+      "孩童",
+      "亲子"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "百子戏弥勒亲子"
+  },
+  {
+    "id": "B2_ATTRACTION_005",
+    "category": "attraction_detail",
+    "query": "祥符禅寺里有哪些历史遗存？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "祥符禅寺"
+    ],
+    "required_facts": [
+      "六角井",
+      "千年古银杏"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "祥符禅寺遗存"
+  },
+  {
+    "id": "B2_ATTRACTION_006",
+    "category": "attraction_detail",
+    "query": "灵山大佛有什么核心看点？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "灵山大佛"
+    ],
+    "required_facts": [
+      "手印",
+      "216级台阶"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "大佛看点"
+  },
+  {
+    "id": "B2_ATTRACTION_007",
+    "category": "attraction_detail",
+    "query": "佛教文化博览馆主要展示什么？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "佛教文化博览馆"
+    ],
+    "required_facts": [
+      "五方五佛",
+      "万佛殿"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "博览馆展示"
+  },
+  {
+    "id": "B2_ATTRACTION_008",
+    "category": "attraction_detail",
+    "query": "灵山梵宫为什么被称为东方卢浮宫？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "灵山梵宫"
+    ],
+    "required_facts": [
+      "东方卢浮宫",
+      "艺术"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "梵宫艺术"
+  },
+  {
+    "id": "B2_ATTRACTION_009",
+    "category": "attraction_detail",
+    "query": "五印坛城有哪些藏式建筑特色？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "五印坛城"
+    ],
+    "required_facts": [
+      "藏式",
+      "白墙红边",
+      "鎏金铜瓦"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "坛城建筑"
+  },
+  {
+    "id": "B2_ATTRACTION_010",
+    "category": "attraction_detail",
+    "query": "曼飞龙塔为什么体现南传佛教特色？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "曼飞龙塔"
+    ],
+    "required_facts": [
+      "南传佛教",
+      "白塔",
+      "傣族"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "曼飞龙塔特色"
+  },
+  {
+    "id": "B2_ATTRACTION_011",
+    "category": "attraction_detail",
+    "query": "无尽意斋有什么纪念意义？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "无尽意斋"
+    ],
+    "required_facts": [
+      "赵朴初",
+      "故居",
+      "书法"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "无尽意斋纪念"
+  },
+  {
+    "id": "B2_ATTRACTION_012",
+    "category": "attraction_detail",
+    "query": "拈花广场的核心景观是什么？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "拈花广场"
+    ],
+    "required_facts": [
+      "拈花微笑",
+      "雕塑"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "拈花广场景观"
+  },
+  {
+    "id": "B2_ATTRACTION_013",
+    "category": "attraction_detail",
+    "query": "梵天花海适合看什么？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "梵天花海"
+    ],
+    "required_facts": [
+      "格桑花",
+      "波斯菊",
+      "木质步道"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "花海游玩"
+  },
+  {
+    "id": "B2_ATTRACTION_014",
+    "category": "attraction_detail",
+    "query": "香月花街有哪些体验？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "香月花街"
+    ],
+    "required_facts": [
+      "禅意文创",
+      "非遗手作",
+      "素面"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "花街体验"
+  },
+  {
+    "id": "B2_ATTRACTION_015",
+    "category": "attraction_detail",
+    "query": "五灯湖夜间有什么特色？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "五灯湖"
+    ],
+    "required_facts": [
+      "灯光秀",
+      "水雾",
+      "禅行"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "五灯湖夜景"
+  },
+  {
+    "id": "B2_ROUTE_001",
+    "category": "route_planning",
+    "query": "历史文化爱好者应该怎么游览灵山胜境？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "历史文化爱好者路线"
+    ],
+    "required_facts": [
+      "祥符禅寺",
+      "灵山大佛",
+      "五印坛城"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "历史路线"
+  },
+  {
+    "id": "B2_ROUTE_002",
+    "category": "route_planning",
+    "query": "自然风光爱好者适合走哪条路线？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "自然风光爱好者路线"
+    ],
+    "required_facts": [
+      "佛足坛",
+      "菩提大道",
+      "曼飞龙塔"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "自然路线"
+  },
+  {
+    "id": "B2_ROUTE_003",
+    "category": "route_planning",
+    "query": "带孩子游览灵山胜境怎么安排比较轻松？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "亲子家庭路线"
+    ],
+    "required_facts": [
+      "九龙灌浴",
+      "百子戏弥勒",
+      "梵宫"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "亲子路线"
+  },
+  {
+    "id": "B2_ROUTE_004",
+    "category": "route_planning",
+    "query": "想深度了解佛教文化，路线里应重点看哪些点？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "历史文化爱好者路线"
+    ],
+    "required_facts": [
+      "祥符禅寺",
+      "灵山梵宫",
+      "三圣殿"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "文化深度路线"
+  },
+  {
+    "id": "B2_ROUTE_005",
+    "category": "route_planning",
+    "query": "半天时间想看核心景观，应该优先哪些地方？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "亲子家庭路线"
+    ],
+    "required_facts": [
+      "九龙灌浴",
+      "佛手广场",
+      "五印坛城"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "半日核心路线"
+  },
+  {
+    "id": "B2_ROUTE_006",
+    "category": "route_planning",
+    "query": "喜欢太湖和园林景观，灵山胜境怎么走？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "自然风光爱好者路线"
+    ],
+    "required_facts": [
+      "太湖",
+      "灵山精舍",
+      "梵宫广场"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "自然全景路线"
+  },
+  {
+    "id": "B2_ROUTE_007",
+    "category": "route_planning",
+    "query": "第一次来灵山胜境，怎样安排不容易错过重点？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "历史文化爱好者路线"
+    ],
+    "required_facts": [
+      "灵山大照壁",
+      "灵山大佛",
+      "灵山梵宫"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "首次游览"
+  },
+  {
+    "id": "B2_ROUTE_008",
+    "category": "route_planning",
+    "query": "亲子游为什么推荐九龙灌浴和百子戏弥勒？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "亲子家庭路线"
+    ],
+    "required_facts": [
+      "动态表演",
+      "亲子互动"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "亲子原因"
+  },
+  {
+    "id": "B2_ROUTE_009",
+    "category": "route_planning",
+    "query": "历史文化路线为什么会安排祥符禅寺？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "历史文化爱好者路线"
+    ],
+    "required_facts": [
+      "千年古刹",
+      "历史讲解"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "祥符禅寺路线价值"
+  },
+  {
+    "id": "B2_ROUTE_010",
+    "category": "route_planning",
+    "query": "自然风光路线为什么会安排菩提大道？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "自然风光爱好者路线"
+    ],
+    "required_facts": [
+      "太湖风光",
+      "自然环境"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "菩提大道路线价值"
+  },
+  {
+    "id": "B2_PRACTICAL_001",
+    "category": "practical_info",
+    "query": "灵山胜境什么时候游览比较合适？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "最佳游览时间"
+    ],
+    "required_facts": [
+      "春秋",
+      "3-5月",
+      "9-11月"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "最佳季节"
+  },
+  {
+    "id": "B2_PRACTICAL_002",
+    "category": "practical_info",
+    "query": "灵山胜境建议几点前入园？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "最佳游览时间"
+    ],
+    "required_facts": [
+      "9点前",
+      "人流高峰"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "入园时间"
+  },
+  {
+    "id": "B2_PRACTICAL_003",
+    "category": "practical_info",
+    "query": "九龙灌浴表演需要提前多久到？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "九龙灌浴"
+    ],
+    "required_facts": [
+      "提前10分钟",
+      "占位"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "演出占位"
+  },
+  {
+    "id": "B2_PRACTICAL_004",
+    "category": "practical_info",
+    "query": "灵山胜境里面吃素斋大概要多少钱？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "餐饮"
+    ],
+    "required_facts": [
+      "50",
+      "35"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "餐饮价格"
+  },
+  {
+    "id": "B2_PRACTICAL_005",
+    "category": "practical_info",
+    "query": "灵山精舍适合什么样的游客？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "住宿"
+    ],
+    "required_facts": [
+      "禅意酒店",
+      "早课体验"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "住宿体验"
+  },
+  {
+    "id": "B2_PRACTICAL_006",
+    "category": "practical_info",
+    "query": "游览灵山胜境穿什么比较合适？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "其他实用建议"
+    ],
+    "required_facts": [
+      "运动鞋",
+      "防晒",
+      "保暖"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "穿着建议"
+  },
+  {
+    "id": "B2_PRACTICAL_007",
+    "category": "practical_info",
+    "query": "去灵山胜境建议带哪些物品？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "其他实用建议"
+    ],
+    "required_facts": [
+      "相机",
+      "充电宝",
+      "雨伞"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "携带物品"
+  },
+  {
+    "id": "B2_PRACTICAL_008",
+    "category": "practical_info",
+    "query": "灵山胜境导游服务适合哪些游客？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "其他实用建议"
+    ],
+    "required_facts": [
+      "导游服务",
+      "300元"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "导游建议"
+  },
+  {
+    "id": "B2_PRACTICAL_009",
+    "category": "practical_info",
+    "query": "在灵山胜境游览时有哪些文明礼仪？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "其他实用建议"
+    ],
+    "required_facts": [
+      "保持安静",
+      "尊重宗教信仰"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "文明礼仪"
+  },
+  {
+    "id": "B2_PRACTICAL_010",
+    "category": "practical_info",
+    "query": "五印坛城参观时有什么注意事项？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [
+      "五印坛城"
+    ],
+    "required_facts": [
+      "禁止触摸",
+      "禁止大声喧哗"
+    ],
+    "forbidden_facts": [],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "坛城注意事项"
+  },
+  {
+    "id": "B2_GUIDED_001",
+    "category": "guided_selection",
+    "query": "它有什么特色？",
+    "selection": {
+      "mode": "attraction",
+      "attraction_id": 13
+    },
+    "context": null,
+    "expected_sources": [
+      "灵山大佛"
+    ],
+    "required_facts": [
+      "灵山大佛"
+    ],
+    "forbidden_facts": [
+      "五印坛城"
+    ],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "主动选择灵山大佛"
+  },
+  {
+    "id": "B2_GUIDED_002",
+    "category": "guided_selection",
+    "query": "这里适合孩子玩吗？",
+    "selection": {
+      "mode": "attraction",
+      "attraction_id": 11
+    },
+    "context": null,
+    "expected_sources": [
+      "百子戏弥勒"
+    ],
+    "required_facts": [
+      "孩童",
+      "亲子"
+    ],
+    "forbidden_facts": [
+      "灵山大佛"
+    ],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "主动选择百子戏弥勒"
+  },
+  {
+    "id": "B2_GUIDED_003",
+    "category": "guided_selection",
+    "query": "这个地方看表演要注意什么？",
+    "selection": {
+      "mode": "attraction",
+      "attraction_id": 8
+    },
+    "context": null,
+    "expected_sources": [
+      "九龙灌浴"
+    ],
+    "required_facts": [
+      "演出",
+      "提前"
+    ],
+    "forbidden_facts": [
+      "五灯湖"
+    ],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "主动选择九龙灌浴"
+  },
+  {
+    "id": "B2_GUIDED_004",
+    "category": "guided_selection",
+    "query": "它的建筑风格是什么？",
+    "selection": {
+      "mode": "attraction",
+      "attraction_id": 16
+    },
+    "context": null,
+    "expected_sources": [
+      "五印坛城"
+    ],
+    "required_facts": [
+      "藏式",
+      "白墙"
+    ],
+    "forbidden_facts": [
+      "灵山梵宫"
+    ],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "主动选择五印坛城"
+  },
+  {
+    "id": "B2_GUIDED_005",
+    "category": "guided_selection",
+    "query": "这里有什么艺术价值？",
+    "selection": {
+      "mode": "attraction",
+      "attraction_id": 15
+    },
+    "context": null,
+    "expected_sources": [
+      "灵山梵宫"
+    ],
+    "required_facts": [
+      "艺术",
+      "东方卢浮宫"
+    ],
+    "forbidden_facts": [
+      "五明桥"
+    ],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "主动选择灵山梵宫"
+  },
+  {
+    "id": "B2_GUIDED_006",
+    "category": "guided_selection",
+    "query": "这个景点适合拍照吗？",
+    "selection": {
+      "mode": "attraction",
+      "attraction_id": 3
+    },
+    "context": null,
+    "expected_sources": [
+      "灵山大照壁"
+    ],
+    "required_facts": [
+      "打卡",
+      "合影"
+    ],
+    "forbidden_facts": [
+      "祥符禅寺"
+    ],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "主动选择大照壁"
+  },
+  {
+    "id": "B2_GUIDED_007",
+    "category": "guided_selection",
+    "query": "它和佛教智慧有什么关系？",
+    "selection": {
+      "mode": "attraction",
+      "attraction_id": 4
+    },
+    "context": null,
+    "expected_sources": [
+      "五明桥"
+    ],
+    "required_facts": [
+      "五明",
+      "智慧"
+    ],
+    "forbidden_facts": [
+      "九龙灌浴"
+    ],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "主动选择五明桥"
+  },
+  {
+    "id": "B2_GUIDED_008",
+    "category": "guided_selection",
+    "query": "这里晚上有什么看点？",
+    "selection": {
+      "mode": "attraction",
+      "attraction_id": 23
+    },
+    "context": null,
+    "expected_sources": [
+      "五灯湖"
+    ],
+    "required_facts": [
+      "灯光秀",
+      "夜间"
+    ],
+    "forbidden_facts": [
+      "梵天花海"
+    ],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "主动选择五灯湖"
+  },
+  {
+    "id": "B2_FOLLOWUP_001",
+    "category": "followup_context",
+    "query": "它适合拍照吗？",
+    "selection": null,
+    "context": {
+      "last_subject": "灵山大照壁"
+    },
+    "expected_sources": [
+      "灵山大照壁"
+    ],
+    "required_facts": [
+      "打卡",
+      "合影"
+    ],
+    "forbidden_facts": [
+      "灵山大佛"
+    ],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "大照壁追问"
+  },
+  {
+    "id": "B2_FOLLOWUP_002",
+    "category": "followup_context",
+    "query": "它为什么适合亲子？",
+    "selection": null,
+    "context": {
+      "last_subject": "百子戏弥勒"
+    },
+    "expected_sources": [
+      "百子戏弥勒"
+    ],
+    "required_facts": [
+      "孩童",
+      "亲子"
+    ],
+    "forbidden_facts": [
+      "五印坛城"
+    ],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "百子戏弥勒追问"
+  },
+  {
+    "id": "B2_FOLLOWUP_003",
+    "category": "followup_context",
+    "query": "这里的表演什么时候看？",
+    "selection": null,
+    "context": {
+      "last_subject": "九龙灌浴"
+    },
+    "expected_sources": [
+      "九龙灌浴"
+    ],
+    "required_facts": [
+      "10:00",
+      "11:30"
+    ],
+    "forbidden_facts": [
+      "五灯湖"
+    ],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "九龙灌浴追问"
+  },
+  {
+    "id": "B2_FOLLOWUP_004",
+    "category": "followup_context",
+    "query": "这里有哪些工艺？",
+    "selection": null,
+    "context": {
+      "last_subject": "灵山梵宫"
+    },
+    "expected_sources": [
+      "灵山梵宫"
+    ],
+    "required_facts": [
+      "东阳木雕",
+      "景泰蓝"
+    ],
+    "forbidden_facts": [
+      "五明桥"
+    ],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "梵宫追问"
+  },
+  {
+    "id": "B2_FOLLOWUP_005",
+    "category": "followup_context",
+    "query": "它的藏式特色体现在哪里？",
+    "selection": null,
+    "context": {
+      "last_subject": "五印坛城"
+    },
+    "expected_sources": [
+      "五印坛城"
+    ],
+    "required_facts": [
+      "藏式",
+      "转经筒"
+    ],
+    "forbidden_facts": [
+      "灵山大佛"
+    ],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "五印坛城追问"
+  },
+  {
+    "id": "B2_FOLLOWUP_006",
+    "category": "followup_context",
+    "query": "这里适合晚上去吗？",
+    "selection": null,
+    "context": {
+      "last_subject": "五灯湖"
+    },
+    "expected_sources": [
+      "五灯湖"
+    ],
+    "required_facts": [
+      "夜间",
+      "灯光秀"
+    ],
+    "forbidden_facts": [
+      "菩提大道"
+    ],
+    "expected_behavior": "answer_with_evidence",
+    "notes": "五灯湖追问"
+  },
+  {
+    "id": "B2_BLIND_001",
+    "category": "blind_spot_refusal",
+    "query": "明天灵山胜境会不会下雨？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [],
+    "required_facts": [],
+    "forbidden_facts": [
+      "一定下雨",
+      "一定不下雨"
+    ],
+    "expected_behavior": "refuse_without_evidence",
+    "notes": "实时天气盲区"
+  },
+  {
+    "id": "B2_BLIND_002",
+    "category": "blind_spot_refusal",
+    "query": "现在厕所排队要多久？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [],
+    "required_facts": [],
+    "forbidden_facts": [
+      "5分钟",
+      "10分钟",
+      "半小时"
+    ],
+    "expected_behavior": "refuse_without_evidence",
+    "notes": "实时排队盲区"
+  },
+  {
+    "id": "B2_BLIND_003",
+    "category": "blind_spot_refusal",
+    "query": "今天下午景区停车场还有多少空位？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [],
+    "required_facts": [],
+    "forbidden_facts": [
+      "100个",
+      "还有空位",
+      "已经满了"
+    ],
+    "expected_behavior": "refuse_without_evidence",
+    "notes": "实时停车盲区"
+  },
+  {
+    "id": "B2_BLIND_004",
+    "category": "blind_spot_refusal",
+    "query": "现在九龙灌浴这一场还剩几个座位？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [],
+    "required_facts": [],
+    "forbidden_facts": [
+      "还剩",
+      "座位"
+    ],
+    "expected_behavior": "refuse_without_evidence",
+    "notes": "实时座位盲区"
+  },
+  {
+    "id": "B2_BLIND_005",
+    "category": "blind_spot_refusal",
+    "query": "明天门票会不会涨价？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [],
+    "required_facts": [],
+    "forbidden_facts": [
+      "一定涨价",
+      "不会涨价"
+    ],
+    "expected_behavior": "refuse_without_evidence",
+    "notes": "实时票价盲区"
+  },
+  {
+    "id": "B2_BLIND_006",
+    "category": "blind_spot_refusal",
+    "query": "现在灵山梵宫里面人多不多？",
+    "selection": null,
+    "context": null,
+    "expected_sources": [],
+    "required_facts": [],
+    "forbidden_facts": [
+      "不多",
+      "很多",
+      "不用排队"
+    ],
+    "expected_behavior": "refuse_without_evidence",
+    "notes": "实时客流盲区"
+  }
+]

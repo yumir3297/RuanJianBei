@@ -1,0 +1,168 @@
+{
+  "input": "D:\\\u684c\u9762\\\u8f6f\u4ef6\u676f\\Luo_Liu_Liu_Liu_ICISS2026_ACM_template(4)_formatfix.docx",
+  "fonts_by_char_count": {},
+  "direct_run_formatting_runs": 285,
+  "direct_paragraph_formatting_paragraphs": 9,
+  "heading_like_paragraphs_not_heading_style": [
+    {
+      "para_index": 11,
+      "text": "Introduction and Literature Context",
+      "style": "Head1"
+    },
+    {
+      "para_index": 16,
+      "text": "ISRSAC Model",
+      "style": "Head1"
+    },
+    {
+      "para_index": 18,
+      "text": "Key Generation",
+      "style": "Head2"
+    },
+    {
+      "para_index": 29,
+      "text": "Encryption",
+      "style": "Head2"
+    },
+    {
+      "para_index": 32,
+      "text": "Decryption",
+      "style": "Head2"
+    },
+    {
+      "para_index": 35,
+      "text": "Deep Analysis of the Integer Condition for \u03b1(n)",
+      "style": "Head1"
+    },
+    {
+      "para_index": 37,
+      "text": "Strict Algebraic Derivation",
+      "style": "Head2"
+    },
+    {
+      "para_index": 51,
+      "text": "Impact of Prime Congruence Forms (4k+1 and 4k+3) on Integer Conditions",
+      "style": "Head2"
+    },
+    {
+      "para_index": 62,
+      "text": "Theoretical Anatomy and Feasibility for Selected r Values",
+      "style": "Head2"
+    },
+    {
+      "para_index": 66,
+      "text": "Decryption Correctness and Compatibility Criteria under Cross-Modulus Systems",
+      "style": "Head1"
+    },
+    {
+      "para_index": 68,
+      "text": "Number-Theoretic Group Cascade under Heterogeneous Moduli",
+      "style": "Head2"
+    },
+    {
+      "para_index": 77,
+      "text": "Algebraic Necessary and Sufficient Conditions for Universal Decryption",
+      "style": "Head2"
+    },
+    {
+      "para_index": 82,
+      "text": "Derivation of the Compatibility Theorem between \u03b1(n) and \u03bb(pq)",
+      "style": "Head2"
+    },
+    {
+      "para_index": 98,
+      "text": "Algebraic Truncation of Plaintext Boundary Conditions",
+      "style": "Head2"
+    },
+    {
+      "para_index": 105,
+      "text": "Potential Security Vulnerabilities and Cryptanalysis of ISRSAC",
+      "style": "Head1"
+    },
+    {
+      "para_index": 107,
+      "text": "Explicit Factor Stripping Attack Caused by Modulus Exposure",
+      "style": "Head2"
+    },
+    {
+      "para_index": 120,
+      "text": "Weaknesses in Multi-Prime Products and Lattice Basis Reduction",
+      "style": "Head2"
+    },
+    {
+      "para_index": 122,
+      "text": "Proposed Correction and Improvement Scheme (C-ISRSAC)",
+      "style": "Head1"
+    },
+    {
+      "para_index": 124,
+      "text": "Key Generation Correction",
+      "style": "Head2"
+    },
+    {
+      "para_index": 133,
+      "text": "Performance Comparison",
+      "style": "Head2"
+    }
+  ],
+  "examples": {
+    "direct_run_formatting": [
+      {
+        "para_index": 1,
+        "run_text": "On the Arithmetic Soundness of ISRSAC: Divisibility Constraints and Decryption V",
+        "style": "Title_document"
+      },
+      {
+        "para_index": 2,
+        "run_text": "On the Arithmetic Soundness of ISRSAC",
+        "style": "Short Title"
+      },
+      {
+        "para_index": 3,
+        "run_text": "Yuewen Luo      Kairui Liu      Chenglian Liu*",
+        "style": "Authors"
+      },
+      {
+        "para_index": 4,
+        "run_text": "School of Engineering, Nanfang College Guangzhou, Guangzhou 510971, China",
+        "style": "Affiliation"
+      },
+      {
+        "para_index": 4,
+        "run_text": "\n",
+        "style": "Affiliation"
+      }
+    ],
+    "direct_paragraph_formatting": [
+      {
+        "para_index": 21,
+        "text": "",
+        "style": "Para"
+      },
+      {
+        "para_index": 25,
+        "text": "Note: In some parts of the original literature, this formula is written with a ceiling operator \u2308\u03b1(n)\u2309. This paper will ",
+        "style": "Para"
+      },
+      {
+        "para_index": 27,
+        "text": "6. Compute the private key exponent d such that it satisfies the following congruence equation:",
+        "style": "Para"
+      },
+      {
+        "para_index": 28,
+        "text": "",
+        "style": "ParaContinue"
+      },
+      {
+        "para_index": 31,
+        "text": "",
+        "style": "Para"
+      }
+    ]
+  },
+  "notes": [
+    "Direct formatting is not always wrong, but it often causes inconsistent output when templates change.",
+    "Heading-like paragraphs not using Heading styles can break TOC and accessibility."
+  ]
+}

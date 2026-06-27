@@ -1,0 +1,677 @@
+{
+  "mode": "faq_semantic_threshold_v1",
+  "testset": "eval/testset/faq_semantic_test.json",
+  "positive_count": 22,
+  "negative_count": 12,
+  "index": {
+    "entry_count": 88,
+    "alias_count": 202,
+    "embedding_model": "BAAI/bge-small-zh-v1.5",
+    "build_ms": 381.63280000026134
+  },
+  "query_latency_ms": {
+    "count": 34,
+    "avg_ms": 28.24125882344721,
+    "p50_ms": 26.903999999376538,
+    "p95_ms": 34.83169999981328,
+    "min_ms": 24.06169999994745,
+    "max_ms": 34.95139999995445
+  },
+  "recommended": null,
+  "threshold_results": [
+    {
+      "threshold": 0.6,
+      "positive_accuracy": 0.7727272727272727,
+      "positive_wrong_rate": 0.22727272727272727,
+      "negative_rejection_rate": 0.9166666666666666,
+      "positive_correct": 17,
+      "positive_wrong": 5,
+      "negative_false_hits": 1
+    },
+    {
+      "threshold": 0.61,
+      "positive_accuracy": 0.7727272727272727,
+      "positive_wrong_rate": 0.22727272727272727,
+      "negative_rejection_rate": 0.9166666666666666,
+      "positive_correct": 17,
+      "positive_wrong": 5,
+      "negative_false_hits": 1
+    },
+    {
+      "threshold": 0.62,
+      "positive_accuracy": 0.7727272727272727,
+      "positive_wrong_rate": 0.22727272727272727,
+      "negative_rejection_rate": 0.9166666666666666,
+      "positive_correct": 17,
+      "positive_wrong": 5,
+      "negative_false_hits": 1
+    },
+    {
+      "threshold": 0.63,
+      "positive_accuracy": 0.7727272727272727,
+      "positive_wrong_rate": 0.18181818181818182,
+      "negative_rejection_rate": 0.9166666666666666,
+      "positive_correct": 17,
+      "positive_wrong": 4,
+      "negative_false_hits": 1
+    },
+    {
+      "threshold": 0.64,
+      "positive_accuracy": 0.7727272727272727,
+      "positive_wrong_rate": 0.18181818181818182,
+      "negative_rejection_rate": 0.9166666666666666,
+      "positive_correct": 17,
+      "positive_wrong": 4,
+      "negative_false_hits": 1
+    },
+    {
+      "threshold": 0.65,
+      "positive_accuracy": 0.7727272727272727,
+      "positive_wrong_rate": 0.18181818181818182,
+      "negative_rejection_rate": 0.9166666666666666,
+      "positive_correct": 17,
+      "positive_wrong": 4,
+      "negative_false_hits": 1
+    },
+    {
+      "threshold": 0.66,
+      "positive_accuracy": 0.7727272727272727,
+      "positive_wrong_rate": 0.18181818181818182,
+      "negative_rejection_rate": 0.9166666666666666,
+      "positive_correct": 17,
+      "positive_wrong": 4,
+      "negative_false_hits": 1
+    },
+    {
+      "threshold": 0.67,
+      "positive_accuracy": 0.7727272727272727,
+      "positive_wrong_rate": 0.18181818181818182,
+      "negative_rejection_rate": 0.9166666666666666,
+      "positive_correct": 17,
+      "positive_wrong": 4,
+      "negative_false_hits": 1
+    },
+    {
+      "threshold": 0.68,
+      "positive_accuracy": 0.7727272727272727,
+      "positive_wrong_rate": 0.18181818181818182,
+      "negative_rejection_rate": 0.9166666666666666,
+      "positive_correct": 17,
+      "positive_wrong": 4,
+      "negative_false_hits": 1
+    },
+    {
+      "threshold": 0.69,
+      "positive_accuracy": 0.7727272727272727,
+      "positive_wrong_rate": 0.18181818181818182,
+      "negative_rejection_rate": 0.9166666666666666,
+      "positive_correct": 17,
+      "positive_wrong": 4,
+      "negative_false_hits": 1
+    },
+    {
+      "threshold": 0.7,
+      "positive_accuracy": 0.7727272727272727,
+      "positive_wrong_rate": 0.18181818181818182,
+      "negative_rejection_rate": 0.9166666666666666,
+      "positive_correct": 17,
+      "positive_wrong": 4,
+      "negative_false_hits": 1
+    },
+    {
+      "threshold": 0.71,
+      "positive_accuracy": 0.7727272727272727,
+      "positive_wrong_rate": 0.18181818181818182,
+      "negative_rejection_rate": 0.9166666666666666,
+      "positive_correct": 17,
+      "positive_wrong": 4,
+      "negative_false_hits": 1
+    },
+    {
+      "threshold": 0.72,
+      "positive_accuracy": 0.7727272727272727,
+      "positive_wrong_rate": 0.18181818181818182,
+      "negative_rejection_rate": 1.0,
+      "positive_correct": 17,
+      "positive_wrong": 4,
+      "negative_false_hits": 0
+    },
+    {
+      "threshold": 0.73,
+      "positive_accuracy": 0.7727272727272727,
+      "positive_wrong_rate": 0.18181818181818182,
+      "negative_rejection_rate": 1.0,
+      "positive_correct": 17,
+      "positive_wrong": 4,
+      "negative_false_hits": 0
+    },
+    {
+      "threshold": 0.74,
+      "positive_accuracy": 0.6818181818181818,
+      "positive_wrong_rate": 0.18181818181818182,
+      "negative_rejection_rate": 1.0,
+      "positive_correct": 15,
+      "positive_wrong": 4,
+      "negative_false_hits": 0
+    },
+    {
+      "threshold": 0.75,
+      "positive_accuracy": 0.6363636363636364,
+      "positive_wrong_rate": 0.18181818181818182,
+      "negative_rejection_rate": 1.0,
+      "positive_correct": 14,
+      "positive_wrong": 4,
+      "negative_false_hits": 0
+    },
+    {
+      "threshold": 0.76,
+      "positive_accuracy": 0.6363636363636364,
+      "positive_wrong_rate": 0.18181818181818182,
+      "negative_rejection_rate": 1.0,
+      "positive_correct": 14,
+      "positive_wrong": 4,
+      "negative_false_hits": 0
+    },
+    {
+      "threshold": 0.77,
+      "positive_accuracy": 0.6363636363636364,
+      "positive_wrong_rate": 0.18181818181818182,
+      "negative_rejection_rate": 1.0,
+      "positive_correct": 14,
+      "positive_wrong": 4,
+      "negative_false_hits": 0
+    },
+    {
+      "threshold": 0.78,
+      "positive_accuracy": 0.5909090909090909,
+      "positive_wrong_rate": 0.09090909090909091,
+      "negative_rejection_rate": 1.0,
+      "positive_correct": 13,
+      "positive_wrong": 2,
+      "negative_false_hits": 0
+    },
+    {
+      "threshold": 0.79,
+      "positive_accuracy": 0.5909090909090909,
+      "positive_wrong_rate": 0.09090909090909091,
+      "negative_rejection_rate": 1.0,
+      "positive_correct": 13,
+      "positive_wrong": 2,
+      "negative_false_hits": 0
+    },
+    {
+      "threshold": 0.8,
+      "positive_accuracy": 0.5454545454545454,
+      "positive_wrong_rate": 0.045454545454545456,
+      "negative_rejection_rate": 1.0,
+      "positive_correct": 12,
+      "positive_wrong": 1,
+      "negative_false_hits": 0
+    },
+    {
+      "threshold": 0.81,
+      "positive_accuracy": 0.5,
+      "positive_wrong_rate": 0.045454545454545456,
+      "negative_rejection_rate": 1.0,
+      "positive_correct": 11,
+      "positive_wrong": 1,
+      "negative_false_hits": 0
+    },
+    {
+      "threshold": 0.82,
+      "positive_accuracy": 0.5,
+      "positive_wrong_rate": 0.045454545454545456,
+      "negative_rejection_rate": 1.0,
+      "positive_correct": 11,
+      "positive_wrong": 1,
+      "negative_false_hits": 0
+    },
+    {
+      "threshold": 0.83,
+      "positive_accuracy": 0.4090909090909091,
+      "positive_wrong_rate": 0.045454545454545456,
+      "negative_rejection_rate": 1.0,
+      "positive_correct": 9,
+      "positive_wrong": 1,
+      "negative_false_hits": 0
+    },
+    {
+      "threshold": 0.84,
+      "positive_accuracy": 0.2727272727272727,
+      "positive_wrong_rate": 0.045454545454545456,
+      "negative_rejection_rate": 1.0,
+      "positive_correct": 6,
+      "positive_wrong": 1,
+      "negative_false_hits": 0
+    },
+    {
+      "threshold": 0.85,
+      "positive_accuracy": 0.2727272727272727,
+      "positive_wrong_rate": 0.045454545454545456,
+      "negative_rejection_rate": 1.0,
+      "positive_correct": 6,
+      "positive_wrong": 1,
+      "negative_false_hits": 0
+    },
+    {
+      "threshold": 0.86,
+      "positive_accuracy": 0.2727272727272727,
+      "positive_wrong_rate": 0.045454545454545456,
+      "negative_rejection_rate": 1.0,
+      "positive_correct": 6,
+      "positive_wrong": 1,
+      "negative_false_hits": 0
+    },
+    {
+      "threshold": 0.87,
+      "positive_accuracy": 0.22727272727272727,
+      "positive_wrong_rate": 0.0,
+      "negative_rejection_rate": 1.0,
+      "positive_correct": 5,
+      "positive_wrong": 0,
+      "negative_false_hits": 0
+    },
+    {
+      "threshold": 0.88,
+      "positive_accuracy": 0.13636363636363635,
+      "positive_wrong_rate": 0.0,
+      "negative_rejection_rate": 1.0,
+      "positive_correct": 3,
+      "positive_wrong": 0,
+      "negative_false_hits": 0
+    },
+    {
+      "threshold": 0.89,
+      "positive_accuracy": 0.09090909090909091,
+      "positive_wrong_rate": 0.0,
+      "negative_rejection_rate": 1.0,
+      "positive_correct": 2,
+      "positive_wrong": 0,
+      "negative_false_hits": 0
+    },
+    {
+      "threshold": 0.9,
+      "positive_accuracy": 0.09090909090909091,
+      "positive_wrong_rate": 0.0,
+      "negative_rejection_rate": 1.0,
+      "positive_correct": 2,
+      "positive_wrong": 0,
+      "negative_false_hits": 0
+    },
+    {
+      "threshold": 0.91,
+      "positive_accuracy": 0.09090909090909091,
+      "positive_wrong_rate": 0.0,
+      "negative_rejection_rate": 1.0,
+      "positive_correct": 2,
+      "positive_wrong": 0,
+      "negative_false_hits": 0
+    },
+    {
+      "threshold": 0.92,
+      "positive_accuracy": 0.045454545454545456,
+      "positive_wrong_rate": 0.0,
+      "negative_rejection_rate": 1.0,
+      "positive_correct": 1,
+      "positive_wrong": 0,
+      "negative_false_hits": 0
+    },
+    {
+      "threshold": 0.93,
+      "positive_accuracy": 0.045454545454545456,
+      "positive_wrong_rate": 0.0,
+      "negative_rejection_rate": 1.0,
+      "positive_correct": 1,
+      "positive_wrong": 0,
+      "negative_false_hits": 0
+    },
+    {
+      "threshold": 0.94,
+      "positive_accuracy": 0.045454545454545456,
+      "positive_wrong_rate": 0.0,
+      "negative_rejection_rate": 1.0,
+      "positive_correct": 1,
+      "positive_wrong": 0,
+      "negative_false_hits": 0
+    },
+    {
+      "threshold": 0.95,
+      "positive_accuracy": 0.045454545454545456,
+      "positive_wrong_rate": 0.0,
+      "negative_rejection_rate": 1.0,
+      "positive_correct": 1,
+      "positive_wrong": 0,
+      "negative_false_hits": 0
+    }
+  ],
+  "raw_results": [
+    {
+      "id": "semantic-pos-001",
+      "kind": "positive",
+      "query": "入口处那块写着灵山胜境的大照壁有什么看点",
+      "expected_faq_id": "faq_spot_001",
+      "best_faq_id": "faq_spot_001",
+      "best_alias": "灵山大照壁有什么亮点",
+      "score": 0.8076652372194622,
+      "query_ms": 30.547099999239435
+    },
+    {
+      "id": "semantic-pos-002",
+      "kind": "positive",
+      "query": "大照壁具体在园区哪个地方",
+      "expected_faq_id": "faq_spot_002",
+      "best_faq_id": "faq_spot_002",
+      "best_alias": "灵山大照壁在哪里",
+      "score": 0.7479178930021747,
+      "query_ms": 27.871799999957148
+    },
+    {
+      "id": "semantic-pos-003",
+      "kind": "positive",
+      "query": "入口那面照壁尺寸有多大",
+      "expected_faq_id": "faq_spot_003",
+      "best_faq_id": "faq_spot_002",
+      "best_alias": "灵山大照壁位置",
+      "score": 0.6222518756211798,
+      "query_ms": 26.15189999960421
+    },
+    {
+      "id": "semantic-pos-004",
+      "kind": "positive",
+      "query": "晚上还能参观灵山大照壁吗",
+      "expected_faq_id": "faq_spot_004",
+      "best_faq_id": "faq_spot_001",
+      "best_alias": "灵山大照壁有什么亮点",
+      "score": 0.7753430982127464,
+      "query_ms": 31.42329999991489
+    },
+    {
+      "id": "semantic-pos-005",
+      "kind": "positive",
+      "query": "五明桥主要有什么特色",
+      "expected_faq_id": "faq_spot_005",
+      "best_faq_id": "faq_spot_005",
+      "best_alias": "五明桥是什么",
+      "score": 0.8769841899324093,
+      "query_ms": 30.85890000056679
+    },
+    {
+      "id": "semantic-pos-006",
+      "kind": "positive",
+      "query": "去佛足坛应该往哪里走",
+      "expected_faq_id": "faq_spot_010",
+      "best_faq_id": "faq_spot_010",
+      "best_alias": "佛足坛在哪里",
+      "score": 0.83958708575273,
+      "query_ms": 25.415699999939534
+    },
+    {
+      "id": "semantic-pos-007",
+      "kind": "positive",
+      "query": "五智门大概有多高多宽",
+      "expected_faq_id": "faq_spot_015",
+      "best_faq_id": "faq_spot_014",
+      "best_alias": "五智门位置",
+      "score": 0.7761194223885928,
+      "query_ms": 24.897400000554626
+    },
+    {
+      "id": "semantic-pos-008",
+      "kind": "positive",
+      "query": "九龙灌浴每天几点可以看",
+      "expected_faq_id": "faq_spot_024",
+      "best_faq_id": "faq_spot_024",
+      "best_alias": "九龙灌浴开放时间",
+      "score": 0.837736538109847,
+      "query_ms": 26.379699999779405
+    },
+    {
+      "id": "semantic-pos-009",
+      "kind": "positive",
+      "query": "阿育王柱的高度和重量是多少",
+      "expected_faq_id": "faq_spot_031",
+      "best_faq_id": "faq_spot_031",
+      "best_alias": "阿育王柱有什么参数",
+      "score": 0.8234675476278954,
+      "query_ms": 26.903999999376538
+    },
+    {
+      "id": "semantic-pos-010",
+      "kind": "positive",
+      "query": "百子戏弥勒雕塑在什么位置",
+      "expected_faq_id": "faq_spot_034",
+      "best_faq_id": "faq_spot_034",
+      "best_alias": "百子戏弥勒位置",
+      "score": 0.8781505387672287,
+      "query_ms": 24.811100000079023
+    },
+    {
+      "id": "semantic-pos-011",
+      "kind": "positive",
+      "query": "祥符禅寺有哪些值得看的地方",
+      "expected_faq_id": "faq_spot_037",
+      "best_faq_id": "faq_spot_038",
+      "best_alias": "祥符禅寺在哪里",
+      "score": 0.8696884187459081,
+      "query_ms": 25.786600000174076
+    },
+    {
+      "id": "semantic-pos-012",
+      "kind": "positive",
+      "query": "那尊露天青铜大佛究竟有多高",
+      "expected_faq_id": "faq_spot_043",
+      "best_faq_id": "faq_spot_043",
+      "best_alias": "灵山大佛有多高",
+      "score": 0.7369697290945117,
+      "query_ms": 27.15540000008332
+    },
+    {
+      "id": "semantic-pos-013",
+      "kind": "positive",
+      "query": "佛教文化博览馆几点停止参观",
+      "expected_faq_id": "faq_spot_047",
+      "best_faq_id": "faq_spot_047",
+      "best_alias": "佛教文化博览馆开放时间",
+      "score": 0.7713401827694908,
+      "query_ms": 33.98509999988164
+    },
+    {
+      "id": "semantic-pos-014",
+      "kind": "positive",
+      "query": "灵山梵宫在景区的哪个区域",
+      "expected_faq_id": "faq_spot_049",
+      "best_faq_id": "faq_spot_049",
+      "best_alias": "灵山梵宫在哪里",
+      "score": 0.9174441465709321,
+      "query_ms": 26.634299999386712
+    },
+    {
+      "id": "semantic-pos-015",
+      "kind": "positive",
+      "query": "五印坛城里面有什么特色体验",
+      "expected_faq_id": "faq_spot_052",
+      "best_faq_id": "faq_spot_052",
+      "best_alias": "五印坛城有什么亮点",
+      "score": 0.8828162805635483,
+      "query_ms": 24.926399999458226
+    },
+    {
+      "id": "semantic-pos-016",
+      "kind": "positive",
+      "query": "曼飞龙塔的规模和建筑参数",
+      "expected_faq_id": "faq_spot_058",
+      "best_faq_id": "faq_spot_058",
+      "best_alias": "曼飞龙塔建筑参数",
+      "score": 0.9509285225822801,
+      "query_ms": 25.406499999917287
+    },
+    {
+      "id": "semantic-pos-017",
+      "kind": "positive",
+      "query": "无尽意斋下午几点关门",
+      "expected_faq_id": "faq_spot_063",
+      "best_faq_id": "faq_spot_063",
+      "best_alias": "无尽意斋开放时间",
+      "score": 0.8356247424383673,
+      "query_ms": 24.06169999994745
+    },
+    {
+      "id": "semantic-pos-018",
+      "kind": "positive",
+      "query": "拈花广场有什么好玩的内容",
+      "expected_faq_id": "faq_spot_064",
+      "best_faq_id": "faq_spot_064",
+      "best_alias": "拈花广场是什么",
+      "score": 0.8288932660536177,
+      "query_ms": 25.00400000008085
+    },
+    {
+      "id": "semantic-pos-019",
+      "kind": "positive",
+      "query": "五灯湖位于拈花湾什么地方",
+      "expected_faq_id": "faq_spot_081",
+      "best_faq_id": "faq_spot_081",
+      "best_alias": "五灯湖在哪里",
+      "score": 0.7944373708023601,
+      "query_ms": 24.73680000002787
+    },
+    {
+      "id": "semantic-pos-020",
+      "kind": "positive",
+      "query": "鹿鸣谷什么时候可以进去游览",
+      "expected_faq_id": "faq_spot_086",
+      "best_faq_id": "faq_spot_085",
+      "best_alias": "鹿鸣谷在哪里",
+      "score": 0.799739331885706,
+      "query_ms": 34.49819999968895
+    },
+    {
+      "id": "semantic-pos-021",
+      "kind": "positive",
+      "query": "简单介绍一下灵山胜境这个景区",
+      "expected_faq_id": "faq_overview_001",
+      "best_faq_id": "faq_overview_001",
+      "best_alias": "灵山胜境介绍",
+      "score": 0.8681300158740404,
+      "query_ms": 34.95139999995445
+    },
+    {
+      "id": "semantic-pos-022",
+      "kind": "positive",
+      "query": "一年里哪个季节来灵山游玩比较舒服",
+      "expected_faq_id": "faq_tips_001",
+      "best_faq_id": "faq_tips_001",
+      "best_alias": "灵山胜境最佳游览时间",
+      "score": 0.7334271238052982,
+      "query_ms": 29.36260000024049
+    },
+    {
+      "id": "semantic-neg-001",
+      "kind": "negative",
+      "query": "景区卫生间具体在哪里",
+      "best_faq_id": "faq_spot_045",
+      "best_alias": "佛教文化博览馆位置",
+      "score": 0.49612048203891607,
+      "query_ms": 26.14960000028077
+    },
+    {
+      "id": "semantic-neg-002",
+      "kind": "negative",
+      "query": "停车场每小时怎么收费",
+      "best_faq_id": "faq_spot_067",
+      "best_alias": "拈花广场开放时间",
+      "score": 0.4496861341131731,
+      "query_ms": 28.91799999997602
+    },
+    {
+      "id": "semantic-neg-003",
+      "kind": "negative",
+      "query": "今天灵山胜境会不会下雨",
+      "best_faq_id": "faq_tips_001",
+      "best_alias": "灵山胜境什么时候去最好",
+      "score": 0.7124747898562593,
+      "query_ms": 32.01149999949848
+    },
+    {
+      "id": "semantic-neg-004",
+      "kind": "negative",
+      "query": "现在景区门票多少钱一张",
+      "best_faq_id": "faq_overview_001",
+      "best_alias": "灵山胜境是什么景区",
+      "score": 0.47652140899539164,
+      "query_ms": 34.83169999981328
+    },
+    {
+      "id": "semantic-neg-005",
+      "kind": "negative",
+      "query": "从无锡火车站坐哪路公交过来",
+      "best_faq_id": "faq_spot_065",
+      "best_alias": "拈花广场在哪里",
+      "score": 0.37921960259160187,
+      "query_ms": 25.763800000277115
+    },
+    {
+      "id": "semantic-neg-006",
+      "kind": "negative",
+      "query": "今天园区实时客流量有多少",
+      "best_faq_id": "faq_spot_008",
+      "best_alias": "五明桥开放时间",
+      "score": 0.45598942526219693,
+      "query_ms": 30.54139999949257
+    },
+    {
+      "id": "semantic-neg-007",
+      "kind": "negative",
+      "query": "丢了身份证应该去哪里登记",
+      "best_faq_id": "faq_spot_077",
+      "best_alias": "拈花堂在哪里",
+      "score": 0.3837905490477598,
+      "query_ms": 31.602600000042003
+    },
+    {
+      "id": "semantic-neg-008",
+      "kind": "negative",
+      "query": "景区有没有免费无线网络",
+      "best_faq_id": "faq_overview_001",
+      "best_alias": "灵山胜境是什么景区",
+      "score": 0.483059477648283,
+      "query_ms": 25.754700000106823
+    },
+    {
+      "id": "semantic-neg-009",
+      "kind": "negative",
+      "query": "哪里可以租充电宝",
+      "best_faq_id": "faq_spot_081",
+      "best_alias": "五灯湖在哪里",
+      "score": 0.3869974518347738,
+      "query_ms": 24.798999999802618
+    },
+    {
+      "id": "semantic-neg-010",
+      "kind": "negative",
+      "query": "可以带宠物狗进入景区吗",
+      "best_faq_id": "faq_overview_001",
+      "best_alias": "灵山胜境是什么景区",
+      "score": 0.4038417378372436,
+      "query_ms": 26.931899999908637
+    },
+    {
+      "id": "semantic-neg-011",
+      "kind": "negative",
+      "query": "游客受伤后最近的医务室在哪里",
+      "best_faq_id": "faq_spot_022",
+      "best_alias": "九龙灌浴在哪里",
+      "score": 0.41563724355721865,
+      "query_ms": 28.482400000029884
+    },
+    {
+      "id": "semantic-neg-012",
+      "kind": "negative",
+      "query": "帮我查询明天上海的股票行情",
+      "best_faq_id": "faq_spot_007",
+      "best_alias": "五明桥有什么参数",
+      "score": 0.41345304161907526,
+      "query_ms": 32.64630000012403
+    }
+  ]
+}

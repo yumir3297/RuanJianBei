@@ -1,0 +1,2763 @@
+{
+  "mode": "reranker_performance_gate_v1",
+  "testset": "eval/testset/retrieval_test.json",
+  "case_count": 30,
+  "fixed": {
+    "model": "BAAI/bge-reranker-base",
+    "batch_size": 8,
+    "top_k": 5,
+    "device": "cpu"
+  },
+  "retrieval_baseline": {
+    "embedding": {
+      "count": 30,
+      "avg_ms": 20.506323333393084,
+      "p50_ms": 19.329300000208605,
+      "p95_ms": 38.542600000255334,
+      "min_ms": 15.239700000165612,
+      "max_ms": 39.61479999998119
+    },
+    "vector_query": {
+      "count": 30,
+      "avg_ms": 14.436289999866858,
+      "p50_ms": 10.121799999978975,
+      "p95_ms": 15.043499999592314,
+      "min_ms": 8.085899999969115,
+      "max_ms": 131.4699999993536
+    },
+    "record_count": 66
+  },
+  "score_gate_analysis": {
+    "conclusion": "No global score or margin threshold is enabled by this 30-case dataset.",
+    "wrong_top_1": [
+      {
+        "id": "retrieval-016",
+        "raw_hit_at_1": 0.0,
+        "top_1_score": 0.6292324026099401,
+        "top_1_top_2_margin": 0.04304535890632266
+      }
+    ],
+    "correct_score_range": {
+      "min": 0.5413495444197445,
+      "max": 0.7459320450294931
+    },
+    "correct_margin_range": {
+      "min": 0.0008243920905631752,
+      "max": 0.1276187491275882
+    }
+  },
+  "configurations": [
+    {
+      "candidate_k": 5,
+      "top_k": 5,
+      "max_length": 128,
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr": 1.0
+      },
+      "latency_ms": {
+        "count": 30,
+        "avg_ms": 658.8134466666512,
+        "p50_ms": 661.819199999627,
+        "p95_ms": 833.4293999996589,
+        "min_ms": 444.47719999971014,
+        "max_ms": 979.8399999999674
+      },
+      "accuracy_passed": true,
+      "improved_ids": [
+        "retrieval-016"
+      ],
+      "degraded_ids": [],
+      "results": [
+        {
+          "id": "retrieval-001",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "灵山大照壁"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "灵山大照壁",
+          "reranked_top_1": "灵山大照壁",
+          "reranker_ms": 444.47719999971014
+        },
+        {
+          "id": "retrieval-002",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "五明桥"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "五明桥",
+          "reranked_top_1": "五明桥",
+          "reranker_ms": 446.5624000004027
+        },
+        {
+          "id": "retrieval-003",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "佛足坛"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "佛足坛",
+          "reranked_top_1": "佛足坛",
+          "reranker_ms": 793.3786000003238
+        },
+        {
+          "id": "retrieval-004",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "五智门"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "五智门",
+          "reranked_top_1": "五智门",
+          "reranker_ms": 613.6156000002302
+        },
+        {
+          "id": "retrieval-005",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "菩提大道"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "菩提大道",
+          "reranked_top_1": "菩提大道",
+          "reranker_ms": 664.8282000005565
+        },
+        {
+          "id": "retrieval-006",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "九龙灌浴"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "九龙灌浴",
+          "reranked_top_1": "九龙灌浴",
+          "reranker_ms": 517.2111000001678
+        },
+        {
+          "id": "retrieval-007",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "降魔浮雕"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "降魔浮雕",
+          "reranked_top_1": "降魔浮雕",
+          "reranker_ms": 486.41940000015893
+        },
+        {
+          "id": "retrieval-008",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "阿育王柱"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "阿育王柱",
+          "reranked_top_1": "阿育王柱",
+          "reranker_ms": 714.4143999994412
+        },
+        {
+          "id": "retrieval-009",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "百子戏弥勒"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "百子戏弥勒",
+          "reranked_top_1": "百子戏弥勒",
+          "reranker_ms": 634.3216000004759
+        },
+        {
+          "id": "retrieval-010",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "灵山大佛"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "灵山大佛",
+          "reranked_top_1": "灵山大佛",
+          "reranker_ms": 807.5195999999778
+        },
+        {
+          "id": "retrieval-011",
+          "category": "history_culture",
+          "expected_titles": [
+            "小灵山的佛教缘起"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "小灵山的佛教缘起",
+          "reranked_top_1": "小灵山的佛教缘起",
+          "reranker_ms": 619.4728000000396
+        },
+        {
+          "id": "retrieval-012",
+          "category": "history_culture",
+          "expected_titles": [
+            "祥符禅寺的千年兴衰"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "祥符禅寺的千年兴衰",
+          "reranked_top_1": "祥符禅寺的千年兴衰",
+          "reranker_ms": 541.5345000001253
+        },
+        {
+          "id": "retrieval-013",
+          "category": "history_culture",
+          "expected_titles": [
+            "现代灵山胜境的崛起"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "现代灵山胜境的崛起",
+          "reranked_top_1": "现代灵山胜境的崛起",
+          "reranker_ms": 777.9486999997971
+        },
+        {
+          "id": "retrieval-014",
+          "category": "history_culture",
+          "expected_titles": [
+            "佛教文化的深度传承"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "佛教文化的深度传承",
+          "reranked_top_1": "佛教文化的深度传承",
+          "reranker_ms": 833.4293999996589
+        },
+        {
+          "id": "retrieval-015",
+          "category": "history_culture",
+          "expected_titles": [
+            "传统艺术与现代科技的完美融合"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "传统艺术与现代科技的完美融合",
+          "reranked_top_1": "传统艺术与现代科技的完美融合",
+          "reranker_ms": 661.819199999627
+        },
+        {
+          "id": "retrieval-016",
+          "category": "history_culture",
+          "expected_titles": [
+            "祈福文化的特色体验"
+          ],
+          "raw_rank": 2,
+          "reranked_rank": 1,
+          "raw_top_1": "其他特色景点",
+          "reranked_top_1": "祈福文化的特色体验",
+          "reranker_ms": 486.0705000000962
+        },
+        {
+          "id": "retrieval-017",
+          "category": "history_culture",
+          "expected_titles": [
+            "世界佛教文化的交流平台"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "世界佛教文化的交流平台",
+          "reranked_top_1": "世界佛教文化的交流平台",
+          "reranker_ms": 526.2856999997894
+        },
+        {
+          "id": "retrieval-018",
+          "category": "history_culture",
+          "expected_titles": [
+            "景区概况与千年历史渊源"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "景区概况与千年历史渊源",
+          "reranked_top_1": "景区概况与千年历史渊源",
+          "reranker_ms": 785.4053000000931
+        },
+        {
+          "id": "retrieval-019",
+          "category": "architecture_art",
+          "expected_titles": [
+            "灵山梵宫"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "灵山梵宫",
+          "reranked_top_1": "灵山梵宫",
+          "reranker_ms": 743.5656999996354
+        },
+        {
+          "id": "retrieval-020",
+          "category": "architecture_art",
+          "expected_titles": [
+            "五印坛城"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "五印坛城",
+          "reranked_top_1": "五印坛城",
+          "reranker_ms": 979.8399999999674
+        },
+        {
+          "id": "retrieval-021",
+          "category": "architecture_art",
+          "expected_titles": [
+            "曼飞龙塔"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "曼飞龙塔",
+          "reranked_top_1": "曼飞龙塔",
+          "reranker_ms": 749.1018999999142
+        },
+        {
+          "id": "retrieval-022",
+          "category": "architecture_art",
+          "expected_titles": [
+            "无尽意斋"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "无尽意斋",
+          "reranked_top_1": "无尽意斋",
+          "reranker_ms": 689.215499999591
+        },
+        {
+          "id": "retrieval-023",
+          "category": "architecture_art",
+          "expected_titles": [
+            "佛教文化博览馆"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "佛教文化博览馆",
+          "reranked_top_1": "佛教文化博览馆",
+          "reranker_ms": 778.679099999863
+        },
+        {
+          "id": "retrieval-024",
+          "category": "architecture_art",
+          "expected_titles": [
+            "祥符禅寺"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "祥符禅寺",
+          "reranked_top_1": "祥符禅寺",
+          "reranker_ms": 603.5496999993484
+        },
+        {
+          "id": "retrieval-025",
+          "category": "visitor_service",
+          "expected_titles": [
+            "最佳游览时间"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "最佳游览时间",
+          "reranked_top_1": "最佳游览时间",
+          "reranker_ms": 579.4958000005863
+        },
+        {
+          "id": "retrieval-026",
+          "category": "visitor_service",
+          "expected_titles": [
+            "餐饮"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "餐饮",
+          "reranked_top_1": "餐饮",
+          "reranker_ms": 533.7025999997422
+        },
+        {
+          "id": "retrieval-027",
+          "category": "visitor_service",
+          "expected_titles": [
+            "住宿"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "住宿",
+          "reranked_top_1": "住宿",
+          "reranker_ms": 580.4551000001084
+        },
+        {
+          "id": "retrieval-028",
+          "category": "visitor_service",
+          "expected_titles": [
+            "其他实用建议"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "其他实用建议",
+          "reranked_top_1": "其他实用建议",
+          "reranker_ms": 722.5181000003431
+        },
+        {
+          "id": "retrieval-029",
+          "category": "visitor_service",
+          "expected_titles": [
+            "自然风光爱好者路线（5小时全景游）"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "自然风光爱好者路线（5小时全景游）",
+          "reranked_top_1": "自然风光爱好者路线（5小时全景游）",
+          "reranker_ms": 679.5326000001296
+        },
+        {
+          "id": "retrieval-030",
+          "category": "visitor_service",
+          "expected_titles": [
+            "亲子家庭路线（4小时轻松游）"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "亲子家庭路线（4小时轻松游）",
+          "reranked_top_1": "亲子家庭路线（4小时轻松游）",
+          "reranker_ms": 770.0330999996368
+        }
+      ]
+    },
+    {
+      "candidate_k": 5,
+      "top_k": 5,
+      "max_length": 256,
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr": 1.0
+      },
+      "latency_ms": {
+        "count": 30,
+        "avg_ms": 976.8382333333648,
+        "p50_ms": 966.4718000003631,
+        "p95_ms": 1251.2719000005745,
+        "min_ms": 538.6972999995123,
+        "max_ms": 1264.4724000001588
+      },
+      "accuracy_passed": true,
+      "improved_ids": [
+        "retrieval-016"
+      ],
+      "degraded_ids": [],
+      "results": [
+        {
+          "id": "retrieval-001",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "灵山大照壁"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "灵山大照壁",
+          "reranked_top_1": "灵山大照壁",
+          "reranker_ms": 1025.4273999998986
+        },
+        {
+          "id": "retrieval-002",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "五明桥"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "五明桥",
+          "reranked_top_1": "五明桥",
+          "reranker_ms": 1251.2719000005745
+        },
+        {
+          "id": "retrieval-003",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "佛足坛"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "佛足坛",
+          "reranked_top_1": "佛足坛",
+          "reranker_ms": 1159.08170000057
+        },
+        {
+          "id": "retrieval-004",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "五智门"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "五智门",
+          "reranked_top_1": "五智门",
+          "reranker_ms": 1210.157800000161
+        },
+        {
+          "id": "retrieval-005",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "菩提大道"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "菩提大道",
+          "reranked_top_1": "菩提大道",
+          "reranker_ms": 1198.6385000000155
+        },
+        {
+          "id": "retrieval-006",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "九龙灌浴"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "九龙灌浴",
+          "reranked_top_1": "九龙灌浴",
+          "reranker_ms": 962.0757000002413
+        },
+        {
+          "id": "retrieval-007",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "降魔浮雕"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "降魔浮雕",
+          "reranked_top_1": "降魔浮雕",
+          "reranker_ms": 970.9710999995878
+        },
+        {
+          "id": "retrieval-008",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "阿育王柱"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "阿育王柱",
+          "reranked_top_1": "阿育王柱",
+          "reranker_ms": 1165.8270999996603
+        },
+        {
+          "id": "retrieval-009",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "百子戏弥勒"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "百子戏弥勒",
+          "reranked_top_1": "百子戏弥勒",
+          "reranker_ms": 1164.4667999999
+        },
+        {
+          "id": "retrieval-010",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "灵山大佛"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "灵山大佛",
+          "reranked_top_1": "灵山大佛",
+          "reranker_ms": 989.8698999995759
+        },
+        {
+          "id": "retrieval-011",
+          "category": "history_culture",
+          "expected_titles": [
+            "小灵山的佛教缘起"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "小灵山的佛教缘起",
+          "reranked_top_1": "小灵山的佛教缘起",
+          "reranker_ms": 1003.964200000155
+        },
+        {
+          "id": "retrieval-012",
+          "category": "history_culture",
+          "expected_titles": [
+            "祥符禅寺的千年兴衰"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "祥符禅寺的千年兴衰",
+          "reranked_top_1": "祥符禅寺的千年兴衰",
+          "reranker_ms": 1264.4724000001588
+        },
+        {
+          "id": "retrieval-013",
+          "category": "history_culture",
+          "expected_titles": [
+            "现代灵山胜境的崛起"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "现代灵山胜境的崛起",
+          "reranked_top_1": "现代灵山胜境的崛起",
+          "reranker_ms": 966.4718000003631
+        },
+        {
+          "id": "retrieval-014",
+          "category": "history_culture",
+          "expected_titles": [
+            "佛教文化的深度传承"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "佛教文化的深度传承",
+          "reranked_top_1": "佛教文化的深度传承",
+          "reranker_ms": 945.0661999999284
+        },
+        {
+          "id": "retrieval-015",
+          "category": "history_culture",
+          "expected_titles": [
+            "传统艺术与现代科技的完美融合"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "传统艺术与现代科技的完美融合",
+          "reranked_top_1": "传统艺术与现代科技的完美融合",
+          "reranker_ms": 1027.1350000002712
+        },
+        {
+          "id": "retrieval-016",
+          "category": "history_culture",
+          "expected_titles": [
+            "祈福文化的特色体验"
+          ],
+          "raw_rank": 2,
+          "reranked_rank": 1,
+          "raw_top_1": "其他特色景点",
+          "reranked_top_1": "祈福文化的特色体验",
+          "reranker_ms": 909.722100000181
+        },
+        {
+          "id": "retrieval-017",
+          "category": "history_culture",
+          "expected_titles": [
+            "世界佛教文化的交流平台"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "世界佛教文化的交流平台",
+          "reranked_top_1": "世界佛教文化的交流平台",
+          "reranker_ms": 932.9555999993318
+        },
+        {
+          "id": "retrieval-018",
+          "category": "history_culture",
+          "expected_titles": [
+            "景区概况与千年历史渊源"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "景区概况与千年历史渊源",
+          "reranked_top_1": "景区概况与千年历史渊源",
+          "reranker_ms": 918.0248000002393
+        },
+        {
+          "id": "retrieval-019",
+          "category": "architecture_art",
+          "expected_titles": [
+            "灵山梵宫"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "灵山梵宫",
+          "reranked_top_1": "灵山梵宫",
+          "reranker_ms": 1029.3423000002804
+        },
+        {
+          "id": "retrieval-020",
+          "category": "architecture_art",
+          "expected_titles": [
+            "五印坛城"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "五印坛城",
+          "reranked_top_1": "五印坛城",
+          "reranker_ms": 921.9640999999683
+        },
+        {
+          "id": "retrieval-021",
+          "category": "architecture_art",
+          "expected_titles": [
+            "曼飞龙塔"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "曼飞龙塔",
+          "reranked_top_1": "曼飞龙塔",
+          "reranker_ms": 967.0031999994535
+        },
+        {
+          "id": "retrieval-022",
+          "category": "architecture_art",
+          "expected_titles": [
+            "无尽意斋"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "无尽意斋",
+          "reranked_top_1": "无尽意斋",
+          "reranker_ms": 1001.0583000002953
+        },
+        {
+          "id": "retrieval-023",
+          "category": "architecture_art",
+          "expected_titles": [
+            "佛教文化博览馆"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "佛教文化博览馆",
+          "reranked_top_1": "佛教文化博览馆",
+          "reranker_ms": 892.0327999994697
+        },
+        {
+          "id": "retrieval-024",
+          "category": "architecture_art",
+          "expected_titles": [
+            "祥符禅寺"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "祥符禅寺",
+          "reranked_top_1": "祥符禅寺",
+          "reranker_ms": 779.5387999995
+        },
+        {
+          "id": "retrieval-025",
+          "category": "visitor_service",
+          "expected_titles": [
+            "最佳游览时间"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "最佳游览时间",
+          "reranked_top_1": "最佳游览时间",
+          "reranker_ms": 835.1396000007298
+        },
+        {
+          "id": "retrieval-026",
+          "category": "visitor_service",
+          "expected_titles": [
+            "餐饮"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "餐饮",
+          "reranked_top_1": "餐饮",
+          "reranker_ms": 880.3542000005109
+        },
+        {
+          "id": "retrieval-027",
+          "category": "visitor_service",
+          "expected_titles": [
+            "住宿"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "住宿",
+          "reranked_top_1": "住宿",
+          "reranker_ms": 780.9984000004988
+        },
+        {
+          "id": "retrieval-028",
+          "category": "visitor_service",
+          "expected_titles": [
+            "其他实用建议"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "其他实用建议",
+          "reranked_top_1": "其他实用建议",
+          "reranker_ms": 808.3539999997811
+        },
+        {
+          "id": "retrieval-029",
+          "category": "visitor_service",
+          "expected_titles": [
+            "自然风光爱好者路线（5小时全景游）"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "自然风光爱好者路线（5小时全景游）",
+          "reranked_top_1": "自然风光爱好者路线（5小时全景游）",
+          "reranker_ms": 538.6972999995123
+        },
+        {
+          "id": "retrieval-030",
+          "category": "visitor_service",
+          "expected_titles": [
+            "亲子家庭路线（4小时轻松游）"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "亲子家庭路线（4小时轻松游）",
+          "reranked_top_1": "亲子家庭路线（4小时轻松游）",
+          "reranker_ms": 805.0640000001295
+        }
+      ]
+    },
+    {
+      "candidate_k": 8,
+      "top_k": 5,
+      "max_length": 256,
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr": 1.0
+      },
+      "latency_ms": {
+        "count": 30,
+        "avg_ms": 1510.5884699998871,
+        "p50_ms": 1456.949500000519,
+        "p95_ms": 1911.6400999992038,
+        "min_ms": 1232.669099999839,
+        "max_ms": 1988.8218999994933
+      },
+      "accuracy_passed": true,
+      "improved_ids": [
+        "retrieval-016"
+      ],
+      "degraded_ids": [],
+      "results": [
+        {
+          "id": "retrieval-001",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "灵山大照壁"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "灵山大照壁",
+          "reranked_top_1": "灵山大照壁",
+          "reranker_ms": 1280.1645999998073
+        },
+        {
+          "id": "retrieval-002",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "五明桥"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "五明桥",
+          "reranked_top_1": "五明桥",
+          "reranker_ms": 1232.669099999839
+        },
+        {
+          "id": "retrieval-003",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "佛足坛"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "佛足坛",
+          "reranked_top_1": "佛足坛",
+          "reranker_ms": 1325.3992999998445
+        },
+        {
+          "id": "retrieval-004",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "五智门"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "五智门",
+          "reranked_top_1": "五智门",
+          "reranker_ms": 1248.0469000001904
+        },
+        {
+          "id": "retrieval-005",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "菩提大道"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "菩提大道",
+          "reranked_top_1": "菩提大道",
+          "reranker_ms": 1271.6786999999385
+        },
+        {
+          "id": "retrieval-006",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "九龙灌浴"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "九龙灌浴",
+          "reranked_top_1": "九龙灌浴",
+          "reranker_ms": 1377.0839999997406
+        },
+        {
+          "id": "retrieval-007",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "降魔浮雕"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "降魔浮雕",
+          "reranked_top_1": "降魔浮雕",
+          "reranker_ms": 1442.3123999995369
+        },
+        {
+          "id": "retrieval-008",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "阿育王柱"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "阿育王柱",
+          "reranked_top_1": "阿育王柱",
+          "reranker_ms": 1254.6328999997058
+        },
+        {
+          "id": "retrieval-009",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "百子戏弥勒"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "百子戏弥勒",
+          "reranked_top_1": "百子戏弥勒",
+          "reranker_ms": 1406.0169999993377
+        },
+        {
+          "id": "retrieval-010",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "灵山大佛"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "灵山大佛",
+          "reranked_top_1": "灵山大佛",
+          "reranker_ms": 1456.949500000519
+        },
+        {
+          "id": "retrieval-011",
+          "category": "history_culture",
+          "expected_titles": [
+            "小灵山的佛教缘起"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "小灵山的佛教缘起",
+          "reranked_top_1": "小灵山的佛教缘起",
+          "reranker_ms": 1406.863500000327
+        },
+        {
+          "id": "retrieval-012",
+          "category": "history_culture",
+          "expected_titles": [
+            "祥符禅寺的千年兴衰"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "祥符禅寺的千年兴衰",
+          "reranked_top_1": "祥符禅寺的千年兴衰",
+          "reranker_ms": 1351.300899999842
+        },
+        {
+          "id": "retrieval-013",
+          "category": "history_culture",
+          "expected_titles": [
+            "现代灵山胜境的崛起"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "现代灵山胜境的崛起",
+          "reranked_top_1": "现代灵山胜境的崛起",
+          "reranker_ms": 1617.8199999994831
+        },
+        {
+          "id": "retrieval-014",
+          "category": "history_culture",
+          "expected_titles": [
+            "佛教文化的深度传承"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "佛教文化的深度传承",
+          "reranked_top_1": "佛教文化的深度传承",
+          "reranker_ms": 1562.376499999118
+        },
+        {
+          "id": "retrieval-015",
+          "category": "history_culture",
+          "expected_titles": [
+            "传统艺术与现代科技的完美融合"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "传统艺术与现代科技的完美融合",
+          "reranked_top_1": "传统艺术与现代科技的完美融合",
+          "reranker_ms": 1821.231699999771
+        },
+        {
+          "id": "retrieval-016",
+          "category": "history_culture",
+          "expected_titles": [
+            "祈福文化的特色体验"
+          ],
+          "raw_rank": 2,
+          "reranked_rank": 1,
+          "raw_top_1": "其他特色景点",
+          "reranked_top_1": "祈福文化的特色体验",
+          "reranker_ms": 1911.6400999992038
+        },
+        {
+          "id": "retrieval-017",
+          "category": "history_culture",
+          "expected_titles": [
+            "世界佛教文化的交流平台"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "世界佛教文化的交流平台",
+          "reranked_top_1": "世界佛教文化的交流平台",
+          "reranker_ms": 1549.413700000514
+        },
+        {
+          "id": "retrieval-018",
+          "category": "history_culture",
+          "expected_titles": [
+            "景区概况与千年历史渊源"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "景区概况与千年历史渊源",
+          "reranked_top_1": "景区概况与千年历史渊源",
+          "reranker_ms": 1988.8218999994933
+        },
+        {
+          "id": "retrieval-019",
+          "category": "architecture_art",
+          "expected_titles": [
+            "灵山梵宫"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "灵山梵宫",
+          "reranked_top_1": "灵山梵宫",
+          "reranker_ms": 1730.3977999999915
+        },
+        {
+          "id": "retrieval-020",
+          "category": "architecture_art",
+          "expected_titles": [
+            "五印坛城"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "五印坛城",
+          "reranked_top_1": "五印坛城",
+          "reranker_ms": 1803.3525999999256
+        },
+        {
+          "id": "retrieval-021",
+          "category": "architecture_art",
+          "expected_titles": [
+            "曼飞龙塔"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "曼飞龙塔",
+          "reranked_top_1": "曼飞龙塔",
+          "reranker_ms": 1842.931099999987
+        },
+        {
+          "id": "retrieval-022",
+          "category": "architecture_art",
+          "expected_titles": [
+            "无尽意斋"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "无尽意斋",
+          "reranked_top_1": "无尽意斋",
+          "reranker_ms": 1544.366600000103
+        },
+        {
+          "id": "retrieval-023",
+          "category": "architecture_art",
+          "expected_titles": [
+            "佛教文化博览馆"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "佛教文化博览馆",
+          "reranked_top_1": "佛教文化博览馆",
+          "reranker_ms": 1433.8709000003291
+        },
+        {
+          "id": "retrieval-024",
+          "category": "architecture_art",
+          "expected_titles": [
+            "祥符禅寺"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "祥符禅寺",
+          "reranked_top_1": "祥符禅寺",
+          "reranker_ms": 1617.6887999999963
+        },
+        {
+          "id": "retrieval-025",
+          "category": "visitor_service",
+          "expected_titles": [
+            "最佳游览时间"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "最佳游览时间",
+          "reranked_top_1": "最佳游览时间",
+          "reranker_ms": 1517.7239000004192
+        },
+        {
+          "id": "retrieval-026",
+          "category": "visitor_service",
+          "expected_titles": [
+            "餐饮"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "餐饮",
+          "reranked_top_1": "餐饮",
+          "reranker_ms": 1307.8488999999536
+        },
+        {
+          "id": "retrieval-027",
+          "category": "visitor_service",
+          "expected_titles": [
+            "住宿"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "住宿",
+          "reranked_top_1": "住宿",
+          "reranker_ms": 1307.59930000022
+        },
+        {
+          "id": "retrieval-028",
+          "category": "visitor_service",
+          "expected_titles": [
+            "其他实用建议"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "其他实用建议",
+          "reranked_top_1": "其他实用建议",
+          "reranker_ms": 1519.0653999998176
+        },
+        {
+          "id": "retrieval-029",
+          "category": "visitor_service",
+          "expected_titles": [
+            "自然风光爱好者路线（5小时全景游）"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "自然风光爱好者路线（5小时全景游）",
+          "reranked_top_1": "自然风光爱好者路线（5小时全景游）",
+          "reranker_ms": 1622.795899999801
+        },
+        {
+          "id": "retrieval-030",
+          "category": "visitor_service",
+          "expected_titles": [
+            "亲子家庭路线（4小时轻松游）"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "亲子家庭路线（4小时轻松游）",
+          "reranked_top_1": "亲子家庭路线（4小时轻松游）",
+          "reranker_ms": 1565.5901999998605
+        }
+      ]
+    },
+    {
+      "candidate_k": 10,
+      "top_k": 5,
+      "max_length": 256,
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr": 1.0
+      },
+      "latency_ms": {
+        "count": 30,
+        "avg_ms": 2015.828373333352,
+        "p50_ms": 2025.3297999997812,
+        "p95_ms": 2630.030899999838,
+        "min_ms": 1461.0549999997602,
+        "max_ms": 2936.160100000052
+      },
+      "accuracy_passed": true,
+      "improved_ids": [
+        "retrieval-016"
+      ],
+      "degraded_ids": [],
+      "results": [
+        {
+          "id": "retrieval-001",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "灵山大照壁"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "灵山大照壁",
+          "reranked_top_1": "灵山大照壁",
+          "reranker_ms": 1908.6041000000478
+        },
+        {
+          "id": "retrieval-002",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "五明桥"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "五明桥",
+          "reranked_top_1": "五明桥",
+          "reranker_ms": 1759.3502999998236
+        },
+        {
+          "id": "retrieval-003",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "佛足坛"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "佛足坛",
+          "reranked_top_1": "佛足坛",
+          "reranker_ms": 1746.686800000134
+        },
+        {
+          "id": "retrieval-004",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "五智门"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "五智门",
+          "reranked_top_1": "五智门",
+          "reranker_ms": 2027.1818999999596
+        },
+        {
+          "id": "retrieval-005",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "菩提大道"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "菩提大道",
+          "reranked_top_1": "菩提大道",
+          "reranker_ms": 2055.888899999445
+        },
+        {
+          "id": "retrieval-006",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "九龙灌浴"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "九龙灌浴",
+          "reranked_top_1": "九龙灌浴",
+          "reranker_ms": 2110.436099999788
+        },
+        {
+          "id": "retrieval-007",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "降魔浮雕"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "降魔浮雕",
+          "reranked_top_1": "降魔浮雕",
+          "reranker_ms": 2134.913800000504
+        },
+        {
+          "id": "retrieval-008",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "阿育王柱"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "阿育王柱",
+          "reranked_top_1": "阿育王柱",
+          "reranker_ms": 2087.83990000029
+        },
+        {
+          "id": "retrieval-009",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "百子戏弥勒"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "百子戏弥勒",
+          "reranked_top_1": "百子戏弥勒",
+          "reranker_ms": 1983.0464000006032
+        },
+        {
+          "id": "retrieval-010",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "灵山大佛"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "灵山大佛",
+          "reranked_top_1": "灵山大佛",
+          "reranker_ms": 2305.992300000071
+        },
+        {
+          "id": "retrieval-011",
+          "category": "history_culture",
+          "expected_titles": [
+            "小灵山的佛教缘起"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "小灵山的佛教缘起",
+          "reranked_top_1": "小灵山的佛教缘起",
+          "reranker_ms": 2045.419000000038
+        },
+        {
+          "id": "retrieval-012",
+          "category": "history_culture",
+          "expected_titles": [
+            "祥符禅寺的千年兴衰"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "祥符禅寺的千年兴衰",
+          "reranked_top_1": "祥符禅寺的千年兴衰",
+          "reranker_ms": 1808.9528000000428
+        },
+        {
+          "id": "retrieval-013",
+          "category": "history_culture",
+          "expected_titles": [
+            "现代灵山胜境的崛起"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "现代灵山胜境的崛起",
+          "reranked_top_1": "现代灵山胜境的崛起",
+          "reranker_ms": 2426.9000999993295
+        },
+        {
+          "id": "retrieval-014",
+          "category": "history_culture",
+          "expected_titles": [
+            "佛教文化的深度传承"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "佛教文化的深度传承",
+          "reranked_top_1": "佛教文化的深度传承",
+          "reranker_ms": 2386.7636000004495
+        },
+        {
+          "id": "retrieval-015",
+          "category": "history_culture",
+          "expected_titles": [
+            "传统艺术与现代科技的完美融合"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "传统艺术与现代科技的完美融合",
+          "reranked_top_1": "传统艺术与现代科技的完美融合",
+          "reranker_ms": 2119.7431000000506
+        },
+        {
+          "id": "retrieval-016",
+          "category": "history_culture",
+          "expected_titles": [
+            "祈福文化的特色体验"
+          ],
+          "raw_rank": 2,
+          "reranked_rank": 1,
+          "raw_top_1": "其他特色景点",
+          "reranked_top_1": "祈福文化的特色体验",
+          "reranker_ms": 2501.206599999932
+        },
+        {
+          "id": "retrieval-017",
+          "category": "history_culture",
+          "expected_titles": [
+            "世界佛教文化的交流平台"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "世界佛教文化的交流平台",
+          "reranked_top_1": "世界佛教文化的交流平台",
+          "reranker_ms": 1800.3789000003962
+        },
+        {
+          "id": "retrieval-018",
+          "category": "history_culture",
+          "expected_titles": [
+            "景区概况与千年历史渊源"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "景区概况与千年历史渊源",
+          "reranked_top_1": "景区概况与千年历史渊源",
+          "reranker_ms": 2212.547600000107
+        },
+        {
+          "id": "retrieval-019",
+          "category": "architecture_art",
+          "expected_titles": [
+            "灵山梵宫"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "灵山梵宫",
+          "reranked_top_1": "灵山梵宫",
+          "reranker_ms": 2630.030899999838
+        },
+        {
+          "id": "retrieval-020",
+          "category": "architecture_art",
+          "expected_titles": [
+            "五印坛城"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "五印坛城",
+          "reranked_top_1": "五印坛城",
+          "reranker_ms": 2936.160100000052
+        },
+        {
+          "id": "retrieval-021",
+          "category": "architecture_art",
+          "expected_titles": [
+            "曼飞龙塔"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "曼飞龙塔",
+          "reranked_top_1": "曼飞龙塔",
+          "reranker_ms": 2145.181599999887
+        },
+        {
+          "id": "retrieval-022",
+          "category": "architecture_art",
+          "expected_titles": [
+            "无尽意斋"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "无尽意斋",
+          "reranked_top_1": "无尽意斋",
+          "reranker_ms": 2025.3297999997812
+        },
+        {
+          "id": "retrieval-023",
+          "category": "architecture_art",
+          "expected_titles": [
+            "佛教文化博览馆"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "佛教文化博览馆",
+          "reranked_top_1": "佛教文化博览馆",
+          "reranker_ms": 1745.6692000005205
+        },
+        {
+          "id": "retrieval-024",
+          "category": "architecture_art",
+          "expected_titles": [
+            "祥符禅寺"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "祥符禅寺",
+          "reranked_top_1": "祥符禅寺",
+          "reranker_ms": 1863.9646000001449
+        },
+        {
+          "id": "retrieval-025",
+          "category": "visitor_service",
+          "expected_titles": [
+            "最佳游览时间"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "最佳游览时间",
+          "reranked_top_1": "最佳游览时间",
+          "reranker_ms": 1555.903099999341
+        },
+        {
+          "id": "retrieval-026",
+          "category": "visitor_service",
+          "expected_titles": [
+            "餐饮"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "餐饮",
+          "reranked_top_1": "餐饮",
+          "reranker_ms": 1762.7598999997645
+        },
+        {
+          "id": "retrieval-027",
+          "category": "visitor_service",
+          "expected_titles": [
+            "住宿"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "住宿",
+          "reranked_top_1": "住宿",
+          "reranker_ms": 1610.2124999997613
+        },
+        {
+          "id": "retrieval-028",
+          "category": "visitor_service",
+          "expected_titles": [
+            "其他实用建议"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "其他实用建议",
+          "reranked_top_1": "其他实用建议",
+          "reranker_ms": 1649.4515000003958
+        },
+        {
+          "id": "retrieval-029",
+          "category": "visitor_service",
+          "expected_titles": [
+            "自然风光爱好者路线（5小时全景游）"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "自然风光爱好者路线（5小时全景游）",
+          "reranked_top_1": "自然风光爱好者路线（5小时全景游）",
+          "reranker_ms": 1667.2808000002988
+        },
+        {
+          "id": "retrieval-030",
+          "category": "visitor_service",
+          "expected_titles": [
+            "亲子家庭路线（4小时轻松游）"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "亲子家庭路线（4小时轻松游）",
+          "reranked_top_1": "亲子家庭路线（4小时轻松游）",
+          "reranker_ms": 1461.0549999997602
+        }
+      ]
+    },
+    {
+      "candidate_k": 5,
+      "top_k": 5,
+      "max_length": 512,
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr": 1.0
+      },
+      "latency_ms": {
+        "count": 30,
+        "avg_ms": 1355.1019833332248,
+        "p50_ms": 1455.5921000001035,
+        "p95_ms": 1660.695300000043,
+        "min_ms": 583.8411999993696,
+        "max_ms": 1679.6236000000135
+      },
+      "accuracy_passed": true,
+      "improved_ids": [
+        "retrieval-016"
+      ],
+      "degraded_ids": [],
+      "results": [
+        {
+          "id": "retrieval-001",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "灵山大照壁"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "灵山大照壁",
+          "reranked_top_1": "灵山大照壁",
+          "reranker_ms": 1455.5921000001035
+        },
+        {
+          "id": "retrieval-002",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "五明桥"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "五明桥",
+          "reranked_top_1": "五明桥",
+          "reranker_ms": 1541.3353000003553
+        },
+        {
+          "id": "retrieval-003",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "佛足坛"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "佛足坛",
+          "reranked_top_1": "佛足坛",
+          "reranker_ms": 1679.6236000000135
+        },
+        {
+          "id": "retrieval-004",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "五智门"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "五智门",
+          "reranked_top_1": "五智门",
+          "reranker_ms": 1600.5325000005541
+        },
+        {
+          "id": "retrieval-005",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "菩提大道"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "菩提大道",
+          "reranked_top_1": "菩提大道",
+          "reranker_ms": 1573.4449000001405
+        },
+        {
+          "id": "retrieval-006",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "九龙灌浴"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "九龙灌浴",
+          "reranked_top_1": "九龙灌浴",
+          "reranker_ms": 1527.8987000001507
+        },
+        {
+          "id": "retrieval-007",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "降魔浮雕"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "降魔浮雕",
+          "reranked_top_1": "降魔浮雕",
+          "reranker_ms": 1443.38499999958
+        },
+        {
+          "id": "retrieval-008",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "阿育王柱"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "阿育王柱",
+          "reranked_top_1": "阿育王柱",
+          "reranker_ms": 1394.8985999995784
+        },
+        {
+          "id": "retrieval-009",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "百子戏弥勒"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "百子戏弥勒",
+          "reranked_top_1": "百子戏弥勒",
+          "reranker_ms": 1386.6215999996712
+        },
+        {
+          "id": "retrieval-010",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "灵山大佛"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "灵山大佛",
+          "reranked_top_1": "灵山大佛",
+          "reranker_ms": 1502.9025999992882
+        },
+        {
+          "id": "retrieval-011",
+          "category": "history_culture",
+          "expected_titles": [
+            "小灵山的佛教缘起"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "小灵山的佛教缘起",
+          "reranked_top_1": "小灵山的佛教缘起",
+          "reranker_ms": 818.8614999999118
+        },
+        {
+          "id": "retrieval-012",
+          "category": "history_culture",
+          "expected_titles": [
+            "祥符禅寺的千年兴衰"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "祥符禅寺的千年兴衰",
+          "reranked_top_1": "祥符禅寺的千年兴衰",
+          "reranker_ms": 1475.340399999368
+        },
+        {
+          "id": "retrieval-013",
+          "category": "history_culture",
+          "expected_titles": [
+            "现代灵山胜境的崛起"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "现代灵山胜境的崛起",
+          "reranked_top_1": "现代灵山胜境的崛起",
+          "reranker_ms": 1330.150699999649
+        },
+        {
+          "id": "retrieval-014",
+          "category": "history_culture",
+          "expected_titles": [
+            "佛教文化的深度传承"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "佛教文化的深度传承",
+          "reranked_top_1": "佛教文化的深度传承",
+          "reranker_ms": 1495.8593000001201
+        },
+        {
+          "id": "retrieval-015",
+          "category": "history_culture",
+          "expected_titles": [
+            "传统艺术与现代科技的完美融合"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "传统艺术与现代科技的完美融合",
+          "reranked_top_1": "传统艺术与现代科技的完美融合",
+          "reranker_ms": 1364.0642999998818
+        },
+        {
+          "id": "retrieval-016",
+          "category": "history_culture",
+          "expected_titles": [
+            "祈福文化的特色体验"
+          ],
+          "raw_rank": 2,
+          "reranked_rank": 1,
+          "raw_top_1": "其他特色景点",
+          "reranked_top_1": "祈福文化的特色体验",
+          "reranker_ms": 1483.9919000005466
+        },
+        {
+          "id": "retrieval-017",
+          "category": "history_culture",
+          "expected_titles": [
+            "世界佛教文化的交流平台"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "世界佛教文化的交流平台",
+          "reranked_top_1": "世界佛教文化的交流平台",
+          "reranker_ms": 1211.666399999558
+        },
+        {
+          "id": "retrieval-018",
+          "category": "history_culture",
+          "expected_titles": [
+            "景区概况与千年历史渊源"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "景区概况与千年历史渊源",
+          "reranked_top_1": "景区概况与千年历史渊源",
+          "reranker_ms": 791.6305999997348
+        },
+        {
+          "id": "retrieval-019",
+          "category": "architecture_art",
+          "expected_titles": [
+            "灵山梵宫"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "灵山梵宫",
+          "reranked_top_1": "灵山梵宫",
+          "reranker_ms": 1562.0779000000766
+        },
+        {
+          "id": "retrieval-020",
+          "category": "architecture_art",
+          "expected_titles": [
+            "五印坛城"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "五印坛城",
+          "reranked_top_1": "五印坛城",
+          "reranker_ms": 1573.2327999994595
+        },
+        {
+          "id": "retrieval-021",
+          "category": "architecture_art",
+          "expected_titles": [
+            "曼飞龙塔"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "曼飞龙塔",
+          "reranked_top_1": "曼飞龙塔",
+          "reranker_ms": 1521.4991000002556
+        },
+        {
+          "id": "retrieval-022",
+          "category": "architecture_art",
+          "expected_titles": [
+            "无尽意斋"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "无尽意斋",
+          "reranked_top_1": "无尽意斋",
+          "reranker_ms": 1660.695300000043
+        },
+        {
+          "id": "retrieval-023",
+          "category": "architecture_art",
+          "expected_titles": [
+            "佛教文化博览馆"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "佛教文化博览馆",
+          "reranked_top_1": "佛教文化博览馆",
+          "reranker_ms": 1307.0384999991802
+        },
+        {
+          "id": "retrieval-024",
+          "category": "architecture_art",
+          "expected_titles": [
+            "祥符禅寺"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "祥符禅寺",
+          "reranked_top_1": "祥符禅寺",
+          "reranker_ms": 1554.0086999999403
+        },
+        {
+          "id": "retrieval-025",
+          "category": "visitor_service",
+          "expected_titles": [
+            "最佳游览时间"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "最佳游览时间",
+          "reranked_top_1": "最佳游览时间",
+          "reranker_ms": 971.3541999999507
+        },
+        {
+          "id": "retrieval-026",
+          "category": "visitor_service",
+          "expected_titles": [
+            "餐饮"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "餐饮",
+          "reranked_top_1": "餐饮",
+          "reranker_ms": 1335.6092999993052
+        },
+        {
+          "id": "retrieval-027",
+          "category": "visitor_service",
+          "expected_titles": [
+            "住宿"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "住宿",
+          "reranked_top_1": "住宿",
+          "reranker_ms": 1601.8626000004588
+        },
+        {
+          "id": "retrieval-028",
+          "category": "visitor_service",
+          "expected_titles": [
+            "其他实用建议"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "其他实用建议",
+          "reranked_top_1": "其他实用建议",
+          "reranker_ms": 968.4848000006241
+        },
+        {
+          "id": "retrieval-029",
+          "category": "visitor_service",
+          "expected_titles": [
+            "自然风光爱好者路线（5小时全景游）"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "自然风光爱好者路线（5小时全景游）",
+          "reranked_top_1": "自然风光爱好者路线（5小时全景游）",
+          "reranker_ms": 583.8411999993696
+        },
+        {
+          "id": "retrieval-030",
+          "category": "visitor_service",
+          "expected_titles": [
+            "亲子家庭路线（4小时轻松游）"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "亲子家庭路线（4小时轻松游）",
+          "reranked_top_1": "亲子家庭路线（4小时轻松游）",
+          "reranker_ms": 935.5550999998741
+        }
+      ]
+    },
+    {
+      "candidate_k": 8,
+      "top_k": 5,
+      "max_length": 512,
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr": 1.0
+      },
+      "latency_ms": {
+        "count": 30,
+        "avg_ms": 2272.7119500000304,
+        "p50_ms": 2101.1971999996604,
+        "p95_ms": 3245.9683000006407,
+        "min_ms": 1100.4207000005408,
+        "max_ms": 3271.036699999968
+      },
+      "accuracy_passed": true,
+      "improved_ids": [
+        "retrieval-016"
+      ],
+      "degraded_ids": [],
+      "results": [
+        {
+          "id": "retrieval-001",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "灵山大照壁"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "灵山大照壁",
+          "reranked_top_1": "灵山大照壁",
+          "reranker_ms": 2623.652100000072
+        },
+        {
+          "id": "retrieval-002",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "五明桥"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "五明桥",
+          "reranked_top_1": "五明桥",
+          "reranker_ms": 2548.630399999638
+        },
+        {
+          "id": "retrieval-003",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "佛足坛"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "佛足坛",
+          "reranked_top_1": "佛足坛",
+          "reranker_ms": 2807.026099999348
+        },
+        {
+          "id": "retrieval-004",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "五智门"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "五智门",
+          "reranked_top_1": "五智门",
+          "reranker_ms": 3245.9683000006407
+        },
+        {
+          "id": "retrieval-005",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "菩提大道"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "菩提大道",
+          "reranked_top_1": "菩提大道",
+          "reranker_ms": 2863.3583999999246
+        },
+        {
+          "id": "retrieval-006",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "九龙灌浴"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "九龙灌浴",
+          "reranked_top_1": "九龙灌浴",
+          "reranker_ms": 2545.7792999995945
+        },
+        {
+          "id": "retrieval-007",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "降魔浮雕"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "降魔浮雕",
+          "reranked_top_1": "降魔浮雕",
+          "reranker_ms": 2804.898399999729
+        },
+        {
+          "id": "retrieval-008",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "阿育王柱"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "阿育王柱",
+          "reranked_top_1": "阿育王柱",
+          "reranker_ms": 3271.036699999968
+        },
+        {
+          "id": "retrieval-009",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "百子戏弥勒"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "百子戏弥勒",
+          "reranked_top_1": "百子戏弥勒",
+          "reranker_ms": 2984.6270999996705
+        },
+        {
+          "id": "retrieval-010",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "灵山大佛"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "灵山大佛",
+          "reranked_top_1": "灵山大佛",
+          "reranker_ms": 2695.675300000403
+        },
+        {
+          "id": "retrieval-011",
+          "category": "history_culture",
+          "expected_titles": [
+            "小灵山的佛教缘起"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "小灵山的佛教缘起",
+          "reranked_top_1": "小灵山的佛教缘起",
+          "reranker_ms": 2591.070999999829
+        },
+        {
+          "id": "retrieval-012",
+          "category": "history_culture",
+          "expected_titles": [
+            "祥符禅寺的千年兴衰"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "祥符禅寺的千年兴衰",
+          "reranked_top_1": "祥符禅寺的千年兴衰",
+          "reranker_ms": 2306.6962000002604
+        },
+        {
+          "id": "retrieval-013",
+          "category": "history_culture",
+          "expected_titles": [
+            "现代灵山胜境的崛起"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "现代灵山胜境的崛起",
+          "reranked_top_1": "现代灵山胜境的崛起",
+          "reranker_ms": 2067.0890000001236
+        },
+        {
+          "id": "retrieval-014",
+          "category": "history_culture",
+          "expected_titles": [
+            "佛教文化的深度传承"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "佛教文化的深度传承",
+          "reranked_top_1": "佛教文化的深度传承",
+          "reranker_ms": 2023.6617000000479
+        },
+        {
+          "id": "retrieval-015",
+          "category": "history_culture",
+          "expected_titles": [
+            "传统艺术与现代科技的完美融合"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "传统艺术与现代科技的完美融合",
+          "reranked_top_1": "传统艺术与现代科技的完美融合",
+          "reranker_ms": 1848.4628000005614
+        },
+        {
+          "id": "retrieval-016",
+          "category": "history_culture",
+          "expected_titles": [
+            "祈福文化的特色体验"
+          ],
+          "raw_rank": 2,
+          "reranked_rank": 1,
+          "raw_top_1": "其他特色景点",
+          "reranked_top_1": "祈福文化的特色体验",
+          "reranker_ms": 1923.5955999993166
+        },
+        {
+          "id": "retrieval-017",
+          "category": "history_culture",
+          "expected_titles": [
+            "世界佛教文化的交流平台"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "世界佛教文化的交流平台",
+          "reranked_top_1": "世界佛教文化的交流平台",
+          "reranker_ms": 2058.564599999954
+        },
+        {
+          "id": "retrieval-018",
+          "category": "history_culture",
+          "expected_titles": [
+            "景区概况与千年历史渊源"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "景区概况与千年历史渊源",
+          "reranked_top_1": "景区概况与千年历史渊源",
+          "reranker_ms": 2168.4033999999883
+        },
+        {
+          "id": "retrieval-019",
+          "category": "architecture_art",
+          "expected_titles": [
+            "灵山梵宫"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "灵山梵宫",
+          "reranked_top_1": "灵山梵宫",
+          "reranker_ms": 2267.3845999997866
+        },
+        {
+          "id": "retrieval-020",
+          "category": "architecture_art",
+          "expected_titles": [
+            "五印坛城"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "五印坛城",
+          "reranked_top_1": "五印坛城",
+          "reranker_ms": 2248.890300000312
+        },
+        {
+          "id": "retrieval-021",
+          "category": "architecture_art",
+          "expected_titles": [
+            "曼飞龙塔"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "曼飞龙塔",
+          "reranked_top_1": "曼飞龙塔",
+          "reranker_ms": 2043.327500000487
+        },
+        {
+          "id": "retrieval-022",
+          "category": "architecture_art",
+          "expected_titles": [
+            "无尽意斋"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "无尽意斋",
+          "reranked_top_1": "无尽意斋",
+          "reranker_ms": 2007.0385999997598
+        },
+        {
+          "id": "retrieval-023",
+          "category": "architecture_art",
+          "expected_titles": [
+            "佛教文化博览馆"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "佛教文化博览馆",
+          "reranked_top_1": "佛教文化博览馆",
+          "reranker_ms": 1680.6790999999066
+        },
+        {
+          "id": "retrieval-024",
+          "category": "architecture_art",
+          "expected_titles": [
+            "祥符禅寺"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "祥符禅寺",
+          "reranked_top_1": "祥符禅寺",
+          "reranker_ms": 2101.1971999996604
+        },
+        {
+          "id": "retrieval-025",
+          "category": "visitor_service",
+          "expected_titles": [
+            "最佳游览时间"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "最佳游览时间",
+          "reranked_top_1": "最佳游览时间",
+          "reranker_ms": 1100.4207000005408
+        },
+        {
+          "id": "retrieval-026",
+          "category": "visitor_service",
+          "expected_titles": [
+            "餐饮"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "餐饮",
+          "reranked_top_1": "餐饮",
+          "reranker_ms": 1971.8441000004532
+        },
+        {
+          "id": "retrieval-027",
+          "category": "visitor_service",
+          "expected_titles": [
+            "住宿"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "住宿",
+          "reranked_top_1": "住宿",
+          "reranker_ms": 1839.6857000007003
+        },
+        {
+          "id": "retrieval-028",
+          "category": "visitor_service",
+          "expected_titles": [
+            "其他实用建议"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "其他实用建议",
+          "reranked_top_1": "其他实用建议",
+          "reranker_ms": 1914.437899999939
+        },
+        {
+          "id": "retrieval-029",
+          "category": "visitor_service",
+          "expected_titles": [
+            "自然风光爱好者路线（5小时全景游）"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "自然风光爱好者路线（5小时全景游）",
+          "reranked_top_1": "自然风光爱好者路线（5小时全景游）",
+          "reranker_ms": 1794.454300000325
+        },
+        {
+          "id": "retrieval-030",
+          "category": "visitor_service",
+          "expected_titles": [
+            "亲子家庭路线（4小时轻松游）"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "亲子家庭路线（4小时轻松游）",
+          "reranked_top_1": "亲子家庭路线（4小时轻松游）",
+          "reranker_ms": 1833.8020999999571
+        }
+      ]
+    },
+    {
+      "candidate_k": 10,
+      "top_k": 5,
+      "max_length": 512,
+      "metrics": {
+        "recall_at_1": 1.0,
+        "recall_at_5": 1.0,
+        "mrr": 1.0
+      },
+      "latency_ms": {
+        "count": 30,
+        "avg_ms": 2102.5662233333,
+        "p50_ms": 2046.038800000133,
+        "p95_ms": 2483.2898000004207,
+        "min_ms": 1829.0606999999,
+        "max_ms": 2523.251800000253
+      },
+      "accuracy_passed": true,
+      "improved_ids": [
+        "retrieval-016"
+      ],
+      "degraded_ids": [],
+      "results": [
+        {
+          "id": "retrieval-001",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "灵山大照壁"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "灵山大照壁",
+          "reranked_top_1": "灵山大照壁",
+          "reranker_ms": 2005.148599999302
+        },
+        {
+          "id": "retrieval-002",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "五明桥"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "五明桥",
+          "reranked_top_1": "五明桥",
+          "reranker_ms": 2171.7987000001813
+        },
+        {
+          "id": "retrieval-003",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "佛足坛"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "佛足坛",
+          "reranked_top_1": "佛足坛",
+          "reranker_ms": 2181.485899999643
+        },
+        {
+          "id": "retrieval-004",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "五智门"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "五智门",
+          "reranked_top_1": "五智门",
+          "reranker_ms": 2351.2393999999404
+        },
+        {
+          "id": "retrieval-005",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "菩提大道"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "菩提大道",
+          "reranked_top_1": "菩提大道",
+          "reranker_ms": 1957.7168000005258
+        },
+        {
+          "id": "retrieval-006",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "九龙灌浴"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "九龙灌浴",
+          "reranked_top_1": "九龙灌浴",
+          "reranker_ms": 2460.7060999996975
+        },
+        {
+          "id": "retrieval-007",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "降魔浮雕"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "降魔浮雕",
+          "reranked_top_1": "降魔浮雕",
+          "reranker_ms": 2523.251800000253
+        },
+        {
+          "id": "retrieval-008",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "阿育王柱"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "阿育王柱",
+          "reranked_top_1": "阿育王柱",
+          "reranker_ms": 2220.6568999999945
+        },
+        {
+          "id": "retrieval-009",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "百子戏弥勒"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "百子戏弥勒",
+          "reranked_top_1": "百子戏弥勒",
+          "reranker_ms": 2046.038800000133
+        },
+        {
+          "id": "retrieval-010",
+          "category": "attraction_fact",
+          "expected_titles": [
+            "灵山大佛"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "灵山大佛",
+          "reranked_top_1": "灵山大佛",
+          "reranker_ms": 2235.387200000332
+        },
+        {
+          "id": "retrieval-011",
+          "category": "history_culture",
+          "expected_titles": [
+            "小灵山的佛教缘起"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "小灵山的佛教缘起",
+          "reranked_top_1": "小灵山的佛教缘起",
+          "reranker_ms": 1861.4331999997376
+        },
+        {
+          "id": "retrieval-012",
+          "category": "history_culture",
+          "expected_titles": [
+            "祥符禅寺的千年兴衰"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "祥符禅寺的千年兴衰",
+          "reranked_top_1": "祥符禅寺的千年兴衰",
+          "reranker_ms": 2007.7751999997417
+        },
+        {
+          "id": "retrieval-013",
+          "category": "history_culture",
+          "expected_titles": [
+            "现代灵山胜境的崛起"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "现代灵山胜境的崛起",
+          "reranked_top_1": "现代灵山胜境的崛起",
+          "reranker_ms": 2135.1804999994783
+        },
+        {
+          "id": "retrieval-014",
+          "category": "history_culture",
+          "expected_titles": [
+            "佛教文化的深度传承"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "佛教文化的深度传承",
+          "reranked_top_1": "佛教文化的深度传承",
+          "reranker_ms": 2264.140999999654
+        },
+        {
+          "id": "retrieval-015",
+          "category": "history_culture",
+          "expected_titles": [
+            "传统艺术与现代科技的完美融合"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "传统艺术与现代科技的完美融合",
+          "reranked_top_1": "传统艺术与现代科技的完美融合",
+          "reranker_ms": 2051.6709000003175
+        },
+        {
+          "id": "retrieval-016",
+          "category": "history_culture",
+          "expected_titles": [
+            "祈福文化的特色体验"
+          ],
+          "raw_rank": 2,
+          "reranked_rank": 1,
+          "raw_top_1": "其他特色景点",
+          "reranked_top_1": "祈福文化的特色体验",
+          "reranker_ms": 2018.7286000000313
+        },
+        {
+          "id": "retrieval-017",
+          "category": "history_culture",
+          "expected_titles": [
+            "世界佛教文化的交流平台"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "世界佛教文化的交流平台",
+          "reranked_top_1": "世界佛教文化的交流平台",
+          "reranker_ms": 1829.0606999999
+        },
+        {
+          "id": "retrieval-018",
+          "category": "history_culture",
+          "expected_titles": [
+            "景区概况与千年历史渊源"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "景区概况与千年历史渊源",
+          "reranked_top_1": "景区概况与千年历史渊源",
+          "reranker_ms": 1932.9131000004054
+        },
+        {
+          "id": "retrieval-019",
+          "category": "architecture_art",
+          "expected_titles": [
+            "灵山梵宫"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "灵山梵宫",
+          "reranked_top_1": "灵山梵宫",
+          "reranker_ms": 2483.2898000004207
+        },
+        {
+          "id": "retrieval-020",
+          "category": "architecture_art",
+          "expected_titles": [
+            "五印坛城"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "五印坛城",
+          "reranked_top_1": "五印坛城",
+          "reranker_ms": 2212.6508999999714
+        },
+        {
+          "id": "retrieval-021",
+          "category": "architecture_art",
+          "expected_titles": [
+            "曼飞龙塔"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "曼飞龙塔",
+          "reranked_top_1": "曼飞龙塔",
+          "reranker_ms": 2221.4311999996426
+        },
+        {
+          "id": "retrieval-022",
+          "category": "architecture_art",
+          "expected_titles": [
+            "无尽意斋"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "无尽意斋",
+          "reranked_top_1": "无尽意斋",
+          "reranker_ms": 1963.6269000002358
+        },
+        {
+          "id": "retrieval-023",
+          "category": "architecture_art",
+          "expected_titles": [
+            "佛教文化博览馆"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "佛教文化博览馆",
+          "reranked_top_1": "佛教文化博览馆",
+          "reranker_ms": 2111.39539999931
+        },
+        {
+          "id": "retrieval-024",
+          "category": "architecture_art",
+          "expected_titles": [
+            "祥符禅寺"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "祥符禅寺",
+          "reranked_top_1": "祥符禅寺",
+          "reranker_ms": 1966.9908000005307
+        },
+        {
+          "id": "retrieval-025",
+          "category": "visitor_service",
+          "expected_titles": [
+            "最佳游览时间"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "最佳游览时间",
+          "reranked_top_1": "最佳游览时间",
+          "reranker_ms": 1960.553599999912
+        },
+        {
+          "id": "retrieval-026",
+          "category": "visitor_service",
+          "expected_titles": [
+            "餐饮"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "餐饮",
+          "reranked_top_1": "餐饮",
+          "reranker_ms": 2256.962000000385
+        },
+        {
+          "id": "retrieval-027",
+          "category": "visitor_service",
+          "expected_titles": [
+            "住宿"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "住宿",
+          "reranked_top_1": "住宿",
+          "reranker_ms": 1895.1679000001604
+        },
+        {
+          "id": "retrieval-028",
+          "category": "visitor_service",
+          "expected_titles": [
+            "其他实用建议"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "其他实用建议",
+          "reranked_top_1": "其他实用建议",
+          "reranker_ms": 2025.1026999994792
+        },
+        {
+          "id": "retrieval-029",
+          "category": "visitor_service",
+          "expected_titles": [
+            "自然风光爱好者路线（5小时全景游）"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "自然风光爱好者路线（5小时全景游）",
+          "reranked_top_1": "自然风光爱好者路线（5小时全景游）",
+          "reranker_ms": 1858.0334999996921
+        },
+        {
+          "id": "retrieval-030",
+          "category": "visitor_service",
+          "expected_titles": [
+            "亲子家庭路线（4小时轻松游）"
+          ],
+          "raw_rank": 1,
+          "reranked_rank": 1,
+          "raw_top_1": "亲子家庭路线（4小时轻松游）",
+          "reranked_top_1": "亲子家庭路线（4小时轻松游）",
+          "reranker_ms": 1867.4485999999888
+        }
+      ]
+    }
+  ],
+  "recommended": {
+    "candidate_k": 5,
+    "max_length": 128,
+    "metrics": {
+      "recall_at_1": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0
+    },
+    "latency_ms": {
+      "count": 30,
+      "avg_ms": 658.8134466666512,
+      "p50_ms": 661.819199999627,
+      "p95_ms": 833.4293999996589,
+      "min_ms": 444.47719999971014,
+      "max_ms": 979.8399999999674
+    }
+  }
+}

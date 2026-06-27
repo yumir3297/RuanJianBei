@@ -1,0 +1,364 @@
+{
+  "project": {
+    "name": "灵山导览风格重设计",
+    "path": "d:\\桌面\\软件杯\\lingshan-redesign",
+    "operation": "create",
+    "deviceType": "desktop",
+    "language": "zh-CN",
+    "dashboardMode": false,
+    "replicationMode": null,
+    "sourceUrl": null,
+    "visualSpecExcerpt": null,
+    "styleDefinitionBrief": null,
+    "designRead": "景区智慧导览系统 / 游客与运营管理者 / 温暖人文与信赖感 / 中等密度 / 避免冷白科技感和赛博蓝",
+    "designDials": {
+      "layoutVariance": 3,
+      "motionIntensity": 2,
+      "visualDensity": 3
+    },
+    "styleContinuityAnchors": {
+      "colorSystem": {
+        "primaryColorRole": "brand-600 (#f1481e) as primary CTA and emphasis",
+        "brandHuePolicy": "single brand orange-red hue with 10-step scale; no secondary accent brand hue",
+        "stateColors": "destructive: #ef4444; chart: warm palette with orange/purple/green/brown/amber"
+      },
+      "shapeSystem": "universal 18px radius across cards, buttons, shell surfaces; 10px inner derived",
+      "typographySystem": "Geist for UI body (--font-sans), Playfair Display for editorial moments (--font-serif), Roboto Mono for labels/eyebrows (--font-mono)",
+      "spacingSystem": "4px base spacing, generous internal padding, not ultra-compact",
+      "componentLanguage": "warm paper-like cards, quiet borders, dark sidebar nav, color-blocked depth",
+      "surfaceAndDepth": "no visible shadows (opacity 0); hierarchy through color blocking and border contrast",
+      "imageryAndIconography": "simple SVG icons via CSS mask, no branded icon set",
+      "interactionTone": "brisk 160ms transitions, low-theater control feedback"
+    },
+    "specsConstraints": null,
+    "sharedProjectShellContract": {
+      "navigationShell": "vibe_camp sidebar nav with dark surface, compact labels, warm sidebar accent",
+      "primaryColorSystem": "brand-600 (#f1481e) as primary; no secondary accent brand hue",
+      "typographySystem": "Geist body, Playfair Display editorial, Roboto Mono mono; 13-14px body, compact metadata 10-11px",
+      "radiusScale": "18px dominant radius; 10px inner derived; 999px dot indicators",
+      "surfaceDepthModel": "warm paper backgrounds (#e3dfd9), slightly lighter cards (#f3f0eb), dark foreground text (#211d1a)",
+      "ctaStyle": "40px height primary buttons with brand-600, 18px radius; 32px ghost buttons",
+      "alignmentRules": "4px grid, left-aligned content, generous padding within cards"
+    },
+    "generationTree": {
+      "root": {
+        "nodeId": "gen-project-shell",
+        "kind": "project-shell",
+        "pageIds": ["page-home", "page-tourist-chat", "page-admin-dashboard", "page-knowledge-manage"],
+        "output": "partials/project-shell.html",
+        "sharedRegions": ["sidebar-nav"],
+        "privateRegions": [],
+        "mutableSlots": ["activeNavItem", "pageTitle"],
+        "status": "planned",
+        "children": [
+          {
+            "nodeId": "gen-page-home",
+            "kind": "page-leaf",
+            "pageIds": ["page-home"],
+            "output": "pages/home.html",
+            "sharedRegions": [],
+            "privateRegions": ["page body"],
+            "mutableSlots": ["activeNavItem", "pageTitle"],
+            "status": "planned",
+            "children": []
+          },
+          {
+            "nodeId": "gen-page-tourist-chat",
+            "kind": "page-leaf",
+            "pageIds": ["page-tourist-chat"],
+            "output": "pages/tourist-chat.html",
+            "sharedRegions": [],
+            "privateRegions": ["page body"],
+            "mutableSlots": ["activeNavItem", "pageTitle"],
+            "status": "planned",
+            "children": []
+          },
+          {
+            "nodeId": "gen-page-admin-dashboard",
+            "kind": "page-leaf",
+            "pageIds": ["page-admin-dashboard"],
+            "output": "pages/admin-dashboard.html",
+            "sharedRegions": [],
+            "privateRegions": ["page body"],
+            "mutableSlots": ["activeNavItem", "pageTitle"],
+            "status": "planned",
+            "children": []
+          },
+          {
+            "nodeId": "gen-page-knowledge-manage",
+            "kind": "page-leaf",
+            "pageIds": ["page-knowledge-manage"],
+            "output": "pages/knowledge-manage.html",
+            "sharedRegions": [],
+            "privateRegions": ["page body"],
+            "mutableSlots": ["activeNavItem", "pageTitle"],
+            "status": "planned",
+            "children": []
+          }
+        ]
+      }
+    }
+  },
+  "designSource": {
+    "operatingMode": "library-bound",
+    "libraryIdentity": {
+      "name": "灵山绿金",
+      "id": "lingshan-jade-gold",
+      "version": "1.0",
+      "scope": "workspace",
+      "path": "d:\\桌面\\软件杯\\lingshan-redesign",
+      "versionSource": "metadata.json"
+    },
+    "libraryPath": "d:\\桌面\\软件杯\\lingshan-redesign",
+    "cssFilePath": "d:\\桌面\\软件杯\\lingshan-redesign\\colors_and_type.css",
+    "brandPrefix": "brand",
+    "themeMode": "light",
+    "designDecisionSummary": "Vibe Camp editorial dashboard aesthetic applied to Lingshan scenic tour guide. Warm paper backgrounds, hot orange-red accent (#f1481e), Geist + Playfair Display typography, 18px radius, no visible shadows, color-blocked depth.",
+    "componentContractKind": "legacy-json",
+    "forbiddenInventedComponents": [],
+    "allowedComponents": ["button", "card", "table", "chart", "navigation", "sidebar"],
+    "styleConstraints": {
+      "radiusMax": 18,
+      "spacingBase": 4,
+      "fontSizeBody": 13,
+      "fontSizeMin": 10,
+      "controlHeightDefault": 40,
+      "controlHeightLarge": 40
+    },
+    "productContext": {
+      "kitType": "editorial-dashboard-design-system",
+      "productType": "Editorial dashboard / analytics platform"
+    },
+    "iconAssets": {
+      "source": "assets/icons",
+      "projectIconDir": "assets/icons/vibe_camp",
+      "libraryKey": "vibe_camp",
+      "renderMethod": "css-mask",
+      "pathTemplate": "../assets/icons/vibe_camp/{name}.svg",
+      "availableNames": [
+        "arrow-down", "arrow-left", "arrow-right", "arrow-up",
+        "box", "check", "chevron-down", "chevron-left", "chevron-right", "chevron-up",
+        "chevrons-down-up", "chevrons-up-down", "circle-alert", "circle-check", "circle-minus",
+        "circle-pause", "circle-play", "circle-plus", "circle-question-mark",
+        "external-link", "file", "folder-open", "folder", "funnel", "grip",
+        "heart", "house", "mail", "map-pin", "message-circle-more",
+        "mouse-pointer-click", "pen-line", "send-horizontal",
+        "star", "tag", "thumbs-down", "thumbs-up", "trash-2",
+        "triangle-alert", "user"
+      ],
+      "totalCount": 37,
+      "coloringRule": "currentColor by default; override with Library token when needed"
+    },
+    "actualTokenNameReference": [
+      { "semanticPurpose": "Page background", "tokenName": "--background" },
+      { "semanticPurpose": "Card surface", "tokenName": "--card" },
+      { "semanticPurpose": "Primary text", "tokenName": "--foreground" },
+      { "semanticPurpose": "Muted text", "tokenName": "--muted-foreground" },
+      { "semanticPurpose": "Primary action color", "tokenName": "--primary" },
+      { "semanticPurpose": "Primary action text", "tokenName": "--primary-foreground" },
+      { "semanticPurpose": "Borders and dividers", "tokenName": "--border" },
+      { "semanticPurpose": "Focus ring", "tokenName": "--ring" },
+      { "semanticPurpose": "Sidebar background", "tokenName": "--sidebar" },
+      { "semanticPurpose": "Sidebar text", "tokenName": "--sidebar-foreground" },
+      { "semanticPurpose": "Sidebar accent", "tokenName": "--sidebar-accent" },
+      { "semanticPurpose": "Destructive action", "tokenName": "--destructive" }
+    ]
+  },
+  "pages": [
+    {
+      "nodeId": "page-home",
+      "slug": "home",
+      "title": "首页",
+      "htmlSrc": "pages/home.html",
+      "pageIndex": 1,
+      "stateGroupId": null,
+      "stateRole": null,
+      "baseStatePageId": null,
+      "sharedShellContract": [],
+      "mutableRegions": [],
+      "derivedFromHtmlSrc": null,
+      "derivationType": "original",
+      "sourcePageId": null,
+      "sourceHtmlSrc": null,
+      "pageType": "showcase",
+      "businessScenario": "灵山景区智慧导览系统入口，供游客和管理者选择进入路径",
+      "visualNorthStar": "温暖纸面质感的入口页，用大尺寸 editorial 排版营造景区人文气质，两张功能卡片引导游客或管理者进入",
+      "compositionPattern": "Aesthetics §2.1 editorial split — centered hero title + dual entry cards",
+      "continuityAnchors": ["sidebar nav shell", "18px radius cards", "Geist body + Playfair Display titles", "brand-600 CTA accent"],
+      "libraryRestraintMode": false,
+      "uiKitPath": "c:\\Users\\李洵\\.trae-cn\\design_libraries\\dl_builtin_vibe_camp\\ui_kits\\dashboard\\index.html",
+      "componentPlan": [
+        { "slug": "card", "contractKind": "legacy-json", "contractFile": "c:\\Users\\李洵\\.trae-cn\\design_libraries\\dl_builtin_vibe_camp\\components\\card.json" },
+        { "slug": "button", "contractKind": "legacy-json", "contractFile": "c:\\Users\\李洵\\.trae-cn\\design_libraries\\dl_builtin_vibe_camp\\components\\button.json" },
+        { "slug": "navigation", "contractKind": "legacy-json", "contractFile": "c:\\Users\\李洵\\.trae-cn\\design_libraries\\dl_builtin_vibe_camp\\components\\navigation.json" },
+        { "slug": "sidebar", "contractKind": "legacy-json", "contractFile": "c:\\Users\\李洵\\.trae-cn\\design_libraries\\dl_builtin_vibe_camp\\components\\sidebar.json" }
+      ],
+      "imagePlan": ["hero-lingshan.jpg"],
+      "chartsRequired": false,
+      "miniProgramStyle": false,
+      "qualityRisks": [],
+      "generationNodeId": "gen-page-home",
+      "generationPath": ["gen-project-shell"],
+      "inheritedFragments": ["partials/project-shell.html"],
+      "privateRegions": ["page body"],
+      "mutableSlots": ["activeNavItem", "pageTitle"]
+    },
+    {
+      "nodeId": "page-tourist-chat",
+      "slug": "tourist-chat",
+      "title": "游客对话",
+      "htmlSrc": "pages/tourist-chat.html",
+      "pageIndex": 2,
+      "stateGroupId": null,
+      "stateRole": null,
+      "baseStatePageId": null,
+      "sharedShellContract": [],
+      "mutableRegions": [],
+      "derivedFromHtmlSrc": null,
+      "derivationType": "original",
+      "sourcePageId": null,
+      "sourceHtmlSrc": null,
+      "pageType": "task-driven",
+      "businessScenario": "游客与AI数字人导游对话的主界面，支持语音提问、文字输入、查看资料来源",
+      "visualNorthStar": "paper-warm chat interface with editorial personality, sidebar shows avatar/digital guide identity, main area has flowing conversation with muted source references",
+      "compositionPattern": "Aesthetics §2.1 sidebar-main split — digital guide identity sidebar (left) + conversation flow with voice-first input dock",
+      "continuityAnchors": ["sidebar nav shell", "18px radius cards", "Geist body + Playfair Display titles", "brand-600 CTA accent"],
+      "libraryRestraintMode": false,
+      "uiKitPath": "c:\\Users\\李洵\\.trae-cn\\design_libraries\\dl_builtin_vibe_camp\\ui_kits\\dashboard\\index.html",
+      "componentPlan": [
+        { "slug": "card", "contractKind": "legacy-json", "contractFile": "c:\\Users\\李洵\\.trae-cn\\design_libraries\\dl_builtin_vibe_camp\\components\\card.json" },
+        { "slug": "button", "contractKind": "legacy-json", "contractFile": "c:\\Users\\李洵\\.trae-cn\\design_libraries\\dl_builtin_vibe_camp\\components\\button.json" },
+        { "slug": "sidebar", "contractKind": "legacy-json", "contractFile": "c:\\Users\\李洵\\.trae-cn\\design_libraries\\dl_builtin_vibe_camp\\components\\sidebar.json" }
+      ],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "miniProgramStyle": false,
+      "qualityRisks": ["high content density — conversation list may overflow"],
+      "generationNodeId": "gen-page-tourist-chat",
+      "generationPath": ["gen-project-shell"],
+      "inheritedFragments": ["partials/project-shell.html"],
+      "privateRegions": ["page body"],
+      "mutableSlots": ["activeNavItem", "pageTitle"]
+    },
+    {
+      "nodeId": "page-admin-dashboard",
+      "slug": "admin-dashboard",
+      "title": "管理总览",
+      "htmlSrc": "pages/admin-dashboard.html",
+      "pageIndex": 3,
+      "stateGroupId": null,
+      "stateRole": null,
+      "baseStatePageId": null,
+      "sharedShellContract": [],
+      "mutableRegions": [],
+      "derivedFromHtmlSrc": null,
+      "derivationType": "original",
+      "sourcePageId": null,
+      "sourceHtmlSrc": null,
+      "pageType": "information-dense",
+      "businessScenario": "景区运营管理总览，展示知识资产、问答日志、游客画像等核心KPI",
+      "visualNorthStar": "editorial dashboard first screen — dark hero header with key metrics, stat cards with warm accent color bars, trend charts in soft card containers",
+      "compositionPattern": "Aesthetics §2.1 dashboard grid — hero header + 4-stat grid + chart row + detail list",
+      "continuityAnchors": ["sidebar nav shell", "18px radius cards", "Geist body + Playfair Display titles", "brand-600 CTA accent"],
+      "libraryRestraintMode": false,
+      "uiKitPath": "c:\\Users\\李洵\\.trae-cn\\design_libraries\\dl_builtin_vibe_camp\\ui_kits\\dashboard\\index.html",
+      "componentPlan": [
+        { "slug": "card", "contractKind": "legacy-json", "contractFile": "c:\\Users\\李洵\\.trae-cn\\design_libraries\\dl_builtin_vibe_camp\\components\\card.json" },
+        { "slug": "chart", "contractKind": "legacy-json", "contractFile": "c:\\Users\\李洵\\.trae-cn\\design_libraries\\dl_builtin_vibe_camp\\components\\chart.json" },
+        { "slug": "button", "contractKind": "legacy-json", "contractFile": "c:\\Users\\李洵\\.trae-cn\\design_libraries\\dl_builtin_vibe_camp\\components\\button.json" },
+        { "slug": "sidebar", "contractKind": "legacy-json", "contractFile": "c:\\Users\\李洵\\.trae-cn\\design_libraries\\dl_builtin_vibe_camp\\components\\sidebar.json" }
+      ],
+      "imagePlan": [],
+      "chartsRequired": true,
+      "miniProgramStyle": false,
+      "qualityRisks": [],
+      "generationNodeId": "gen-page-admin-dashboard",
+      "generationPath": ["gen-project-shell"],
+      "inheritedFragments": ["partials/project-shell.html"],
+      "privateRegions": ["page body"],
+      "mutableSlots": ["activeNavItem", "pageTitle"]
+    },
+    {
+      "nodeId": "page-knowledge-manage",
+      "slug": "knowledge-manage",
+      "title": "知识管理",
+      "htmlSrc": "pages/knowledge-manage.html",
+      "pageIndex": 4,
+      "stateGroupId": null,
+      "stateRole": null,
+      "baseStatePageId": null,
+      "sharedShellContract": [],
+      "mutableRegions": [],
+      "derivedFromHtmlSrc": null,
+      "derivationType": "original",
+      "sourcePageId": null,
+      "sourceHtmlSrc": null,
+      "pageType": "information-dense",
+      "businessScenario": "景区知识资产管理，包含知识条目列表、搜索筛选、新增编辑操作",
+      "visualNorthStar": "operational knowledge table — warm card container, muted table dividers, compact but readable data rows, search bar and action buttons in header",
+      "compositionPattern": "Aesthetics §2.1 table-operations — hero header + search/filter bar + data table in card",
+      "continuityAnchors": ["sidebar nav shell", "18px radius cards", "Geist body + Playfair Display titles", "brand-600 CTA accent"],
+      "libraryRestraintMode": false,
+      "uiKitPath": "c:\\Users\\李洵\\.trae-cn\\design_libraries\\dl_builtin_vibe_camp\\ui_kits\\dashboard\\index.html",
+      "componentPlan": [
+        { "slug": "card", "contractKind": "legacy-json", "contractFile": "c:\\Users\\李洵\\.trae-cn\\design_libraries\\dl_builtin_vibe_camp\\components\\card.json" },
+        { "slug": "table", "contractKind": "legacy-json", "contractFile": "c:\\Users\\李洵\\.trae-cn\\design_libraries\\dl_builtin_vibe_camp\\components\\table.json" },
+        { "slug": "button", "contractKind": "legacy-json", "contractFile": "c:\\Users\\李洵\\.trae-cn\\design_libraries\\dl_builtin_vibe_camp\\components\\button.json" },
+        { "slug": "sidebar", "contractKind": "legacy-json", "contractFile": "c:\\Users\\李洵\\.trae-cn\\design_libraries\\dl_builtin_vibe_camp\\components\\sidebar.json" }
+      ],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "miniProgramStyle": false,
+      "qualityRisks": [],
+      "generationNodeId": "gen-page-knowledge-manage",
+      "generationPath": ["gen-project-shell"],
+      "inheritedFragments": ["partials/project-shell.html"],
+      "privateRegions": ["page body"],
+      "mutableSlots": ["activeNavItem", "pageTitle"]
+    }
+  ],
+  "assets": [
+    {
+      "filename": "hero-lingshan.jpg",
+      "role": "critical-hero",
+      "owningPage": "home",
+      "semanticDescription": "Warm atmospheric Buddha statue or temple mountain landscape, soft golden light, editorial photography style",
+      "status": "planned"
+    }
+  ],
+  "wiringPlan": [
+    {
+      "sourceNodeId": "page-home",
+      "domId": "entry-tourist",
+      "targetPageId": "page-tourist-chat"
+    },
+    {
+      "sourceNodeId": "page-home",
+      "domId": "entry-admin",
+      "targetPageId": "page-admin-dashboard"
+    }
+  ],
+  "hiddenInteractionPlan": [
+    {
+      "sourceNodeId": "page-tourist-chat",
+      "domId": "nav-back-home",
+      "targetPageId": "page-home",
+      "hideEdge": true,
+      "reason": "global nav back to home"
+    },
+    {
+      "sourceNodeId": "page-admin-dashboard",
+      "domId": "nav-back-home",
+      "targetPageId": "page-home",
+      "hideEdge": true,
+      "reason": "global nav back to home"
+    },
+    {
+      "sourceNodeId": "page-knowledge-manage",
+      "domId": "nav-back-home",
+      "targetPageId": "page-home",
+      "hideEdge": true,
+      "reason": "global nav back to home"
+    }
+  ]
+}

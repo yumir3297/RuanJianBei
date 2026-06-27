@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识管理</title>
+    <style id="theme-vars">
+:root {
+  /* brand */
+  --brand-50: #fff4ee;
+  --brand-100: #ffe6dc;
+  --brand-200: #ffc8b5;
+  --brand-300: #ffab8f;
+  --brand-400: #ff845f;
+  --brand-500: #f7663c;
+  --brand-600: #f1481e;
+  --brand-700: #d63a14;
+  --brand-800: #ad2f13;
+  --brand-900: #8a2914;
+
+  /* surface */
+  --background: #e3dfd9;
+  --muted: #ece7e1;
+  --card: #f3f0eb;
+  --popover: #f7f4ef;
+
+  /* text */
+  --foreground: #211d1a;
+  --muted-foreground: #5c5650;
+  --card-foreground: #211d1a;
+  --popover-foreground: #211d1a;
+  --accent-foreground: #211d1a;
+  --secondary-foreground: #ffffff;
+
+  /* action */
+  --primary: var(--brand-600);
+  --primary-foreground: #fff7f3;
+  --accent: #ded7cf;
+  --input: #d7d1c9;
+  --border: #cbc3ba;
+  --secondary: #1d1e20;
+  --ring: var(--brand-500);
+
+  /* feedback */
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
+  /* chart */
+  --chart-1: #f7663c;
+  --chart-2: #aea4fd;
+  --chart-3: #13b15a;
+  --chart-4: #84776e;
+  --chart-5: #fe9a45;
+
+  /* sidebar */
+  --sidebar: #d2cbc3;
+  --sidebar-foreground: #211d1a;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: #212121;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #d6cec6;
+  --sidebar-ring: var(--ring);
+
+  /* compatibility aliases */
+  --bg-background: var(--background);
+  --bg-card: var(--card);
+  --bg-popover: var(--popover);
+  --bg-muted: var(--muted);
+  --text-foreground: var(--foreground);
+  --text-card-foreground: var(--card-foreground);
+  --text-popover-foreground: var(--popover-foreground);
+  --text-primary-foreground: var(--primary-foreground);
+  --text-secondary-foreground: var(--secondary-foreground);
+  --text-muted-foreground: var(--muted-foreground);
+  --text-accent-foreground: var(--accent-foreground);
+  --text-destructive-foreground: var(--destructive-foreground);
+  --accent-primary: var(--primary);
+  --accent-secondary: var(--secondary);
+  --accent-input: var(--input);
+  --accent-ring: var(--ring);
+  --status-destructive: var(--destructive);
+
+  /* === Typography === */
+  --font-sans: Geist, ui-sans-serif, sans-serif, system-ui;
+  --font-serif: Playfair Display, ui-serif, serif;
+  --font-mono: Roboto Mono, monospace;
+  --tracking-normal: 0em;
+
+  /* === Radius === */
+  --radius: 18px;
+
+  /* === Spacing === */
+  --spacing: 4px;
+
+  /* === Size === */
+
+  /* === Shadow === */
+  --shadow-2xs: transparent;
+  --shadow-xs: 2px 2px 10px 4px transparent;
+  --shadow-sm: 2px 2px 10px 4px transparent;
+  --shadow: 2px 2px 10px 4px transparent;
+  --shadow-md: 2px 2px 10px 4px transparent;
+  --shadow-lg: 2px 2px 10px 4px transparent;
+  --shadow-xl: 2px 2px 10px 4px transparent;
+  --shadow-2xl: transparent;
+}
+
+.dark {
+  /* surface */
+  --background: #1e1a16;
+  --muted: #221d19;
+  --card: #2a2521;
+  --popover: #302923;
+
+  /* text */
+  --foreground: #f2ede7;
+  --muted-foreground: #b4aba2;
+  --card-foreground: #f2ede7;
+  --popover-foreground: #f2ede7;
+  --accent-foreground: #f2ede7;
+  --secondary-foreground: #f2ede7;
+
+  /* action */
+  --primary: var(--brand-600);
+  --primary-foreground: #31150d;
+  --accent: #443c35;
+  --input: #3a332d;
+  --border: #3a322c;
+  --secondary: #4a413a;
+  --ring: var(--brand-500);
+
+  /* feedback */
+  --destructive: #ff6b57;
+  --destructive-foreground: #fff5f2;
+
+  /* chart */
+  --chart-1: #ff845f;
+  --chart-2: #f4b366;
+  --chart-3: #3ccf8e;
+  --chart-4: #b3a6ff;
+  --chart-5: #f0d2a6;
+
+  /* sidebar */
+  --sidebar: #2b2520;
+  --sidebar-foreground: #f2ede7;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: #443c35;
+  --sidebar-accent-foreground: #f2ede7;
+  --sidebar-border: #3a322c;
+  --sidebar-ring: var(--ring);
+
+  /* compatibility aliases */
+  --bg-background: var(--background);
+  --bg-card: var(--card);
+  --bg-popover: var(--popover);
+  --bg-muted: var(--muted);
+  --text-foreground: var(--foreground);
+  --text-card-foreground: var(--card-foreground);
+  --text-popover-foreground: var(--popover-foreground);
+  --text-primary-foreground: var(--primary-foreground);
+  --text-secondary-foreground: var(--secondary-foreground);
+  --text-muted-foreground: var(--muted-foreground);
+  --text-accent-foreground: var(--accent-foreground);
+  --text-destructive-foreground: var(--destructive-foreground);
+  --accent-primary: var(--primary);
+  --accent-secondary: var(--secondary);
+  --accent-input: var(--input);
+  --accent-ring: var(--ring);
+  --status-destructive: var(--destructive);
+  --shadow-2xs: transparent;
+  --shadow-2xl: transparent;
+}
+
+    </style>
+    <style id="component-vars">
+/* ═══════════════════════════════════════════════════════════════
+   components.css — Design System Component Definitions
+   Auto-extracted from preview/component-*.html
+   DO NOT EDIT MANUALLY — regenerate via extract-components-css.mjs
+   ═══════════════════════════════════════════════════════════════ */
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  
+  @layer base {
+    body { background: var(--brand-background); color: var(--brand-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main>
+<div class="flex h-screen" style="font-family: var(--font-sans)">
+  <aside class="flex flex-col shrink-0" style="width: 240px; background-color: var(--sidebar-accent); border-right: 1px solid var(--sidebar-border)">
+    <div class="flex items-center gap-3 px-4 py-5">
+      <div class="flex items-center justify-center shrink-0" style="width: 42px; height: 42px; border-radius: 14px; background: linear-gradient(160deg, var(--primary), color-mix(in srgb, var(--primary) 72%, black)); color: var(--primary-foreground); font-family: var(--font-serif); font-weight: 700; font-size: 22px; line-height: 1">灵</div>
+      <div class="flex-1 min-w-0">
+        <div class="truncate font-semibold" style="font-size: 15px; font-family: var(--font-serif); color: var(--sidebar-accent-foreground)">灵山导游</div>
+        <div class="truncate" style="font-size: 12px; color: var(--sidebar-foreground); opacity: 0.55">AI智慧导览</div>
+      </div>
+    </div>
+    <div class="px-4 pt-1 pb-2" style="font-family: var(--font-mono); font-weight: 700; font-size: 11px; letter-spacing: 0.12em; color: var(--sidebar-foreground); opacity: 0.42; text-transform: uppercase">导航</div>
+    <nav class="flex flex-col gap-1.5 px-3">
+      <a href="#" data-nav-key="dashboard" data-dom-id="nav-dashboard" class="flex items-center gap-3 py-3 px-3.5 w-full no-underline" style="border-radius: 18px; border: 1px solid transparent; color: color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent); font-size: 14px; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease">
+        <i data-lucide="layout-dashboard" class="flex items-center justify-center shrink-0" style="width: 28px; height: 28px; font-size: 16px; border-radius: 12px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)"></i>
+        <span class="truncate">总览</span>
+      </a>
+      <a href="#" data-nav-key="tourist-chat" data-dom-id="nav-tourist-chat" class="flex items-center gap-3 py-3 px-3.5 w-full no-underline" style="border-radius: 18px; border: 1px solid transparent; color: color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent); font-size: 14px; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease">
+        <i data-lucide="message-circle" class="flex items-center justify-center shrink-0" style="width: 28px; height: 28px; font-size: 16px; border-radius: 12px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)"></i>
+        <span class="truncate">游客对话</span>
+      </a>
+      <a href="#" data-nav-key="knowledge" data-dom-id="nav-knowledge" data-active="true" class="flex items-center gap-3 py-3 px-3.5 w-full no-underline" style="border-radius: 18px; border: 1px solid color-mix(in srgb, var(--sidebar-border) 28%, transparent); background: color-mix(in srgb, var(--sidebar-accent-foreground) 10%, transparent); color: var(--sidebar-accent-foreground); font-size: 14px; transition: background 0.16s ease, border-color 0.16s ease">
+        <i data-lucide="book-open" class="flex items-center justify-center shrink-0" style="width: 28px; height: 28px; font-size: 16px; border-radius: 12px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 12%, transparent)"></i>
+        <span class="truncate">知识管理</span>
+      </a>
+      <a href="#" data-nav-key="analytics" data-dom-id="nav-analytics" class="flex items-center gap-3 py-3 px-3.5 w-full no-underline" style="border-radius: 18px; border: 1px solid transparent; color: color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent); font-size: 14px; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease">
+        <i data-lucide="bar-chart-3" class="flex items-center justify-center shrink-0" style="width: 28px; height: 28px; font-size: 16px; border-radius: 12px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)"></i>
+        <span class="truncate">数据大屏</span>
+      </a>
+    </nav>
+    <div class="mt-auto mx-3 mb-4 flex items-center gap-3 p-3" style="border-radius: 20px; border: 1px solid var(--sidebar-border); background: color-mix(in srgb, var(--sidebar-accent-foreground) 4%, transparent)">
+      <div class="flex items-center justify-center shrink-0 font-bold" style="width: 42px; height: 42px; border-radius: 14px; background: var(--secondary); color: var(--secondary-foreground); font-size: 15px">管</div>
+      <div class="flex-1 min-w-0">
+        <div class="truncate font-semibold" style="font-size: 14px; color: var(--sidebar-accent-foreground)">管理员</div>
+        <div class="truncate" style="font-size: 12px; color: var(--sidebar-foreground); opacity: 0.55">系统管理</div>
+      </div>
+    </div>
+  </aside>
+  <main class="flex-1 min-w-0 overflow-auto" style="background-color: var(--background); padding: 28px">
+    <div class="flex flex-col gap-5 max-w-[1280px] mx-auto">
+      <!-- Hero Header -->
+      <div style="border-radius: 26px; overflow: hidden; border: 1px solid var(--border); background: linear-gradient(140deg, color-mix(in srgb, var(--secondary) 92%, var(--primary)) 0%, var(--secondary) 66%, color-mix(in srgb, var(--secondary) 78%, var(--brand-700)) 100%)">
+        <div class="px-8 py-9 flex flex-col gap-6">
+          <div>
+            <h1 class="m-0" style="font-family: var(--font-serif); font-size: clamp(32px, 3.6vw, 48px); line-height: 1.08; letter-spacing: -0.03em; color: var(--secondary-foreground); text-wrap: balance; word-break: keep-all; overflow-wrap: break-word; max-width: 20ch">知识资产管理</h1>
+            <p class="m-0 mt-3 max-w-3xl" style="font-size: 14px; line-height: 1.65; color: color-mix(in srgb, var(--secondary-foreground) 56%, transparent)">灵山景区AI数字人智慧导览系统的知识条目统一管理平台，支持知识的创建、编辑、审核与发布流程。</p>
+          </div>
+          <div class="flex items-center gap-8 flex-wrap">
+            <div>
+              <span class="block" style="font-size: 34px; font-weight: 600; line-height: 1.05; letter-spacing: -0.03em; color: var(--secondary-foreground); font-family: var(--font-serif)">156</span>
+              <span class="block mt-1" style="font-size: 12px; color: color-mix(in srgb, var(--secondary-foreground) 48%, transparent)">知识池总数</span>
+            </div>
+            <div style="width: 1px; height: 44px; background: color-mix(in srgb, var(--secondary-foreground) 14%, transparent); flex: none"></div>
+            <div>
+              <span class="block" style="font-size: 34px; font-weight: 600; line-height: 1.05; letter-spacing: -0.03em; color: var(--secondary-foreground); font-family: var(--font-serif)">8</span>
+              <span class="block mt-1" style="font-size: 12px; color: color-mix(in srgb, var(--secondary-foreground) 48%, transparent)">分类数</span>
+            </div>
+            <div style="width: 1px; height: 44px; background: color-mix(in srgb, var(--secondary-foreground) 14%, transparent); flex: none"></div>
+            <div>
+              <span class="block" style="font-size: 34px; font-weight: 600; line-height: 1.05; letter-spacing: -0.03em; color: var(--secondary-foreground); font-family: var(--font-serif)">142</span>
+              <span class="block mt-1" style="font-size: 12px; color: color-mix(in srgb, var(--secondary-foreground) 48%, transparent)">已发布条目</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="flex items-center gap-3 flex-wrap">
+        <label class="flex items-center gap-3 flex-1" style="min-width: 260px; max-width: 420px; height: 46px; padding: 0 16px; border: 1px solid var(--border); border-radius: 18px; background: color-mix(in srgb, var(--card) 82%, transparent)">
+          <i data-lucide="search" class="shrink-0" style="width: 18px; height: 18px; color: var(--muted-foreground)"></i>
+          <input type="text" placeholder="搜索知识标题、分类..." class="w-full border-0 outline-none bg-transparent" style="color: var(--foreground); font-size: 14px" aria-label="搜索知识条目">
+        </label>
+        <select class="shrink-0" style="height: 46px; padding: 0 36px 0 16px; border: 1px solid var(--border); border-radius: 18px; background: color-mix(in srgb, var(--card) 82%, transparent); color: var(--foreground); font-size: 14px; font-weight: 500; cursor: pointer; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%235c5650%22 stroke-width=%222%22 stroke-linecap=%22round%22><path d=%22m6 9 6 6 6-6%22/></svg>'); background-repeat: no-repeat; background-position: right 12px center" aria-label="分类筛选">
+          <option value="">全部分类</option>
+          <option value="历史文化">历史文化</option>
+          <option value="景点导览">景点导览</option>
+          <option value="建筑艺术">建筑艺术</option>
+          <option value="演艺活动">演艺活动</option>
+          <option value="饮食文化">饮食文化</option>
+          <option value="禅修体验">禅修体验</option>
+          <option value="自然生态">自然生态</option>
+          <option value="服务指南">服务指南</option>
+        </select>
+        <button data-dom-id="cta-add-knowledge" class="inline-flex items-center justify-center gap-2 shrink-0" style="height: 46px; padding: 0 20px; border: 1px solid var(--primary); border-radius: 18px; background: var(--primary); color: var(--primary-foreground); font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: filter 0.16s ease, transform 0.16s ease">
+          <i data-lucide="plus" style="width: 17px; height: 17px"></i>
+          新增知识
+        </button>
+      </div>
+
+      <!-- Table Card -->
+      <div style="border: 1px solid var(--border); border-radius: 18px; background: color-mix(in srgb, var(--card) 84%, transparent); overflow: hidden">
+        <div class="flex items-center justify-between gap-4 px-6 pt-6 pb-0 flex-wrap">
+          <div>
+            <h2 class="m-0" style="font-size: 17px; font-weight: 600; line-height: 1.25; color: var(--foreground)">知识条目列表</h2>
+            <p class="m-0 mt-1" style="font-size: 13px; color: var(--muted-foreground); line-height: 1.6">共 156 条知识，按更新时间排序</p>
+          </div>
+          <div class="flex items-center gap-2 text-sm" style="color: var(--muted-foreground); font-size: 12px">
+            <span>每页 10 条</span>
+            <span class="mx-1" style="color: var(--border)">|</span>
+            <span>1 / 16</span>
+          </div>
+        </div>
+        <div class="px-6 pt-4 pb-6" style="max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain">
+          <table class="w-full" style="border-collapse: collapse">
+            <thead>
+              <tr>
+                <th class="text-left pb-3" style="padding-top: 0; border-top: 0; font-family: var(--font-mono); font-weight: 700; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-foreground); white-space: nowrap">标题</th>
+                <th class="text-left pb-3" style="padding-top: 0; border-top: 0; font-family: var(--font-mono); font-weight: 700; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-foreground); white-space: nowrap; min-width: 100px">分类</th>
+                <th class="text-left pb-3" style="padding-top: 0; border-top: 0; font-family: var(--font-mono); font-weight: 700; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-foreground); white-space: nowrap; min-width: 90px">状态</th>
+                <th class="text-left pb-3" style="padding-top: 0; border-top: 0; font-family: var(--font-mono); font-weight: 700; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-foreground); white-space: nowrap; min-width: 120px">更新时间</th>
+                <th class="text-left pb-3" style="padding-top: 0; border-top: 0; font-family: var(--font-mono); font-weight: 700; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-foreground); white-space: nowrap; min-width: 100px">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="block truncate" style="font-weight: 600; font-size: 15px; color: var(--foreground); max-width: 280px">灵山大佛历史沿革</span>
+                  <span class="block truncate mt-1" style="font-size: 12px; color: var(--muted-foreground); max-width: 260px">涵盖大佛建造历程、文化象征与宗教意义</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 12px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 74%, transparent); font-size: 12px; color: var(--foreground)">历史文化</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center gap-2 whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 12px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 74%, transparent); font-size: 12px; color: var(--chart-3)">
+                    <span style="width: 8px; height: 8px; border-radius: 999px; background: currentColor; opacity: 0.72"></span>
+                    已发布
+                  </span>
+                </td>
+                <td class="py-4 whitespace-nowrap" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle; font-size: 13px; color: var(--muted-foreground)">2026-06-20</td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <div class="flex items-center gap-2">
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 18px; background: color-mix(in srgb, var(--card) 80%, transparent); color: var(--foreground); font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.16s ease" data-dom-id="row-edit-1">编辑</button>
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 18px; background: color-mix(in srgb, var(--card) 80%, transparent); color: var(--foreground); font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.16s ease" data-dom-id="row-view-1">查看</button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="block truncate" style="font-weight: 600; font-size: 15px; color: var(--foreground); max-width: 280px">九龙灌浴表演解说词</span>
+                  <span class="block truncate mt-1" style="font-size: 12px; color: var(--muted-foreground); max-width: 260px">大型动态群雕表演的完整解说与背景故事</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 12px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 74%, transparent); font-size: 12px; color: var(--foreground)">演艺活动</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center gap-2 whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 12px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 74%, transparent); font-size: 12px; color: var(--chart-3)">
+                    <span style="width: 8px; height: 8px; border-radius: 999px; background: currentColor; opacity: 0.72"></span>
+                    已发布
+                  </span>
+                </td>
+                <td class="py-4 whitespace-nowrap" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle; font-size: 13px; color: var(--muted-foreground)">2026-06-18</td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <div class="flex items-center gap-2">
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 18px; background: color-mix(in srgb, var(--card) 80%, transparent); color: var(--foreground); font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.16s ease" data-dom-id="row-edit-2">编辑</button>
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 18px; background: color-mix(in srgb, var(--card) 80%, transparent); color: var(--foreground); font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.16s ease" data-dom-id="row-view-2">查看</button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="block truncate" style="font-weight: 600; font-size: 15px; color: var(--foreground); max-width: 280px">梵宫建筑艺术赏析</span>
+                  <span class="block truncate mt-1" style="font-size: 12px; color: var(--muted-foreground); max-width: 260px">梵宫内部穹顶壁画、木雕与琉璃工艺解读</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 12px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 74%, transparent); font-size: 12px; color: var(--foreground)">建筑艺术</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center gap-2 whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 12px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 74%, transparent); font-size: 12px; color: var(--chart-2)">
+                    <span style="width: 8px; height: 8px; border-radius: 999px; background: currentColor; opacity: 0.72"></span>
+                    审核中
+                  </span>
+                </td>
+                <td class="py-4 whitespace-nowrap" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle; font-size: 13px; color: var(--muted-foreground)">2026-06-15</td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <div class="flex items-center gap-2">
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 18px; background: color-mix(in srgb, var(--card) 80%, transparent); color: var(--foreground); font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.16s ease" data-dom-id="row-edit-3">编辑</button>
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 18px; background: color-mix(in srgb, var(--card) 80%, transparent); color: var(--foreground); font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.16s ease" data-dom-id="row-view-3">查看</button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="block truncate" style="font-weight: 600; font-size: 15px; color: var(--foreground); max-width: 280px">五印坛城导览词</span>
+                  <span class="block truncate mt-1" style="font-size: 12px; color: var(--muted-foreground); max-width: 260px">藏传佛教建筑风格与坛城文化内涵介绍</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 12px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 74%, transparent); font-size: 12px; color: var(--foreground)">景点导览</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center gap-2 whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 12px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 74%, transparent); font-size: 12px; color: var(--chart-5)">
+                    <span style="width: 8px; height: 8px; border-radius: 999px; background: currentColor; opacity: 0.72"></span>
+                    草稿
+                  </span>
+                </td>
+                <td class="py-4 whitespace-nowrap" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle; font-size: 13px; color: var(--muted-foreground)">2026-06-12</td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <div class="flex items-center gap-2">
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 18px; background: color-mix(in srgb, var(--card) 80%, transparent); color: var(--foreground); font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.16s ease" data-dom-id="row-edit-4">编辑</button>
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 18px; background: color-mix(in srgb, var(--card) 80%, transparent); color: var(--foreground); font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.16s ease" data-dom-id="row-view-4">查看</button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="block truncate" style="font-weight: 600; font-size: 15px; color: var(--foreground); max-width: 280px">灵山素食文化介绍</span>
+                  <span class="block truncate mt-1" style="font-size: 12px; color: var(--muted-foreground); max-width: 260px">素斋堂菜品体系、饮食理念与佛教素食传统</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 12px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 74%, transparent); font-size: 12px; color: var(--foreground)">饮食文化</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center gap-2 whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 12px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 74%, transparent); font-size: 12px; color: var(--chart-3)">
+                    <span style="width: 8px; height: 8px; border-radius: 999px; background: currentColor; opacity: 0.72"></span>
+                    已发布
+                  </span>
+                </td>
+                <td class="py-4 whitespace-nowrap" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle; font-size: 13px; color: var(--muted-foreground)">2026-06-10</td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <div class="flex items-center gap-2">
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 18px; background: color-mix(in srgb, var(--card) 80%, transparent); color: var(--foreground); font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.16s ease" data-dom-id="row-edit-5">编辑</button>
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 18px; background: color-mix(in srgb, var(--card) 80%, transparent); color: var(--foreground); font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.16s ease" data-dom-id="row-view-5">查看</button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="block truncate" style="font-weight: 600; font-size: 15px; color: var(--foreground); max-width: 280px">拈花湾禅意小镇讲解</span>
+                  <span class="block truncate mt-1" style="font-size: 12px; color: var(--muted-foreground); max-width: 260px">禅修体验区布局、活动项目与文化内核概述</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 12px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 74%, transparent); font-size: 12px; color: var(--foreground)">禅修体验</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center gap-2 whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 12px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 74%, transparent); font-size: 12px; color: var(--chart-2)">
+                    <span style="width: 8px; height: 8px; border-radius: 999px; background: currentColor; opacity: 0.72"></span>
+                    审核中
+                  </span>
+                </td>
+                <td class="py-4 whitespace-nowrap" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle; font-size: 13px; color: var(--muted-foreground)">2026-06-08</td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <div class="flex items-center gap-2">
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 18px; background: color-mix(in srgb, var(--card) 80%, transparent); color: var(--foreground); font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.16s ease" data-dom-id="row-edit-6">编辑</button>
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 18px; background: color-mix(in srgb, var(--card) 80%, transparent); color: var(--foreground); font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.16s ease" data-dom-id="row-view-6">查看</button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="block truncate" style="font-weight: 600; font-size: 15px; color: var(--foreground); max-width: 280px">灵山春季花卉指南</span>
+                  <span class="block truncate mt-1" style="font-size: 12px; color: var(--muted-foreground); max-width: 260px">景区各季花卉品种、分布区域与最佳观赏时间</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 12px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 74%, transparent); font-size: 12px; color: var(--foreground)">自然生态</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center gap-2 whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 12px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 74%, transparent); font-size: 12px; color: var(--chart-3)">
+                    <span style="width: 8px; height: 8px; border-radius: 999px; background: currentColor; opacity: 0.72"></span>
+                    已发布
+                  </span>
+                </td>
+                <td class="py-4 whitespace-nowrap" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle; font-size: 13px; color: var(--muted-foreground)">2026-06-05</td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <div class="flex items-center gap-2">
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 18px; background: color-mix(in srgb, var(--card) 80%, transparent); color: var(--foreground); font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.16s ease" data-dom-id="row-edit-7">编辑</button>
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 18px; background: color-mix(in srgb, var(--card) 80%, transparent); color: var(--foreground); font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.16s ease" data-dom-id="row-view-7">查看</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+(function(){
+  var navItems = document.querySelectorAll('[data-nav-key]');
+  function applyActive(item, isActive) {
+    if (isActive) {
+      item.style.background = 'color-mix(in srgb, var(--sidebar-accent-foreground) 10%, transparent)';
+      item.style.borderColor = 'color-mix(in srgb, var(--sidebar-border) 28%, transparent)';
+      item.style.color = 'var(--sidebar-accent-foreground)';
+      var icon = item.querySelector('i');
+      if (icon) icon.style.background = 'color-mix(in srgb, var(--sidebar-accent-foreground) 12%, transparent)';
+    } else {
+      item.style.background = 'transparent';
+      item.style.borderColor = 'transparent';
+      item.style.color = 'color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent)';
+      var icon = item.querySelector('i');
+      if (icon) icon.style.background = 'color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)';
+    }
+  }
+  navItems.forEach(function(item) {
+    var isActive = item.getAttribute('data-active') === 'true';
+    applyActive(item, isActive);
+    item.addEventListener('mouseenter', function() {
+      if (item.getAttribute('data-active') !== 'true') {
+        item.style.background = 'color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)';
+        item.style.color = 'var(--sidebar-accent-foreground)';
+      }
+    });
+    item.addEventListener('mouseleave', function() {
+      applyActive(item, item.getAttribute('data-active') === 'true');
+    });
+  });
+})();
+</script>
+    </main>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

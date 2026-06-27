@@ -1,0 +1,72 @@
+{
+  "ok": true,
+  "provider": "qwen",
+  "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "model": "qwen3.7-plus",
+  "api_key_masked": "sk-w...LvYU",
+  "checks": [
+    {
+      "name": "get_models",
+      "ok": true,
+      "status_code": 200,
+      "elapsed_ms": 2779.0796999997838,
+      "error_type": null,
+      "error_message": null,
+      "body_preview": "{\"object\":\"list\",\"data\":[{\"id\":\"fun-asr-flash-2026-06-15\",\"object\":\"model\",\"created\":1781685634,\"owned_by\":\"system\"},{\"id\":\"glm-5.2\",\"object\":\"model\",\"created\":1781626783,\"owned_by\":\"system\"},{\"id\":\"kimi/kimi-k2.7-code\",\"object\":\"model\",\"created\":1781526973,\"owned_by\":\"system\"},{\"id\":\"kimi-k2.7-code\",\"object\":\"model\",\"created\":1781495524,\"owned_by\":\"system\"},{\"id\":\"sre-gpu-auto-handle\",\"object\":\"model\",\"created\":1781066849,\"owned_by\":\"system\"},{\"id\":\"qwen3.7-max-2026-06-08\",\"object\":\"model\",\"created\":1781025072,\"owned_by\":\"system\"},{\"id\":\"qwen3.5-ocr\",\"object\":\"model\",\"created\":1781525537,\"owned_by\":\"system\"},{\"id\":\"qwentype-api-dingtalk\",\"object\":\"model\",\"created\":1780651778,\"owned_by\":\"system\"},{\"id\":\"qwen3.7-plus-2026-05-26\",\"object\":\"model\",\"created\":1781449610,\"owned_by\":\"system\"},{\"i",
+      "parsed": {
+        "model_count": 219,
+        "first_model_ids": [
+          "fun-asr-flash-2026-06-15",
+          "glm-5.2",
+          "kimi/kimi-k2.7-code",
+          "kimi-k2.7-code",
+          "sre-gpu-auto-handle",
+          "qwen3.7-max-2026-06-08",
+          "qwen3.5-ocr",
+          "qwentype-api-dingtalk",
+          "qwen3.7-plus-2026-05-26",
+          "qwen3.7-plus",
+          "qwen3.7-max-2026-05-17",
+          "qwen3.7-max-preview",
+          "ZHIPU/GLM-5",
+          "qwen3.7-max-2026-05-20",
+          "qwen3.7-max",
+          "qwen3.5-livetranslate-flash-realtime-2026-05-19",
+          "qwen3.5-livetranslate-flash-realtime",
+          "ZHIPU/GLM-5.1",
+          "kimi/kimi-k2.6",
+          "deepseek-v4-flash"
+        ],
+        "configured_model_listed": true
+      }
+    },
+    {
+      "name": "minimal_chat",
+      "ok": true,
+      "status_code": 200,
+      "elapsed_ms": 1622.5876999997126,
+      "error_type": null,
+      "error_message": null,
+      "body_preview": "{\"model\":\"qwen3.7-plus\",\"id\":\"chatcmpl-d735f57f-a1a6-9731-bd48-b2723727a92a\",\"choices\":[{\"message\":{\"content\":\"OK\",\"reasoning_content\":\"用户要求只回复“OK”。\\n这是一个非常明确的指令，不需要任何额外的解释或内容。\\n直接输出“OK”即可。\",\"role\":\"assistant\"},\"index\":0,\"finish_reason\":\"stop\"}],\"created\":1781687917,\"object\":\"chat.completion\",\"usage\":{\"total_tokens\":47,\"completion_tokens\":34,\"prompt_tokens\":13,\"completion_tokens_details\":{\"reasoning_tokens\":28,\"text_tokens\":34},\"prompt_tokens_details\":{\"cached_tokens\":0,\"text_tokens\":13}}}",
+      "parsed": {
+        "model": "qwen3.7-plus",
+        "content_preview": "OK",
+        "usage": {
+          "total_tokens": 47,
+          "completion_tokens": 34,
+          "prompt_tokens": 13,
+          "completion_tokens_details": {
+            "reasoning_tokens": 28,
+            "text_tokens": 34
+          },
+          "prompt_tokens_details": {
+            "cached_tokens": 0,
+            "text_tokens": 13
+          }
+        },
+        "error": null
+      }
+    }
+  ],
+  "conclusion": "Qwen compatible chat endpoint, API key, and configured model are usable."
+}

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>灵山智慧导游 · 游览中</title>
+    <style id="theme-vars">
+:root {
+  /* brand — 深青绿 */
+  --brand-50: #edf5f1;
+  --brand-100: #d4e8dc;
+  --brand-200: #a9d1b9;
+  --brand-300: #7eba96;
+  --brand-400: #53a373;
+  --brand-500: #398c5a;
+  --brand-600: #2D5A4B;
+  --brand-700: #1f4638;
+  --brand-800: #163226;
+  --brand-900: #0d1e14;
+
+  /* surface — 中式温润纸面 */
+  --background: #F5F2EC;
+  --muted: #EDEAE4;
+  --card: #FAF8F4;
+  --popover: #FFFDF9;
+
+  /* text — 墨色体系 */
+  --foreground: #2C3A33;
+  --muted-foreground: #6B7A72;
+  --card-foreground: #2C3A33;
+  --popover-foreground: #2C3A33;
+  --accent-foreground: #2C3A33;
+  --secondary-foreground: #FFFFFF;
+
+  /* action */
+  --primary: var(--brand-600);
+  --primary-foreground: #FFFFFF;
+  --accent: #C49B4C;
+  --accent-foreground: #3D2E14;
+  --input: #E8E4DC;
+  --border: #D8D2C7;
+  --secondary: #2C3A33;
+  --ring: var(--brand-500);
+
+  /* feedback */
+  --destructive: #C5534B;
+  --destructive-foreground: #FFFFFF;
+
+  /* chart — 山水色系 */
+  --chart-1: #2D5A4B;
+  --chart-2: #C49B4C;
+  --chart-3: #7EAD89;
+  --chart-4: #8B7355;
+  --chart-5: #4A8C7C;
+
+  /* sidebar — 深墨绿 */
+  --sidebar: #D8D4CA;
+  --sidebar-foreground: #2C3A33;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: #1B2E25;
+  --sidebar-accent-foreground: #EDEAE4;
+  --sidebar-border: #C4BFB0;
+  --sidebar-ring: var(--ring);
+
+  /* compatibility aliases */
+  --bg-background: var(--background);
+  --bg-card: var(--card);
+  --bg-popover: var(--popover);
+  --bg-muted: var(--muted);
+  --text-foreground: var(--foreground);
+  --text-card-foreground: var(--card-foreground);
+  --text-popover-foreground: var(--popover-foreground);
+  --text-primary-foreground: var(--primary-foreground);
+  --text-secondary-foreground: var(--secondary-foreground);
+  --text-muted-foreground: var(--muted-foreground);
+  --text-accent-foreground: var(--accent-foreground);
+  --text-destructive-foreground: var(--destructive-foreground);
+  --accent-primary: var(--primary);
+  --accent-secondary: var(--secondary);
+  --accent-input: var(--input);
+  --accent-ring: var(--ring);
+  --status-destructive: var(--destructive);
+
+  /* === Typography === */
+  --font-sans: Geist, "PingFang SC", "Microsoft YaHei", ui-sans-serif, sans-serif;
+  --font-serif: "Noto Serif SC", "STSong", Georgia, ui-serif, serif;
+  --font-mono: Roboto Mono, "SF Mono", monospace;
+  --tracking-normal: 0em;
+
+  /* === Radius === */
+  --radius: 16px;
+
+  /* === Spacing === */
+  --spacing: 4px;
+
+  /* === Scenic Background (可替换：修改此路径即可换背景图) === */
+  --bg-scenic: url('../assets/bg-fangong.png');
+
+  /* === Shadow === */
+  --shadow-2xs: transparent;
+  --shadow-xs: 0 1px 2px rgba(44, 58, 51, 0.04);
+  --shadow-sm: 0 2px 8px rgba(44, 58, 51, 0.06);
+  --shadow: 0 4px 16px rgba(44, 58, 51, 0.08);
+  --shadow-md: 0 8px 24px rgba(44, 58, 51, 0.1);
+  --shadow-lg: 0 12px 36px rgba(44, 58, 51, 0.12);
+  --shadow-xl: 0 16px 48px rgba(44, 58, 51, 0.14);
+  --shadow-2xl: 0 24px 64px rgba(44, 58, 51, 0.18);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  
+  @layer base {
+    body { background: var(--brand-background); color: var(--brand-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      @keyframes voice-glow-mobile {
+        0%, 100% { box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 40%, transparent), 0 0 32px color-mix(in srgb, var(--accent) 15%, transparent); }
+        50% { box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 55%, transparent), 0 0 42px color-mix(in srgb, var(--accent) 22%, transparent); }
+      }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main class="relative min-h-screen flex flex-col" style="background: linear-gradient(180deg, color-mix(in srgb, var(--background) 35%, transparent) 0%, color-mix(in srgb, var(--background) 88%, transparent) 100%), var(--bg-scenic) center/cover no-repeat;">
+        <div class="relative z-10 flex flex-col min-h-screen">
+
+            <!-- ======  Top Bar  ====== -->
+            <header class="sticky top-0 z-30 flex items-center justify-between px-4 h-12" style="background: color-mix(in srgb, var(--background) 85%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);">
+                <div class="flex items-center gap-2">
+                    <button class="inline-flex h-8 w-8 items-center justify-center rounded-lg" style="border: 1px solid var(--border);" aria-label="返回">
+                        <i data-lucide="chevron-left" class="h-4 w-4" style="color: var(--foreground);"></i>
+                    </button>
+                    <span class="text-sm font-medium truncate" style="color: var(--foreground);">灵山智慧导游</span>
+                </div>
+                <span class="inline-flex items-center text-xs px-2 py-0.5 rounded-full font-medium shrink-0" style="background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary);">休闲游</span>
+            </header>
+
+            <!-- ======  Digital Person  ====== -->
+            <div class="flex flex-col items-center justify-center pt-6 pb-2 px-4">
+                <!-- Golden glow backdrop -->
+                <div class="relative">
+                    <div class="absolute inset-0 rounded-full blur-3xl opacity-40" style="background: radial-gradient(circle, var(--accent) 0%, transparent 70%); transform: scale(1.3);"></div>
+                    <!-- Digital Person SVG -->
+                    <div class="relative z-10 w-[180px] h-[200px] flex items-center justify-center">
+                        <svg width="160" height="200" viewBox="0 0 160 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Outer ring -->
+                            <circle cx="80" cy="62" r="56" stroke="var(--accent)" stroke-width="1.5" opacity="0.35" fill="none"></circle>
+                            <circle cx="80" cy="62" r="48" stroke="var(--accent)" stroke-width="0.75" opacity="0.2" fill="none"></circle>
+                            <!-- Head -->
+                            <ellipse cx="80" cy="52" rx="18" ry="22" fill="color-mix(in srgb, var(--accent) 18%, transparent)" stroke="var(--accent)" stroke-width="1.2" opacity="0.85"></ellipse>
+                            <!-- Face features -->
+                            <ellipse cx="74" cy="48" rx="2.4" ry="3" fill="var(--accent)" opacity="0.5"></ellipse>
+                            <ellipse cx="86" cy="48" rx="2.4" ry="3" fill="var(--accent)" opacity="0.5"></ellipse>
+                            <path d="M73 58 Q80 64 87 58" stroke="var(--accent)" stroke-width="1.2" fill="none" opacity="0.55" stroke-linecap="round"></path>
+                            <!-- Body / robe -->
+                            <path d="M56 80 Q50 102 46 132 L62 134 Q58 110 62 86 L80 92 L98 86 Q102 110 98 134 L114 132 Q110 102 104 80" fill="color-mix(in srgb, var(--accent) 10%, transparent)" stroke="var(--accent)" stroke-width="1.2" opacity="0.8" stroke-linejoin="round"></path>
+                            <!-- Inner robe lines -->
+                            <line x1="80" y1="74" x2="80" y2="134" stroke="var(--accent)" stroke-width="0.8" opacity="0.3"></line>
+                            <path d="M62 86 Q68 96 80 98" stroke="var(--accent)" stroke-width="0.7" fill="none" opacity="0.3"></path>
+                            <path d="M98 86 Q92 96 80 98" stroke="var(--accent)" stroke-width="0.7" fill="none" opacity="0.3"></path>
+                            <!-- Hands -->
+                            <path d="M56 96 Q44 104 38 114" stroke="var(--accent)" stroke-width="1.2" fill="none" opacity="0.6" stroke-linecap="round"></path>
+                            <path d="M104 96 Q116 104 122 114" stroke="var(--accent)" stroke-width="1.2" fill="none" opacity="0.6" stroke-linecap="round"></path>
+                            <!-- Data nodes / digital particles -->
+                            <circle cx="34" cy="60" r="2" fill="var(--accent)" opacity="0.5"></circle>
+                            <circle cx="126" cy="55" r="1.8" fill="var(--accent)" opacity="0.4"></circle>
+                            <circle cx="40" cy="130" r="1.5" fill="var(--accent)" opacity="0.35"></circle>
+                            <circle cx="120" cy="125" r="2" fill="var(--accent)" opacity="0.4"></circle>
+                            <circle cx="28" cy="100" r="1.2" fill="var(--accent)" opacity="0.3"></circle>
+                            <circle cx="132" cy="95" r="1.5" fill="var(--accent)" opacity="0.35"></circle>
+                        </svg>
+                    </div>
+                </div>
+                <p class="text-xs mt-1" style="color: var(--accent); opacity: 0.75;">AI 智慧导游 · 小灵</p>
+            </div>
+
+            <!-- ======  Chat Messages  ====== -->
+            <div class="flex-1 px-4 overflow-y-auto no-scrollbar" style="max-height: 260px;">
+                <div class="flex flex-col gap-3 pb-2">
+
+                    <!-- Message 1: AI (小灵) -->
+                    <div class="flex items-start gap-2 max-w-[88%]">
+                        <div class="shrink-0 w-7 h-7 rounded-full flex items-center justify-center mt-0.5" style="background: color-mix(in srgb, var(--accent) 25%, transparent);">
+                            <span class="text-[10px] font-semibold" style="color: var(--accent);">灵</span>
+                        </div>
+                        <div class="rounded-2xl rounded-tl-md px-3.5 py-2.5" style="background: color-mix(in srgb, var(--card) 88%, transparent); border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);">
+                            <p class="text-sm leading-relaxed" style="color: var(--foreground);">灵山大佛高88米，始建于1994年，是世界上最高的青铜立佛。佛像面朝太湖，背倚灵山，庄严肃穆。</p>
+                        </div>
+                    </div>
+
+                    <!-- Message 2: User (游客) -->
+                    <div class="flex items-start justify-end gap-2 ml-auto max-w-[85%]">
+                        <div class="rounded-2xl rounded-tr-md px-3.5 py-2.5" style="background: color-mix(in srgb, var(--primary) 92%, transparent);">
+                            <p class="text-sm leading-relaxed" style="color: var(--primary-foreground);">还有别的景点推荐吗？</p>
+                        </div>
+                        <div class="shrink-0 w-7 h-7 rounded-full flex items-center justify-center mt-0.5" style="background: color-mix(in srgb, var(--primary) 15%, transparent);">
+                            <i data-lucide="user" class="h-3.5 w-3.5" style="color: var(--primary);"></i>
+                        </div>
+                    </div>
+
+                    <!-- Message 3: AI (小灵) -->
+                    <div class="flex items-start gap-2 max-w-[88%]">
+                        <div class="shrink-0 w-7 h-7 rounded-full flex items-center justify-center mt-0.5" style="background: color-mix(in srgb, var(--accent) 25%, transparent);">
+                            <span class="text-[10px] font-semibold" style="color: var(--accent);">灵</span>
+                        </div>
+                        <div class="rounded-2xl rounded-tl-md px-3.5 py-2.5" style="background: color-mix(in srgb, var(--card) 88%, transparent); border: 1px solid color-mix(in srgb, var(--border) 60%, transparent); transform: rotate(0deg);">
+                            <p class="text-sm leading-relaxed" style="color: var(--foreground);">当然！灵山胜境还有九龙灌浴、五印坛城、梵宫等景点。梵宫内部金碧辉煌，值得细细观赏。</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ======  Source Evidence Toggle  ====== -->
+            <div class="px-4 pt-1 pb-2">
+                <button data-dom-id="source-toggle" class="inline-flex items-center gap-1.5 text-xs px-3 py-1 rounded-full transition-colors duration-150 hover:opacity-80" style="background: color-mix(in srgb, var(--muted) 70%, transparent); color: var(--muted-foreground);">
+                    <i data-lucide="book-open" class="h-3 w-3"></i>
+                    <span>基于 3 条资料</span>
+                    <i data-lucide="chevron-down" class="h-3 w-3 transition-transform duration-200"></i>
+                </button>
+            </div>
+
+            <!-- ======  Quick Actions  ====== -->
+            <div class="px-4 pb-2">
+                <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                    <button data-dom-id="quick-spots" class="inline-flex items-center shrink-0 text-xs px-3.5 py-1.5 rounded-full font-medium whitespace-nowrap transition-all duration-150 hover:opacity-80 active:scale-95" style="background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);">热门景点</button>
+                    <button data-dom-id="quick-history" class="inline-flex items-center shrink-0 text-xs px-3.5 py-1.5 rounded-full font-medium whitespace-nowrap transition-all duration-150 hover:opacity-80 active:scale-95" style="background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent-foreground); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);">历史文化</button>
+                    <button data-dom-id="quick-routes" class="inline-flex items-center shrink-0 text-xs px-3.5 py-1.5 rounded-full font-medium whitespace-nowrap transition-all duration-150 hover:opacity-80 active:scale-95" style="background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);">游览路线</button>
+                    <button data-dom-id="quick-food" class="inline-flex items-center shrink-0 text-xs px-3.5 py-1.5 rounded-full font-medium whitespace-nowrap transition-all duration-150 hover:opacity-80 active:scale-95" style="background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent-foreground); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);">美食推荐</button>
+                    <button data-dom-id="switch-mode" class="inline-flex items-center shrink-0 text-xs px-3.5 py-1.5 rounded-full font-medium whitespace-nowrap transition-all duration-150 hover:opacity-80 active:scale-95" style="background: transparent; color: var(--muted-foreground); border: 1px solid var(--border);">
+                        <i data-lucide="refresh-cw" class="h-3 w-3 mr-1"></i>切换模式
+                    </button>
+                </div>
+            </div>
+
+            <!-- ======  Bottom Input Bar  ====== -->
+            <div class="sticky bottom-0 z-30 px-3 py-2.5" style="background: color-mix(in srgb, var(--background) 92%, transparent); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid color-mix(in srgb, var(--border) 50%, transparent);">
+                <div class="flex items-center gap-2">
+                    <!-- Camera button -->
+                    <button data-dom-id="btn-camera" class="shrink-0 inline-flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-150 hover:opacity-80 active:scale-95" style="background: color-mix(in srgb, var(--muted) 80%, transparent); border: 1px solid var(--border);" aria-label="拍照">
+                        <i data-lucide="camera" class="h-5 w-5" style="color: var(--muted-foreground);"></i>
+                    </button>
+
+                    <!-- Input field -->
+                    <div class="flex-1 min-w-0 relative">
+                        <input type="text" placeholder="想了解什么？" class="w-full h-10 px-4 rounded-xl text-sm outline-none transition-all duration-150 placeholder:opacity-50" style="background: color-mix(in srgb, var(--card) 90%, transparent); color: var(--foreground); border: 1px solid var(--border);">
+                    </div>
+
+                    <!-- Voice button — PRIMARY, equal prominence -->
+                    <button data-dom-id="btn-voice" class="shrink-0 inline-flex items-center justify-center gap-1.5 font-semibold rounded-xl transition-all duration-150 active:scale-95 relative" style="height:40px;min-width:72px;padding:0 16px;background:var(--primary);color:var(--primary-foreground);border:2px solid var(--accent);box-shadow:0 0 16px color-mix(in srgb, var(--accent) 40%, transparent),0 0 32px color-mix(in srgb, var(--accent) 15%, transparent);animation:voice-glow-mobile 2.5s ease-in-out infinite" aria-label="语音">
+                        <i data-lucide="mic" class="h-4 w-4"></i>
+                        <span class="text-[13px]">语音</span>
+                    </button>
+
+                    <!-- Send button -->
+                    <button data-dom-id="btn-send" class="shrink-0 inline-flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-150 hover:opacity-80 active:scale-95" style="background: color-mix(in srgb, var(--primary) 85%, transparent);" aria-label="发送">
+                        <i data-lucide="send" class="h-4 w-4" style="color: var(--primary-foreground);"></i>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

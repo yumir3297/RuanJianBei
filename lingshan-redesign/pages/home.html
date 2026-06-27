@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>灵山智慧导游</title>
+    <style id="theme-vars">
+:root {
+  /* brand — 深青绿 */
+  --brand-50: #edf5f1;
+  --brand-100: #d4e8dc;
+  --brand-200: #a9d1b9;
+  --brand-300: #7eba96;
+  --brand-400: #53a373;
+  --brand-500: #398c5a;
+  --brand-600: #2D5A4B;
+  --brand-700: #1f4638;
+  --brand-800: #163226;
+  --brand-900: #0d1e14;
+
+  /* surface — 中式温润纸面 */
+  --background: #F5F2EC;
+  --muted: #EDEAE4;
+  --card: #FAF8F4;
+  --popover: #FFFDF9;
+
+  /* text — 墨色体系 */
+  --foreground: #2C3A33;
+  --muted-foreground: #6B7A72;
+  --card-foreground: #2C3A33;
+  --popover-foreground: #2C3A33;
+  --accent-foreground: #2C3A33;
+  --secondary-foreground: #FFFFFF;
+
+  /* action */
+  --primary: var(--brand-600);
+  --primary-foreground: #FFFFFF;
+  --accent: #C49B4C;
+  --accent-foreground: #3D2E14;
+  --input: #E8E4DC;
+  --border: #D8D2C7;
+  --secondary: #2C3A33;
+  --ring: var(--brand-500);
+
+  /* feedback */
+  --destructive: #C5534B;
+  --destructive-foreground: #FFFFFF;
+
+  /* chart — 山水色系 */
+  --chart-1: #2D5A4B;
+  --chart-2: #C49B4C;
+  --chart-3: #7EAD89;
+  --chart-4: #8B7355;
+  --chart-5: #4A8C7C;
+
+  /* sidebar — 深墨绿 */
+  --sidebar: #D8D4CA;
+  --sidebar-foreground: #2C3A33;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: #1B2E25;
+  --sidebar-accent-foreground: #EDEAE4;
+  --sidebar-border: #C4BFB0;
+  --sidebar-ring: var(--ring);
+
+  /* compatibility aliases */
+  --bg-background: var(--background);
+  --bg-card: var(--card);
+  --bg-popover: var(--popover);
+  --bg-muted: var(--muted);
+  --text-foreground: var(--foreground);
+  --text-card-foreground: var(--card-foreground);
+  --text-popover-foreground: var(--popover-foreground);
+  --text-primary-foreground: var(--primary-foreground);
+  --text-secondary-foreground: var(--secondary-foreground);
+  --text-muted-foreground: var(--muted-foreground);
+  --text-accent-foreground: var(--accent-foreground);
+  --text-destructive-foreground: var(--destructive-foreground);
+  --accent-primary: var(--primary);
+  --accent-secondary: var(--secondary);
+  --accent-input: var(--input);
+  --accent-ring: var(--ring);
+  --status-destructive: var(--destructive);
+
+  /* === Typography === */
+  --font-sans: Geist, "PingFang SC", "Microsoft YaHei", ui-sans-serif, sans-serif;
+  --font-serif: "Noto Serif SC", "STSong", Georgia, ui-serif, serif;
+  --font-mono: Roboto Mono, "SF Mono", monospace;
+  --tracking-normal: 0em;
+
+  /* === Radius === */
+  --radius: 16px;
+
+  /* === Spacing === */
+  --spacing: 4px;
+
+  /* === Shadow === */
+  --shadow-2xs: transparent;
+  --shadow-xs: 0 1px 2px rgba(44, 58, 51, 0.04);
+  --shadow-sm: 0 2px 8px rgba(44, 58, 51, 0.06);
+  --shadow: 0 4px 16px rgba(44, 58, 51, 0.08);
+  --shadow-md: 0 8px 24px rgba(44, 58, 51, 0.1);
+  --shadow-lg: 0 12px 36px rgba(44, 58, 51, 0.12);
+  --shadow-xl: 0 16px 48px rgba(44, 58, 51, 0.14);
+  --shadow-2xl: 0 24px 64px rgba(44, 58, 51, 0.18);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  
+  @layer base {
+    body { background: var(--brand-background); color: var(--brand-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main class="relative flex flex-col items-center justify-between min-h-screen overflow-hidden" style="background:linear-gradient(180deg, var(--background) 0%, color-mix(in srgb, var(--background) 97%, var(--accent)) 50%, var(--background) 100%)">
+      <!-- 景区背景层 (可替换: 修改 colors_and_type.css 中 --bg-scenic 的路径即可换背景) -->
+      <div class="absolute inset-0 pointer-events-none z-0" aria-hidden="true">
+        <div class="absolute inset-0 bg-cover bg-center" style="background-image:var(--bg-scenic);filter:blur(5px) saturate(0.6) brightness(0.5)"></div>
+        <div class="absolute inset-0" style="background:radial-gradient(ellipse 60% 50% at 50% 55%, transparent 0%, rgba(45,90,75,0.35) 70%, rgba(20,40,28,0.55) 100%)"></div>
+      </div>
+      <!-- Subtle landscape background texture -->
+      <div class="absolute inset-0 pointer-events-none opacity-[0.06]" style="background:radial-gradient(ellipse 80% 60% at 50% 55%, var(--accent), transparent), radial-gradient(ellipse 60% 30% at 30% 80%, var(--primary), transparent), radial-gradient(ellipse 50% 25% at 70% 75%, var(--primary), transparent)"></div>
+
+      <!-- Top title bar -->
+      <div class="relative z-10 w-full pt-10 md:pt-14 text-center">
+        <span class="text-sm tracking-[0.12em] opacity-70" style="font-family:var(--font-serif);color:var(--muted-foreground);letter-spacing:0.12em">灵山智慧导游</span>
+      </div>
+
+      <!-- Center content area -->
+      <div class="relative z-10 flex flex-col items-center justify-center flex-1 w-full px-6">
+
+        <!-- Digital person with glow -->
+        <div class="relative flex items-center justify-center">
+          <!-- Radial glow behind figure -->
+          <div class="absolute rounded-full" style="width:300px;height:300px;background:radial-gradient(circle, color-mix(in srgb, var(--accent) 10%, transparent), transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%)"></div>
+
+          <!-- SVG digital person silhouette -->
+          <svg class="relative" width="320" height="480" viewBox="0 0 320 480" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="数字人导游形象">
+            <defs>
+              <linearGradient id="figure-grad" x1="160" y1="0" x2="160" y2="480" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="var(--primary)"/>
+                <stop offset="100%" stop-color="var(--brand-800)"/>
+              </linearGradient>
+            </defs>
+            <!-- Head -->
+            <ellipse cx="160" cy="54" rx="26" ry="30" fill="url(#figure-grad)"/>
+            <!-- Hair bun -->
+            <ellipse cx="160" cy="24" rx="18" ry="14" fill="url(#figure-grad)"/>
+            <!-- Hair side streams -->
+            <path d="M134 38Q126 48 130 68Q134 54 140 44" fill="url(#figure-grad)"/>
+            <path d="M186 38Q194 48 190 68Q186 54 180 44" fill="url(#figure-grad)"/>
+            <!-- Neck -->
+            <rect x="152" y="80" width="16" height="14" rx="3" fill="url(#figure-grad)"/>
+            <!-- Shoulders & upper body robe -->
+            <path d="M130 94Q116 94 108 104L100 140Q94 166 80 200L88 204Q106 176 120 150L126 134Q132 120 140 112L160 104L180 112Q188 120 194 134L200 150Q214 176 232 204L240 200Q226 166 220 140L212 104Q204 94 190 94Z" fill="url(#figure-grad)"/>
+            <!-- Outer robe left side -->
+            <path d="M80 200Q76 232 72 280Q68 340 66 380L64 420Q62 444 66 460L80 458Q78 448 80 420L84 370Q88 320 94 280Q100 240 108 210Z" fill="url(#figure-grad)"/>
+            <!-- Outer robe right side -->
+            <path d="M240 200Q244 232 248 280Q252 340 254 380L256 420Q258 444 254 460L240 458Q242 448 240 420L236 370Q232 320 226 280Q220 240 212 210Z" fill="url(#figure-grad)"/>
+            <!-- Inner robe body -->
+            <path d="M108 210Q100 240 98 300Q96 380 100 440Q104 456 108 460L212 460Q216 456 220 440Q224 380 222 300Q220 240 212 210Q200 190 184 178Q168 170 160 168Q152 170 136 178Q120 190 108 210Z" fill="url(#figure-grad)" opacity="0.85"/>
+            <!-- Sash/waist detail -->
+            <path d="M112 250Q140 242 160 240Q180 242 208 250Q212 254 208 258Q180 250 160 248Q140 250 112 258Q108 254 112 250Z" fill="var(--brand-500)" opacity="0.6"/>
+            <!-- Sleeve left -->
+            <path d="M80 200Q64 196 54 210Q44 230 48 260Q52 278 62 282Q70 284 74 278Q70 264 68 248Q66 230 72 216Q78 204 88 204Z" fill="url(#figure-grad)"/>
+            <!-- Sleeve right -->
+            <path d="M240 200Q256 196 266 210Q276 230 272 260Q268 278 258 282Q250 284 246 278Q250 264 252 248Q254 230 248 216Q242 204 232 204Z" fill="url(#figure-grad)"/>
+            <!-- Hands -->
+            <ellipse cx="68" cy="256" rx="10" ry="7" fill="var(--brand-200)" opacity="0.5"/>
+            <ellipse cx="252" cy="256" rx="10" ry="7" fill="var(--brand-200)" opacity="0.5"/>
+            <!-- Feet -->
+            <path d="M104 460L100 476Q98 480 104 480L130 480Q136 480 134 476L128 460Z" fill="url(#figure-grad)"/>
+            <path d="M216 460L192 476Q188 480 192 480L220 480Q226 480 222 478L216 460Z" fill="url(#figure-grad)"/>
+          </svg>
+        </div>
+
+        <!-- Guide text -->
+        <p class="mt-10 text-lg md:text-xl leading-relaxed tracking-[0.06em]" style="font-family:var(--font-serif);color:var(--muted-foreground);text-wrap:balance;word-break:keep-all">您好，我将陪您游览灵山</p>
+
+        <!-- CTA button -->
+        <div class="mt-10">
+          <button data-dom-id="start-tour" class="welcome-cta inline-flex items-center justify-center px-10 py-4 text-lg font-semibold tracking-[0.04em] whitespace-nowrap rounded-2xl transition-all duration-160 hover:brightness-105 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2" style="font-family:var(--font-sans);background:var(--primary);color:var(--primary-foreground);--tw-ring-color:var(--ring);border:1px solid var(--primary)">
+            开始游览
+          </button>
+        </div>
+      </div>
+
+      <!-- Bottom mountain silhouette -->
+      <div class="relative z-10 w-full mt-auto">
+        <svg class="w-full h-auto" viewBox="0 0 1440 160" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M0 160L0 128Q60 104 120 116Q180 128 240 80Q300 32 360 64Q420 96 480 72Q540 48 600 88Q660 128 720 104Q780 80 840 56Q900 32 960 72Q1020 112 1080 88Q1140 64 1200 100Q1260 136 1320 80Q1380 24 1440 72L1440 160Z" style="fill:var(--border);opacity:0.5"/>
+          <path d="M0 160L0 144Q60 124 120 132Q180 140 240 108Q300 76 360 96Q420 116 480 96Q540 76 600 104Q660 132 720 116Q780 100 840 88Q900 76 960 96Q1020 116 1080 104Q1140 92 1200 112Q1260 132 1320 96Q1380 60 1440 92L1440 160Z" style="fill:var(--border);opacity:0.35"/>
+        </svg>
+      </div>
+    </main>
+    <style>
+      @keyframes pulse-breathe {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+      }
+      .welcome-cta {
+        animation: pulse-breathe 3s cubic-bezier(.45,0,.55,1) infinite;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .welcome-cta { animation: none; }
+      }
+    </style>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

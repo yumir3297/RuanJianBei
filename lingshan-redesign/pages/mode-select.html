@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>选择讲解方式</title>
+    <style id="theme-vars">
+:root {
+  /* brand — 深青绿 */
+  --brand-50: #edf5f1;
+  --brand-100: #d4e8dc;
+  --brand-200: #a9d1b9;
+  --brand-300: #7eba96;
+  --brand-400: #53a373;
+  --brand-500: #398c5a;
+  --brand-600: #2D5A4B;
+  --brand-700: #1f4638;
+  --brand-800: #163226;
+  --brand-900: #0d1e14;
+
+  /* surface — 中式温润纸面 */
+  --background: #F5F2EC;
+  --muted: #EDEAE4;
+  --card: #FAF8F4;
+  --popover: #FFFDF9;
+
+  /* text — 墨色体系 */
+  --foreground: #2C3A33;
+  --muted-foreground: #6B7A72;
+  --card-foreground: #2C3A33;
+  --popover-foreground: #2C3A33;
+  --accent-foreground: #2C3A33;
+  --secondary-foreground: #FFFFFF;
+
+  /* action */
+  --primary: var(--brand-600);
+  --primary-foreground: #FFFFFF;
+  --accent: #C49B4C;
+  --accent-foreground: #3D2E14;
+  --input: #E8E4DC;
+  --border: #D8D2C7;
+  --secondary: #2C3A33;
+  --ring: var(--brand-500);
+
+  /* feedback */
+  --destructive: #C5534B;
+  --destructive-foreground: #FFFFFF;
+
+  /* chart — 山水色系 */
+  --chart-1: #2D5A4B;
+  --chart-2: #C49B4C;
+  --chart-3: #7EAD89;
+  --chart-4: #8B7355;
+  --chart-5: #4A8C7C;
+
+  /* sidebar — 深墨绿 */
+  --sidebar: #D8D4CA;
+  --sidebar-foreground: #2C3A33;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: #1B2E25;
+  --sidebar-accent-foreground: #EDEAE4;
+  --sidebar-border: #C4BFB0;
+  --sidebar-ring: var(--ring);
+
+  /* compatibility aliases */
+  --bg-background: var(--background);
+  --bg-card: var(--card);
+  --bg-popover: var(--popover);
+  --bg-muted: var(--muted);
+  --text-foreground: var(--foreground);
+  --text-card-foreground: var(--card-foreground);
+  --text-popover-foreground: var(--popover-foreground);
+  --text-primary-foreground: var(--primary-foreground);
+  --text-secondary-foreground: var(--secondary-foreground);
+  --text-muted-foreground: var(--muted-foreground);
+  --text-accent-foreground: var(--accent-foreground);
+  --text-destructive-foreground: var(--destructive-foreground);
+  --accent-primary: var(--primary);
+  --accent-secondary: var(--secondary);
+  --accent-input: var(--input);
+  --accent-ring: var(--ring);
+  --status-destructive: var(--destructive);
+
+  /* === Typography === */
+  --font-sans: Geist, "PingFang SC", "Microsoft YaHei", ui-sans-serif, sans-serif;
+  --font-serif: "Noto Serif SC", "STSong", Georgia, ui-serif, serif;
+  --font-mono: Roboto Mono, "SF Mono", monospace;
+  --tracking-normal: 0em;
+
+  /* === Radius === */
+  --radius: 16px;
+
+  /* === Spacing === */
+  --spacing: 4px;
+
+  /* === Shadow === */
+  --shadow-2xs: transparent;
+  --shadow-xs: 0 1px 2px rgba(44, 58, 51, 0.04);
+  --shadow-sm: 0 2px 8px rgba(44, 58, 51, 0.06);
+  --shadow: 0 4px 16px rgba(44, 58, 51, 0.08);
+  --shadow-md: 0 8px 24px rgba(44, 58, 51, 0.1);
+  --shadow-lg: 0 12px 36px rgba(44, 58, 51, 0.12);
+  --shadow-xl: 0 16px 48px rgba(44, 58, 51, 0.14);
+  --shadow-2xl: 0 24px 64px rgba(44, 58, 51, 0.18);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  
+  @layer base {
+    body { background: var(--brand-background); color: var(--brand-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main class="relative min-h-screen flex flex-col overflow-hidden" style="background:var(--background)">
+      <!-- 景区背景层 (可替换: 修改 colors_and_type.css 中 --bg-scenic 的路径即可换背景) -->
+      <div class="absolute inset-0 pointer-events-none z-0" aria-hidden="true">
+        <div class="absolute inset-0 bg-cover bg-center" style="background-image:var(--bg-scenic);filter:blur(5px) saturate(0.6) brightness(0.5)"></div>
+        <div class="absolute inset-0" style="background:radial-gradient(ellipse 60% 50% at 50% 55%, transparent 0%, rgba(45,90,75,0.35) 70%, rgba(20,40,28,0.55) 100%)"></div>
+      </div>
+      <!-- Subtle mountain silhouette background -->
+      <div class="absolute inset-0 pointer-events-none overflow-hidden opacity-[0.05]" aria-hidden="true">
+        <svg viewBox="0 0 1440 600" preserveAspectRatio="none" class="absolute bottom-0 w-full h-[55%]" style="color:var(--foreground)">
+          <path d="M0 600 L0 380 Q90 340 180 370 Q270 300 360 350 Q450 280 540 330 Q630 260 720 310 Q810 240 900 290 Q990 250 1080 300 Q1170 270 1260 310 Q1350 280 1440 320 L1440 600 Z" fill="currentColor" opacity="0.4"/>
+          <path d="M0 600 L0 440 Q120 400 240 430 Q360 370 480 420 Q600 360 720 400 Q840 340 960 380 Q1080 340 1200 370 Q1320 350 1440 380 L1440 600 Z" fill="currentColor" opacity="0.25"/>
+          <path d="M0 600 L0 500 Q160 470 320 490 Q480 450 640 480 Q800 440 960 470 Q1120 430 1280 460 Q1360 450 1440 460 L1440 600 Z" fill="currentColor" opacity="0.15"/>
+        </svg>
+      </div>
+
+      <!-- Subtle page title -->
+      <div class="relative z-10 text-center pt-5 md:pt-8">
+        <p class="text-sm tracking-[0.18em]" style="color:var(--muted-foreground);font-family:var(--font-serif)">灵山智慧导游</p>
+      </div>
+
+      <!-- Digital Person Area -->
+      <div class="relative z-10 flex-1 flex items-end justify-center pb-2">
+        <div class="relative flex items-end justify-center" style="width:320px;height:420px">
+          <!-- Golden glow behind -->
+          <div class="absolute bottom-[5%] left-1/2 -translate-x-1/2 w-56 h-56 rounded-full" style="background:radial-gradient(circle, rgba(196,155,76,0.15) 0%, transparent 70%)"></div>
+          <div class="absolute bottom-[10%] left-1/2 -translate-x-1/2 w-44 h-44 rounded-full" style="background:radial-gradient(circle, rgba(45,90,75,0.08) 0%, transparent 70%)"></div>
+          <!-- Female Guide Silhouette SVG -->
+          <svg viewBox="0 0 280 400" class="relative z-10 w-full h-full" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="guideGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#2D5A4B" stop-opacity="0.95"/>
+                <stop offset="100%" stop-color="#1f4638" stop-opacity="0.85"/>
+              </linearGradient>
+              <linearGradient id="robeGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#398c5a" stop-opacity="0.5"/>
+                <stop offset="100%" stop-color="#2D5A4B" stop-opacity="0.9"/>
+              </linearGradient>
+            </defs>
+            <!-- Hair bun -->
+            <ellipse cx="140" cy="55" rx="32" ry="28" fill="url(#guideGrad)" opacity="0.9"/>
+            <!-- Head -->
+            <ellipse cx="140" cy="80" rx="26" ry="30" fill="url(#guideGrad)"/>
+            <!-- Neck -->
+            <rect x="132" y="108" width="16" height="12" rx="3" fill="url(#guideGrad)" opacity="0.8"/>
+            <!-- Shoulders & upper body -->
+            <path d="M90 125 Q100 118 140 122 Q180 118 190 125 L210 180 Q195 185 185 200 L175 280 Q170 310 160 340 L140 345 L120 340 Q110 310 105 280 L95 200 Q85 185 70 180 Z" fill="url(#guideGrad)"/>
+            <!-- Robe / dress -->
+            <path d="M70 180 Q50 200 35 260 Q25 310 20 360 Q18 385 30 395 L60 390 Q55 360 65 320 Q75 270 90 220 Z" fill="url(#robeGrad)" opacity="0.7"/>
+            <path d="M210 180 Q230 200 245 260 Q255 310 260 360 Q262 385 250 395 L220 390 Q225 360 215 320 Q205 270 190 220 Z" fill="url(#robeGrad)" opacity="0.7"/>
+            <path d="M90 220 Q100 230 120 260 Q140 290 140 310 Q140 290 160 260 Q180 230 190 220 L185 350 Q180 380 170 395 L140 398 L110 395 Q100 380 95 350 Z" fill="url(#guideGrad)" opacity="0.6"/>
+            <!-- Arms -->
+            <path d="M90 130 Q70 145 62 175 Q58 195 65 210 Q68 200 72 185 Q78 165 88 148 Z" fill="url(#guideGrad)" opacity="0.75"/>
+            <path d="M190 130 Q210 145 218 175 Q222 195 215 210 Q212 200 208 185 Q202 165 192 148 Z" fill="url(#guideGrad)" opacity="0.75"/>
+            <!-- Face features hints -->
+            <ellipse cx="134" cy="78" rx="3" ry="4" fill="#163226" opacity="0.3"/>
+            <ellipse cx="146" cy="78" rx="3" ry="4" fill="#163226" opacity="0.3"/>
+            <path d="M136 90 Q140 94 144 90" stroke="#163226" stroke-width="1.5" fill="none" opacity="0.25"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Guide text -->
+      <p class="relative z-10 text-center mb-2 md:mb-3 text-base md:text-lg tracking-[0.06em] leading-relaxed" style="font-family:var(--font-serif);color:var(--foreground);text-wrap:balance;word-break:keep-all">请选择您偏好的游览方式</p>
+
+      <!-- 2x2 Mode Card Grid -- semi-transparent, no panel wrapper -->
+      <div class="relative z-10 grid grid-cols-2 gap-3 md:gap-4 mb-3 md:mb-4 max-w-[520px] mx-auto w-full px-4">
+        <!-- Card 1: 亲子游 (Recommended) -->
+        <div data-dom-id="mode-child" class="mode-card relative rounded-[16px] border p-3 md:p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 select-none overflow-hidden" style="background:rgba(250,248,244,0.72);border-color:rgba(216,210,199,0.6);box-shadow:0 2px 12px rgba(44,58,51,0.05);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)" onclick="handleModeSelect(this)" onkeydown="if(event.key==='Enter')handleModeSelect(this)" tabindex="0" role="radio" aria-checked="false">
+          <span class="absolute top-2 right-2 inline-flex items-center justify-center rounded-[10px] px-2 py-0.5 text-[11px] font-semibold tracking-wide whitespace-nowrap" style="background:var(--accent);color:var(--accent-foreground)">推荐</span>
+          <p class="text-lg md:text-xl font-semibold mb-1 tracking-[0.02em]" style="font-family:var(--font-sans);color:var(--foreground);text-wrap:balance;word-break:keep-all">亲子游</p>
+          <p class="text-xs md:text-sm leading-relaxed" style="color:var(--muted-foreground)">适合家庭轻松出行</p>
+        </div>
+
+        <!-- Card 2: 休闲游 -->
+        <div data-dom-id="mode-leisure" class="mode-card relative rounded-[16px] border p-3 md:p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 select-none" style="background:rgba(250,248,244,0.72);border-color:rgba(216,210,199,0.6);box-shadow:0 2px 12px rgba(44,58,51,0.05);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)" onclick="handleModeSelect(this)" onkeydown="if(event.key==='Enter')handleModeSelect(this)" tabindex="0" role="radio" aria-checked="false">
+          <p class="text-lg md:text-xl font-semibold mb-1 tracking-[0.02em]" style="font-family:var(--font-sans);color:var(--foreground);text-wrap:balance;word-break:keep-all">休闲游</p>
+          <p class="text-xs md:text-sm leading-relaxed" style="color:var(--muted-foreground)">轻松体验，随走随听</p>
+        </div>
+
+        <!-- Card 3: 文化深度游 -->
+        <div data-dom-id="mode-expert" class="mode-card relative rounded-[16px] border p-3 md:p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 select-none" style="background:rgba(250,248,244,0.72);border-color:rgba(216,210,199,0.6);box-shadow:0 2px 12px rgba(44,58,51,0.05);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)" onclick="handleModeSelect(this)" onkeydown="if(event.key==='Enter')handleModeSelect(this)" tabindex="0" role="radio" aria-checked="false">
+          <p class="text-lg md:text-xl font-semibold mb-1 tracking-[0.02em]" style="font-family:var(--font-sans);color:var(--foreground);text-wrap:balance;word-break:keep-all">文化深度游</p>
+          <p class="text-xs md:text-sm leading-relaxed" style="color:var(--muted-foreground)">深入解读历史与文化</p>
+        </div>
+
+        <!-- Card 4: 自由游览 -->
+        <div data-dom-id="mode-free" class="mode-card relative rounded-[16px] border p-3 md:p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 select-none" style="background:rgba(250,248,244,0.72);border-color:rgba(216,210,199,0.6);box-shadow:0 2px 12px rgba(44,58,51,0.05);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)" onclick="handleModeSelect(this)" onkeydown="if(event.key==='Enter')handleModeSelect(this)" tabindex="0" role="radio" aria-checked="false">
+          <p class="text-lg md:text-xl font-semibold mb-1 tracking-[0.02em]" style="font-family:var(--font-sans);color:var(--foreground);text-wrap:balance;word-break:keep-all">自由游览</p>
+          <p class="text-xs md:text-sm leading-relaxed" style="color:var(--muted-foreground)">按需陪伴，不过度打扰</p>
+        </div>
+      </div>
+
+      <!-- Confirm Button -->
+      <div class="relative z-10 flex justify-center pb-6 md:pb-8">
+        <button data-dom-id="confirm-mode" id="confirmBtn" class="inline-flex items-center justify-center rounded-full px-8 md:px-10 h-11 md:h-12 text-sm md:text-base font-semibold tracking-[0.04em] whitespace-nowrap transition-all duration-200 cursor-pointer select-none opacity-50" style="background:var(--primary);color:var(--primary-foreground);pointer-events:none" disabled aria-disabled="true" onclick="handleConfirm()" onkeydown="if(event.key==='Enter')handleConfirm()">
+          确认选择
+        </button>
+      </div>
+
+      <!-- Card interaction styles -->
+      <style>
+        .mode-card:hover { border-color: var(--accent) !important; transform: translateY(-2px); box-shadow: var(--shadow) !important; }
+        .mode-card:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+        .mode-card.selected { background: var(--primary) !important; color: var(--primary-foreground) !important; border-color: var(--primary) !important; border-left: 3.5px solid var(--accent) !important; box-shadow: var(--shadow-md) !important; }
+        .mode-card.selected .mode-title { color: var(--primary-foreground) !important; }
+        .mode-card.selected .mode-desc { color: rgba(255,255,255,0.78) !important; }
+        .mode-card.selected .mode-badge { background: var(--accent-foreground) !important; color: var(--accent) !important; }
+        .confirm-active { opacity: 1 !important; pointer-events: auto !important; }
+        .confirm-active:hover { filter: brightness(1.08); }
+        .confirm-active:active { transform: scale(0.98); }
+        .confirm-active:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+        @media (prefers-reduced-motion: reduce) {
+          .mode-card, #confirmBtn { transition-duration: 0.01ms !important; }
+        }
+      </style>
+
+      <!-- Interaction script -->
+      <script>
+        (function() {
+          var cards = document.querySelectorAll('.mode-card');
+          var confirmBtn = document.getElementById('confirmBtn');
+          var selectedMode = null;
+
+          window.handleModeSelect = function(el) {
+            if (selectedMode === el) {
+              el.classList.remove('selected');
+              el.setAttribute('aria-checked', 'false');
+              selectedMode = null;
+              confirmBtn.classList.remove('confirm-active');
+              confirmBtn.setAttribute('disabled', '');
+              confirmBtn.setAttribute('aria-disabled', 'true');
+              confirmBtn.style.pointerEvents = 'none';
+              confirmBtn.style.opacity = '0.5';
+              return;
+            }
+            cards.forEach(function(c) {
+              c.classList.remove('selected');
+              c.setAttribute('aria-checked', 'false');
+            });
+            el.classList.add('selected');
+            el.setAttribute('aria-checked', 'true');
+            selectedMode = el;
+            confirmBtn.classList.add('confirm-active');
+            confirmBtn.removeAttribute('disabled');
+            confirmBtn.setAttribute('aria-disabled', 'false');
+            confirmBtn.style.pointerEvents = 'auto';
+            confirmBtn.style.opacity = '1';
+          };
+
+          window.handleConfirm = function() {
+            if (!selectedMode) return;
+            var targetPageId = selectedMode.getAttribute('data-dom-id');
+            var event = new CustomEvent('navigate', { detail: { targetPageId: 'page-tourist-chat', sourceDomId: targetPageId } });
+            window.dispatchEvent(event);
+          };
+        })();
+      </script>
+    </main>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

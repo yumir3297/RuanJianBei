@@ -1,0 +1,13 @@
+[
+  {
+    "id": "recommend_001",
+    "category": "路线推荐",
+    "query": "适合两小时亲子游的路线",
+    "aliases": [],
+    "expected_answer": "推荐适合亲子游客的2小时路线，并说明路线理由",
+    "key_points": ["亲子", "2小时", "路线"],
+    "must_contain": [],
+    "must_not_contain": [],
+    "source_doc": "结构化推荐规则"
+  }
+]

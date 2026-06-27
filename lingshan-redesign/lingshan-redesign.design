@@ -1,0 +1,173 @@
+{
+  "data": [
+    {
+      "id": "page-home",
+      "title": "欢迎页",
+      "type": "page",
+      "version": 2,
+      "createdAt": 1750941560000,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/home.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-mode-select",
+      "title": "选择讲解方式",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1750941560000,
+      "canvasData": {
+        "x": 620,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/mode-select.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-tourist-chat",
+      "title": "游览中",
+      "type": "page",
+      "version": 2,
+      "createdAt": 1750941560000,
+      "canvasData": {
+        "x": 1240,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/tourist-chat.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-admin-dashboard",
+      "title": "管理总览",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1750941560000,
+      "canvasData": {
+        "x": 0,
+        "y": 377,
+        "group": 1
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/admin-dashboard.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-knowledge-manage",
+      "title": "知识管理",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1750941560000,
+      "canvasData": {
+        "x": 620,
+        "y": 377,
+        "group": 1
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/knowledge-manage.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "image-001",
+      "title": "灵山景区主视觉",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1750941560000,
+      "canvasData": {
+        "x": 0,
+        "y": 1131
+      },
+      "devMetadata": {
+        "imageSrc": "assets/hero-lingshan.jpg"
+      }
+    },
+    {
+      "id": "image-002",
+      "title": "灵山梵宫背景",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1750941560000,
+      "canvasData": {
+        "x": 620,
+        "y": 1131
+      },
+      "devMetadata": {
+        "imageSrc": "assets/bg-fangong.png"
+      }
+    },
+    {
+      "id": "page-mobile-home",
+      "title": "📱 欢迎页",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1750941560000,
+      "canvasData": {
+        "x": 0,
+        "y": 754,
+        "group": 2
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/mobile-home.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-mobile-mode-select",
+      "title": "📱 选择讲解方式",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1750941560000,
+      "canvasData": {
+        "x": 620,
+        "y": 754,
+        "group": 2
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/mobile-mode-select.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-mobile-tourist-chat",
+      "title": "📱 游览中",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1750941560000,
+      "canvasData": {
+        "x": 1240,
+        "y": 754,
+        "group": 2
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/mobile-tourist-chat.html",
+        "interactions": []
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": true,
+    "deviceType": "desktop",
+    "projectName": "灵山导览风格重设计",
+    "designLibrary": {
+      "name": "灵山绿金",
+      "id": "lingshan-jade-gold",
+      "version": "1.0",
+      "scope": "workspace",
+      "path": "d:\\桌面\\软件杯\\lingshan-redesign",
+      "versionSource": "metadata.json"
+    }
+  }
+}
