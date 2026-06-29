@@ -1,0 +1,58 @@
+[
+  {
+    "rank": 1,
+    "time_sec": 0,
+    "time_mmss": "00:00",
+    "diff": 0.0,
+    "path": "video_sprites/candidates/cand-01-0000s.jpg"
+  },
+  {
+    "rank": 2,
+    "time_sec": 11,
+    "time_mmss": "00:11",
+    "diff": 0.7818,
+    "path": "video_sprites/candidates/cand-02-0011s.jpg"
+  },
+  {
+    "rank": 3,
+    "time_sec": 47,
+    "time_mmss": "00:47",
+    "diff": 0.2786,
+    "path": "video_sprites/candidates/cand-03-0047s.jpg"
+  },
+  {
+    "rank": 4,
+    "time_sec": 1409,
+    "time_mmss": "23:29",
+    "diff": 0.2401,
+    "path": "video_sprites/candidates/cand-04-1409s.jpg"
+  },
+  {
+    "rank": 5,
+    "time_sec": 1637,
+    "time_mmss": "27:17",
+    "diff": 0.2913,
+    "path": "video_sprites/candidates/cand-05-1637s.jpg"
+  },
+  {
+    "rank": 6,
+    "time_sec": 2135,
+    "time_mmss": "35:35",
+    "diff": 1.039,
+    "path": "video_sprites/candidates/cand-06-2135s.jpg"
+  },
+  {
+    "rank": 7,
+    "time_sec": 2165,
+    "time_mmss": "36:05",
+    "diff": 0.395,
+    "path": "video_sprites/candidates/cand-07-2165s.jpg"
+  },
+  {
+    "rank": 8,
+    "time_sec": 2183,
+    "time_mmss": "36:23",
+    "diff": 0.7997,
+    "path": "video_sprites/candidates/cand-08-2183s.jpg"
+  }
+]

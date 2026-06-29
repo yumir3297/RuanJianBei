@@ -1,0 +1,296 @@
+{"kind":"deck","id":"pr/cpyq7k","name":"Deck"}
+{"kind":"layout","layoutId":"b55c4152-4feb-4154-854c-0a1747236169","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"0d030f3d-3e9c-4024-b393-acb59af154d3","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/xsp96r","slide":1,"title":"学习整理版","textShapes":8}
+{"kind":"shape","id":"sh/wfyxobm5","slide":1,"bbox":[0,0,1280,720]}
+{"kind":"shape","id":"sh/7u54zido","slide":1,"bbox":[0,0,440,720]}
+{"kind":"shape","id":"sh/ed8bat47","slide":1,"bbox":[874,-84,460,460]}
+{"kind":"shape","id":"sh/lc7u54zi","slide":1,"bbox":[80,88,156,36]}
+{"kind":"textbox","id":"sh/wra5gbq1","slide":1,"text":"学习整理版","textPreview":"学习整理版","textChars":5,"textLines":1,"bbox":[98,96,120,20]}
+{"kind":"textbox","id":"sh/36hcrmhk","slide":1,"text":"识别嗜酸，精准诊断","textPreview":"识别嗜酸，精准诊断","textChars":9,"textLines":1,"bbox":[80,150,560,150]}
+{"kind":"textbox","id":"sh/eloj2t83","slide":1,"text":"《嗜酸粒细胞增多相关性肺疾病诊疗中国专家共识》2023 解读关键页提炼","textPreview":"《嗜酸粒细胞增多相关性肺疾病诊疗中国专家共识》2023 解读关键页提炼","textChars":35,"textLines":1,"bbox":[80,300,580,80]}
+{"kind":"textbox","id":"sh/pg3ex0nu","slide":1,"text":"张清玲 教授\n广州医科大学附属第一医院 呼吸科","textPreview":"张清玲 教授 | 广州医科大学附属第一医院 呼吸科","textChars":23,"textLines":2,"bbox":[80,418,360,62]}
+{"kind":"textbox","id":"sh/wval87ed","slide":1,"text":"来源：B站视频 BV13k4y1Q7UR\n整理日期：2026-06-28","textPreview":"来源：B站视频 BV13k4y1Q7UR | 整理日期：2026-06-28","textChars":36,"textLines":2,"bbox":[80,550,420,46]}
+{"kind":"shape","id":"sh/6hcrmhk3","slide":1,"bbox":[706,92,486,474]}
+{"kind":"shape","id":"sh/onyd0z61","slide":1,"bbox":[706,590,486,48]}
+{"kind":"textbox","id":"sh/d8v6psfi","slide":1,"text":"基于公开视频关键帧提取，并按复盘逻辑重排为正式汇报版式","textPreview":"基于公开视频关键帧提取，并按复盘逻辑重排为正式汇报版式","textChars":27,"textLines":1,"bbox":[726,603,446,18]}
+{"kind":"textbox","id":"sh/6tovahoz","slide":1,"text":"张清玲教授讲座关键页整理 | B站视频 BV13k4y1Q7UR","textPreview":"张清玲教授讲座关键页整理 | B站视频 BV13k4y1Q7UR","textChars":32,"textLines":1,"bbox":[64,682,540,20]}
+{"kind":"textbox","id":"sh/vahoza1g","slide":1,"text":"1/12","textPreview":"1/12","textChars":4,"textLines":1,"bbox":[1120,680,92,20]}
+{"kind":"image","id":"im/oj2t83it","slide":1,"name":"","geometry":"roundRect","alt":"讲座封面截图","bbox":[736,122,426,414]}
+{"kind":"notes","id":"nt/xsp96r","slide":1,"text":""}
+{"kind":"slide","id":"sl/bccw9b","slide":2,"title":"SOURCE","textShapes":24}
+{"kind":"shape","id":"sh/sfil0rqd","slide":2,"bbox":[0,0,1280,82]}
+{"kind":"shape","id":"sh/zupwb2hw","slide":2,"bbox":[0,82,1280,5]}
+{"kind":"shape","id":"sh/a9w3m94f","slide":2,"bbox":[1032,-58,256,256]}
+{"kind":"textbox","id":"sh/hcrmhk3q","slide":2,"text":"SOURCE","textPreview":"SOURCE","textChars":6,"textLines":1,"bbox":[62,22,180,20]}
+{"kind":"textbox","id":"sh/orytsvu9","slide":2,"text":"视频来源与整理说明","textPreview":"视频来源与整理说明","textChars":9,"textLines":1,"bbox":[62,40,760,28]}
+{"kind":"shape","id":"sh/z61032ls","slide":2,"bbox":[1088,22,128,36]}
+{"kind":"textbox","id":"sh/al87ed8b","slide":2,"text":"视频 00:00","textPreview":"视频 00:00","textChars":8,"textLines":1,"bbox":[1100,29,104,18]}
+{"kind":"textbox","id":"sh/hk3q5o7q","slide":2,"text":"张清玲教授讲座关键页整理 | B站视频 BV13k4y1Q7UR","textPreview":"张清玲教授讲座关键页整理 | B站视频 BV13k4y1Q7UR","textChars":32,"textLines":1,"bbox":[64,682,540,20]}
+{"kind":"textbox","id":"sh/oza1gvy9","slide":2,"text":"2/12","textPreview":"2/12","textChars":4,"textLines":1,"bbox":[1120,680,92,20]}
+{"kind":"shape","id":"sh/29gr2p8n","slide":2,"bbox":[64,122,534,468]}
+{"kind":"shape","id":"sh/vu9knih4","slide":2,"bbox":[626,122,590,468]}
+{"kind":"textbox","id":"sh/kf6dcbul","slide":2,"text":"来源与方法","textPreview":"来源与方法","textChars":5,"textLines":1,"bbox":[96,154,180,24]}
+{"kind":"textbox","id":"sh/d0z61032","slide":2,"text":"视频来源：B站 BV13k4y1Q7UR，《嗜酸粒细胞增多相关性肺疾病诊疗专家共识解读 张清玲教授》。\n发布时间：2024-01-13；全长约 36 分钟。\n整理方式：从公开视频关键帧中提取 11 张代表性页面，再按学习复盘逻辑重组。\n当前版本保留截图证据页，便于后续继续 OCR、补全文字和院内二次改写。","textPreview":"视频来源：B站 BV13k4y1Q7UR，《嗜酸粒细胞增多相关性肺疾病诊疗专家共识解读 张清玲教授》。 | 发布时间：2024-01-13；全长约 36 分钟。 | 整理方式：从公开视频关键帧中提取 11 张代表性页面，再按学习复盘逻辑重组。 | 当前版本保留截图证据页，便...","textChars":153,"textLines":4,"bbox":[96,204,458,232]}
+{"kind":"shape","id":"sh/2lszqtcj","slide":2,"bbox":[96,464,466,84]}
+{"kind":"textbox","id":"sh/v6psfil0","slide":2,"text":"说明：截图来自讲解视频画面，不等同于原始 PPT 文件；本成品更适合作为学习整理版和二次编辑底稿。","textPreview":"说明：截图来自讲解视频画面，不等同于原始 PPT 文件；本成品更适合作为学习整理版和二次编辑底稿。","textChars":49,"textLines":1,"bbox":[116,485,426,40]}
+{"kind":"textbox","id":"sh/knih4byh","slide":2,"text":"本版结构","textPreview":"本版结构","textChars":4,"textLines":1,"bbox":[660,154,180,24]}
+{"kind":"shape","id":"sh/d8bat47y","slide":2,"bbox":[664,206,44,28]}
+{"kind":"textbox","id":"sh/6psfil0r","slide":2,"text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[676,213,20,14]}
+{"kind":"textbox","id":"sh/val87ed8","slide":2,"text":"疾病谱总览","textPreview":"疾病谱总览","textChars":5,"textLines":1,"bbox":[726,209,420,22]}
+{"kind":"shape","id":"sh/n29gr2p8","slide":2,"bbox":[664,248,44,28]}
+{"kind":"textbox","id":"sh/yhgn29gr","slide":2,"text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[676,255,20,14]}
+{"kind":"textbox","id":"sh/58z25kb6","slide":2,"text":"诊断标准与判定门槛","textPreview":"诊断标准与判定门槛","textChars":9,"textLines":1,"bbox":[726,251,420,22]}
+{"kind":"shape","id":"sh/gn29gr2p","slide":2,"bbox":[664,290,44,28]}
+{"kind":"textbox","id":"sh/nuxc3ylc","slide":2,"text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[676,297,20,14]}
+{"kind":"textbox","id":"sh/y90je9cv","slide":2,"text":"分层评估与诊断流程","textPreview":"分层评估与诊断流程","textChars":9,"textLines":1,"bbox":[726,293,420,22]}
+{"kind":"shape","id":"sh/5wjudg7a","slide":2,"bbox":[664,332,44,28]}
+{"kind":"textbox","id":"sh/gbq1oryt","slide":2,"text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[676,339,20,14]}
+{"kind":"textbox","id":"sh/nqxs72x4","slide":2,"text":"病因学与常见相关疾病","textPreview":"病因学与常见相关疾病","textChars":10,"textLines":1,"bbox":[726,335,420,22]}
+{"kind":"shape","id":"sh/u54zidon","slide":2,"bbox":[664,374,44,28]}
+{"kind":"textbox","id":"sh/8z25kb6x","slide":2,"text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[676,381,20,14]}
+{"kind":"textbox","id":"sh/1gvy90je","slide":2,"text":"ABPA / EGPA 专题页","textPreview":"ABPA / EGPA 专题页","textChars":15,"textLines":1,"bbox":[726,377,420,22]}
+{"kind":"shape","id":"sh/qtcj6tov","slide":2,"bbox":[664,416,44,28]}
+{"kind":"textbox","id":"sh/je9cvixc","slide":2,"text":"06","textPreview":"06","textChars":2,"textLines":1,"bbox":[676,423,20,14]}
+{"kind":"textbox","id":"sh/87ed8bat","slide":2,"text":"少见疾病鉴别提醒","textPreview":"少见疾病鉴别提醒","textChars":8,"textLines":1,"bbox":[726,419,420,22]}
+{"kind":"shape","id":"sh/xs72x4na","slide":2,"bbox":[664,458,44,28]}
+{"kind":"textbox","id":"sh/q1orytsv","slide":2,"text":"07","textPreview":"07","textChars":2,"textLines":1,"bbox":[676,465,20,14]}
+{"kind":"textbox","id":"sh/fmlkjm1c","slide":2,"text":"11 条推荐意见总览","textPreview":"11 条推荐意见总览","textChars":10,"textLines":1,"bbox":[726,461,420,22]}
+{"kind":"textbox","id":"sh/8jqh0fep","slide":2,"text":"关键时间点：00:59 / 05:59 / 08:59 / 12:59 / 17:59 / 21:59 / 24:59 / 27:59 / 31:59","textPreview":"关键时间点：00:59 / 05:59 / 08:59 / 12:59 / 17:59 / 21:59 / 24:59 / 27:59 / 31:59","textChars":75,"textLines":1,"bbox":[664,528,500,22]}
+{"kind":"notes","id":"nt/bccw9b","slide":2,"text":""}
+{"kind":"slide","id":"sl/oqv8n8","slide":3,"title":"KEY PAGE","textShapes":11}
+{"kind":"shape","id":"sh/25kb6xkf","slide":3,"bbox":[0,0,1280,82]}
+{"kind":"shape","id":"sh/9w3m94fu","slide":3,"bbox":[0,82,1280,5]}
+{"kind":"shape","id":"sh/kb6xkf6d","slide":3,"bbox":[1032,-58,256,256]}
+{"kind":"textbox","id":"sh/re1w7mp0","slide":3,"text":"KEY PAGE","textPreview":"KEY PAGE","textChars":8,"textLines":1,"bbox":[62,22,180,20]}
+{"kind":"textbox","id":"sh/2t83itgf","slide":3,"text":"疾病谱总览：先建立 EPD 全局认识","textPreview":"疾病谱总览：先建立 EPD 全局认识","textChars":18,"textLines":1,"bbox":[62,40,760,28]}
+{"kind":"shape","id":"sh/9knih4by","slide":3,"bbox":[1088,22,128,36]}
+{"kind":"textbox","id":"sh/kzupwb2h","slide":3,"text":"视频 00:59","textPreview":"视频 00:59","textChars":8,"textLines":1,"bbox":[1100,29,104,18]}
+{"kind":"textbox","id":"sh/ra5gbq1o","slide":3,"text":"张清玲教授讲座关键页整理 | B站视频 BV13k4y1Q7UR","textPreview":"张清玲教授讲座关键页整理 | B站视频 BV13k4y1Q7UR","textChars":32,"textLines":1,"bbox":[64,682,540,20]}
+{"kind":"textbox","id":"sh/2p8nqxs7","slide":3,"text":"3/12","textPreview":"3/12","textChars":4,"textLines":1,"bbox":[1120,680,92,20]}
+{"kind":"shape","id":"sh/gvy90je9","slide":3,"bbox":[64,122,544,470]}
+{"kind":"shape","id":"sh/9gr2p8nq","slide":3,"bbox":[632,122,584,470]}
+{"kind":"shape","id":"sh/2p8nqxs7","slide":3,"bbox":[90,148,492,338]}
+{"kind":"shape","id":"sh/kjm1cfa9","slide":3,"bbox":[90,504,492,56]}
+{"kind":"textbox","id":"sh/94fu18jq","slide":3,"text":"原页标题（按截图辨识整理）：EPD 临床表现谱系庞大，正确识别是后续精准诊断的前提","textPreview":"原页标题（按截图辨识整理）：EPD 临床表现谱系庞大，正确识别是后续精准诊断的前提","textChars":41,"textLines":1,"bbox":[112,518,448,26]}
+{"kind":"shape","id":"sh/2hwfyxob","slide":3,"bbox":[664,152,132,30]}
+{"kind":"textbox","id":"sh/r2p8nqxs","slide":3,"text":"页面主题","textPreview":"页面主题","textChars":4,"textLines":1,"bbox":[678,159,104,16]}
+{"kind":"textbox","id":"sh/kb6xkf6d","slide":3,"text":"这一页承担开场总览功能，提醒我们 EPD 不是单一病名，而是一组临床表现、病理基础和影像特征各不相同的相关疾病。","textPreview":"这一页承担开场总览功能，提醒我们 EPD 不是单一病名，而是一组临床表现、病理基础和影像特征各不相同的相关疾病。","textChars":56,"textLines":1,"bbox":[664,198,520,96]}
+{"kind":"textbox","id":"sh/9w3m94fu","slide":3,"text":"提炼重点","textPreview":"提炼重点","textChars":4,"textLines":1,"bbox":[664,310,180,24]}
+{"kind":"textbox","id":"sh/dg7adsji","slide":3,"text":"学习重点是先把“嗜酸粒细胞增多”和“肺部受累”放到同一诊断框架中。\n同一类患者可能呈现气道、肺实质或系统性受累，不能只盯单一器官表现。\n把这页放在前面，有助于后续理解为什么需要流程化鉴别。","textPreview":"学习重点是先把“嗜酸粒细胞增多”和“肺部受累”放到同一诊断框架中。 | 同一类患者可能呈现气道、肺实质或系统性受累，不能只盯单一器官表现。 | 把这页放在前面，有助于后续理解为什么需要流程化鉴别。","textChars":94,"textLines":3,"bbox":[664,346,512,170]}
+{"kind":"shape","id":"sh/ovahoza1","slide":3,"bbox":[664,526,520,42]}
+{"kind":"textbox","id":"sh/vahoza1g","slide":3,"text":"使用建议：适合作为病例汇报导入页，用来建立问题意识。","textPreview":"使用建议：适合作为病例汇报导入页，用来建立问题意识。","textChars":26,"textLines":1,"bbox":[682,538,484,16]}
+{"kind":"image","id":"im/kzupwb2h","slide":3,"name":"","geometry":"roundRect","alt":"spectrum_overview 页面截图","bbox":[104,162,464,310]}
+{"kind":"notes","id":"nt/oqv8n8","slide":3,"text":""}
+{"kind":"slide","id":"sl/ge81xg","slide":4,"title":"KEY PAGE","textShapes":11}
+{"kind":"shape","id":"sh/cbulwval","slide":4,"bbox":[0,0,1280,82]}
+{"kind":"shape","id":"sh/nqxs72x4","slide":4,"bbox":[0,82,1280,5]}
+{"kind":"shape","id":"sh/u54zidon","slide":4,"bbox":[1032,-58,256,256]}
+{"kind":"textbox","id":"sh/5kb6xkf6","slide":4,"text":"KEY PAGE","textPreview":"KEY PAGE","textChars":8,"textLines":1,"bbox":[62,22,180,20]}
+{"kind":"textbox","id":"sh/czed8v6p","slide":4,"text":"诊断标准页：先抓住判定门槛","textPreview":"诊断标准页：先抓住判定门槛","textChars":13,"textLines":1,"bbox":[62,40,760,28]}
+{"kind":"shape","id":"sh/neloj2t8","slide":4,"bbox":[1088,22,128,36]}
+{"kind":"textbox","id":"sh/ytsvu9kn","slide":4,"text":"视频 05:59","textPreview":"视频 05:59","textChars":8,"textLines":1,"bbox":[1100,29,104,18]}
+{"kind":"textbox","id":"sh/58z25kb6","slide":4,"text":"张清玲教授讲座关键页整理 | B站视频 BV13k4y1Q7UR","textPreview":"张清玲教授讲座关键页整理 | B站视频 BV13k4y1Q7UR","textChars":32,"textLines":1,"bbox":[64,682,540,20]}
+{"kind":"textbox","id":"sh/gn29gr2p","slide":4,"text":"4/12","textPreview":"4/12","textChars":4,"textLines":1,"bbox":[1120,680,92,20]}
+{"kind":"shape","id":"sh/u54zidon","slide":4,"bbox":[64,122,544,470]}
+{"kind":"shape","id":"sh/nqxs72x4","slide":4,"bbox":[632,122,584,470]}
+{"kind":"shape","id":"sh/cbulwval","slide":4,"bbox":[90,148,492,338]}
+{"kind":"shape","id":"sh/ytsvu9kn","slide":4,"bbox":[90,504,492,56]}
+{"kind":"textbox","id":"sh/neloj2t8","slide":4,"text":"原页标题（按截图辨识整理）：明确嗜酸粒细胞增多相关性肺疾病（EPD）诊断标准","textPreview":"原页标题（按截图辨识整理）：明确嗜酸粒细胞增多相关性肺疾病（EPD）诊断标准","textChars":38,"textLines":1,"bbox":[112,518,448,26]}
+{"kind":"shape","id":"sh/czed8v6p","slide":4,"bbox":[664,152,132,30]}
+{"kind":"textbox","id":"sh/5kb6xkf6","slide":4,"text":"页面主题","textPreview":"页面主题","textChars":4,"textLines":1,"bbox":[678,159,104,16]}
+{"kind":"textbox","id":"sh/yhgn29gr","slide":4,"text":"这页把 EPD 识别时最核心的判定门槛集中展示出来，是整段视频里最适合反复回看的基础页之一。","textPreview":"这页把 EPD 识别时最核心的判定门槛集中展示出来，是整段视频里最适合反复回看的基础页之一。","textChars":46,"textLines":1,"bbox":[664,198,520,96]}
+{"kind":"textbox","id":"sh/n29gr2p8","slide":4,"text":"提炼重点","textPreview":"提炼重点","textChars":4,"textLines":1,"bbox":[664,310,180,24]}
+{"kind":"textbox","id":"sh/fyxobm58","slide":4,"text":"不要把诊断简化成单一数值阈值，更重要的是临床情境和证据组合。\n外周血、组织学和影像学线索需要彼此印证，才能支持疾病归类。\n若后续要做正式汇报，可围绕这页再补充对应文献和原共识条目。","textPreview":"不要把诊断简化成单一数值阈值，更重要的是临床情境和证据组合。 | 外周血、组织学和影像学线索需要彼此印证，才能支持疾病归类。 | 若后续要做正式汇报，可围绕这页再补充对应文献和原共识条目。","textChars":90,"textLines":3,"bbox":[664,346,512,170]}
+{"kind":"shape","id":"sh/qd4vmtwr","slide":4,"bbox":[664,526,520,42]}
+{"kind":"textbox","id":"sh/x4nap4r6","slide":4,"text":"使用建议：建议与原共识原文对照，做成自己的判定清单。","textPreview":"使用建议：建议与原共识原文对照，做成自己的判定清单。","textChars":26,"textLines":1,"bbox":[682,538,484,16]}
+{"kind":"image","id":"im/2p8nqxs7","slide":4,"name":"","geometry":"roundRect","alt":"recognition_principles 页面截图","bbox":[104,162,464,310]}
+{"kind":"notes","id":"nt/ge81xg","slide":4,"text":""}
+{"kind":"slide","id":"sl/0dq9o3","slide":5,"title":"KEY PAGE","textShapes":11}
+{"kind":"shape","id":"sh/uxc3ylc7","slide":5,"bbox":[0,0,1280,82]}
+{"kind":"shape","id":"sh/1kre1w7m","slide":5,"bbox":[0,82,1280,5]}
+{"kind":"shape","id":"sh/c3ylc7u5","slide":5,"bbox":[1032,-58,256,256]}
+{"kind":"textbox","id":"sh/j6tovaho","slide":5,"text":"KEY PAGE","textPreview":"KEY PAGE","textChars":8,"textLines":1,"bbox":[62,22,180,20]}
+{"kind":"textbox","id":"sh/ulwval87","slide":5,"text":"共识提示页：疑似 EPD 的分层评估","textPreview":"共识提示页：疑似 EPD 的分层评估","textChars":18,"textLines":1,"bbox":[62,40,760,28]}
+{"kind":"shape","id":"sh/1cfa9w3m","slide":5,"bbox":[1088,22,128,36]}
+{"kind":"textbox","id":"sh/crmhk3q5","slide":5,"text":"视频 08:59","textPreview":"视频 08:59","textChars":8,"textLines":1,"bbox":[1100,29,104,18]}
+{"kind":"textbox","id":"sh/j2t83itg","slide":5,"text":"张清玲教授讲座关键页整理 | B站视频 BV13k4y1Q7UR","textPreview":"张清玲教授讲座关键页整理 | B站视频 BV13k4y1Q7UR","textChars":32,"textLines":1,"bbox":[64,682,540,20]}
+{"kind":"textbox","id":"sh/qh0fepkz","slide":5,"text":"5/12","textPreview":"5/12","textChars":4,"textLines":1,"bbox":[1120,680,92,20]}
+{"kind":"shape","id":"sh/s36hcrmh","slide":5,"bbox":[64,122,544,470]}
+{"kind":"shape","id":"sh/hoza1gvy","slide":5,"bbox":[632,122,584,470]}
+{"kind":"shape","id":"sh/a1gvy90j","slide":5,"bbox":[90,148,492,338]}
+{"kind":"shape","id":"sh/svu9knih","slide":5,"bbox":[90,504,492,56]}
+{"kind":"textbox","id":"sh/hgn29gr2","slide":5,"text":"原页标题（按截图辨识整理）：2022 年中国 EPD 共识以临床问题为先导，细化评估与诊断次序","textPreview":"原页标题（按截图辨识整理）：2022 年中国 EPD 共识以临床问题为先导，细化评估与诊断次序","textChars":47,"textLines":1,"bbox":[112,518,448,26]}
+{"kind":"shape","id":"sh/ap4r65wj","slide":5,"bbox":[664,152,132,30]}
+{"kind":"textbox","id":"sh/za1gvy90","slide":5,"text":"页面主题","textPreview":"页面主题","textChars":4,"textLines":1,"bbox":[678,159,104,16]}
+{"kind":"textbox","id":"sh/sji5snel","slide":5,"text":"视频在这里把中国共识的诊疗思路拆解成可执行的评估问题，适合转译成门诊或会诊前的核对表。","textPreview":"视频在这里把中国共识的诊疗思路拆解成可执行的评估问题，适合转译成门诊或会诊前的核对表。","textChars":43,"textLines":1,"bbox":[664,198,520,96]}
+{"kind":"textbox","id":"sh/h4byhgn2","slide":5,"text":"提炼重点","textPreview":"提炼重点","textChars":4,"textLines":1,"bbox":[664,310,180,24]}
+{"kind":"textbox","id":"sh/psfil0rq","slide":5,"text":"先确认是否存在真实嗜酸粒细胞增多，再看是否伴有肺部受累证据。\n再往下要追问病因、受累器官、危险信号和是否需要多学科协作。\n这类页面很适合转成临床路径表单，而不是只停留在阅读层面。","textPreview":"先确认是否存在真实嗜酸粒细胞增多，再看是否伴有肺部受累证据。 | 再往下要追问病因、受累器官、危险信号和是否需要多学科协作。 | 这类页面很适合转成临床路径表单，而不是只停留在阅读层面。","textChars":89,"textLines":3,"bbox":[664,346,512,170]}
+{"kind":"shape","id":"sh/w7mp0bi9","slide":5,"bbox":[664,526,520,42]}
+{"kind":"textbox","id":"sh/7mp0bi9s","slide":5,"text":"使用建议：若用于教学，可把左右两栏改写成“首诊问题单”。","textPreview":"使用建议：若用于教学，可把左右两栏改写成“首诊问题单”。","textChars":28,"textLines":1,"bbox":[682,538,484,16]}
+{"kind":"image","id":"im/87ed8bat","slide":5,"name":"","geometry":"roundRect","alt":"diagnostic_checklist 页面截图","bbox":[104,162,464,310]}
+{"kind":"notes","id":"nt/0dq9o3","slide":5,"text":""}
+{"kind":"slide","id":"sl/emmmq0","slide":6,"title":"KEY PAGE","textShapes":11}
+{"kind":"shape","id":"sh/1orytsvu","slide":6,"bbox":[0,0,1280,82]}
+{"kind":"shape","id":"sh/u18jqh0f","slide":6,"bbox":[0,82,1280,5]}
+{"kind":"shape","id":"sh/jm1cfa9w","slide":6,"bbox":[1032,-58,256,256]}
+{"kind":"textbox","id":"sh/cfa9w3m9","slide":6,"text":"KEY PAGE","textPreview":"KEY PAGE","textChars":8,"textLines":1,"bbox":[62,22,180,20]}
+{"kind":"textbox","id":"sh/1032lszq","slide":6,"text":"诊断路径页：从发现嗜酸到收敛病因","textPreview":"诊断路径页：从发现嗜酸到收敛病因","textChars":16,"textLines":1,"bbox":[62,40,760,28]}
+{"kind":"shape","id":"sh/u9knih4b","slide":6,"bbox":[1088,22,128,36]}
+{"kind":"textbox","id":"sh/judg7ads","slide":6,"text":"视频 12:59","textPreview":"视频 12:59","textChars":8,"textLines":1,"bbox":[1100,29,104,18]}
+{"kind":"textbox","id":"sh/cj6tovah","slide":6,"text":"张清玲教授讲座关键页整理 | B站视频 BV13k4y1Q7UR","textPreview":"张清玲教授讲座关键页整理 | B站视频 BV13k4y1Q7UR","textChars":32,"textLines":1,"bbox":[64,682,540,20]}
+{"kind":"textbox","id":"sh/54zidony","slide":6,"text":"6/12","textPreview":"6/12","textChars":4,"textLines":1,"bbox":[1120,680,92,20]}
+{"kind":"shape","id":"sh/t47y1kre","slide":6,"bbox":[64,122,544,470]}
+{"kind":"shape","id":"sh/0je9cvix","slide":6,"bbox":[632,122,584,470]}
+{"kind":"shape","id":"sh/byhgn29g","slide":6,"bbox":[90,148,492,338]}
+{"kind":"shape","id":"sh/tcj6tova","slide":6,"bbox":[90,504,492,56]}
+{"kind":"textbox","id":"sh/0rqd4vmt","slide":6,"text":"原页标题（按截图辨识整理）：EPD 评估和诊断程序","textPreview":"原页标题（按截图辨识整理）：EPD 评估和诊断程序","textChars":25,"textLines":1,"bbox":[112,518,448,26]}
+{"kind":"shape","id":"sh/b6xkf6dc","slide":6,"bbox":[664,152,132,30]}
+{"kind":"textbox","id":"sh/il0rqd4v","slide":6,"text":"页面主题","textPreview":"页面主题","textChars":4,"textLines":1,"bbox":[678,159,104,16]}
+{"kind":"textbox","id":"sh/tovahoza","slide":6,"text":"这是整场讲座最关键的流程图页面，适合直接作为病例讨论或院内汇报的底图来使用。","textPreview":"这是整场讲座最关键的流程图页面，适合直接作为病例讨论或院内汇报的底图来使用。","textChars":38,"textLines":1,"bbox":[664,198,520,96]}
+{"kind":"textbox","id":"sh/032lszqt","slide":6,"text":"提炼重点","textPreview":"提炼重点","textChars":4,"textLines":1,"bbox":[664,310,180,24]}
+{"kind":"textbox","id":"sh/czed8v6p","slide":6,"text":"可以按“发现嗜酸粒细胞异常 -> 证实肺受累 -> 排除继发原因 -> 收敛具体病种”来理解。\n流程图的价值在于减少漏诊，也减少把不同病因混为一谈的风险。\n实际应用时，最好把实验室、影像和系统症状并列放进流程节点。","textPreview":"可以按“发现嗜酸粒细胞异常 -> 证实肺受累 -> 排除继发原因 -> 收敛具体病种”来理解。 | 流程图的价值在于减少漏诊，也减少把不同病因混为一谈的风险。 | 实际应用时，最好把实验室、影像和系统症状并列放进流程节点。","textChars":107,"textLines":3,"bbox":[664,346,512,170]}
+{"kind":"shape","id":"sh/5kb6xkf6","slide":6,"bbox":[664,526,520,42]}
+{"kind":"textbox","id":"sh/ytsvu9kn","slide":6,"text":"使用建议：正式汇报时最值得单独放大讲解的一页。","textPreview":"使用建议：正式汇报时最值得单独放大讲解的一页。","textChars":23,"textLines":1,"bbox":[682,538,484,16]}
+{"kind":"image","id":"im/pkzupwb2","slide":6,"name":"","geometry":"roundRect","alt":"differential_pathway 页面截图","bbox":[104,162,464,310]}
+{"kind":"notes","id":"nt/emmmq0","slide":6,"text":""}
+{"kind":"slide","id":"sl/r7zs0s","slide":7,"title":"KEY PAGE","textShapes":11}
+{"kind":"shape","id":"sh/lc7u54zi","slide":7,"bbox":[0,0,1280,82]}
+{"kind":"shape","id":"sh/eloj2t83","slide":7,"bbox":[0,82,1280,5]}
+{"kind":"shape","id":"sh/36hcrmhk","slide":7,"bbox":[1032,-58,256,256]}
+{"kind":"textbox","id":"sh/wfyxobm5","slide":7,"text":"KEY PAGE","textPreview":"KEY PAGE","textChars":8,"textLines":1,"bbox":[62,22,180,20]}
+{"kind":"textbox","id":"sh/l0rqd4vm","slide":7,"text":"相关疾病页：常见病因与疾病谱提示","textPreview":"相关疾病页：常见病因与疾病谱提示","textChars":16,"textLines":1,"bbox":[62,40,760,28]}
+{"kind":"shape","id":"sh/ed8bat47","slide":7,"bbox":[1088,22,128,36]}
+{"kind":"textbox","id":"sh/7u54zido","slide":7,"text":"视频 17:59","textPreview":"视频 17:59","textChars":8,"textLines":1,"bbox":[1100,29,104,18]}
+{"kind":"textbox","id":"sh/w7mp0bi9","slide":7,"text":"张清玲教授讲座关键页整理 | B站视频 BV13k4y1Q7UR","textPreview":"张清玲教授讲座关键页整理 | B站视频 BV13k4y1Q7UR","textChars":32,"textLines":1,"bbox":[64,682,540,20]}
+{"kind":"textbox","id":"sh/psfil0rq","slide":7,"text":"7/12","textPreview":"7/12","textChars":4,"textLines":1,"bbox":[1120,680,92,20]}
+{"kind":"shape","id":"sh/tsvu9kni","slide":7,"bbox":[64,122,544,470]}
+{"kind":"shape","id":"sh/47y1kre1","slide":7,"bbox":[632,122,584,470]}
+{"kind":"shape","id":"sh/bm58z25k","slide":7,"bbox":[90,148,492,338]}
+{"kind":"shape","id":"sh/tgfmlkjm","slide":7,"bbox":[90,504,492,56]}
+{"kind":"textbox","id":"sh/4vmtwra5","slide":7,"text":"原页标题（按截图辨识整理）：寄生虫感染仍然为多见的嗜酸相关 EPD","textPreview":"原页标题（按截图辨识整理）：寄生虫感染仍然为多见的嗜酸相关 EPD","textChars":33,"textLines":1,"bbox":[112,518,448,26]}
+{"kind":"shape","id":"sh/bat47y1k","slide":7,"bbox":[664,152,132,30]}
+{"kind":"textbox","id":"sh/mp0bi9s3","slide":7,"text":"页面主题","textPreview":"页面主题","textChars":4,"textLines":1,"bbox":[678,159,104,16]}
+{"kind":"textbox","id":"sh/t83itgfm","slide":7,"text":"这一页把感染性和非感染性病因同时放进同一张图里，提醒鉴别诊断不能只从免疫炎症角度出发。","textPreview":"这一页把感染性和非感染性病因同时放进同一张图里，提醒鉴别诊断不能只从免疫炎症角度出发。","textChars":43,"textLines":1,"bbox":[664,198,520,96]}
+{"kind":"textbox","id":"sh/4nap4r65","slide":7,"text":"提炼重点","textPreview":"提炼重点","textChars":4,"textLines":1,"bbox":[664,310,180,24]}
+{"kind":"textbox","id":"sh/0rqd4vmt","slide":7,"text":"寄生虫感染等常见原因仍需优先考虑，尤其在流行病学背景支持时更不能跳过。\n免疫相关疾病、药物因素和系统性疾病需要与感染性原因同步排查。\n病例讨论时可据此先搭建“病因树”，再逐层排除。","textPreview":"寄生虫感染等常见原因仍需优先考虑，尤其在流行病学背景支持时更不能跳过。 | 免疫相关疾病、药物因素和系统性疾病需要与感染性原因同步排查。 | 病例讨论时可据此先搭建“病因树”，再逐层排除。","textChars":90,"textLines":3,"bbox":[664,346,512,170]}
+{"kind":"shape","id":"sh/tcj6tova","slide":7,"bbox":[664,526,520,42]}
+{"kind":"textbox","id":"sh/il0rqd4v","slide":7,"text":"使用建议：适合作为病因学鉴别页插入到病例汇报中段。","textPreview":"使用建议：适合作为病因学鉴别页插入到病例汇报中段。","textChars":25,"textLines":1,"bbox":[682,538,484,16]}
+{"kind":"image","id":"im/p0bi9s36","slide":7,"name":"","geometry":"roundRect","alt":"disease_spectrum 页面截图","bbox":[104,162,464,310]}
+{"kind":"notes","id":"nt/r7zs0s","slide":7,"text":""}
+{"kind":"slide","id":"sl/b5t24e","slide":8,"title":"KEY PAGE","textShapes":11}
+{"kind":"shape","id":"sh/u9knih4b","slide":8,"bbox":[0,0,1280,82]}
+{"kind":"shape","id":"sh/1032lszq","slide":8,"bbox":[0,82,1280,5]}
+{"kind":"shape","id":"sh/cfa9w3m9","slide":8,"bbox":[1032,-58,256,256]}
+{"kind":"textbox","id":"sh/jm1cfa9w","slide":8,"text":"KEY PAGE","textPreview":"KEY PAGE","textChars":8,"textLines":1,"bbox":[62,22,180,20]}
+{"kind":"textbox","id":"sh/u18jqh0f","slide":8,"text":"ABPA 专题页：IgE、EOS 与影像并看","textPreview":"ABPA 专题页：IgE、EOS 与影像并看","textChars":22,"textLines":1,"bbox":[62,40,760,28]}
+{"kind":"shape","id":"sh/1orytsvu","slide":8,"bbox":[1088,22,128,36]}
+{"kind":"textbox","id":"sh/c7u54zid","slide":8,"text":"视频 21:59","textPreview":"视频 21:59","textChars":8,"textLines":1,"bbox":[1100,29,104,18]}
+{"kind":"textbox","id":"sh/nap4r65w","slide":8,"text":"张清玲教授讲座关键页整理 | B站视频 BV13k4y1Q7UR","textPreview":"张清玲教授讲座关键页整理 | B站视频 BV13k4y1Q7UR","textChars":32,"textLines":1,"bbox":[64,682,540,20]}
+{"kind":"textbox","id":"sh/upwb2hwf","slide":8,"text":"8/12","textPreview":"8/12","textChars":4,"textLines":1,"bbox":[1120,680,92,20]}
+{"kind":"shape","id":"sh/orytsvu9","slide":8,"bbox":[64,122,544,470]}
+{"kind":"shape","id":"sh/hcrmhk3q","slide":8,"bbox":[632,122,584,470]}
+{"kind":"shape","id":"sh/al87ed8b","slide":8,"bbox":[90,148,492,338]}
+{"kind":"shape","id":"sh/sfil0rqd","slide":8,"bbox":[90,504,492,56]}
+{"kind":"textbox","id":"sh/h0fepkzu","slide":8,"text":"原页标题（按截图辨识整理）：所有伴外周血 EOS 和总 IgE 升高的哮喘患者都需关注 ABPA 可能","textPreview":"原页标题（按截图辨识整理）：所有伴外周血 EOS 和总 IgE 升高的哮喘患者都需关注 ABPA 可能","textChars":51,"textLines":1,"bbox":[112,518,448,26]}
+{"kind":"shape","id":"sh/a9w3m94f","slide":8,"bbox":[664,152,132,30]}
+{"kind":"textbox","id":"sh/zupwb2hw","slide":8,"text":"页面主题","textPreview":"页面主题","textChars":4,"textLines":1,"bbox":[678,159,104,16]}
+{"kind":"textbox","id":"sh/obm58z25","slide":8,"text":"这页把 ABPA 的识别线索收得很集中，适合在支气管哮喘、反复肺部阴影和支扩场景中重点回看。","textPreview":"这页把 ABPA 的识别线索收得很集中，适合在支气管哮喘、反复肺部阴影和支扩场景中重点回看。","textChars":46,"textLines":1,"bbox":[664,198,520,96]}
+{"kind":"textbox","id":"sh/hwfyxobm","slide":8,"text":"提炼重点","textPreview":"提炼重点","textChars":4,"textLines":1,"bbox":[664,310,180,24]}
+{"kind":"textbox","id":"sh/18jqh0fe","slide":8,"text":"关键不是某一项指标单独升高，而是病史、实验室和影像共同指向同一问题。\n总 IgE、EOS 水平与肺部影像特征要结合既往哮喘或过敏背景来理解。\n如果做专题课，这页可以拆成“提示线索”和“进一步证据”两部分。","textPreview":"关键不是某一项指标单独升高，而是病史、实验室和影像共同指向同一问题。 | 总 IgE、EOS 水平与肺部影像特征要结合既往哮喘或过敏背景来理解。 | 如果做专题课，这页可以拆成“提示线索”和“进一步证据”两部分。","textChars":102,"textLines":3,"bbox":[664,346,512,170]}
+{"kind":"shape","id":"sh/8nqxs72x","slide":8,"bbox":[664,526,520,42]}
+{"kind":"textbox","id":"sh/j2t83itg","slide":8,"text":"使用建议：适合放进哮喘合并肺部影像异常的鉴别章节。","textPreview":"使用建议：适合放进哮喘合并肺部影像异常的鉴别章节。","textChars":25,"textLines":1,"bbox":[682,538,484,16]}
+{"kind":"image","id":"im/c3ylc7u5","slide":8,"name":"","geometry":"roundRect","alt":"abpa_focus 页面截图","bbox":[104,162,464,310]}
+{"kind":"notes","id":"nt/b5t24e","slide":8,"text":""}
+{"kind":"slide","id":"sl/3yyxja","slide":9,"title":"KEY PAGE","textShapes":11}
+{"kind":"shape","id":"sh/6psfil0r","slide":9,"bbox":[0,0,1280,82]}
+{"kind":"shape","id":"sh/dcbulwva","slide":9,"bbox":[0,82,1280,5]}
+{"kind":"shape","id":"sh/kre1w7mp","slide":9,"bbox":[1032,-58,256,256]}
+{"kind":"textbox","id":"sh/vixczed8","slide":9,"text":"KEY PAGE","textPreview":"KEY PAGE","textChars":8,"textLines":1,"bbox":[62,22,180,20]}
+{"kind":"textbox","id":"sh/2x4nap4r","slide":9,"text":"EGPA 专题页：系统性受累是识别关键","textPreview":"EGPA 专题页：系统性受累是识别关键","textChars":19,"textLines":1,"bbox":[62,40,760,28]}
+{"kind":"shape","id":"sh/donyd0z6","slide":9,"bbox":[1088,22,128,36]}
+{"kind":"textbox","id":"sh/k3q5o7qp","slide":9,"text":"视频 24:59","textPreview":"视频 24:59","textChars":8,"textLines":1,"bbox":[1100,29,104,18]}
+{"kind":"textbox","id":"sh/vu9knih4","slide":9,"text":"张清玲教授讲座关键页整理 | B站视频 BV13k4y1Q7UR","textPreview":"张清玲教授讲座关键页整理 | B站视频 BV13k4y1Q7UR","textChars":32,"textLines":1,"bbox":[64,682,540,20]}
+{"kind":"textbox","id":"sh/29gr2p8n","slide":9,"text":"9/12","textPreview":"9/12","textChars":4,"textLines":1,"bbox":[1120,680,92,20]}
+{"kind":"shape","id":"sh/kre1w7mp","slide":9,"bbox":[64,122,544,470]}
+{"kind":"shape","id":"sh/dcbulwva","slide":9,"bbox":[632,122,584,470]}
+{"kind":"shape","id":"sh/6psfil0r","slide":9,"bbox":[90,148,492,338]}
+{"kind":"shape","id":"sh/k3q5o7qp","slide":9,"bbox":[90,504,492,56]}
+{"kind":"textbox","id":"sh/donyd0z6","slide":9,"text":"原页标题（按截图辨识整理）：EGPA 是一种以嗜酸粒细胞增多为主要特征并可累及多个器官系统的疾病","textPreview":"原页标题（按截图辨识整理）：EGPA 是一种以嗜酸粒细胞增多为主要特征并可累及多个器官系统的疾病","textChars":48,"textLines":1,"bbox":[112,518,448,26]}
+{"kind":"shape","id":"sh/2x4nap4r","slide":9,"bbox":[664,152,132,30]}
+{"kind":"textbox","id":"sh/vixczed8","slide":9,"text":"页面主题","textPreview":"页面主题","textChars":4,"textLines":1,"bbox":[678,159,104,16]}
+{"kind":"textbox","id":"sh/kf6dcbul","slide":9,"text":"这一页强调 EGPA 绝不只是肺部疾病，真正的识别关键在于多系统表现是否被同时看见。","textPreview":"这一页强调 EGPA 绝不只是肺部疾病，真正的识别关键在于多系统表现是否被同时看见。","textChars":42,"textLines":1,"bbox":[664,198,520,96]}
+{"kind":"textbox","id":"sh/d0z61032","slide":9,"text":"提炼重点","textPreview":"提炼重点","textChars":4,"textLines":1,"bbox":[664,310,180,24]}
+{"kind":"textbox","id":"sh/dsji5sne","slide":9,"text":"除呼吸系统外，皮肤、神经、心血管等受累提示都应纳入病史和查体清单。\n当患者已经存在哮喘背景时，更要留意是否出现系统性扩展信号。\n会诊汇报时可把“器官受累谱”独立成一栏，提升判断效率。","textPreview":"除呼吸系统外，皮肤、神经、心血管等受累提示都应纳入病史和查体清单。 | 当患者已经存在哮喘背景时，更要留意是否出现系统性扩展信号。 | 会诊汇报时可把“器官受累谱”独立成一栏，提升判断效率。","textChars":91,"textLines":3,"bbox":[664,346,512,170]}
+{"kind":"shape","id":"sh/o7qpg3ex","slide":9,"bbox":[664,526,520,42]}
+{"kind":"textbox","id":"sh/vmtwra5g","slide":9,"text":"使用建议：适合和 ANCA、系统症状一起做专题延展。","textPreview":"使用建议：适合和 ANCA、系统症状一起做专题延展。","textChars":26,"textLines":1,"bbox":[682,538,484,16]}
+{"kind":"image","id":"im/knih4byh","slide":9,"name":"","geometry":"roundRect","alt":"egpa_focus 页面截图","bbox":[104,162,464,310]}
+{"kind":"notes","id":"nt/3yyxja","slide":9,"text":""}
+{"kind":"slide","id":"sl/vmjyi9","slide":10,"title":"KEY PAGE","textShapes":11}
+{"kind":"shape","id":"sh/0rqd4vmt","slide":10,"bbox":[0,0,1280,82]}
+{"kind":"shape","id":"sh/b6xkf6dc","slide":10,"bbox":[0,82,1280,5]}
+{"kind":"shape","id":"sh/il0rqd4v","slide":10,"bbox":[1032,-58,256,256]}
+{"kind":"textbox","id":"sh/t47y1kre","slide":10,"text":"KEY PAGE","textPreview":"KEY PAGE","textChars":8,"textLines":1,"bbox":[62,22,180,20]}
+{"kind":"textbox","id":"sh/0je9cvix","slide":10,"text":"少见疾病页：KD / EMS / EF 的鉴别提醒","textPreview":"少见疾病页：KD / EMS / EF 的鉴别提醒","textChars":25,"textLines":1,"bbox":[62,40,760,28]}
+{"kind":"shape","id":"sh/byhgn29g","slide":10,"bbox":[1088,22,128,36]}
+{"kind":"textbox","id":"sh/idonyd0z","slide":10,"text":"视频 27:59","textPreview":"视频 27:59","textChars":8,"textLines":1,"bbox":[1100,29,104,18]}
+{"kind":"textbox","id":"sh/p0bi9s36","slide":10,"text":"张清玲教授讲座关键页整理 | B站视频 BV13k4y1Q7UR","textPreview":"张清玲教授讲座关键页整理 | B站视频 BV13k4y1Q7UR","textChars":32,"textLines":1,"bbox":[64,682,540,20]}
+{"kind":"textbox","id":"sh/0fepkzup","slide":10,"text":"10/12","textPreview":"10/12","textChars":5,"textLines":1,"bbox":[1120,680,92,20]}
+{"kind":"shape","id":"sh/itgfmlkj","slide":10,"bbox":[64,122,544,470]}
+{"kind":"shape","id":"sh/7ed8bat4","slide":10,"bbox":[632,122,584,470]}
+{"kind":"shape","id":"sh/0z61032l","slide":10,"bbox":[90,148,492,338]}
+{"kind":"shape","id":"sh/ih4byhgn","slide":10,"bbox":[90,504,492,56]}
+{"kind":"textbox","id":"sh/72x4nap4","slide":10,"text":"原页标题（按截图辨识整理）：KD、EMS、EF 的诊断可参考以下标准，需注意排除其他疾病","textPreview":"原页标题（按截图辨识整理）：KD、EMS、EF 的诊断可参考以下标准，需注意排除其他疾病","textChars":44,"textLines":1,"bbox":[112,518,448,26]}
+{"kind":"shape","id":"sh/0nuxc3yl","slide":10,"bbox":[664,152,132,30]}
+{"kind":"textbox","id":"sh/p8nqxs72","slide":10,"text":"页面主题","textPreview":"页面主题","textChars":4,"textLines":1,"bbox":[678,159,104,16]}
+{"kind":"textbox","id":"sh/ed8v6psf","slide":10,"text":"讲者在这里把相对少见但临床上容易忽略的疾病并列展示，帮助把鉴别诊断从常见病再往外扩一层。","textPreview":"讲者在这里把相对少见但临床上容易忽略的疾病并列展示，帮助把鉴别诊断从常见病再往外扩一层。","textChars":44,"textLines":1,"bbox":[664,198,520,96]}
+{"kind":"textbox","id":"sh/7y1kre1w","slide":10,"text":"提炼重点","textPreview":"提炼重点","textChars":4,"textLines":1,"bbox":[664,310,180,24]}
+{"kind":"textbox","id":"sh/j6tovaho","slide":10,"text":"疑难病例里不能把所有嗜酸粒细胞增多都默认归入常见过敏或哮喘相关疾病。\n这类页面的价值在于补齐“少见但关键”的排查清单，降低误归类风险。\n如果后续继续深加工，可把这页整理成单独的鉴别速查表。","textPreview":"疑难病例里不能把所有嗜酸粒细胞增多都默认归入常见过敏或哮喘相关疾病。 | 这类页面的价值在于补齐“少见但关键”的排查清单，降低误归类风险。 | 如果后续继续深加工，可把这页整理成单独的鉴别速查表。","textChars":94,"textLines":3,"bbox":[664,346,512,170]}
+{"kind":"shape","id":"sh/ulwval87","slide":10,"bbox":[664,526,520,42]}
+{"kind":"textbox","id":"sh/1cfa9w3m","slide":10,"text":"使用建议：适合作为疑难病例讨论时的补充页。","textPreview":"使用建议：适合作为疑难病例讨论时的补充页。","textChars":21,"textLines":1,"bbox":[682,538,484,16]}
+{"kind":"image","id":"im/2t83itgf","slide":10,"name":"","geometry":"roundRect","alt":"mechanism_pathology 页面截图","bbox":[104,162,464,310]}
+{"kind":"notes","id":"nt/vmjyi9","slide":10,"text":""}
+{"kind":"slide","id":"sl/pa3c2k","slide":11,"title":"KEY PAGE","textShapes":11}
+{"kind":"shape","id":"sh/4byhgn29","slide":11,"bbox":[0,0,1280,82]}
+{"kind":"shape","id":"sh/bq1oryts","slide":11,"bbox":[0,82,1280,5]}
+{"kind":"shape","id":"sh/m58z25kb","slide":11,"bbox":[1032,-58,256,256]}
+{"kind":"textbox","id":"sh/t83itgfm","slide":11,"text":"KEY PAGE","textPreview":"KEY PAGE","textChars":8,"textLines":1,"bbox":[62,22,180,20]}
+{"kind":"textbox","id":"sh/4nap4r65","slide":11,"text":"共识汇总页：11 条推荐意见总览","textPreview":"共识汇总页：11 条推荐意见总览","textChars":16,"textLines":1,"bbox":[62,40,760,28]}
+{"kind":"shape","id":"sh/b2hwfyxo","slide":11,"bbox":[1088,22,128,36]}
+{"kind":"textbox","id":"sh/mhk3q5o7","slide":11,"text":"视频 31:59","textPreview":"视频 31:59","textChars":8,"textLines":1,"bbox":[1100,29,104,18]}
+{"kind":"textbox","id":"sh/tgfmlkjm","slide":11,"text":"张清玲教授讲座关键页整理 | B站视频 BV13k4y1Q7UR","textPreview":"张清玲教授讲座关键页整理 | B站视频 BV13k4y1Q7UR","textChars":32,"textLines":1,"bbox":[64,682,540,20]}
+{"kind":"textbox","id":"sh/4vmtwra5","slide":11,"text":"11/12","textPreview":"11/12","textChars":5,"textLines":1,"bbox":[1120,680,92,20]}
+{"kind":"shape","id":"sh/i5sneloj","slide":11,"bbox":[64,122,544,470]}
+{"kind":"shape","id":"sh/7qpg3ex0","slide":11,"bbox":[632,122,584,470]}
+{"kind":"shape","id":"sh/0bi9s36h","slide":11,"bbox":[90,148,492,338]}
+{"kind":"shape","id":"sh/ed8v6psf","slide":11,"bbox":[90,504,492,56]}
+{"kind":"textbox","id":"sh/7y1kre1w","slide":11,"text":"原页标题（按截图辨识整理）：EPD 诊疗中国专家共识：共提出 11 条推荐意见汇总","textPreview":"原页标题（按截图辨识整理）：EPD 诊疗中国专家共识：共提出 11 条推荐意见汇总","textChars":41,"textLines":1,"bbox":[112,518,448,26]}
+{"kind":"shape","id":"sh/wjudg7ad","slide":11,"bbox":[664,152,132,30]}
+{"kind":"textbox","id":"sh/p4r65wju","slide":11,"text":"页面主题","textPreview":"页面主题","textChars":4,"textLines":1,"bbox":[678,159,104,16]}
+{"kind":"textbox","id":"sh/ih4byhgn","slide":11,"text":"这是整场视频里最适合做复盘锚点的一页，几乎可以直接作为后续正式汇报的大纲起点。","textPreview":"这是整场视频里最适合做复盘锚点的一页，几乎可以直接作为后续正式汇报的大纲起点。","textChars":39,"textLines":1,"bbox":[664,198,520,96]}
+{"kind":"textbox","id":"sh/72x4nap4","slide":11,"text":"提炼重点","textPreview":"提炼重点","textChars":4,"textLines":1,"bbox":[664,310,180,24]}
+{"kind":"textbox","id":"sh/ji5snelo","slide":11,"text":"如果要把讲座整理成院内分享，建议直接以这 11 条推荐意见作为一级标题展开。\n本次成品保留了原页截图，方便你后续逐条校对、二次补充证据和改写话术。\n从效率上看，这一页最值得单独截图打印或放进病例讨论资料包。","textPreview":"如果要把讲座整理成院内分享，建议直接以这 11 条推荐意见作为一级标题展开。 | 本次成品保留了原页截图，方便你后续逐条校对、二次补充证据和改写话术。 | 从效率上看，这一页最值得单独截图打印或放进病例讨论资料包。","textChars":103,"textLines":3,"bbox":[664,346,512,170]}
+{"kind":"shape","id":"sh/uxc3ylc7","slide":11,"bbox":[664,526,520,42]}
+{"kind":"textbox","id":"sh/1kre1w7m","slide":11,"text":"使用建议：后续若需要扩展全文版 PPT，可从这一页继续拆分。","textPreview":"使用建议：后续若需要扩展全文版 PPT，可从这一页继续拆分。","textChars":30,"textLines":1,"bbox":[682,538,484,16]}
+{"kind":"image","id":"im/m1cfa9w3","slide":11,"name":"","geometry":"roundRect","alt":"hes_management 页面截图","bbox":[104,162,464,310]}
+{"kind":"notes","id":"nt/pa3c2k","slide":11,"text":""}
+{"kind":"slide","id":"sl/1nmphy","slide":12,"title":"WRAP-UP","textShapes":9}
+{"kind":"shape","id":"sh/9cvixcze","slide":12,"bbox":[0,0,1280,82]}
+{"kind":"shape","id":"sh/ylc7u54z","slide":12,"bbox":[0,82,1280,5]}
+{"kind":"shape","id":"sh/r65wjudg","slide":12,"bbox":[1032,-58,256,256]}
+{"kind":"textbox","id":"sh/g3ex0nux","slide":12,"text":"WRAP-UP","textPreview":"WRAP-UP","textChars":7,"textLines":1,"bbox":[62,22,180,20]}
+{"kind":"textbox","id":"sh/5o7qpg3e","slide":12,"text":"复盘建议：把关键页继续变成可讲可用的汇报","textPreview":"复盘建议：把关键页继续变成可讲可用的汇报","textChars":20,"textLines":1,"bbox":[62,40,760,28]}
+{"kind":"shape","id":"sh/yxobm58z","slide":12,"bbox":[1088,22,128,36]}
+{"kind":"textbox","id":"sh/nih4byhg","slide":12,"text":"视频 35:59","textPreview":"视频 35:59","textChars":8,"textLines":1,"bbox":[1100,29,104,18]}
+{"kind":"textbox","id":"sh/g7adsji5","slide":12,"text":"张清玲教授讲座关键页整理 | B站视频 BV13k4y1Q7UR","textPreview":"张清玲教授讲座关键页整理 | B站视频 BV13k4y1Q7UR","textChars":32,"textLines":1,"bbox":[64,682,540,20]}
+{"kind":"textbox","id":"sh/9s36hcrm","slide":12,"text":"12/12","textPreview":"12/12","textChars":5,"textLines":1,"bbox":[1120,680,92,20]}
+{"kind":"shape","id":"sh/d8v6psfi","slide":12,"bbox":[64,122,544,470]}
+{"kind":"shape","id":"sh/onyd0z61","slide":12,"bbox":[632,122,584,470]}
+{"kind":"shape","id":"sh/z25kb6xk","slide":12,"bbox":[92,150,488,340]}
+{"kind":"textbox","id":"sh/dg7adsji","slide":12,"text":"结束页保留在这里，方便后续继续回看原视频并补充完整文本、讲者旁白和指南条目。","textPreview":"结束页保留在这里，方便后续继续回看原视频并补充完整文本、讲者旁白和指南条目。","textChars":38,"textLines":1,"bbox":[94,510,484,40]}
+{"kind":"textbox","id":"sh/ovahoza1","slide":12,"text":"建议的二次使用方式","textPreview":"建议的二次使用方式","textChars":9,"textLines":1,"bbox":[664,158,420,34]}
+{"kind":"textbox","id":"sh/vahoza1g","slide":12,"text":"把 31:59 的“11 条推荐意见汇总页”扩成正式汇报目录，用作主线结构。\n把 12:59 的诊断流程页单独放大，作为病例讨论中的流程底图。\n把 ABPA、EGPA 和 KD/EMS/EF 三页拆成专题补充材料，形成鉴别诊断附录。\n若需要发布到院内教学，可继续补做全文 OCR、文献出处和病例示意图。","textPreview":"把 31:59 的“11 条推荐意见汇总页”扩成正式汇报目录，用作主线结构。 | 把 12:59 的诊断流程页单独放大，作为病例讨论中的流程底图。 | 把 ABPA、EGPA 和 KD/EMS/EF 三页拆成专题补充材料，形成鉴别诊断附录。 | 若需要发布到院内教学，可继续...","textChars":151,"textLines":4,"bbox":[664,222,500,206]}
+{"kind":"shape","id":"sh/6tovahoz","slide":12,"bbox":[664,468,488,86]}
+{"kind":"textbox","id":"sh/dsji5sne","slide":12,"text":"当前成品定位：正式学习整理版 PPT。\n优点是可直接汇报，缺点是文字仍以截图证据页为主，尚未完全替换成全文可编辑内容。","textPreview":"当前成品定位：正式学习整理版 PPT。 | 优点是可直接汇报，缺点是文字仍以截图证据页为主，尚未完全替换成全文可编辑内容。","textChars":59,"textLines":2,"bbox":[688,489,442,42]}
+{"kind":"image","id":"im/9s36hcrm","slide":12,"name":"","geometry":"roundRect","alt":"视频结束页截图","bbox":[106,164,460,312]}
+{"kind":"notes","id":"nt/1nmphy","slide":12,"text":""}

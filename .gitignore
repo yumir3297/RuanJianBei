@@ -59,6 +59,7 @@ logs/
 # 临时文件
 # =====================
 tmp/
+tmp-vite-*
 docx_review_template1/
 
 # =====================

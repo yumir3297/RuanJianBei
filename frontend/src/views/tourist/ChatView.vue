@@ -1,50 +1,36 @@
 <template>
   <section class="tourist-page">
-    <div class="chat-layout">
-      <section class="chat-panel panel-card">
-        <div class="chat-header">
-          <div class="chat-header-left">
-            <div class="chat-guide-avatar">
-              <ThreeAvatar
-                v-if="!avatarError"
-                :preset="avatarConfig.modelKey"
-                :emotion="avatar.currentEmotion.value"
-                :is-speaking="avatarState === 'speaking' || avatarState === 'happy'"
-                :speech-progress="speechProgress"
-                :speech-sync-active="activeAudioSegments > 0"
-                :viseme-timeline="visemeTimeline"
-                @loaded="handleAvatarLoaded"
-                @error="handleAvatarLoadError"
-              />
-              <AvatarDisplay
-                v-else
-                :state="avatarState"
-                :emotion="avatar.currentEmotion.value"
-              />
-            </div>
-            <div class="chat-guide-copy">
-              <span class="guide-kicker">灵山随行讲解</span>
-              <h2 class="section-title">灵山智慧导游</h2>
-              <p class="section-subtitle">
-                {{
-                  interactionStore.breadcrumbs.length
-                    ? interactionStore.breadcrumbs.join(" / ")
-                    : "随时解答您的游览疑问，就像真人导游陪伴身边"
-                }}
-              </p>
-            </div>
-          </div>
+    <div class="scenic-bg" aria-hidden="true">
+      <div class="scenic-bg-img" :style="{ backgroundImage: scenicBgUrl }"></div>
+      <div class="scenic-bg-overlay"></div>
+    </div>
 
-          <div class="chat-header-actions">
-            <el-button
-              text
-              :disabled="chatStore.streaming || speechListening || isRecording"
-              @click="handleChangeMode"
-            >
-              更换问答模式
-            </el-button>
-            <el-tag size="small" type="info">{{ chatStore.statusText }}</el-tag>
-          </div>
+    <header class="tourist-top">
+      <span class="tourist-brand">灵山智慧导览</span>
+      <div class="tourist-top-right">
+        <el-tag size="small" effect="plain">{{ explanationLevelLabel }}</el-tag>
+        <el-tag size="small" type="info">{{ chatStore.statusText }}</el-tag>
+        <el-button
+          text
+          :disabled="chatStore.streaming || speechListening || isRecording"
+          @click="handleChangeMode"
+        >
+          切换讲解方式
+        </el-button>
+      </div>
+    </header>
+
+    <div class="tourist-stage">
+      <aside class="chat-float left-float">
+        <div class="float-head">
+          <span>实时对话</span>
+          <small>
+            {{
+              interactionStore.breadcrumbs.length
+                ? interactionStore.breadcrumbs.join(" / ")
+                : "我会跟随你的节奏讲解灵山景区"
+            }}
+          </small>
         </div>
 
         <div ref="messageListRef" class="message-list">
@@ -62,7 +48,12 @@
             ></div>
             <p v-else>{{ message.content }}</p>
             <span
-              v-if="message.role === 'assistant' && chatStore.streaming && index === chatStore.messages.length - 1 && message.content.length > 0"
+              v-if="
+                message.role === 'assistant'
+                && chatStore.streaming
+                && index === chatStore.messages.length - 1
+                && message.content.length > 0
+              "
               class="typing-cursor"
             >|</span>
           </article>
@@ -71,7 +62,7 @@
         <div v-if="chatStore.followups.length" class="followup-panel" aria-label="快捷追问">
           <div class="followup-heading">
             <span>继续探索</span>
-            <small>选择一个方向接着问</small>
+            <small>选一个方向继续提问</small>
           </div>
           <div class="followup-list">
             <button
@@ -86,215 +77,301 @@
             </button>
           </div>
         </div>
+      </aside>
 
-        <div
-          v-show="visionPanelOpen || visionFile || visionResult"
-          class="vision-panel"
-          aria-label="图片识别入口"
-        >
-          <div class="vision-heading">
-            <div>
-              <span>拍照识景</span>
-              <small>选择一张景物照片，小灵会结合景区资料继续讲解。</small>
-            </div>
-            <el-button text @click="visionPanelOpen = false">收起</el-button>
-          </div>
-
-          <input
-            ref="visionFileInputRef"
-            class="vision-file-input"
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            @change="handleVisionFileChange"
+      <div class="chat-center">
+        <div class="avatar-halo halo-outer"></div>
+        <div class="avatar-halo halo-inner"></div>
+        <div class="avatar-stage">
+          <ThreeAvatar
+            v-if="!avatarError"
+            :preset="avatarConfig.modelKey"
+            :emotion="avatar.currentEmotion.value"
+            :is-speaking="avatarState === 'speaking' || avatarState === 'happy'"
+            :speech-progress="speechProgress"
+            :speech-sync-active="activeAudioSegments > 0"
+            :viseme-timeline="visemeTimeline"
+            @loaded="handleAvatarLoaded"
+            @error="handleAvatarLoadError"
           />
-
-          <div class="vision-actions">
-            <el-button :disabled="visionAnalyzing || chatStore.streaming" @click="openVisionFilePicker">
-              选择图片
-            </el-button>
-            <el-button
-              type="primary"
-              :loading="visionAnalyzing"
-              :disabled="!visionFile || chatStore.streaming"
-              @click="handleAnalyzeImage"
-            >
-              识别图片
-            </el-button>
-            <el-button v-if="visionResult || visionFile" :disabled="visionAnalyzing" @click="clearVisionState">
-              清除
-            </el-button>
-          </div>
-
-          <div v-if="visionFile" class="vision-file-card">
-            <img v-if="visionPreviewUrl" :src="visionPreviewUrl" alt="待识别图片预览" />
-            <div>
-              <strong>{{ visionFile.name }}</strong>
-              <span>{{ formatBytes(visionFile.size) }}</span>
-            </div>
-          </div>
-
-          <el-alert
-            v-if="visionError"
-            class="vision-alert"
-            type="error"
-            :title="visionError"
-            :closable="false"
+          <AvatarDisplay
+            v-else
+            :state="avatarState"
+            :emotion="avatar.currentEmotion.value"
           />
+        </div>
+        <div class="center-caption">
+          <span class="caption-kicker">数字导览中</span>
+          <p>
+            {{
+              interactionStore.breadcrumbs.length
+                ? interactionStore.breadcrumbs.join(" / ")
+                : "随时问我关于灵山的路线、典故和景点"
+            }}
+          </p>
+        </div>
+      </div>
 
-          <div v-if="visionResult" class="vision-result-card">
-            <p class="vision-summary">{{ visionResult.scene_summary || "暂未识别出明确场景。" }}</p>
-            <p v-if="visionResult.candidate_attractions?.length" class="vision-greeting">
-              我看到这可能是{{ visionResult.candidate_attractions[0] }}，让我为您介绍它。
-            </p>
-            <div v-if="visionResult.candidate_attractions?.length" class="vision-tags">
-              <span>可能是</span>
-              <el-tag
-                v-for="item in visionResult.candidate_attractions"
-                :key="`attraction-${item}`"
-                type="success"
-              >
-                {{ item }}
-              </el-tag>
-            </div>
-            <div v-if="visionResult.visual_tags?.length" class="vision-tags">
-              <span>画面特征</span>
-              <el-tag v-for="item in visionResult.visual_tags" :key="`tag-${item}`">
-                {{ item }}
-              </el-tag>
-            </div>
-            <div class="vision-meta">
-              <span>识别把握：{{ formatConfidence(visionResult.confidence) }}</span>
-            </div>
-            <div class="vision-query">
-              <span>发现的景物特征</span>
-              <div v-if="visionDisplayHints.length" class="vision-query-chips">
-                <el-tag
-                  v-for="item in visionDisplayHints"
-                  :key="`hint-${item}`"
-                  effect="plain"
-                  type="warning"
-                >
-                  {{ item }}
-                </el-tag>
-              </div>
-              <p v-else class="vision-query-note">暂时没有发现明确特征，仍可根据图片概述继续询问。</p>
-              <small class="vision-query-note">这些结果只作为检索线索，最终讲解仍以景区资料为准。</small>
-            </div>
-            <el-button
-              type="success"
-              :disabled="chatStore.streaming || !visionResult.retrieval_query"
-              @click="askFromImage"
-            >
-              请小灵讲讲这里
-            </el-button>
-          </div>
+      <aside class="chat-float right-float">
+        <div class="float-head">
+          <span>快捷操作</span>
+          <small>选择提问方向，或打开识景与资料面板</small>
         </div>
 
-        <div class="composer">
-          <div class="composer-topline">
-            <div class="explanation-mode">
-              <span>讲解方式</span>
-              <el-radio-group v-model="explanationLevel" size="small">
-                <el-radio-button value="child">亲子游</el-radio-button>
-                <el-radio-button value="adult">休闲游</el-radio-button>
-                <el-radio-button value="expert">文化深度游</el-radio-button>
-              </el-radio-group>
-            </div>
-            <span v-if="interactionStore.breadcrumbs.length" class="composer-context">
-              {{ interactionStore.breadcrumbs.join(" / ") }}
-            </span>
+        <div class="quick-section">
+          <button
+            v-for="question in quickQuestions"
+            :key="question"
+            type="button"
+            :disabled="chatStore.streaming"
+            @click="handleQuickQuestion(question)"
+          >
+            {{ question }}
+          </button>
+        </div>
+
+        <div class="explanation-card">
+          <span class="card-label">讲解方式</span>
+          <el-radio-group v-model="explanationLevel" size="small">
+            <el-radio-button value="child">亲子游</el-radio-button>
+            <el-radio-button value="adult">休闲游</el-radio-button>
+            <el-radio-button value="expert">文化深度游</el-radio-button>
+          </el-radio-group>
+        </div>
+
+        <div class="action-group">
+          <button type="button" class="action-chip" @click="toggleVisionPanel">
+            拍照识景
+          </button>
+          <button
+            type="button"
+            :class="['action-chip', { active: sourceDrawerOpen }]"
+            @click="toggleSourceDrawer"
+          >
+            资料来源
+            <em v-if="chatStore.sources.length">{{ chatStore.sources.length }}</em>
+          </button>
+        </div>
+      </aside>
+    </div>
+
+    <section
+      v-show="visionPanelOpen || visionFile || visionResult"
+      class="overlay-panel vision-drawer"
+      aria-label="图片识别入口"
+    >
+      <div class="vision-heading">
+        <div>
+          <span>拍照识景</span>
+          <small>选择一张景物照片，小灵会结合景区资料继续讲解。</small>
+        </div>
+        <el-button text @click="visionPanelOpen = false">收起</el-button>
+      </div>
+
+      <input
+        ref="visionFileInputRef"
+        class="vision-file-input"
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        @change="handleVisionFileChange"
+      />
+
+      <div class="vision-actions">
+        <el-button :disabled="visionAnalyzing || chatStore.streaming" @click="openVisionFilePicker">
+          选择图片
+        </el-button>
+        <el-button
+          type="primary"
+          :loading="visionAnalyzing"
+          :disabled="!visionFile || chatStore.streaming"
+          @click="handleAnalyzeImage"
+        >
+          识别图片
+        </el-button>
+        <el-button v-if="visionResult || visionFile" :disabled="visionAnalyzing" @click="clearVisionState">
+          清除
+        </el-button>
+      </div>
+
+      <div v-if="visionFile" class="vision-file-card">
+        <img v-if="visionPreviewUrl" :src="visionPreviewUrl" alt="待识别图片预览" />
+        <div>
+          <strong>{{ visionFile.name }}</strong>
+          <span>{{ formatBytes(visionFile.size) }}</span>
+        </div>
+      </div>
+
+      <el-alert
+        v-if="visionError"
+        class="vision-alert"
+        type="error"
+        :title="visionError"
+        :closable="false"
+      />
+
+      <div v-if="visionResult" class="vision-result-card">
+        <p class="vision-summary">{{ visionResult.scene_summary || "暂未识别出明确场景。" }}</p>
+        <p v-if="visionResult.candidate_attractions?.length" class="vision-greeting">
+          我看到这可能是 {{ visionResult.candidate_attractions[0] }}，让我为您介绍它。
+        </p>
+        <div v-if="visionResult.candidate_attractions?.length" class="vision-tags">
+          <span>可能是</span>
+          <el-tag
+            v-for="item in visionResult.candidate_attractions"
+            :key="`attraction-${item}`"
+            type="success"
+          >
+            {{ item }}
+          </el-tag>
+        </div>
+        <div v-if="visionResult.visual_tags?.length" class="vision-tags">
+          <span>画面特征</span>
+          <el-tag v-for="item in visionResult.visual_tags" :key="`tag-${item}`">
+            {{ item }}
+          </el-tag>
+        </div>
+        <div class="vision-meta">
+          <span>识别把握：{{ formatConfidence(visionResult.confidence) }}</span>
+        </div>
+        <div class="vision-query">
+          <span>发现的景物特征</span>
+          <div v-if="visionDisplayHints.length" class="vision-query-chips">
+            <el-tag
+              v-for="item in visionDisplayHints"
+              :key="`hint-${item}`"
+              effect="plain"
+              type="warning"
+            >
+              {{ item }}
+            </el-tag>
           </div>
+          <p v-else class="vision-query-note">暂时没有发现明确特征，仍可根据图片概述继续提问。</p>
+          <small class="vision-query-note">这些结果仅作为检索线索，最终讲解仍以景区资料为准。</small>
+        </div>
+        <el-button
+          type="success"
+          :disabled="chatStore.streaming || !visionResult.retrieval_query"
+          @click="askFromImage"
+        >
+          请小灵讲讲这里
+        </el-button>
+      </div>
+    </section>
+
+    <aside
+      v-show="sourceDrawerOpen || sourceHighlightIndex >= 0"
+      class="overlay-panel source-drawer"
+      aria-label="资料来源"
+    >
+      <div class="drawer-head">
+        <div>
+          <span>资料来源</span>
+          <small>所有回答均来自景区官方资料，点击引文编号可高亮定位。</small>
+        </div>
+        <el-button text @click="sourceDrawerOpen = false">收起</el-button>
+      </div>
+
+      <el-empty v-if="chatStore.sources.length === 0" description="提问后这里会显示参考资料" />
+      <ul v-else class="source-list">
+        <li
+          v-for="(item, index) in chatStore.sources"
+          :key="`${item.title}-${index}`"
+          :data-source-index="index"
+          :class="{ 'source-highlight': sourceHighlightIndex === index }"
+        >
+          <h4>
+            <span class="source-number">{{ index + 1 }}</span>
+            {{ item.title }}
+          </h4>
+          <p>{{ item.snippet }}</p>
+          <span class="source-meta">{{ item.source }}</span>
+        </li>
+      </ul>
+    </aside>
+
+    <div class="tourist-input-wrap">
+      <div class="tourist-input-bar">
+        <button type="button" class="input-chip" @click="toggleVisionPanel">
+          拍照识景
+        </button>
+
+        <div class="input-main">
+          <div class="input-topline">
+            <span>
+              {{
+                interactionStore.breadcrumbs.length
+                  ? interactionStore.breadcrumbs.join(" / ")
+                  : "导览助手已准备好"
+              }}
+            </span>
+            <span v-if="speechListening">{{ speechPreviewText || "正在聆听..." }}</span>
+          </div>
+
           <el-input
             v-model="query"
             type="textarea"
             :rows="2"
             resize="none"
-            placeholder="问我关于灵山的任何问题，比如：大佛有多高？"
+            placeholder="问我关于灵山的路线、景点和典故，例如：灵山大佛有多高？"
             @keydown.enter.exact.prevent="handleSubmit"
           />
-          <div v-if="speechListening" class="speech-listening" aria-live="polite">
-            <span class="speech-pulse" aria-hidden="true"></span>
-            <strong>正在聆听</strong>
-            <span>{{ speechPreviewText || "请开始说话，识别文字会实时出现在输入框中。" }}</span>
-          </div>
-          <el-alert
-            v-if="voiceErrorMessage"
-            class="speech-alert"
-            type="warning"
-            :title="voiceErrorMessage"
-            :closable="false"
-            show-icon
-          />
-          <div class="composer-actions">
-            <div class="secondary-actions">
-              <el-button :disabled="chatStore.streaming" @click="toggleVisionPanel">
-                拍照识景
-              </el-button>
-              <el-button
-                v-if="voiceSupported"
-                :type="speechListening || isRecording ? 'danger' : 'default'"
-                :loading="transcribing"
-                :disabled="chatStore.streaming || transcribing"
-                @click="toggleRecording"
-              >
-                <template v-if="speechListening">结束语音</template>
-                <template v-else-if="isRecording">结束录音（{{ durationSeconds }}s）</template>
-                <template v-else>语音提问</template>
-              </el-button>
-            </div>
-            <el-button
-              type="primary"
-              class="submit-button"
-              :loading="chatStore.streaming"
-              :disabled="speechListening || isRecording || transcribing"
-              @click="handleSubmit"
-            >
-              发送问题
-            </el-button>
-          </div>
         </div>
-      </section>
 
-      <aside class="source-panel panel-card">
-        <span class="source-kicker">景区资料</span>
-        <h3 class="section-title">资料来源</h3>
-        <p class="section-subtitle">所有回答均来自官方景区资料，点击数字可查看详情。</p>
-        <el-empty v-if="chatStore.sources.length === 0" description="提问后这里会显示参考资料" />
-        <ul v-else class="source-list">
-          <li
-            v-for="(item, index) in chatStore.sources"
-            :key="`${item.title}-${index}`"
-            :data-source-index="index"
-            :class="{ 'source-highlight': sourceHighlightIndex === index }"
-          >
-            <h4>
-              <span class="source-number">{{ index + 1 }}</span>
-              {{ item.title }}
-            </h4>
-            <p>{{ item.snippet }}</p>
-            <span class="source-meta">{{ item.source }}</span>
-          </li>
-        </ul>
-      </aside>
+        <button
+          type="button"
+          class="send-btn"
+          :disabled="chatStore.streaming || speechListening || isRecording || transcribing"
+          @click="handleSubmit"
+        >
+          {{ chatStore.streaming ? "发送中" : "发送" }}
+        </button>
+
+        <button
+          v-if="voiceSupported"
+          type="button"
+          :class="['voice-btn', { recording: speechListening || isRecording }]"
+          :disabled="chatStore.streaming || transcribing"
+          @click="toggleRecording"
+        >
+          <template v-if="speechListening">结束语音</template>
+          <template v-else-if="isRecording">结束录音 {{ durationSeconds }}s</template>
+          <template v-else>语音提问</template>
+        </button>
+      </div>
+
+      <div v-if="speechListening" class="speech-listening" aria-live="polite">
+        <span class="speech-pulse" aria-hidden="true"></span>
+        <strong>正在聆听</strong>
+        <span>{{ speechPreviewText || "请开始说话，识别文字会实时出现在输入框中。" }}</span>
+      </div>
+
+      <el-alert
+        v-if="voiceErrorMessage"
+        class="speech-alert"
+        type="warning"
+        :title="voiceErrorMessage"
+        :closable="false"
+        show-icon
+      />
     </div>
   </section>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, nextTick, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
 import ThreeAvatar from "../../components/ThreeAvatar.vue";
 import AvatarDisplay from "../../components/AvatarDisplay.vue";
-import { useChatStore } from "../../stores/chat";
-import { useInteractionStore } from "../../stores/interaction";
+import { analyzeImage } from "../../api/vision";
+import { transcribeAudio } from "../../api/voice";
+import { useAudioPlayer } from "../../composables/useAudioPlayer";
+import { renderMarkdown } from "../../composables/useMarkdown";
 import { useRecorder } from "../../composables/useRecorder";
 import { useSpeechRecognition } from "../../composables/useSpeechRecognition";
 import { GUIDE_PERSONA, useAvatar } from "../../composables/useAvatar";
-import { useAudioPlayer } from "../../composables/useAudioPlayer";
-import { renderMarkdown } from "../../composables/useMarkdown";
-import { transcribeAudio } from "../../api/voice";
-import { analyzeImage } from "../../api/vision";
+import { useChatStore } from "../../stores/chat";
+import { useInteractionStore } from "../../stores/interaction";
 
 const router = useRouter();
 const chatStore = useChatStore();
@@ -322,6 +399,7 @@ const avatarState = avatar.currentState;
 const avatarError = ref(false);
 
 const STORAGE_KEY = "a5-avatar-config-v1";
+const GUIDE_STYLE_STORAGE_KEY = "a5-pending-guide-style-v1";
 const avatarConfig = ref({ modelKey: "hanfu" });
 try {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -347,18 +425,28 @@ const visionPanelOpen = ref(false);
 const speechProgress = ref(0);
 const visemeTimeline = ref(null);
 const activeAudioSegments = ref(0);
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const sourceHighlightIndex = ref(-1);
 const sourceDrawerOpen = ref(false);
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const scenicBgUrl = "var(--lingshan-scenic-bg)";
+const quickQuestions = [
+  "灵山大佛有多高？",
+  "推荐游览路线是什么？",
+  "这里有什么代表性的文化典故？",
+  "附近适合拍照的景点有哪些？",
+];
 let greetingTimer = null;
 
 const voiceSupported = computed(() => speechSupported.value || recorderSupported.value);
-const speechPreviewText = computed(
-  () => speechInterimText.value || speechFinalText.value,
-);
+const speechPreviewText = computed(() => speechInterimText.value || speechFinalText.value);
 const voiceErrorMessage = computed(
   () => getSpeechErrorMessage(speechError.value) || recorderError.value,
 );
+const explanationLevelLabel = computed(() => ({
+  child: "亲子游",
+  adult: "休闲游",
+  expert: "文化深度游",
+}[explanationLevel.value] || "休闲游"));
 
 const visionDisplayHints = computed(() => {
   const result = visionResult.value;
@@ -387,17 +475,20 @@ function handleCitationClick(event) {
 
 function highlightSource(evidenceId) {
   const index = chatStore.sources.findIndex(
-    s => s.evidence_id === `证据${evidenceId}`
+    source => source.evidence_id === `证据${evidenceId}`,
   );
   if (index >= 0) {
+    sourceDrawerOpen.value = true;
     sourceHighlightIndex.value = index;
     nextTick(() => {
       document.querySelector(`[data-source-index="${index}"]`)?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
+        behavior: "smooth",
+        block: "center",
       });
     });
-    setTimeout(() => sourceHighlightIndex.value = -1, 2000);
+    setTimeout(() => {
+      sourceHighlightIndex.value = -1;
+    }, 2000);
   }
 }
 
@@ -433,8 +524,8 @@ watch(
 
 watch(
   () => {
-    const msgs = chatStore.messages;
-    return msgs.length > 0 ? msgs[msgs.length - 1].content : "";
+    const messages = chatStore.messages;
+    return messages.length > 0 ? messages[messages.length - 1].content : "";
   },
   () => scrollToBottom(),
 );
@@ -472,6 +563,15 @@ watch(speechListening, (listening, wasListening) => {
 
 onMounted(() => {
   interactionStore.initialize();
+
+  try {
+    const pendingStyle = window.sessionStorage.getItem(GUIDE_STYLE_STORAGE_KEY);
+    if (pendingStyle && ["child", "adult", "expert"].includes(pendingStyle)) {
+      explanationLevel.value = pendingStyle;
+      window.sessionStorage.removeItem(GUIDE_STYLE_STORAGE_KEY);
+    }
+  } catch {}
+
   if (chatStore.messages.length === 0) {
     greetingTimer = window.setTimeout(() => {
       if (chatStore.messages.length === 0) {
@@ -513,17 +613,21 @@ function handleFollowup(followupQuery) {
   submitQuery(followupQuery);
 }
 
+function handleQuickQuestion(question) {
+  submitQuery(question);
+}
+
 function submitQuery(rawQuery) {
   const value = rawQuery.trim();
   if (!value || chatStore.streaming) {
     return;
   }
   const levelPrefix = {
-    child: '请用小朋友能听懂的语言解释：',
-    adult: '',
-    expert: '请给出专业详细的解释：',
+    child: "请用小朋友能听懂的语言解释：",
+    adult: "",
+    expert: "请给出专业详细的解释：",
   }[explanationLevel.value];
-  const finalQuery = levelPrefix + value;
+  const finalQuery = `${levelPrefix}${value}`;
   avatar.setState("thinking");
   try {
     chatStore.sendMessage(finalQuery, interactionStore.selectionPayload, {
@@ -547,7 +651,7 @@ function submitQuery(rawQuery) {
           visemeTimeline.value = null;
         }
       },
-      onSpeechProgress: (progress, elapsedMs, timeline) => {
+      onSpeechProgress: (progress, _elapsedMs, timeline) => {
         speechProgress.value = progress;
         visemeTimeline.value = timeline;
       },
@@ -763,151 +867,160 @@ function formatConfidence(value) {
 
 <style scoped>
 .tourist-page {
-  display: grid;
-  gap: 20px;
-  animation: page-reveal 480ms ease-out both;
-}
-
-@keyframes page-reveal {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.chat-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.65fr) minmax(300px, 0.85fr);
-  gap: 20px;
-  align-items: start;
-}
-
-.chat-panel,
-.source-panel {
-  padding: 24px;
-}
-
-.chat-panel {
-  overflow: hidden;
-}
-
-.source-panel {
-  position: sticky;
-  top: 20px;
-  max-height: calc(100vh - 40px);
-  overflow-y: auto;
-}
-
-.chat-header {
+  position: relative;
+  min-height: 100vh;
   display: flex;
+  flex-direction: column;
+  padding: 16px 20px 20px;
+  overflow: hidden;
+  background: var(--lingshan-paper);
+}
+
+.scenic-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.scenic-bg-img {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  filter: blur(6px) saturate(0.5) brightness(0.42);
+  transform: scale(1.04);
+}
+
+.scenic-bg-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 52%, rgba(196, 155, 76, 0.12), transparent 24%),
+    radial-gradient(
+      ellipse 65% 52% at 50% 56%,
+      transparent 0%,
+      rgba(27, 46, 37, 0.42) 68%,
+      rgba(15, 25, 18, 0.7) 100%
+    );
+}
+
+.tourist-top {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  align-items: center;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--lingshan-line);
 }
 
-.chat-header-left {
+.tourist-brand {
+  color: rgba(255, 255, 255, 0.9);
+  font-family: "STKaiti", "KaiTi", "STSong", serif;
+  font-size: 18px;
+  letter-spacing: 0.16em;
+}
+
+.tourist-top-right {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 20px;
-  min-width: 0;
-}
-
-.chat-header-actions {
-  display: grid;
+  justify-content: flex-end;
   gap: 10px;
-  justify-items: end;
-  flex-shrink: 0;
 }
 
-.chat-guide-avatar {
+.tourist-stage {
+  position: relative;
+  z-index: 10;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(270px, 320px) minmax(0, 1fr) minmax(240px, 280px);
+  align-items: center;
+  gap: 18px;
+}
+
+.chat-float {
   display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  width: 136px;
-  height: 172px;
-  flex: 0 0 136px;
-  overflow: hidden;
-  border: 1px solid var(--lingshan-line);
-  border-radius: 16px 6px 16px 6px;
-  background: linear-gradient(180deg, var(--lingshan-green-light), #fffdf8);
+  flex-direction: column;
+  gap: 14px;
+  align-self: center;
+  max-height: min(62vh, 700px);
+  padding: 18px 16px;
+  border: 1px solid rgba(233, 240, 235, 0.16);
+  border-radius: 20px;
+  background: rgba(247, 244, 237, 0.16);
+  box-shadow: 0 22px 60px rgba(10, 18, 14, 0.2);
+  backdrop-filter: blur(18px);
 }
 
-.chat-guide-avatar :deep(.three-wrapper),
-.chat-guide-avatar :deep(.avatar-display) {
-  width: 100%;
-  height: 100%;
+.float-head {
+  display: grid;
+  gap: 6px;
 }
 
-.chat-guide-avatar :deep(.three-wrapper) {
-  min-height: 100%;
+.float-head span,
+.drawer-head span,
+.vision-heading span,
+.caption-kicker,
+.card-label {
+  color: #f8e7bb;
+  font-family: "STKaiti", "KaiTi", serif;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
 }
 
-.chat-guide-copy {
-  min-width: 0;
-}
-
-.chat-guide-copy .section-title {
-  margin-bottom: 6px;
-}
-
-.guide-kicker,
-.source-kicker {
-  display: block;
-  margin-bottom: 6px;
-  color: var(--lingshan-gold-deep);
-  font-family: "FangSong", "STFangsong", serif;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
+.float-head small,
+.drawer-head small,
+.vision-heading small {
+  color: rgba(240, 242, 236, 0.78);
+  line-height: 1.55;
 }
 
 .message-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  min-height: 220px;
-  max-height: 480px;
+  gap: 12px;
+  min-height: 200px;
   overflow-y: auto;
-  margin: 24px 0;
+  padding-right: 4px;
   scroll-behavior: smooth;
 }
 
 .message-item {
   position: relative;
-  width: min(92%, 760px);
-  padding: 15px 17px;
-  border-radius: 5px 16px 16px 16px;
-  box-shadow: 0 5px 16px rgba(55, 71, 59, 0.05);
+  width: 100%;
+  max-width: 100%;
+  padding: 13px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(11, 17, 13, 0.12);
 }
 
 .message-item.user {
   align-self: flex-end;
+  background: rgba(255, 248, 232, 0.9);
   border-right: 3px solid var(--lingshan-gold);
-  border-radius: 16px 5px 16px 16px;
-  background: linear-gradient(135deg, #fff7e9, #fffdf8);
+  color: #4b3a21;
 }
 
 .message-item.assistant {
   align-self: flex-start;
+  background: rgba(234, 240, 235, 0.94);
   border-left: 3px solid var(--lingshan-green);
-  background: var(--lingshan-green-light);
 }
 
 .message-speaker {
   color: var(--lingshan-green-deep);
   font-family: "STKaiti", "KaiTi", serif;
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .message-item p {
   margin: 8px 0 0;
-  line-height: 1.7;
+  line-height: 1.68;
 }
 
 .typing-cursor {
@@ -917,21 +1030,548 @@ function formatConfidence(value) {
 }
 
 @keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
 }
 
-.composer {
+.chat-center {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 100%;
+  padding: 34px 0 86px;
+}
+
+.avatar-halo {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.halo-outer {
+  bottom: 20%;
+  width: 360px;
+  height: 360px;
+  background: radial-gradient(circle, rgba(196, 155, 76, 0.18) 0%, transparent 70%);
+  filter: blur(4px);
+}
+
+.halo-inner {
+  bottom: 25%;
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, transparent 72%);
+}
+
+.avatar-stage {
+  position: relative;
+  z-index: 2;
+  width: min(360px, 36vw);
+  height: min(580px, 66vh);
+  min-height: 340px;
+}
+
+.avatar-stage :deep(.three-wrapper),
+.avatar-stage :deep(.avatar-display) {
+  width: 100%;
+  height: 100%;
+}
+
+.center-caption {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  text-align: center;
+}
+
+.center-caption p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-family: "STKaiti", "KaiTi", serif;
+  font-size: 16px;
+  letter-spacing: 0.06em;
+}
+
+.quick-section,
+.action-group,
+.explanation-card {
+  display: grid;
+  gap: 10px;
+}
+
+.quick-section button,
+.action-chip {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid rgba(248, 231, 187, 0.2);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.quick-section button:hover:not(:disabled),
+.action-chip:hover {
+  transform: translateY(-1px);
+  border-color: rgba(248, 231, 187, 0.4);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.quick-section button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.explanation-card {
+  padding: 14px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(248, 231, 187, 0.16);
+}
+
+.explanation-card :deep(.el-radio-group) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.explanation-card :deep(.el-radio-button__inner) {
+  min-width: 88px;
+  padding: 8px 12px;
+  border-radius: 999px;
+}
+
+.action-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.action-chip em {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(248, 231, 187, 0.18);
+  color: #f8e7bb;
+  font-style: normal;
+  font-size: 12px;
+  line-height: 22px;
+  text-align: center;
+}
+
+.action-chip.active {
+  border-color: rgba(248, 231, 187, 0.5);
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.overlay-panel {
+  position: absolute;
+  z-index: 30;
+  padding: 16px;
+  border: 1px solid rgba(233, 240, 235, 0.18);
+  border-radius: 20px;
+  background: rgba(17, 28, 22, 0.78);
+  box-shadow: 0 22px 60px rgba(4, 8, 6, 0.35);
+  backdrop-filter: blur(18px);
+}
+
+.vision-drawer {
+  right: 20px;
+  bottom: 126px;
+  width: min(440px, calc(100vw - 40px));
+  max-height: min(62vh, 640px);
+  overflow-y: auto;
+}
+
+.source-drawer {
+  left: 20px;
+  bottom: 126px;
+  width: min(360px, calc(100vw - 40px));
+  max-height: min(62vh, 620px);
+  overflow-y: auto;
+}
+
+.drawer-head,
+.vision-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.drawer-head div,
+.vision-heading div {
+  display: grid;
+  gap: 4px;
+}
+
+.vision-file-input {
+  display: none;
+}
+
+.vision-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.vision-file-card {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 14px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.vision-file-card img {
+  width: 88px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+}
+
+.vision-file-card div {
+  display: grid;
+  gap: 4px;
+}
+
+.vision-file-card strong,
+.vision-summary,
+.vision-greeting,
+.source-list h4,
+.source-list p {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.vision-file-card span,
+.vision-meta,
+.vision-query-note,
+.source-meta {
+  color: rgba(240, 242, 236, 0.72);
+  font-size: 13px;
+}
+
+.vision-alert,
+.speech-alert {
+  margin: 0;
+}
+
+.vision-result-card {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(248, 231, 187, 0.08);
+}
+
+.vision-summary,
+.vision-query-note {
+  margin: 0;
+  line-height: 1.65;
+}
+
+.vision-greeting {
+  margin: 0;
+  font-weight: 500;
+}
+
+.vision-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.vision-tags > span,
+.vision-query > span {
+  color: #f8e7bb;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.vision-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.vision-query {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.vision-query-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.followup-panel {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(248, 231, 187, 0.18);
+  border-radius: 16px;
+  background: rgba(255, 248, 232, 0.08);
+}
+
+.followup-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  color: #f8e7bb;
+}
+
+.followup-heading span {
+  font-family: "STKaiti", "KaiTi", serif;
+  font-weight: 700;
+}
+
+.followup-heading small {
+  color: rgba(240, 242, 236, 0.7);
+}
+
+.followup-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.followup-list button {
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1px solid rgba(248, 231, 187, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.88);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.followup-list button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(248, 231, 187, 0.38);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.followup-list button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.followup-list strong {
+  color: #f8e7bb;
+  font-size: 13px;
+}
+
+.followup-list span {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.source-list {
+  list-style: none;
+  padding: 0;
+  margin: 18px 0 0;
   display: grid;
   gap: 12px;
 }
 
-.composer-topline {
+.source-list li {
+  padding: 14px;
+  border: 1px solid rgba(248, 231, 187, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.source-list li:hover {
+  border-color: rgba(248, 231, 187, 0.24);
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.source-list h4 {
   display: flex;
   align-items: center;
+  margin: 0 0 8px;
+}
+
+.source-list p {
+  margin: 0 0 8px;
+  line-height: 1.6;
+}
+
+.source-number {
+  display: inline-flex;
+  flex: 0 0 22px;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: rgba(248, 231, 187, 0.18);
+  color: #f8e7bb;
+  font-family: Georgia, serif;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tourist-input-wrap {
+  position: relative;
+  z-index: 20;
+  display: grid;
+  gap: 10px;
+}
+
+.tourist-input-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(233, 240, 235, 0.16);
+  border-radius: 24px;
+  background: rgba(247, 244, 237, 0.16);
+  box-shadow: 0 18px 40px rgba(10, 18, 14, 0.2);
+  backdrop-filter: blur(18px);
+}
+
+.input-chip,
+.send-btn {
+  flex-shrink: 0;
+  height: 46px;
+  padding: 0 18px;
+  border: 1px solid rgba(248, 231, 187, 0.2);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.92);
+  font: inherit;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, opacity 0.18s ease;
+}
+
+.input-chip:hover,
+.send-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(248, 231, 187, 0.4);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.send-btn:disabled,
+.voice-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.input-main {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.input-topline {
+  display: flex;
   justify-content: space-between;
   gap: 12px;
-  flex-wrap: wrap;
+  color: rgba(240, 242, 236, 0.76);
+  font-size: 12px;
+}
+
+.input-main :deep(.el-textarea__inner) {
+  min-height: 56px !important;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(248, 231, 187, 0.16);
+  background: rgba(255, 255, 255, 0.84);
+  color: var(--lingshan-ink);
+  box-shadow: none;
+}
+
+.input-main :deep(.el-textarea__inner:focus) {
+  border-color: var(--lingshan-accent);
+}
+
+.voice-btn {
+  flex-shrink: 0;
+  height: 50px;
+  padding: 0 20px;
+  border: 2px solid rgba(248, 231, 187, 0.74);
+  border-radius: 999px;
+  background: var(--lingshan-primary);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 0 22px rgba(196, 155, 76, 0.26);
+  animation: voice-pulse 2.5s ease-in-out infinite;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.voice-btn:hover:not(:disabled) {
+  transform: scale(1.03);
+  box-shadow: 0 0 30px rgba(196, 155, 76, 0.42);
+  filter: brightness(1.05);
+}
+
+.voice-btn.recording {
+  background: #a3412f;
+  border-color: #f0b49b;
+  animation: recording-pulse 1s ease-in-out infinite;
+}
+
+@keyframes voice-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(196, 155, 76, 0.24);
+  }
+
+  50% {
+    box-shadow: 0 0 36px rgba(196, 155, 76, 0.44);
+  }
+}
+
+@keyframes recording-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 18px rgba(163, 65, 47, 0.28);
+  }
+
+  50% {
+    box-shadow: 0 0 34px rgba(163, 65, 47, 0.5);
+  }
 }
 
 .speech-listening {
@@ -940,9 +1580,9 @@ function formatConfidence(value) {
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  border: 1px solid rgba(220, 38, 38, 0.18);
-  border-radius: 12px;
-  background: linear-gradient(135deg, #fff7ed, #fff 76%);
+  border: 1px solid rgba(240, 180, 155, 0.22);
+  border-radius: 14px;
+  background: rgba(255, 244, 236, 0.9);
   color: #7f1d1d;
   font-size: 13px;
 }
@@ -960,390 +1600,118 @@ function formatConfidence(value) {
   animation: speech-pulse 1.35s ease-out infinite;
 }
 
-.speech-alert {
-  margin: 0;
-}
-
 @keyframes speech-pulse {
   0% {
     box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.34);
   }
+
   70% {
     box-shadow: 0 0 0 9px rgba(220, 38, 38, 0);
   }
+
   100% {
     box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
   }
 }
 
-.vision-panel {
-  display: grid;
-  gap: 12px;
-  margin: -4px 0 20px;
-  padding: 16px;
-  border: 1px solid rgba(102, 128, 107, 0.22);
-  border-radius: 16px 6px 16px 6px;
-  background:
-    radial-gradient(circle at top left, rgba(184, 137, 79, 0.12), transparent 34%),
-    linear-gradient(135deg, var(--lingshan-green-light), #fffdf8 72%);
-}
-
-.vision-heading {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: flex-start;
-}
-
-.vision-heading div {
-  display: grid;
-  gap: 4px;
-}
-
-.vision-heading span {
-  color: var(--lingshan-green-deep);
-  font-family: "STKaiti", "KaiTi", serif;
-  font-weight: 700;
-}
-
-.vision-heading small {
-  color: #64748b;
-  line-height: 1.5;
-}
-
-.vision-file-input {
-  display: none;
-}
-
-.vision-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.vision-file-card {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 10px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.72);
-}
-
-.vision-file-card img {
-  width: 88px;
-  height: 64px;
-  object-fit: cover;
-  border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(54, 88, 71, 0.14);
-}
-
-.vision-file-card div {
-  display: grid;
-  gap: 4px;
-}
-
-.vision-file-card span,
-.vision-meta {
-  color: #64748b;
-  font-size: 13px;
-}
-
-.vision-alert {
-  margin: 0;
-}
-
-.vision-result-card {
-  display: grid;
-  gap: 12px;
-  padding: 14px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: inset 0 0 0 1px rgba(54, 88, 71, 0.08);
-}
-
-.vision-summary,
-.vision-query-note {
-  margin: 0;
-  color: #334155;
-  line-height: 1.65;
-}
-
-.vision-greeting {
-  color: var(--lingshan-green-deep);
-  font-weight: 500;
-  margin: 8px 0;
-}
-
-.explanation-mode {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 12px;
-  border-radius: 10px;
-  border-left: 3px solid var(--lingshan-gold);
-  background: #f8f2e8;
-  font-size: 13px;
-}
-
-.explanation-mode span {
-  color: var(--lingshan-stone);
-  font-weight: 700;
-}
-
-.explanation-mode :deep(.el-radio-button__inner) {
-  padding: 8px 12px;
-  font-size: 13px;
-}
-
-.vision-tags {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.vision-tags > span,
-.vision-query > span {
-  color: var(--lingshan-green-deep);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.vision-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.vision-query {
-  display: grid;
-  gap: 6px;
-  padding: 10px;
-  border-radius: 12px;
-  background: #f6f3eb;
-}
-
-.vision-query-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.vision-query-note {
-  color: #64748b;
-  font-size: 12px;
-}
-
-.followup-panel {
-  display: grid;
-  gap: 10px;
-  margin: -8px 0 20px;
-  padding: 14px;
-  border: 1px solid rgba(184, 137, 79, 0.26);
-  border-radius: 16px 6px 16px 6px;
-  background: linear-gradient(135deg, #fbf3e5, #fffdf8 72%);
-}
-
-.followup-heading {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  color: #92400e;
-}
-
-.followup-heading span {
-  font-family: "STKaiti", "KaiTi", serif;
-  font-weight: 700;
-}
-
-.followup-heading small {
-  color: #8b7355;
-}
-
-.followup-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.followup-list button {
-  display: grid;
-  gap: 4px;
-  padding: 11px 12px;
-  border: 1px solid #f1d6a8;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.88);
-  color: #543b24;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
-}
-
-.followup-list button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  border-color: var(--lingshan-gold);
-  box-shadow: 0 8px 18px rgba(146, 64, 14, 0.1);
-}
-
-.followup-list button:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-.followup-list strong {
-  color: #92400e;
-  font-size: 13px;
-}
-
-.followup-list span {
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.composer-context {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  padding: 9px 12px;
-  border-radius: 10px;
-  background: var(--lingshan-green-light);
-  color: var(--lingshan-green-deep);
-  font-size: 13px;
-}
-
-.composer-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.secondary-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.secondary-actions .el-button + .el-button {
-  margin-left: 0;
-}
-
-.submit-button {
-  min-width: 126px;
-}
-
-.source-list {
-  list-style: none;
-  padding: 0;
-  margin: 20px 0 0;
-  display: grid;
-  gap: 12px;
-}
-
-.source-list li {
-  padding: 16px;
-  border: 1px solid transparent;
-  border-radius: 14px 5px 14px 5px;
-  background: #f6f3eb;
-  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
-}
-
-.source-list li:hover {
-  border-color: rgba(184, 137, 79, 0.34);
-  background: #fffaf0;
-  transform: translateY(-1px);
-}
-
-.source-list h4 {
-  display: flex;
-  align-items: center;
-  margin: 0 0 8px;
-  color: var(--lingshan-ink);
-}
-
-.source-list p {
-  margin: 0 0 8px;
-  color: #334155;
-  line-height: 1.6;
-}
-
-.source-number {
-  display: inline-flex;
-  flex: 0 0 22px;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  margin-right: 8px;
-  border-radius: 50%;
-  background: var(--lingshan-gold-light);
-  color: var(--lingshan-gold-deep);
-  font-family: Georgia, serif;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.source-meta {
-  color: var(--lingshan-stone);
-  font-size: 13px;
-}
-
-@media (max-width: 980px) {
-  .chat-layout {
-    grid-template-columns: 1fr;
+@media (max-width: 1180px) {
+  .tourist-page {
+    overflow-y: auto;
   }
 
-  .source-panel {
-    position: static;
+  .tourist-stage {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 8px 0 16px;
+  }
+
+  .chat-center {
+    order: 1;
+    min-height: 48vh;
+    padding: 18px 0 16px;
+  }
+
+  .left-float {
+    order: 2;
+  }
+
+  .right-float {
+    order: 3;
+  }
+
+  .chat-float {
     max-height: none;
   }
+
+  .avatar-stage {
+    width: min(320px, 64vw);
+    height: min(500px, 56vh);
+  }
+
+  .vision-drawer,
+  .source-drawer {
+    left: 20px;
+    right: 20px;
+    width: auto;
+  }
 }
 
-@media (max-width: 560px) {
-  .chat-panel,
-  .source-panel {
-    padding: 18px;
+@media (max-width: 720px) {
+  .tourist-page {
+    padding: 14px;
   }
 
-  .chat-header,
-  .chat-header-left,
-  .chat-header-actions {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .chat-guide-avatar {
-    width: 120px;
-    height: 152px;
-    flex-basis: 120px;
-  }
-
-  .message-item {
-    width: 96%;
-  }
-
-  .composer-actions {
+  .tourist-top,
+  .tourist-top-right,
+  .tourist-input-bar {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .composer-actions .el-button {
+  .tourist-top-right {
+    justify-content: flex-start;
+  }
+
+  .tourist-brand {
+    font-size: 16px;
+  }
+
+  .chat-float,
+  .overlay-panel {
+    padding: 14px;
+  }
+
+  .avatar-stage {
+    width: min(280px, 72vw);
+    height: min(430px, 48vh);
+    min-height: 280px;
+  }
+
+  .center-caption p {
+    font-size: 15px;
+  }
+
+  .vision-drawer,
+  .source-drawer {
+    left: 14px;
+    right: 14px;
+    bottom: 96px;
+  }
+
+  .input-chip,
+  .send-btn,
+  .voice-btn {
     width: 100%;
-    margin-left: 0;
   }
 
-  .followup-list {
-    grid-template-columns: 1fr;
+  .input-topline {
+    flex-direction: column;
   }
+}
 
-  .vision-file-card {
-    align-items: flex-start;
+@media (prefers-reduced-motion: reduce) {
+  .voice-btn {
+    animation: none;
   }
 }
 </style>

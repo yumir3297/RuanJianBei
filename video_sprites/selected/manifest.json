@@ -1,0 +1,90 @@
+[
+  {
+    "name": "cover",
+    "target_sec": 0,
+    "actual_sec": 0,
+    "mmss": "00:00",
+    "full": "video_sprites/selected/full/cover-0000s.jpg",
+    "crop": "video_sprites/selected/slide_crop/cover-0000s.jpg"
+  },
+  {
+    "name": "spectrum_overview",
+    "target_sec": 58,
+    "actual_sec": 59,
+    "mmss": "00:59",
+    "full": "video_sprites/selected/full/spectrum_overview-0059s.jpg",
+    "crop": "video_sprites/selected/slide_crop/spectrum_overview-0059s.jpg"
+  },
+  {
+    "name": "recognition_principles",
+    "target_sec": 358,
+    "actual_sec": 359,
+    "mmss": "05:59",
+    "full": "video_sprites/selected/full/recognition_principles-0359s.jpg",
+    "crop": "video_sprites/selected/slide_crop/recognition_principles-0359s.jpg"
+  },
+  {
+    "name": "diagnostic_checklist",
+    "target_sec": 538,
+    "actual_sec": 539,
+    "mmss": "08:59",
+    "full": "video_sprites/selected/full/diagnostic_checklist-0539s.jpg",
+    "crop": "video_sprites/selected/slide_crop/diagnostic_checklist-0539s.jpg"
+  },
+  {
+    "name": "differential_pathway",
+    "target_sec": 778,
+    "actual_sec": 779,
+    "mmss": "12:59",
+    "full": "video_sprites/selected/full/differential_pathway-0779s.jpg",
+    "crop": "video_sprites/selected/slide_crop/differential_pathway-0779s.jpg"
+  },
+  {
+    "name": "disease_spectrum",
+    "target_sec": 1078,
+    "actual_sec": 1079,
+    "mmss": "17:59",
+    "full": "video_sprites/selected/full/disease_spectrum-1079s.jpg",
+    "crop": "video_sprites/selected/slide_crop/disease_spectrum-1079s.jpg"
+  },
+  {
+    "name": "abpa_focus",
+    "target_sec": 1318,
+    "actual_sec": 1319,
+    "mmss": "21:59",
+    "full": "video_sprites/selected/full/abpa_focus-1319s.jpg",
+    "crop": "video_sprites/selected/slide_crop/abpa_focus-1319s.jpg"
+  },
+  {
+    "name": "egpa_focus",
+    "target_sec": 1498,
+    "actual_sec": 1499,
+    "mmss": "24:59",
+    "full": "video_sprites/selected/full/egpa_focus-1499s.jpg",
+    "crop": "video_sprites/selected/slide_crop/egpa_focus-1499s.jpg"
+  },
+  {
+    "name": "mechanism_pathology",
+    "target_sec": 1678,
+    "actual_sec": 1679,
+    "mmss": "27:59",
+    "full": "video_sprites/selected/full/mechanism_pathology-1679s.jpg",
+    "crop": "video_sprites/selected/slide_crop/mechanism_pathology-1679s.jpg"
+  },
+  {
+    "name": "hes_management",
+    "target_sec": 1918,
+    "actual_sec": 1919,
+    "mmss": "31:59",
+    "full": "video_sprites/selected/full/hes_management-1919s.jpg",
+    "crop": "video_sprites/selected/slide_crop/hes_management-1919s.jpg"
+  },
+  {
+    "name": "closing_summary",
+    "target_sec": 2159,
+    "actual_sec": 2159,
+    "mmss": "35:59",
+    "full": "video_sprites/selected/full/closing_summary-2159s.jpg",
+    "crop": "video_sprites/selected/slide_crop/closing_summary-2159s.jpg"
+  }
+]

@@ -119,7 +119,7 @@ function confirmMode() {
 }
 
 function goHome() {
-  router.push("/");
+  router.push("/tourist/welcome");
 }
 </script>
 

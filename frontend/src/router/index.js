@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 
+import LandingPage from "../views/LandingPage.vue";
 import HomePage from "../views/HomePage.vue";
 import ChatView from "../views/tourist/ChatView.vue";
 import ModeSelectView from "../views/tourist/ModeSelectView.vue";
@@ -23,6 +24,11 @@ const router = createRouter({
     {
       path: "/",
       name: "home",
+      component: LandingPage,
+    },
+    {
+      path: "/tourist/welcome",
+      name: "tourist-welcome",
       component: HomePage,
     },
     {
