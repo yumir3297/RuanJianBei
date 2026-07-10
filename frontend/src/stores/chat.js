@@ -15,6 +15,18 @@ const GENERIC_ERROR_TEXT = "抱歉，导览服务暂时没有响应。请稍后�
 
 let activeStreamController = null;
 let activeStreamToken = 0;
+let lastFailedRequest = null;
+const SESSION_STORAGE_KEY = "a5-chat-session-id";
+
+function getSessionId() {
+  const fallbackId = `visitor-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  if (typeof sessionStorage === "undefined") return fallbackId;
+  const existing = sessionStorage.getItem(SESSION_STORAGE_KEY);
+  if (existing) return existing;
+  const sessionId = globalThis.crypto?.randomUUID?.() || fallbackId;
+  sessionStorage.setItem(SESSION_STORAGE_KEY, sessionId);
+  return sessionId;
+}
 
 function isAbortError(error) {
   return error?.name === "AbortError";
@@ -29,6 +41,7 @@ export const useChatStore = defineStore("chat", {
     statusText: DEFAULT_STATUS_TEXT,
     streaming: false,
     voiceFallback: false,
+    errorMessage: "",
   }),
   actions: {
     resetConversationContext() {
@@ -40,6 +53,8 @@ export const useChatStore = defineStore("chat", {
     resetSession() {
       this.stopOutput();
       this.messages = [];
+      this.errorMessage = "";
+      lastFailedRequest = null;
       this.resetConversationContext();
     },
     stopOutput() {
@@ -59,6 +74,7 @@ export const useChatStore = defineStore("chat", {
       }
 
       this.stopOutput();
+      this.errorMessage = "";
       const requestToken = activeStreamToken;
       const streamController = new AbortController();
       activeStreamController = streamController;
@@ -70,7 +86,7 @@ export const useChatStore = defineStore("chat", {
         content: "",
       };
 
-      this.messages.push({ role: "user", content: query });
+      this.messages.push({ role: "user", content: options.displayQuery || query });
       this.messages.push(assistantMessage);
       this.sources = [];
       this.followups = [];
@@ -81,8 +97,8 @@ export const useChatStore = defineStore("chat", {
         await streamChat(
           {
             query,
-            session_id: "demo-session",
-            input_mode: "text",
+            session_id: getSessionId(),
+            input_mode: options.inputMode || "text",
             text_only: false,
             persona: options.ttsConfig?.persona || null,
             tts_voice: options.ttsConfig?.voiceType || null,
@@ -179,6 +195,7 @@ export const useChatStore = defineStore("chat", {
               this.statusText = this.voiceFallback
                 ? FALLBACK_DONE_STATUS_TEXT
                 : DEFAULT_STATUS_TEXT;
+              lastFailedRequest = null;
             },
           },
           {
@@ -189,14 +206,24 @@ export const useChatStore = defineStore("chat", {
         if (isAbortError(error)) {
           return;
         }
-        assistantMessage.content = GENERIC_ERROR_TEXT;
+        assistantMessage.content = assistantMessage.content
+          ? `${assistantMessage.content}\n\n（回答传输中断，可点击重试。）`
+          : GENERIC_ERROR_TEXT;
         this.streaming = false;
         this.statusText = OFFLINE_STATUS_TEXT;
+        this.errorMessage = error?.message || "导览服务暂时不可用，请稍后重试。";
+        lastFailedRequest = { query, selection, options };
       } finally {
         if (activeStreamController === streamController) {
           activeStreamController = null;
         }
       }
+    },
+    async retryLastMessage() {
+      if (!lastFailedRequest || this.streaming) return;
+      const request = lastFailedRequest;
+      if (this.messages.length >= 2) this.messages.splice(-2, 2);
+      await this.sendMessage(request.query, request.selection, request.options);
     },
   },
 });

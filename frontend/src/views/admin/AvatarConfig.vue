@@ -138,8 +138,8 @@
           </div>
 
           <div class="workbench-actions">
-            <el-button type="primary" size="large" @click="handleSave">保存数字人配置</el-button>
-            <el-button size="large" @click="handleReset">恢复默认</el-button>
+            <el-button type="primary" size="large" :loading="saving" @click="handleSave">保存数字人配置</el-button>
+            <el-button size="large" :disabled="saving" @click="handleReset">恢复默认</el-button>
           </div>
         </div>
       </div>
@@ -155,7 +155,6 @@ import ThreeAvatar from "../../components/ThreeAvatar.vue";
 import {
   fetchAvatarConfigs,
   saveAvatarConfig,
-  updateAvatarConfig,
 } from "../../api/admin";
 import {
   DEFAULT_AVATAR_PRESET,
@@ -188,6 +187,7 @@ function loadLocalConfig() {
 const saved = loadLocalConfig();
 const initialized = ref(false);
 const pageLoading = ref(false);
+const saving = ref(false);
 const lastUpdatedAt = ref("");
 const presetToConfigId = ref({});
 const previewEmotion = ref("neutral");
@@ -283,6 +283,8 @@ async function loadPageData() {
 }
 
 async function handleSave() {
+  if (saving.value) return;
+  saving.value = true;
   const config = {
     preset: selectedPreset.value,
     voiceType: voiceType.value,
@@ -294,14 +296,16 @@ async function handleSave() {
   const targetConfigId = presetToConfigId.value[selectedPreset.value];
   if (targetConfigId) {
     try {
-      await updateAvatarConfig(targetConfigId, voiceType.value);
       await saveAvatarConfig(targetConfigId);
       ElMessage.success("数字人配置已保存并同步到游客端");
-    } catch {
-      ElMessage.success("数字人配置已本地保存（后端同步失败，游客端刷新后生效）");
+    } catch (error) {
+      ElMessage.error(`本地偏好已保存，但后端激活失败：${error?.response?.data?.detail || error.message || "请检查后端服务"}`);
+    } finally {
+      saving.value = false;
     }
   } else {
-    ElMessage.success("数字人配置已本地保存（游客端刷新后生效）");
+    saving.value = false;
+    ElMessage.warning("本地偏好已保存，但当前形象没有可激活的后端配置");
   }
   lastUpdatedAt.value = formatNow();
 }

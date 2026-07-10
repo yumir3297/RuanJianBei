@@ -1,19 +1,18 @@
 import { createRouter, createWebHistory } from "vue-router";
 
-import LandingPage from "../views/LandingPage.vue";
-import HomePage from "../views/HomePage.vue";
-import ChatView from "../views/tourist/ChatView.vue";
-import ModeSelectView from "../views/tourist/ModeSelectView.vue";
-import KnowledgeManage from "../views/admin/KnowledgeManage.vue";
-import AvatarConfig from "../views/admin/AvatarConfig.vue";
-import DisplayAssets from "../views/admin/DisplayAssets.vue";
-import AnalyticsReport from "../views/admin/AnalyticsReport.vue";
-import BlindSpotManage from "../views/admin/BlindSpotManage.vue";
-
 import { useAuthStore } from "../stores/auth";
 
+const LandingPage = () => import("../views/LandingPage.vue");
+const HomePage = () => import("../views/HomePage.vue");
+const ChatView = () => import("../views/tourist/ChatView.vue");
+const ModeSelectView = () => import("../views/tourist/ModeSelectView.vue");
 const Dashboard = () => import("../views/admin/Dashboard.vue");
 const AdminLogin = () => import("../views/admin/AdminLogin.vue");
+const KnowledgeManage = () => import("../views/admin/KnowledgeManage.vue");
+const AvatarConfig = () => import("../views/admin/AvatarConfig.vue");
+const DisplayAssets = () => import("../views/admin/DisplayAssets.vue");
+const AnalyticsReport = () => import("../views/admin/AnalyticsReport.vue");
+const BlindSpotManage = () => import("../views/admin/BlindSpotManage.vue");
 
 const router = createRouter({
   history: createWebHistory(),

@@ -91,6 +91,11 @@ a:hover {
   text-decoration: underline;
 }
 
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--lingshan-gold) 72%, white);
+  outline-offset: 3px;
+}
+
 .app-shell {
   min-height: 100vh;
 }
@@ -316,4 +321,15 @@ a:hover {
   background: #fff8e9 !important;
   border: 2px solid var(--lingshan-gold) !important;
   transition: all 0.3s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -357,12 +357,14 @@ async function loadDashboard() {
 
     const trendData = await fetchQATrend();
     if (Array.isArray(trendData?.daily_trend)) {
-      const weekdayMap = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-      trendDays.value = trendData.daily_trend.map(item => {
+      const recentTrend = trendData.daily_trend.slice(-7);
+      trendDays.value = recentTrend.map(item => {
         const date = new Date(item.date);
-        return weekdayMap[date.getDay()];
+        return Number.isNaN(date.getTime())
+          ? item.date
+          : new Intl.DateTimeFormat("zh-CN", { month: "numeric", day: "numeric" }).format(date);
       });
-      trendValues.value = trendData.daily_trend.map(item => Number(item.count) || 0);
+      trendValues.value = recentTrend.map(item => Number(item.count) || 0);
     } else {
       trendDays.value = [];
       trendValues.value = [];

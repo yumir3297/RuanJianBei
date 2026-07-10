@@ -46,16 +46,18 @@
       <p class="mode-guide">请选择您偏好的游览方式</p>
 
       <div class="mode-cards">
-        <div
+        <button
           v-for="mode in modes"
           :key="mode.key"
+          type="button"
           :class="['mode-card', { selected: selectedMode === mode.key }]"
+          :aria-pressed="selectedMode === mode.key"
           @click="selectMode(mode.key)"
         >
           <span v-if="mode.recommended" class="mode-badge">推荐</span>
           <strong class="mode-name">{{ mode.label }}</strong>
           <p class="mode-desc">{{ mode.desc }}</p>
-        </div>
+        </button>
       </div>
 
       <button
@@ -181,7 +183,9 @@ function goHome() {
 }
 
 .back-btn {
-  padding: 0;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 8px;
   background: none;
   border: none;
   color: rgba(255, 255, 255, 0.72);
@@ -264,11 +268,20 @@ function goHome() {
   cursor: pointer;
   transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
   text-align: center;
+  color: inherit;
+  font: inherit;
 }
 
 .mode-card:hover {
   border-color: var(--lingshan-accent);
   transform: translateY(-2px);
+}
+
+.mode-card:focus-visible,
+.confirm-btn:focus-visible,
+.back-btn:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--lingshan-accent) 78%, white);
+  outline-offset: 3px;
 }
 
 .mode-card.selected {

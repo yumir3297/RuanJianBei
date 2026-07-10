@@ -21,12 +21,12 @@ export async function resolveBlindSpotWithFAQ(id, payload) {
 }
 
 export async function syncOfficialData() {
-  const { data } = await http.post("/admin/sync-processed-data");
+  const { data } = await http.post("/admin/sync-processed-data", null, { timeout: 30000 });
   return data;
 }
 
 export async function rebuildVectorIndex() {
-  const { data } = await http.post("/admin/build-rag-index");
+  const { data } = await http.post("/admin/build-rag-index", null, { timeout: 120000 });
   return data;
 }
 
@@ -40,15 +40,13 @@ export async function fetchAvatarConfigs() {
   return data;
 }
 
-export async function updateAvatarConfig(configId, voiceType) {
-  const { data } = await http.patch(`/admin/avatar-configs/${configId}`, null, {
-    params: { voice_type: voiceType },
-  });
+export async function saveAvatarConfig(configId) {
+  const { data } = await http.put(`/admin/avatar-configs/${configId}/activate`);
   return data;
 }
 
-export async function saveAvatarConfig(configId) {
-  const { data } = await http.put(`/admin/avatar-configs/${configId}/activate`);
+export async function updateAvatarConfig(configId, voiceType) {
+  const { data } = await http.put(`/admin/avatar-configs/${configId}`, { voice_type: voiceType });
   return data;
 }
 
@@ -62,11 +60,17 @@ export async function uploadTouristBackground(imageFile) {
   formData.append("image", imageFile);
   const { data } = await http.post("/admin/display-assets/tourist-background", formData, {
     headers: { "Content-Type": "multipart/form-data" },
+    timeout: 60000,
   });
   return data;
 }
 
 export async function clearTouristBackground() {
   const { data } = await http.delete("/admin/display-assets/tourist-background");
+  return data;
+}
+
+export async function updateWelcomeText(text) {
+  const { data } = await http.put("/admin/display-assets/welcome-text", { text });
   return data;
 }

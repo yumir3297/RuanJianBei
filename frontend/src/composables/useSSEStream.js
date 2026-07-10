@@ -10,7 +10,7 @@ function parseEventBlock(block) {
       event = line.slice(6).trim();
     }
     if (line.startsWith("data:")) {
-      data += line.slice(5).trim();
+      data += `${data ? "\n" : ""}${line.slice(5).trimStart()}`;
     }
   });
 
@@ -33,12 +33,25 @@ export function useSSEStream() {
     });
 
     if (!response.ok || !response.body) {
-      throw new Error("无法建立流式连接。");
+      let detail = "";
+      try {
+        const errorPayload = await response.json();
+        detail = errorPayload?.detail || errorPayload?.message || "";
+      } catch {
+        detail = await response.text().catch(() => "");
+      }
+      throw new Error(detail || `无法建立流式连接（HTTP ${response.status}）。`);
     }
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder("utf-8");
     let buffer = "";
+
+    const dispatchBlock = (block) => {
+      if (!block.trim()) return;
+      const parsed = parseEventBlock(block);
+      handlers[parsed.event]?.(parsed.data);
+    };
 
     while (true) {
       const { done, value } = await reader.read();
@@ -46,21 +59,17 @@ export function useSSEStream() {
         break;
       }
 
-      buffer += decoder.decode(value, { stream: true });
+      buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
       const parts = buffer.split("\n\n");
       buffer = parts.pop() || "";
 
       for (const part of parts) {
-        if (!part.trim()) {
-          continue;
-        }
-        const parsed = parseEventBlock(part);
-        const handler = handlers[parsed.event];
-        if (handler) {
-          handler(parsed.data);
-        }
+        dispatchBlock(part);
       }
     }
+
+    buffer += decoder.decode();
+    dispatchBlock(buffer);
   }
 
   return {

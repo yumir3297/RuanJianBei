@@ -1,6 +1,6 @@
 <template>
   <div class="app-shell" :class="{ 'tourist-mode': isTouristRoute }">
-    <header v-if="!isTouristRoute" class="topbar">
+    <header v-if="!isTouristRoute && !isFullBleedRoute" class="topbar">
       <h1>灵山胜境 AI 数字导游</h1>
       <nav class="topbar-nav">
         <RouterLink to="/">开始游览</RouterLink>
@@ -8,8 +8,8 @@
       </nav>
     </header>
 
-    <main :class="isTouristRoute ? 'tourist-shell' : 'page-body'">
-      <nav v-if="isAdminRoute && !isTouristRoute" class="admin-nav">
+    <main :class="isTouristRoute ? 'tourist-shell' : isFullBleedRoute ? 'fullbleed-shell' : 'page-body'">
+      <nav v-if="isAdminRoute && !isTouristRoute && !isFullBleedRoute" class="admin-nav">
         <RouterLink
           v-for="item in adminLinks"
           :key="item.path"
@@ -21,9 +21,9 @@
           <span>{{ item.label }}</span>
         </RouterLink>
         <span class="admin-nav-spacer" />
-        <a class="admin-nav-link admin-nav-logout" @click="handleLogout">
+        <button type="button" class="admin-nav-link admin-nav-logout" @click="handleLogout">
           <span>退出</span>
-        </a>
+        </button>
       </nav>
       <RouterView />
     </main>
@@ -42,6 +42,7 @@ const authStore = useAuthStore();
 
 const isAdminRoute = computed(() => route.path.startsWith("/admin"));
 const isTouristRoute = computed(() => route.path.startsWith("/tourist") || route.path === "/");
+const isFullBleedRoute = computed(() => route.path === "/" || route.path === "/admin/login");
 
 const adminLinks = [
   { path: "/admin/dashboard", label: "总览", icon: DataLine },
@@ -69,6 +70,14 @@ function handleLogout() {
   max-width: none;
   margin: 0;
   background: var(--lingshan-paper);
+  min-height: 100vh;
+}
+
+.fullbleed-shell {
+  padding: 0;
+  width: 100%;
+  max-width: none;
+  margin: 0;
   min-height: 100vh;
 }
 
@@ -161,6 +170,8 @@ function handleLogout() {
   transition: color 160ms, background 160ms;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
+  min-height: 44px;
+  white-space: nowrap;
 }
 
 .admin-nav-link:hover {
@@ -179,6 +190,10 @@ function handleLogout() {
 }
 
 .admin-nav-logout {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  font: inherit;
   cursor: pointer;
 }
 
@@ -193,6 +208,10 @@ function handleLogout() {
   }
   .page-body {
     padding: 20px;
+  }
+
+  .admin-nav-spacer {
+    display: none;
   }
 }
 
