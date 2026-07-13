@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识管理</title>
+    <style id="theme-vars">
+:root {
+  /* ── 品牌色：灵山青绿 ── */
+  --brand-50: #f0fdf6;
+  --brand-100: #d7f5e3;
+  --brand-200: #a8e9c0;
+  --brand-300: #6fd89b;
+  --brand-400: #44c07a;
+  --brand-500: #2fa363;
+  --brand-600: #248550;
+  --brand-700: #1c6c42;
+  --brand-800: #185636;
+  --brand-900: #13462d;
+
+  /* ── 金色点缀（取 Codepen 暖金灵感） ── */
+  --gold-300: #e8c876;
+  --gold-400: #d9a441;
+  --gold-500: #c8922c;
+  --gold-600: #8a5d22;
+  --gold-700: #6b4513;
+
+  /* ── 表面色（取 Codepen 暖调） ── */
+  --background: #f6efe4;
+  --muted: #f0e9dc;
+  --card: #fffaf2;
+  --popover: #fffaf2;
+
+  /* ── 文字 ── */
+  --foreground: #241d16;
+  --muted-foreground: #675a4e;
+  --card-foreground: #241d16;
+  --popover-foreground: #241d16;
+  --accent-foreground: #241d16;
+  --secondary-foreground: #fff7eb;
+
+  /* ── 交互 ── */
+  --primary: var(--brand-600);
+  --primary-foreground: #fefefe;
+  --accent: #efe4d3;
+  --input: #e3d9cc;
+  --border: #d4c8b8;
+  --secondary: #241d16;
+  --ring: var(--brand-500);
+
+  /* ── 反馈 ── */
+  --destructive: #c93c3c;
+  --destructive-foreground: #fffaf2;
+
+  /* ── 图表色 ── */
+  --chart-1: #248550;
+  --chart-2: #8faab3;
+  --chart-3: #2fa363;
+  --chart-4: #d9a441;
+  --chart-5: #c47c4a;
+
+  /* ── 侧栏（深色木质调） ── */
+  --sidebar: #ebe3d5;
+  --sidebar-foreground: #241d16;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: #17120e;
+  --sidebar-accent-foreground: #fff7eb;
+  --sidebar-border: #332b23;
+  --sidebar-ring: var(--ring);
+
+  /* ── 兼容别名 ── */
+  --bg-background: var(--background);
+  --bg-card: var(--card);
+  --bg-popover: var(--popover);
+  --bg-muted: var(--muted);
+  --text-foreground: var(--foreground);
+  --text-card-foreground: var(--card-foreground);
+  --text-popover-foreground: var(--popover-foreground);
+  --text-primary-foreground: var(--primary-foreground);
+  --text-secondary-foreground: var(--secondary-foreground);
+  --text-muted-foreground: var(--muted-foreground);
+  --text-accent-foreground: var(--accent-foreground);
+  --text-destructive-foreground: var(--destructive-foreground);
+  --accent-primary: var(--primary);
+  --accent-secondary: var(--secondary);
+  --accent-input: var(--input);
+  --accent-ring: var(--ring);
+  --status-destructive: var(--destructive);
+
+  /* ── 排版 ── */
+  --font-sans: Inter, "Noto Sans SC", ui-sans-serif, sans-serif;
+  --font-serif: "Noto Serif SC", "Cormorant Garamond", ui-serif, serif;
+  --font-mono: "JetBrains Mono", "Roboto Mono", monospace;
+  --tracking-normal: 0em;
+
+  /* ── 圆角 ── */
+  --radius: 12px;
+
+  /* ── 间距 ── */
+  --spacing: 4px;
+
+  /* ── 阴影（只有必要层级，克制使用） ── */
+  --shadow-2xs: 0 1px 2px rgba(23,18,14,0.04);
+  --shadow-xs:  0 1px 3px rgba(23,18,14,0.06);
+  --shadow-sm:  0 2px 6px rgba(23,18,14,0.08);
+  --shadow:     0 3px 12px rgba(23,18,14,0.10);
+  --shadow-md:  0 6px 20px rgba(23,18,14,0.12);
+  --shadow-lg:  0 10px 32px rgba(23,18,14,0.14);
+  --shadow-xl:  0 16px 48px rgba(23,18,14,0.16);
+  --shadow-2xl: 0 24px 64px rgba(23,18,14,0.18);
+
+  /* ── 过渡 ── */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.22s ease;
+}
+
+.dark {
+  /* surface */
+  --background: #1a1612;
+  --muted: #1f1b17;
+  --card: #26221d;
+  --popover: #2c2722;
+
+  /* text */
+  --foreground: #f0ece5;
+  --muted-foreground: #b8b09f;
+  --card-foreground: #f0ece5;
+  --popover-foreground: #f0ece5;
+  --accent-foreground: #f0ece5;
+  --secondary-foreground: #f0ece5;
+
+  /* action */
+  --primary: var(--brand-500);
+  --primary-foreground: #0a1e0f;
+  --accent: #3d342b;
+  --input: #352f28;
+  --border: #342d26;
+  --secondary: #3d342b;
+  --ring: var(--brand-400);
+
+  /* feedback */
+  --destructive: #e85d5d;
+  --destructive-foreground: #faf5f0;
+
+  /* chart */
+  --chart-1: #44c07a;
+  --chart-2: #9bb5c0;
+  --chart-3: #6fd89b;
+  --chart-4: #d9a441;
+  --chart-5: #e8c876;
+
+  /* sidebar */
+  --sidebar: #1f1b17;
+  --sidebar-foreground: #f0ece5;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: #332b23;
+  --sidebar-accent-foreground: #f0ece5;
+  --sidebar-border: #342d26;
+  --sidebar-ring: var(--ring);
+
+  /* compatibility aliases */
+  --bg-background: var(--background);
+  --bg-card: var(--card);
+  --bg-popover: var(--popover);
+  --bg-muted: var(--muted);
+  --text-foreground: var(--foreground);
+  --text-card-foreground: var(--card-foreground);
+  --text-popover-foreground: var(--popover-foreground);
+  --text-primary-foreground: var(--primary-foreground);
+  --text-secondary-foreground: var(--secondary-foreground);
+  --text-muted-foreground: var(--muted-foreground);
+  --text-accent-foreground: var(--accent-foreground);
+  --text-destructive-foreground: var(--destructive-foreground);
+  --accent-primary: var(--primary);
+  --accent-secondary: var(--secondary);
+  --accent-input: var(--input);
+  --accent-ring: var(--ring);
+  --status-destructive: var(--destructive);
+  --shadow-2xs: 0 1px 2px rgba(0,0,0,0.18);
+  --shadow-2xl: 0 24px 64px rgba(0,0,0,0.35);
+}
+
+    </style>
+    <style id="component-vars">
+/* ═══════════════════════════════════════════════════════════════
+   components.css — Design System Component Definitions
+   Auto-extracted from preview/component-*.html
+   DO NOT EDIT MANUALLY — regenerate via extract-components-css.mjs
+   ═══════════════════════════════════════════════════════════════ */
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  
+  @layer base {
+    body { background: var(--bg-background); color: var(--text-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+    body { font-feature-settings: "cv02","cv03","cv04","cv11"; -webkit-font-smoothing: antialiased; }
+  }
+
+  /* ── 表格行悬浮 ── */
+  tbody tr {
+    transition: background var(--transition-fast), box-shadow var(--transition-fast);
+  }
+  tbody tr:hover {
+    background: color-mix(in srgb, var(--primary) 5%, var(--card));
+    box-shadow: inset 3px 0 0 var(--primary);
+  }
+
+  /* ── 按钮点击反馈 ── */
+  button:active {
+    transform: scale(0.97);
+    transition: transform 0.1s ease;
+  }
+
+  /* ── 搜索框聚焦 ── */
+  input:focus, select:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 30%, transparent);
+  }
+
+  /* ── 分类彩色标签 ── */
+  .cat-tag-heritage   { background: #fef3c7; color: #92400e; }
+  .cat-tag-tour       { background: #dbeafe; color: #1e40af; }
+  .cat-tag-art        { background: #ede9fe; color: #6d28d9; }
+  .cat-tag-show       { background: #fce7f3; color: #9d174d; }
+  .cat-tag-food       { background: #fef3c7; color: #a16207; }
+  .cat-tag-zen        { background: #e0f2fe; color: #0c4a6e; }
+  .cat-tag-nature     { background: #dcfce7; color: #166534; }
+  .cat-tag-service    { background: #f1f5f9; color: #475569; }
+
+  /* ── 页面淡入 ── */
+  .page-fade-in {
+    animation: fadeIn 0.4s ease both;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main>
+<div class="flex h-screen" style="font-family: var(--font-sans)">
+  <aside class="flex flex-col shrink-0" style="width: 240px; border-right: 1px solid var(--sidebar-border); background: linear-gradient(180deg, #1e1813 0%, #1a1510 40%, #15110d 100%); position: relative; overflow: hidden">
+    <div style="position: absolute; inset: 0; pointer-events: none; opacity: 0.06; background: radial-gradient(ellipse 70% 30% at 50% 0%, var(--gold-400) 0%, transparent 70%), radial-gradient(ellipse 50% 40% at 80% 100%, var(--primary) 0%, transparent 60%)"></div>
+    <div style="position: relative; z-index: 1; padding: 18px 16px 12px; border-bottom: 1px solid color-mix(in srgb, var(--gold-400) 12%, transparent); margin-bottom: 4px; text-align: center">
+      <div style="font-size: 10px; font-family: var(--font-sans); font-weight: 500; color: var(--gold-400); letter-spacing: 0.28em; margin-bottom: 8px; opacity: 0.7">AI DIGITAL GUIDE</div>
+      <div style="font-size: 22px; font-family: var(--font-serif); font-weight: 700; color: var(--gold-400); letter-spacing: 0.08em; line-height: 1.1; text-shadow: 0 1px 2px rgba(0,0,0,0.4)">智能数字人导游</div>
+      <div style="font-size: 10px; color: var(--sidebar-foreground); opacity: 0.4; margin-top: 6px; letter-spacing: 0.18em">管 理 后 台</div>
+    </div>
+    <div class="px-4 pt-1 pb-2" style="font-family: var(--font-mono); font-weight: 700; font-size: 10px; letter-spacing: 0.12em; color: var(--sidebar-foreground); opacity: 0.42;">导航</div>
+    <nav class="flex flex-col gap-1 px-3">
+      <a href="#" data-nav-key="dashboard" data-dom-id="nav-dashboard" class="flex items-center gap-3 py-2 px-2.5 w-full no-underline" style="border-radius: 2px; border: 1px solid transparent; color: color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent); font-size: 12px; transition: background var(--transition-fast), border-color var(--transition-fast), border-color 0.16s ease, color 0.16s ease">
+        <i data-lucide="layout-dashboard" class="flex items-center justify-center shrink-0" style="width: 22px; height: 22px; font-size: 14px; border-radius: 2px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)"></i>
+        <span class="truncate">总览</span>
+      </a>
+      <a href="#" data-nav-key="knowledge" data-dom-id="nav-knowledge" data-active="true" class="flex items-center gap-3 py-2 px-2.5 w-full no-underline" style="border-radius: 2px; border: 1px solid color-mix(in srgb, var(--sidebar-border) 28%, transparent); background: color-mix(in srgb, var(--sidebar-accent-foreground) 10%, transparent); color: var(--sidebar-accent-foreground); font-size: 12px; transition: background var(--transition-fast), border-color var(--transition-fast), border-color 0.16s ease">
+        <i data-lucide="book-open" class="flex items-center justify-center shrink-0" style="width: 22px; height: 22px; font-size: 14px; border-radius: 2px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 12%, transparent)"></i>
+        <span class="truncate">知识管理</span>
+      </a>
+      <a href="analytics-report.html" data-nav-key="analytics" data-dom-id="nav-analytics" class="flex items-center gap-3 py-2 px-2.5 w-full no-underline" style="border-radius: 2px; border: 1px solid transparent; color: color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent); font-size: 12px; transition: background var(--transition-fast), border-color var(--transition-fast), color 0.16s ease">
+        <i data-lucide="bar-chart-3" class="flex items-center justify-center shrink-0" style="width: 22px; height: 22px; font-size: 14px; border-radius: 2px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)"></i>
+        <span class="truncate">数据大屏</span>
+      </a>
+<a href="blind-spot-manage.html" data-nav-key="blindspot" class="flex items-center gap-3 py-2 px-2.5 w-full no-underline" style="border-radius: 2px; border: 1px solid transparent; color: color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent); font-size: 12px; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease">
+        <i data-lucide="eye-off" class="flex items-center justify-center shrink-0" style="width: 22px; height: 22px; font-size: 14px; border-radius: 2px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)"></i>
+        <span class="truncate">知识盲区</span>
+      </a>
+      <a href="avatar-config.html" data-nav-key="avatar" class="flex items-center gap-3 py-2 px-2.5 w-full no-underline" style="border-radius: 2px; border: 1px solid transparent; color: color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent); font-size: 12px; transition: background var(--transition-fast), border-color var(--transition-fast), border-color 0.16s ease, color 0.16s ease">
+        <i data-lucide="user-circle" class="flex items-center justify-center shrink-0" style="width: 22px; height: 22px; font-size: 14px; border-radius: 2px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)"></i>
+        <span class="truncate">数字人配置</span>
+      </a>
+      <a href="display-assets.html" data-nav-key="assets" class="flex items-center gap-3 py-2 px-2.5 w-full no-underline" style="border-radius: 2px; border: 1px solid transparent; color: color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent); font-size: 12px; transition: background var(--transition-fast), border-color var(--transition-fast), border-color 0.16s ease, color 0.16s ease">
+        <i data-lucide="image" class="flex items-center justify-center shrink-0" style="width: 22px; height: 22px; font-size: 14px; border-radius: 2px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)"></i>
+        <span class="truncate">资源替换</span>
+      </a>
+    </nav>
+    <div class="mt-auto mx-3 mb-4" style="border-radius: 2px; border: 1px solid color-mix(in srgb, var(--gold-400) 14%, transparent); background: color-mix(in srgb, var(--sidebar-accent-foreground) 3%, transparent); overflow: hidden">
+      <div style="padding: 10px 12px; border-bottom: 1px solid color-mix(in srgb, var(--sidebar-border) 40%, transparent)">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <div style="width: 8px; height: 8px; border-radius: 2px; background: var(--chart-3); box-shadow: 0 0 6px var(--chart-3)"></div>
+          <span style="font-size: 10px; color: var(--chart-3); font-weight: 600; letter-spacing: 0.06em">运行中</span>
+          <div style="flex:1;min-width:0"></div>
+          <span style="font-size: 9px; color: var(--sidebar-foreground); opacity: 0.4">v2.1</span>
+        </div>
+      </div>
+      <div style="padding: 8px 12px">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <div class="flex items-center justify-center shrink-0" style="width: 28px; height: 28px; border-radius: 2px; background: var(--gold-500); color: #fff; font-size: 13px; font-weight: 700">管</div>
+          <div class="flex-1 min-w-0">
+            <div style="font-size: 11px; font-weight: 600; color: var(--sidebar-accent-foreground)">系统管理员</div>
+            <div style="font-size: 9px; color: var(--sidebar-foreground); opacity: 0.45; margin-top: 1px">admin@lingshan.com</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <main class="flex-1 min-w-0 overflow-auto" style="background-color: var(--background); padding: 12px">
+    <div class="flex flex-col gap-3 max-w-[1280px] mx-auto">
+      <!-- Hero Header -->
+      <div style="border-radius: 2px; overflow: hidden; border: 1px solid var(--border); background: linear-gradient(155deg, #241d16 0%, #2e2620 50%, #3a3028 100%); box-shadow: var(--shadow-sm)">
+        <div class="px-5 py-4 flex flex-col gap-3">
+          <div>
+            <h1 class="m-0" style="font-family: var(--font-serif); font-size: clamp(24px, 2.8vw, 34px); line-height: 1.08; letter-spacing: -0.03em; color: var(--secondary-foreground); text-wrap: balance; word-break: keep-all; overflow-wrap: break-word; max-width: 20ch">知识资产管理</h1>
+            <p class="m-0 mt-3 max-w-3xl" style="font-size: 12px; line-height: 1.65; color: color-mix(in srgb, var(--secondary-foreground) 56%, transparent)">灵山景区AI数字人智慧导览系统的知识条目统一管理平台，支持知识的创建、编辑、审核与发布流程。</p>
+          </div>
+          <div class="flex items-center gap-8 flex-wrap">
+            <div>
+              <span class="block" style="font-size: 22px; font-weight: 600; line-height: 1.05; letter-spacing: -0.03em; color: var(--secondary-foreground); font-family: var(--font-serif)">156</span>
+              <span class="block mt-1" style="font-size: 11px; color: color-mix(in srgb, var(--secondary-foreground) 48%, transparent)">知识池总数</span>
+            </div>
+            <div style="width: 1px; height: 38px; background: color-mix(in srgb, var(--secondary-foreground) 14%, transparent); flex: none"></div>
+            <div>
+              <span class="block" style="font-size: 22px; font-weight: 600; line-height: 1.05; letter-spacing: -0.03em; color: var(--secondary-foreground); font-family: var(--font-serif)">8</span>
+              <span class="block mt-1" style="font-size: 11px; color: color-mix(in srgb, var(--secondary-foreground) 48%, transparent)">分类数</span>
+            </div>
+            <div style="width: 1px; height: 38px; background: color-mix(in srgb, var(--secondary-foreground) 14%, transparent); flex: none"></div>
+            <div>
+              <span class="block" style="font-size: 22px; font-weight: 600; line-height: 1.05; letter-spacing: -0.03em; color: var(--secondary-foreground); font-family: var(--font-serif)">142</span>
+              <span class="block mt-1" style="font-size: 11px; color: color-mix(in srgb, var(--secondary-foreground) 48%, transparent)">已发布条目</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="flex items-center gap-3 flex-wrap">
+        <label class="flex items-center gap-3 flex-1" style="min-width: 220px; max-width: 340px; height: 38px; padding: 0 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); box-shadow: var(--shadow-2xs)">
+          <i data-lucide="search" class="shrink-0" style="width: 15px; height: 15px; color: var(--muted-foreground)"></i>
+          <input type="text" placeholder="搜索知识标题、分类..." class="w-full border-0 outline-none bg-transparent" style="color: var(--foreground); font-size: 12px" aria-label="搜索知识条目">
+        </label>
+        <select class="shrink-0" style="height: 38px; padding: 0 36px 0 16px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); box-shadow: var(--shadow-2xs); color: var(--foreground); font-size: 12px; font-weight: 500; cursor: pointer; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23675a4e%22 stroke-width=%222%22 stroke-linecap=%22round%22><path d=%22m6 9 6 6 6-6%22/></svg>'); background-repeat: no-repeat; background-position: right 12px center" aria-label="分类筛选">
+          <option value="">全部分类</option>
+          <option value="历史文化">历史文化</option>
+          <option value="景点导览">景点导览</option>
+          <option value="建筑艺术">建筑艺术</option>
+          <option value="演艺活动">演艺活动</option>
+          <option value="饮食文化">饮食文化</option>
+          <option value="禅修体验">禅修体验</option>
+          <option value="自然生态">自然生态</option>
+          <option value="服务指南">服务指南</option>
+        </select>
+        <button id="addKnowledgeBtn" onclick="openCreateDialog()" data-dom-id="cta-add-knowledge" class="inline-flex items-center justify-center gap-2 shrink-0" style="height: 38px; padding: 0 16px; border: 1px solid var(--primary); border-radius: 6px; background: var(--primary); color: var(--primary-foreground); font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: filter 0.16s ease, transform 0.16s ease; box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 30%, transparent)">
+          <i data-lucide="plus" style="width: 14px; height: 14px"></i>
+          新增知识
+        </button>
+      </div>
+
+      <!-- Table Card -->
+      <div style="border: 1px solid var(--border); border-radius: 2px; background: var(--card); box-shadow: var(--shadow-xs); overflow: hidden">
+        <div class="flex items-center justify-between gap-3 px-4 pt-3 pb-0 flex-wrap">
+          <div>
+            <h2 class="m-0" style="font-size: 14px; font-weight: 600; line-height: 1.25; color: var(--foreground)">知识条目列表</h2>
+            <p class="m-0 mt-1" style="font-size: 12px; color: var(--muted-foreground); line-height: 1.6">共 156 条知识，按更新时间排序</p>
+          </div>
+          <div class="flex items-center gap-2 text-sm" style="color: var(--muted-foreground); font-size: 11px">
+            <span>每页 10 条</span>
+            <span class="mx-1" style="color: var(--border)">|</span>
+            <span>1 / 16</span>
+          </div>
+        </div>
+        <div class="px-4 pt-2 pb-4" style="max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain">
+          <table class="w-full" style="border-collapse: collapse">
+            <thead>
+              <tr>
+                <th class="text-left pb-3" style="padding-top: 0; border-top: 0; font-family: var(--font-mono); font-weight: 700; font-size: 10px; letter-spacing: 0.12em; color: var(--muted-foreground); white-space: nowrap">标题</th>
+                <th class="text-left pb-3" style="padding-top: 0; border-top: 0; font-family: var(--font-mono); font-weight: 700; font-size: 10px; letter-spacing: 0.12em; color: var(--muted-foreground); white-space: nowrap; min-width: 100px">分类</th>
+                <th class="text-left pb-3" style="padding-top: 0; border-top: 0; font-family: var(--font-mono); font-weight: 700; font-size: 10px; letter-spacing: 0.12em; color: var(--muted-foreground); white-space: nowrap; min-width: 90px">状态</th>
+                <th class="text-left pb-3" style="padding-top: 0; border-top: 0; font-family: var(--font-mono); font-weight: 700; font-size: 10px; letter-spacing: 0.12em; color: var(--muted-foreground); white-space: nowrap; min-width: 120px">更新时间</th>
+                <th class="text-left pb-3" style="padding-top: 0; border-top: 0; font-family: var(--font-mono); font-weight: 700; font-size: 10px; letter-spacing: 0.12em; color: var(--muted-foreground); white-space: nowrap; min-width: 100px">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="block truncate" style="font-weight: 600; font-size: 12px; color: var(--foreground); max-width: 240px">灵山大佛历史沿革</span>
+                  <span class="block truncate mt-1" style="font-size: 11px; color: var(--muted-foreground); max-width: 220px">涵盖大佛建造历程、文化象征与宗教意义</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center whitespace-nowrap shrink-0 cat-tag-heritage" style="min-height: 24px; padding: 0 10px; border-radius: 2px; font-size: 11px; font-weight: 600">历史文化</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center gap-2 whitespace-nowrap shrink-0" style="min-height: 24px; padding: 0 10px; border-radius: 2px; background: color-mix(in srgb, var(--muted) 74%, transparent); font-size: 11px; color: var(--chart-3)">
+                    <span style="width: 8px; height: 8px; border-radius: 2px; background: currentColor; opacity: 0.72"></span>
+                    已发布
+                  </span>
+                </td>
+                <td class="py-4 whitespace-nowrap" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle; font-size: 12px; color: var(--muted-foreground)">2026-06-20</td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <div class="flex items-center gap-2">
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--foreground); font-size: 11px; font-weight: 600; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast)" data-dom-id="row-edit-1">编辑</button>
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--foreground); font-size: 11px; font-weight: 600; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast)" data-dom-id="row-view-1">查看</button>
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 14px; border: 1px solid var(--destructive); border-radius: 6px; background: var(--card); color: var(--destructive); font-size: 11px; font-weight: 600; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast)" data-dom-id="row-delete-1" onclick="confirmDelete('灵山大佛历史沿革',1)">删除</button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="block truncate" style="font-weight: 600; font-size: 12px; color: var(--foreground); max-width: 240px">九龙灌浴表演解说词</span>
+                  <span class="block truncate mt-1" style="font-size: 11px; color: var(--muted-foreground); max-width: 220px">大型动态群雕表演的完整解说与背景故事</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center whitespace-nowrap shrink-0 cat-tag-show" style="min-height: 24px; padding: 0 10px; border-radius: 2px; font-size: 11px; font-weight: 600">演艺活动</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center gap-2 whitespace-nowrap shrink-0" style="min-height: 24px; padding: 0 10px; border-radius: 2px; background: color-mix(in srgb, var(--muted) 74%, transparent); font-size: 11px; color: var(--chart-3)">
+                    <span style="width: 8px; height: 8px; border-radius: 2px; background: currentColor; opacity: 0.72"></span>
+                    已发布
+                  </span>
+                </td>
+                <td class="py-4 whitespace-nowrap" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle; font-size: 12px; color: var(--muted-foreground)">2026-06-18</td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <div class="flex items-center gap-2">
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--foreground); font-size: 11px; font-weight: 600; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast)" data-dom-id="row-edit-2">编辑</button>
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--foreground); font-size: 11px; font-weight: 600; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast)" data-dom-id="row-view-2">查看</button>
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 14px; border: 1px solid var(--destructive); border-radius: 6px; background: var(--card); color: var(--destructive); font-size: 11px; font-weight: 600; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast)" data-dom-id="row-delete-2" onclick="confirmDelete('灵山大佛历史沿革',2)">删除</button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="block truncate" style="font-weight: 600; font-size: 12px; color: var(--foreground); max-width: 240px">梵宫建筑艺术赏析</span>
+                  <span class="block truncate mt-1" style="font-size: 11px; color: var(--muted-foreground); max-width: 220px">梵宫内部穹顶壁画、木雕与琉璃工艺解读</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center whitespace-nowrap shrink-0 cat-tag-art" style="min-height: 24px; padding: 0 10px; border-radius: 2px; font-size: 11px; font-weight: 600">建筑艺术</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center gap-2 whitespace-nowrap shrink-0" style="min-height: 24px; padding: 0 10px; border-radius: 2px; background: color-mix(in srgb, var(--muted) 74%, transparent); font-size: 11px; color: var(--chart-2)">
+                    <span style="width: 8px; height: 8px; border-radius: 2px; background: currentColor; opacity: 0.72"></span>
+                    审核中
+                  </span>
+                </td>
+                <td class="py-4 whitespace-nowrap" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle; font-size: 12px; color: var(--muted-foreground)">2026-06-15</td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <div class="flex items-center gap-2">
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--foreground); font-size: 11px; font-weight: 600; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast)" data-dom-id="row-edit-3">编辑</button>
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--foreground); font-size: 11px; font-weight: 600; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast)" data-dom-id="row-view-3">查看</button>
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 14px; border: 1px solid var(--destructive); border-radius: 6px; background: var(--card); color: var(--destructive); font-size: 11px; font-weight: 600; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast)" data-dom-id="row-delete-3" onclick="confirmDelete('灵山大佛历史沿革',3)">删除</button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="block truncate" style="font-weight: 600; font-size: 12px; color: var(--foreground); max-width: 240px">五印坛城导览词</span>
+                  <span class="block truncate mt-1" style="font-size: 11px; color: var(--muted-foreground); max-width: 220px">藏传佛教建筑风格与坛城文化内涵介绍</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center whitespace-nowrap shrink-0 cat-tag-tour" style="min-height: 24px; padding: 0 10px; border-radius: 2px; font-size: 11px; font-weight: 600">景点导览</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center gap-2 whitespace-nowrap shrink-0" style="min-height: 24px; padding: 0 10px; border-radius: 2px; background: color-mix(in srgb, var(--muted) 74%, transparent); font-size: 11px; color: var(--chart-5)">
+                    <span style="width: 8px; height: 8px; border-radius: 2px; background: currentColor; opacity: 0.72"></span>
+                    草稿
+                  </span>
+                </td>
+                <td class="py-4 whitespace-nowrap" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle; font-size: 12px; color: var(--muted-foreground)">2026-06-12</td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <div class="flex items-center gap-2">
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--foreground); font-size: 11px; font-weight: 600; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast)" data-dom-id="row-edit-4">编辑</button>
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--foreground); font-size: 11px; font-weight: 600; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast)" data-dom-id="row-view-4">查看</button>
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 14px; border: 1px solid var(--destructive); border-radius: 6px; background: var(--card); color: var(--destructive); font-size: 11px; font-weight: 600; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast)" data-dom-id="row-delete-4" onclick="confirmDelete('灵山大佛历史沿革',4)">删除</button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="block truncate" style="font-weight: 600; font-size: 12px; color: var(--foreground); max-width: 240px">灵山素食文化介绍</span>
+                  <span class="block truncate mt-1" style="font-size: 11px; color: var(--muted-foreground); max-width: 220px">素斋堂菜品体系、饮食理念与佛教素食传统</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center whitespace-nowrap shrink-0 cat-tag-food" style="min-height: 24px; padding: 0 10px; border-radius: 2px; font-size: 11px; font-weight: 600">饮食文化</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center gap-2 whitespace-nowrap shrink-0" style="min-height: 24px; padding: 0 10px; border-radius: 2px; background: color-mix(in srgb, var(--muted) 74%, transparent); font-size: 11px; color: var(--chart-3)">
+                    <span style="width: 8px; height: 8px; border-radius: 2px; background: currentColor; opacity: 0.72"></span>
+                    已发布
+                  </span>
+                </td>
+                <td class="py-4 whitespace-nowrap" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle; font-size: 12px; color: var(--muted-foreground)">2026-06-10</td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <div class="flex items-center gap-2">
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--foreground); font-size: 11px; font-weight: 600; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast)" data-dom-id="row-edit-5">编辑</button>
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--foreground); font-size: 11px; font-weight: 600; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast)" data-dom-id="row-view-5">查看</button>
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 14px; border: 1px solid var(--destructive); border-radius: 6px; background: var(--card); color: var(--destructive); font-size: 11px; font-weight: 600; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast)" data-dom-id="row-delete-5" onclick="confirmDelete('灵山大佛历史沿革',5)">删除</button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="block truncate" style="font-weight: 600; font-size: 12px; color: var(--foreground); max-width: 240px">拈花湾禅意小镇讲解</span>
+                  <span class="block truncate mt-1" style="font-size: 11px; color: var(--muted-foreground); max-width: 220px">禅修体验区布局、活动项目与文化内核概述</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center whitespace-nowrap shrink-0 cat-tag-zen" style="min-height: 24px; padding: 0 10px; border-radius: 2px; font-size: 11px; font-weight: 600">禅修体验</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center gap-2 whitespace-nowrap shrink-0" style="min-height: 24px; padding: 0 10px; border-radius: 2px; background: color-mix(in srgb, var(--muted) 74%, transparent); font-size: 11px; color: var(--chart-2)">
+                    <span style="width: 8px; height: 8px; border-radius: 2px; background: currentColor; opacity: 0.72"></span>
+                    审核中
+                  </span>
+                </td>
+                <td class="py-4 whitespace-nowrap" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle; font-size: 12px; color: var(--muted-foreground)">2026-06-08</td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <div class="flex items-center gap-2">
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--foreground); font-size: 11px; font-weight: 600; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast)" data-dom-id="row-edit-6">编辑</button>
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--foreground); font-size: 11px; font-weight: 600; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast)" data-dom-id="row-view-6">查看</button>
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 14px; border: 1px solid var(--destructive); border-radius: 6px; background: var(--card); color: var(--destructive); font-size: 11px; font-weight: 600; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast)" data-dom-id="row-delete-6" onclick="confirmDelete('灵山大佛历史沿革',6)">删除</button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="block truncate" style="font-weight: 600; font-size: 12px; color: var(--foreground); max-width: 240px">灵山春季花卉指南</span>
+                  <span class="block truncate mt-1" style="font-size: 11px; color: var(--muted-foreground); max-width: 220px">景区各季花卉品种、分布区域与最佳观赏时间</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center whitespace-nowrap shrink-0 cat-tag-nature" style="min-height: 24px; padding: 0 10px; border-radius: 2px; font-size: 11px; font-weight: 600">自然生态</span>
+                </td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <span class="inline-flex items-center gap-2 whitespace-nowrap shrink-0" style="min-height: 24px; padding: 0 10px; border-radius: 2px; background: color-mix(in srgb, var(--muted) 74%, transparent); font-size: 11px; color: var(--chart-3)">
+                    <span style="width: 8px; height: 8px; border-radius: 2px; background: currentColor; opacity: 0.72"></span>
+                    已发布
+                  </span>
+                </td>
+                <td class="py-4 whitespace-nowrap" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle; font-size: 12px; color: var(--muted-foreground)">2026-06-05</td>
+                <td class="py-4" style="border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent); vertical-align: middle">
+                  <div class="flex items-center gap-2">
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--foreground); font-size: 11px; font-weight: 600; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast)" data-dom-id="row-edit-7">编辑</button>
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--foreground); font-size: 11px; font-weight: 600; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast)" data-dom-id="row-view-7">查看</button>
+                    <button class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 30px; padding: 0 14px; border: 1px solid var(--destructive); border-radius: 6px; background: var(--card); color: var(--destructive); font-size: 11px; font-weight: 600; cursor: pointer; transition: background var(--transition-fast), border-color var(--transition-fast)" data-dom-id="row-delete-7" onclick="confirmDelete('灵山大佛历史沿革',7)">删除</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+(function(){
+  var navItems = document.querySelectorAll('[data-nav-key]');
+  function applyActive(item, isActive) {
+    if (isActive) {
+      item.style.background = 'color-mix(in srgb, var(--sidebar-accent-foreground) 10%, transparent)';
+      item.style.borderColor = 'color-mix(in srgb, var(--sidebar-border) 28%, transparent)';
+      item.style.color = 'var(--sidebar-accent-foreground)';
+      var icon = item.querySelector('i');
+      if (icon) icon.style.background = 'color-mix(in srgb, var(--sidebar-accent-foreground) 12%, transparent)';
+    } else {
+      item.style.background = 'transparent';
+      item.style.borderColor = 'transparent';
+      item.style.color = 'color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent)';
+      var icon = item.querySelector('i');
+      if (icon) icon.style.background = 'color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)';
+    }
+  }
+  navItems.forEach(function(item) {
+    var isActive = item.getAttribute('data-active') === 'true';
+    applyActive(item, isActive);
+    item.addEventListener('mouseenter', function() {
+      if (item.getAttribute('data-active') !== 'true') {
+        item.style.background = 'color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)';
+        item.style.color = 'var(--sidebar-accent-foreground)';
+      }
+    });
+    item.addEventListener('mouseleave', function() {
+      applyActive(item, item.getAttribute('data-active') === 'true');
+    });
+  });
+})();
+</script>
+    </main>
+    <script>lucide.createIcons();</script>
+
+<script>
+window.confirmDelete = function(title, rowId) {
+  if (confirm('确定要删除知识条目 "' + title + '" 吗？此操作不可撤销。')) {
+    var toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:999;padding:14px 22px;border-radius:10px;background:var(--destructive);color:var(--destructive-foreground);font-size:14px;font-weight:600;box-shadow:var(--shadow-lg);animation:fadeIn 0.3s ease';
+    toast.textContent = '✓ 知识条目 "' + title + '" 已删除';
+    document.body.appendChild(toast);
+    setTimeout(function(){toast.style.opacity='0';toast.style.transition='opacity 0.3s ease';setTimeout(function(){toast.remove()},300)},1500);
+    // Remove the row from the table
+    var rows = document.querySelectorAll('tbody tr');
+    if (rows[rowId - 1]) {
+      rows[rowId - 1].style.opacity = '0';
+      rows[rowId - 1].style.transition = 'opacity 0.3s ease';
+      setTimeout(function(){rows[rowId - 1].remove()},300);
+    }
+  }
+};
+</script>
+
+
+<div id="createDialog" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(23,18,14,0.5);display:none;align-items:center;justify-content:center" onclick="if(event.target===this)closeCreateDialog()">
+  <div style="background:var(--card);border-radius:14px;border:1px solid var(--border);box-shadow:var(--shadow-xl);padding:28px;width:90%;max-width:560px;max-height:90vh;overflow-y:auto;animation:fadeIn 0.25s ease" onclick="event.stopPropagation()">
+    <div class="flex items-center justify-between mb-5">
+      <h3 style="font-family:var(--font-serif);font-size:22px;margin:0;color:var(--foreground)">新建知识条目</h3>
+      <button onclick="closeCreateDialog()" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted-foreground);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+    <div class="flex flex-col gap-3">
+      <div>
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--foreground);margin-bottom:6px">知识标题</label>
+        <input id="newKbTitle" type="text" placeholder="输入知识标题..." style="width:100%;height:42px;padding:0 14px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--foreground);font-size:14px;outline:none;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--foreground);margin-bottom:6px">分类</label>
+        <select id="newKbCategory" style="width:100%;height:42px;padding:0 14px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--foreground);font-size:14px;outline:none;box-sizing:border-box;appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23675a4e%22 stroke-width=%222%22 stroke-linecap=%22round%22><path d=%22m6 9 6 6 6-6%22/></svg>');background-repeat:no-repeat;background-position:right 12px center">
+          <option value="">选择分类</option>
+          <option value="历史文化">历史文化</option><option value="景点导览">景点导览</option><option value="建筑艺术">建筑艺术</option>
+          <option value="演艺活动">演艺活动</option><option value="饮食文化">饮食文化</option><option value="禅修体验">禅修体验</option>
+          <option value="自然生态">自然生态</option><option value="服务指南">服务指南</option>
+        </select>
+      </div>
+      <div>
+        <label style="display:block;font-size:13px;font-weight:600;color:var(--foreground);margin-bottom:6px">知识内容</label>
+        <textarea id="newKbContent" rows="5" placeholder="输入知识内容..." style="width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--foreground);font-size:14px;outline:none;resize:vertical;box-sizing:border-box;font-family:var(--font-sans);line-height:1.6"></textarea>
+      </div>
+      <div class="flex gap-3 justify-end">
+        <button onclick="closeCreateDialog()" style="min-height:40px;padding:0 20px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--foreground);font-size:14px;font-weight:600;cursor:pointer">取消</button>
+        <button onclick="submitNewKnowledge()" style="min-height:40px;padding:0 20px;border:1px solid var(--primary);border-radius:10px;background:var(--primary);color:var(--primary-foreground);font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px color-mix(in srgb,var(--primary) 30%,transparent)">保存知识</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+window.openCreateDialog = function() {
+  document.getElementById('createDialog').style.display = 'flex';
+  document.getElementById('newKbTitle').focus();
+};
+window.closeCreateDialog = function() {
+  document.getElementById('createDialog').style.display = 'none';
+  document.getElementById('newKbTitle').value = '';
+  document.getElementById('newKbCategory').value = '';
+  document.getElementById('newKbContent').value = '';
+};
+window.submitNewKnowledge = function() {
+  var title = document.getElementById('newKbTitle').value.trim();
+  var cat = document.getElementById('newKbCategory').value;
+  if (!title) { alert('请输入知识标题'); return; }
+  if (!cat) { alert('请选择分类'); return; }
+  closeCreateDialog();
+  var toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:999;padding:14px 22px;border-radius:10px;background:var(--primary);color:var(--primary-foreground);font-size:14px;font-weight:600;box-shadow:var(--shadow-lg);animation:fadeIn 0.3s ease';
+  toast.textContent = '✓ 知识条目已创建';
+  document.body.appendChild(toast);
+  setTimeout(function(){toast.style.opacity='0';toast.style.transition='opacity 0.3s ease';setTimeout(function(){toast.remove()},300)},1500);
+};
+</script>
+
+</body>
+</html>

@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>选择智慧服务 · 设计预览</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --gold:      #d9a441;
+    --gold-dim:  rgba(217,164,65,0.5);
+    --text-warm: #e8e4db;
+    --glass-bg:  rgba(255,250,242,0.06);
+    --glass-bd:  rgba(255,250,242,0.09);
+  }
+
+  html, body {
+    height: 100%;
+    font-family: "Noto Serif SC","STKaiti","KaiTi","STSong",ui-serif,serif;
+    overflow: hidden;
+    user-select: none;
+    background: #1a1612;
+  }
+
+  /* ══════════════ 背景层 ══════════════ */
+  .page {
+    position: relative;
+    width: 100%; height: 100vh; height: 100dvh;
+    color: var(--text-warm);
+    background: #1a1612;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  .bg-img {
+    position: absolute; inset: 0;
+    background: url('assets/bg-alt.jpg') center/cover no-repeat;
+    filter: blur(10px) saturate(0.3) brightness(0.4);
+    transform: scale(1.06);
+  }
+
+  .bg-veil {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 35%, transparent 0%, rgba(20,16,10,0.55) 80%),
+      radial-gradient(ellipse 80% 50% at 50% 100%, rgba(22,18,10,0.5) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .bg-orb {
+    position: absolute; border-radius: 50%; pointer-events: none;
+    filter: blur(80px); opacity: 0.12;
+  }
+  .bg-orb-1 { width: 420px; height: 420px; top: -10%; left: -8%; background: radial-gradient(circle, #6366f1, transparent); }
+  .bg-orb-2 { width: 360px; height: 360px; bottom: 5%; right: -6%; background: radial-gradient(circle, #d9a441, transparent); }
+
+  /* ══════════════ 回退按钮 ══════════════ */
+  .back-btn {
+    position: absolute;
+    top: 28px; left: 28px; z-index: 20;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 20px;
+    border: 1px solid var(--glass-bd);
+    border-radius: 999px;
+    background: rgba(255,250,242,0.05);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    color: rgba(232,228,219,0.55);
+    font-family: inherit; font-size: 13px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  .back-btn:hover {
+    border-color: rgba(255,255,255,0.16);
+    background: rgba(255,250,242,0.09);
+    color: rgba(232,228,219,0.8);
+  }
+  .back-arrow { display: inline-block; transition: transform 0.3s ease; }
+  .back-btn:hover .back-arrow { transform: translateX(-3px); }
+
+  /* ══════════════ 顶部标题 ══════════════ */
+  .header {
+    position: relative; z-index: 5;
+    text-align: center; padding: 40px 20px 0;
+    pointer-events: none;
+  }
+  .header-title {
+    font-size: clamp(22px, 2.6vw, 34px);
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    color: rgba(232,228,219,0.85);
+    text-shadow: 0 0 40px rgba(217,164,65,0.1);
+  }
+  .header-sub {
+    margin-top: 8px;
+    font-size: clamp(12px, 1vw, 15px);
+    color: rgba(217,164,65,0.45);
+    letter-spacing: 0.08em;
+  }
+
+  /* ══════════════ 轮播主体 ══════════════ */
+  .carousel-area {
+    flex: 1;
+    position: relative; z-index: 5;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 0;
+  }
+
+  /* ── 箭头 ── */
+  .carousel-arrow {
+    position: absolute; top: 50%; z-index: 15;
+    width: 48px; height: 48px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(255,250,242,0.11);
+    border-radius: 50%;
+    background: rgba(10,8,5,0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: rgba(232,228,219,0.55);
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    transform: translateY(-50%);
+    outline: none;
+  }
+  .carousel-arrow:hover {
+    border-color: rgba(255,255,255,0.2);
+    background: rgba(10,8,5,0.7);
+    color: rgba(232,228,219,0.85);
+    box-shadow: 0 0 24px rgba(0,0,0,0.3);
+  }
+  .carousel-arrow:active { transform: translateY(-50%) scale(0.93); }
+  .carousel-arrow:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 3px;
+  }
+  .carousel-arrow.disabled {
+    opacity: 0.2; pointer-events: none;
+  }
+
+  .arrow-left  { left: clamp(12px, 3vw, 48px); }
+  .arrow-right { right: clamp(12px, 3vw, 48px); }
+
+  /* ── 卡片轨道 ── */
+  .card-track {
+    position: relative;
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ── 单张卡片 ── */
+  .feature-card {
+    --card-theme: #d9a441;
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 360px;
+    min-height: 200px;
+    padding: 26px 28px 18px;
+    border-radius: 12px;
+    border: 1px solid rgba(232,228,219,0.14);
+    background: rgba(22,20,15,0.94);
+    cursor: pointer;
+    transform-origin: center center;
+    transition: transform 0.48s cubic-bezier(0.22,1,0.36,1),
+                opacity 0.48s cubic-bezier(0.22,1,0.36,1),
+                box-shadow 0.48s ease,
+                border-color 0.48s ease;
+    will-change: transform, opacity;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    outline: none;
+  }
+
+  /* ── 卡片内部结构 ── */
+  .card-heading {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 14px;
+  }
+
+  .card-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+    padding: 0 10px;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--card-theme) 18%, transparent);
+    color: var(--card-theme);
+    font-family: "STKaiti","KaiTi","STSong",system-ui,sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 1;
+  }
+
+  .card-title {
+    font-size: clamp(22px, 1.8vw, 28px);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 1.2;
+    color: rgba(232,228,219,0.96);
+    transition: opacity 0.48s ease, color 0.48s ease;
+  }
+
+  .card-desc {
+    min-height: 36px;
+    margin-top: 12px;
+    font-size: 15px;
+    line-height: 1.65;
+    color: rgba(232,228,219,0.58);
+    letter-spacing: 0.04em;
+    transition: opacity 0.48s ease, color 0.48s ease;
+  }
+
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-top: auto;
+    padding-top: 14px;
+    border-top: 1px solid rgba(232,228,219,0.10);
+    transition: opacity 0.48s ease;
+  }
+
+  .card-arrow-hint {
+    width: 40px; height: 40px;
+    min-width: 40px; min-height: 40px;
+    border-radius: 50%;
+    border: 1px solid rgba(232,228,219,0.18);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    color: rgba(232,228,219,0.6);
+    background: rgba(255,250,242,0.05);
+    transition: transform 0.35s cubic-bezier(0.22,1,0.36,1), background 0.35s ease, border-color 0.35s ease;
+  }
+
+  /* ── 卡片各层级状态 ── */
+  .feature-card[data-level="0"] {
+    /* 主卡片 — 借鉴 cascade-slider 的 now 状态 */
+    z-index: 10;
+    filter: none;
+    border-color: rgba(232,228,219,0.22);
+    box-shadow: 0 24px 56px rgba(0,0,0,0.5), 0 0 0 1px rgba(232,228,219,0.06);
+  }
+  .feature-card[data-level="0"] .card-arrow-hint {
+    border-color: rgba(232,228,219,0.28);
+    color: #f0ece5;
+  }
+
+  .feature-card[data-level="1"],
+  .feature-card[data-level="-1"] {
+    /* 次级卡片 — 借鉴 cascade-slider 的 next/prev：brightness(85%) + scale(0.8) */
+    z-index: 5;
+    filter: brightness(78%);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.32);
+  }
+  .feature-card[data-level="1"] .card-desc,
+  .feature-card[data-level="-1"] .card-desc {
+    opacity: 0;
+  }
+  .feature-card[data-level="1"] .card-footer,
+  .feature-card[data-level="-1"] .card-footer {
+    opacity: 0.35;
+  }
+
+  .feature-card[data-level="2"],
+  .feature-card[data-level="-2"] {
+    /* 边缘卡片 — 亮度进一步降低 */
+    z-index: 1;
+    filter: brightness(48%);
+    box-shadow: none;
+    pointer-events: none;
+  }
+  .feature-card[data-level="2"] .card-desc,
+  .feature-card[data-level="-2"] .card-desc,
+  .feature-card[data-level="2"] .card-footer,
+  .feature-card[data-level="-2"] .card-footer {
+    opacity: 0;
+  }
+
+  /* Hover — 借鉴 CodePen 的浮层感 */
+  .feature-card[data-level="0"]:hover {
+    border-color: rgba(232,228,219,0.34);
+    box-shadow: 0 32px 64px rgba(0,0,0,0.55), 0 0 0 1px rgba(232,228,219,0.08);
+    transform: translateY(-4px);
+  }
+  .feature-card[data-level="0"]:hover .card-arrow-hint {
+    transform: translateX(4px);
+    border-color: rgba(232,228,219,0.44);
+    background: rgba(255,255,255,0.1);
+  }
+
+  .feature-card[data-level="1"]:hover,
+  .feature-card[data-level="-1"]:hover {
+    filter: brightness(92%);
+  }
+  .feature-card[data-level="1"]:hover .card-desc,
+  .feature-card[data-level="-1"]:hover .card-desc {
+    opacity: 1;
+  }
+
+  .feature-card:focus-visible[data-level="0"] {
+    outline: 2px solid color-mix(in srgb, var(--card-theme) 70%, #e8e4db);
+    outline-offset: 4px;
+  }
+
+  /* ══════════════ 底部区域 ══════════════ */
+  .bottom-area {
+    position: relative; z-index: 10;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 0 20px 36px;
+    gap: 18px;
+  }
+
+  /* 分页指示器 */
+  .pagination {
+    display: flex; gap: 10px; align-items: center;
+  }
+  .pag-dot {
+    width: 8px; height: 8px;
+    border-radius: 4px;
+    border: none;
+    background: rgba(255,250,242,0.16);
+    cursor: pointer;
+    transition: all 0.35s ease;
+    padding: 0;
+    outline: none;
+  }
+  .pag-dot.active {
+    width: 28px;
+    background: var(--gold);
+    box-shadow: 0 0 12px rgba(217,164,65,0.3);
+  }
+  .pag-dot:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 3px;
+  }
+
+  /* ══════════════ prefers-reduced-motion ══════════════ */
+  @media (prefers-reduced-motion: reduce) {
+    .feature-card {
+      transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+    .feature-card[data-level="0"]:hover {
+      transform: none;
+    }
+    .feature-card[data-level="0"]:hover .card-arrow-hint {
+      transform: none;
+    }
+  }
+
+  /* ══════════════ 响应式：平板 ══════════════ */
+  @media (max-width: 1199px) and (min-width: 769px) {
+    .feature-card { width: 310px; min-height: 190px; padding: 22px 22px 16px; }
+    .card-heading { margin-bottom: 12px; }
+    .card-title { font-size: 20px; }
+    .card-desc { font-size: 14px; }
+    .carousel-arrow { width: 40px; height: 40px; font-size: 15px; }
+    .header { padding-top: 30px; }
+  }
+
+  /* ══════════════ 响应式：移动端 ══════════════ */
+  @media (max-width: 768px) {
+    .header { padding-top: 24px; }
+    .header-title { font-size: 20px; }
+
+    .feature-card {
+      width: min(82vw, 300px);
+      min-height: 180px;
+      padding: 18px 18px 14px;
+      border-radius: 12px;
+    }
+    .card-heading { margin-bottom: 10px; }
+    .card-title { font-size: 18px; }
+    .card-desc { font-size: 14px; }
+    .card-footer { padding-top: 10px; }
+
+    .carousel-arrow { display: none; }
+
+    .back-btn { top: 14px; left: 14px; padding: 7px 16px; font-size: 12px; }
+    .bottom-area { padding-bottom: 28px; gap: 14px; }
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@500;600;700&display=swap" rel="stylesheet">
+
+<style>body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}</style>
+</head>
+<body>
+
+<div class="page">
+  <!-- 背景 -->
+  <div class="bg-img"></div>
+  <div class="bg-veil"></div>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
+  <!-- 回退 -->
+  <button class="back-btn" onclick="history.back()">
+    <span class="back-arrow">←</span> 返回
+  </button>
+
+  <!-- 标题 -->
+  <header class="header">
+    <h1 class="header-title">选择智慧服务</h1>
+    <p class="header-sub">滑动浏览不同功能，选择适合你的智慧文旅服务</p>
+  </header>
+
+  <!-- 轮播区 -->
+  <div class="carousel-area" id="carouselArea">
+    <button class="carousel-arrow arrow-left" id="arrowLeft" aria-label="上一项">←</button>
+
+    <div class="card-track" id="cardTrack">
+      <!-- JS 动态生成 -->
+    </div>
+
+    <button class="carousel-arrow arrow-right" id="arrowRight" aria-label="下一项">→</button>
+  </div>
+
+  <!-- 底部 -->
+  <div class="bottom-area">
+    <div class="pagination" id="pagination">
+      <!-- JS 动态生成 -->
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  /* ══════════════ 数据驱动 ══════════════ */
+  const features = [
+    {
+      id: "guide",
+      index: 0,
+      title: "数字人导游",
+      description: "与虚拟导游「清岚」实时对话 · AI 语音互动 · 身临其境的景点讲解与个性化导览服务",
+      themeColor: "#c4964c",
+      actionLabel: "进入数字人导游",
+      route: "/tourist",
+    },
+    {
+      id: "explore",
+      index: 1,
+      title: "景点探索",
+      description: "热门景点一览 · 特色文化深度解读 · 拍照识景 · 发现灵山每一个角落的故事",
+      themeColor: "#2d8a6e",
+      actionLabel: "探索热门景点",
+      route: "/tourist",
+    },
+    {
+      id: "route",
+      index: 2,
+      title: "智能路线",
+      description: "基于你的时间与兴趣智能规划 · 最优游览路径推荐 · 不错过每一处精华",
+      themeColor: "#b84c3b",
+      actionLabel: "开始规划路线",
+      route: "/tourist",
+    },
+    {
+      id: "quiz",
+      index: 3,
+      title: "文化问答",
+      description: "佛教文化 · 建筑美学 · 历史典故 · 随问随答，满足你的每一份好奇心",
+      themeColor: "#4a6d8c",
+      actionLabel: "进入文化问答",
+      route: "/tourist",
+    },
+  ];
+
+  /* ══════════════ 状态 ══════════════ */
+  const total = features.length;
+  let currentIndex = 0;
+  let isDragging = false;
+  let startX = 0;
+  let dragDelta = 0;
+  const DRAG_THRESHOLD = 60;
+
+  /* ══════════════ DOM 引用 ══════════════ */
+  const track = document.getElementById("cardTrack");
+  const arrowLeft = document.getElementById("arrowLeft");
+  const arrowRight = document.getElementById("arrowRight");
+  const pagEl = document.getElementById("pagination");
+  const carouselArea = document.getElementById("carouselArea");
+
+  /* ══════════════ 构建 DOM ══════════════ */
+  features.forEach((f) => {
+    const card = document.createElement("div");
+    card.className = "feature-card";
+    card.dataset.id = f.id;
+    card.dataset.index = f.index;
+    card.style.setProperty("--card-theme", f.themeColor);
+    card.tabIndex = -1;
+    card.setAttribute("role", "option");
+    card.setAttribute("aria-label", f.title);
+    card.innerHTML = `
+      <div class="card-heading">
+        <span class="card-index">0${f.index + 1}</span>
+      </div>
+      <div class="card-title">${f.title}</div>
+      <p class="card-desc">${f.description}</p>
+      <div class="card-footer">
+        <div class="card-arrow-hint">→</div>
+      </div>
+    `;
+    card.addEventListener("click", () => goTo(f.index));
+    track.appendChild(card);
+
+    const dot = document.createElement("button");
+    dot.className = "pag-dot";
+    dot.setAttribute("aria-label", `切换到${f.title}`);
+    dot.addEventListener("click", () => goTo(f.index));
+    pagEl.appendChild(dot);
+  });
+
+  const cards = document.querySelectorAll(".feature-card");
+  const dots = document.querySelectorAll(".pag-dot");
+
+  /* ══════════════ 布局计算 ══════════════ */
+  function getCardWidth() {
+    const style = getComputedStyle(cards[0]);
+    return parseFloat(style.width);
+  }
+
+  function layoutCards(instant) {
+    const cardW = getCardWidth();
+    // 主卡片间距
+    const gap = cardW * 0.22;
+
+    cards.forEach((card, i) => {
+      const dist = i - currentIndex;
+      const level = dist;
+
+      // 水平偏移
+      let tx = dist * (cardW + gap);
+
+      // 拖拽中叠加偏移
+      if (isDragging) tx += dragDelta;
+
+      // 缩放
+      const absD = Math.abs(dist);
+      let scale;
+      if (absD === 0) scale = 1;
+      else if (absD === 1) scale = 0.87;
+      else scale = 0.76;
+
+      // 卡片透明度、阴影等由 data-level CSS 规则处理
+      card.dataset.level = String(dist);
+
+      // 应用变换
+      if (instant) {
+        card.style.transition = "none";
+      }
+      card.style.transform = `translate(-50%, -50%) translateX(${tx}px) scale(${scale})`;
+
+      if (instant) {
+        // 强制回流恢复过渡
+        card.offsetHeight;
+        card.style.transition = "";
+      }
+    });
+  }
+
+  /* ══════════════ 导航 ══════════════ */
+  function goTo(index) {
+    if (index === currentIndex) return;
+    if (index < 0 || index >= total) return;
+    currentIndex = index;
+    updateUI();
+    layoutCards(false);
+  }
+
+  function updateUI() {
+    // 箭头
+    arrowLeft.classList.toggle("disabled", currentIndex === 0);
+    arrowRight.classList.toggle("disabled", currentIndex === total - 1);
+
+    // 分页点
+    dots.forEach((d, i) => d.classList.toggle("active", i === currentIndex));
+
+    // 卡片 aria
+    cards.forEach((c, i) => {
+      const level = i - currentIndex;
+      c.setAttribute("aria-current", level === 0 ? "true" : "false");
+      c.tabIndex = level === 0 ? 0 : -1;
+    });
+  }
+
+  /* ══════════════ 箭头 ══════════════ */
+  arrowLeft.addEventListener("click", () => {
+    if (currentIndex > 0) goTo(currentIndex - 1);
+  });
+  arrowRight.addEventListener("click", () => {
+    if (currentIndex < total - 1) goTo(currentIndex + 1);
+  });
+
+  /* ══════════════ 键盘 ══════════════ */
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      if (currentIndex > 0) goTo(currentIndex - 1);
+    } else if (e.key === "ArrowRight") {
+      e.preventDefault();
+      if (currentIndex < total - 1) goTo(currentIndex + 1);
+    }
+  });
+
+  /* ══════════════ 拖拽 / 触摸 ══════════════ */
+  function dragStart(x) {
+    isDragging = true;
+    startX = x;
+    dragDelta = 0;
+    cards.forEach(c => { c.style.transition = "none"; c.style.cursor = "grabbing"; });
+  }
+
+  function dragMove(x) {
+    if (!isDragging) return;
+    dragDelta = x - startX;
+    layoutCards(true);
+  }
+
+  function dragEnd() {
+    if (!isDragging) return;
+    isDragging = false;
+    cards.forEach(c => { c.style.transition = ""; c.style.cursor = ""; });
+
+    if (dragDelta < -DRAG_THRESHOLD && currentIndex < total - 1) {
+      currentIndex++;
+    } else if (dragDelta > DRAG_THRESHOLD && currentIndex > 0) {
+      currentIndex--;
+    }
+
+    dragDelta = 0;
+    updateUI();
+    layoutCards(false);
+  }
+
+  carouselArea.addEventListener("mousedown", (e) => {
+    if (e.target.closest(".carousel-arrow") || e.target.closest(".pag-dot")) return;
+    dragStart(e.clientX);
+  });
+  window.addEventListener("mousemove", (e) => {
+    if (isDragging) dragMove(e.clientX);
+  });
+  window.addEventListener("mouseup", dragEnd);
+
+  carouselArea.addEventListener("touchstart", (e) => {
+    if (e.target.closest(".carousel-arrow") || e.target.closest(".pag-dot")) return;
+    dragStart(e.touches[0].clientX);
+  }, { passive: true });
+  carouselArea.addEventListener("touchmove", (e) => {
+    if (isDragging) dragMove(e.touches[0].clientX);
+  }, { passive: true });
+  carouselArea.addEventListener("touchend", dragEnd);
+
+  /* ══════════════ 响应式重算 ══════════════ */
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      layoutCards(true);
+    }, 150);
+  });
+
+  /* ══════════════ 初始化 ══════════════ */
+  updateUI();
+  layoutCards(true);
+  // 给首帧一点时间后恢复过渡
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      cards.forEach(c => { c.style.transition = ""; });
+    });
+  });
+
+  console.log("✅ 四功能横向轮播选择页就绪 | 当前:", features[currentIndex].title);
+})();
+</script>
+
+</body>
+</html>

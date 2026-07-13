@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数字人配置</title>
+    <style id="theme-vars">
+:root {
+  --brand-50: #f0fdf6; --brand-100: #d7f5e3; --brand-200: #a8e9c0; --brand-300: #6fd89b;
+  --brand-400: #44c07a; --brand-500: #2fa363; --brand-600: #248550; --brand-700: #1c6c42;
+  --brand-800: #185636; --brand-900: #13462d;
+  --gold-300: #e8c876; --gold-400: #d9a441; --gold-500: #c8922c; --gold-600: #8a5d22; --gold-700: #6b4513;
+  --background: #f6efe4; --muted: #f0e9dc; --card: #fffaf2; --popover: #fffaf2;
+  --foreground: #241d16; --muted-foreground: #675a4e; --card-foreground: #241d16; --popover-foreground: #241d16;
+  --accent-foreground: #241d16; --secondary-foreground: #fff7eb;
+  --primary: var(--brand-600); --primary-foreground: #fefefe; --accent: #efe4d3;
+  --input: #e3d9cc; --border: #d4c8b8; --secondary: #241d16; --ring: var(--brand-500);
+  --destructive: #c93c3c; --destructive-foreground: #fffaf2;
+  --chart-1: #248550; --chart-2: #8faab3; --chart-3: #2fa363; --chart-4: #d9a441; --chart-5: #c47c4a;
+  --sidebar: #ebe3d5; --sidebar-foreground: #241d16; --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground); --sidebar-accent: #17120e;
+  --sidebar-accent-foreground: #fff7eb; --sidebar-border: #332b23; --sidebar-ring: var(--ring);
+  --bg-background: var(--background); --bg-card: var(--card); --bg-popover: var(--popover); --bg-muted: var(--muted);
+  --text-foreground: var(--foreground); --text-card-foreground: var(--card-foreground);
+  --text-popover-foreground: var(--popover-foreground); --text-primary-foreground: var(--primary-foreground);
+  --text-secondary-foreground: var(--secondary-foreground); --text-muted-foreground: var(--muted-foreground);
+  --text-accent-foreground: var(--accent-foreground); --text-destructive-foreground: var(--destructive-foreground);
+  --accent-primary: var(--primary); --accent-secondary: var(--secondary); --accent-input: var(--input);
+  --accent-ring: var(--ring); --status-destructive: var(--destructive);
+  --font-sans: Inter, "Noto Sans SC", ui-sans-serif, sans-serif;
+  --font-serif: "Noto Serif SC", "Cormorant Garamond", ui-serif, serif;
+  --font-mono: "JetBrains Mono", "Roboto Mono", monospace; --tracking-normal: 0em;
+  --radius: 12px; --spacing: 4px;
+  --shadow-2xs: 0 1px 2px rgba(23,18,14,0.04); --shadow-xs: 0 1px 3px rgba(23,18,14,0.06);
+  --shadow-sm: 0 2px 6px rgba(23,18,14,0.08); --shadow: 0 3px 12px rgba(23,18,14,0.10);
+  --shadow-md: 0 6px 20px rgba(23,18,14,0.12); --shadow-lg: 0 10px 32px rgba(23,18,14,0.14);
+  --shadow-xl: 0 16px 48px rgba(23,18,14,0.16); --shadow-2xl: 0 24px 64px rgba(23,18,14,0.18);
+  --transition-fast: 0.15s ease; --transition-base: 0.22s ease;
+}
+.dark {
+  --background: #1a1612; --muted: #1f1b17; --card: #26221d; --popover: #2c2722;
+  --foreground: #f0ece5; --muted-foreground: #b8b09f; --card-foreground: #f0ece5; --popover-foreground: #f0ece5;
+  --accent-foreground: #f0ece5; --secondary-foreground: #f0ece5;
+  --primary: var(--brand-500); --primary-foreground: #0a1e0f; --accent: #3d342b; --input: #352f28;
+  --border: #342d26; --secondary: #3d342b; --ring: var(--brand-400);
+  --destructive: #e85d5d; --destructive-foreground: #faf5f0;
+  --chart-1: #44c07a; --chart-2: #9bb5c0; --chart-3: #6fd89b; --chart-4: #d9a441; --chart-5: #e8c876;
+  --sidebar: #1f1b17; --sidebar-foreground: #f0ece5; --sidebar-accent: #332b23;
+  --sidebar-accent-foreground: #f0ece5; --sidebar-border: #342d26;
+  --shadow-2xs: 0 1px 2px rgba(0,0,0,0.18); --shadow-2xl: 0 24px 64px rgba(0,0,0,0.35);
+}
+    </style>
+    <style id="component-vars"></style>
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+@layer base {
+  body { background: var(--bg-background); color: var(--text-foreground); }
+  td, th { word-break: break-all; word-break: auto-phrase; }
+  th { white-space: nowrap; }
+  body { font-feature-settings: "cv02","cv03","cv04","cv11"; -webkit-font-smoothing: antialiased; }
+}
+.stat-card { transition: transform var(--transition-base), box-shadow var(--transition-base); }
+.stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+button:active { transform: scale(0.97); transition: transform 0.1s ease; }
+.page-fade-in { animation: fadeIn 0.4s ease both; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:translateY(0) } }
+.model-card { transition: border-color var(--transition-base), box-shadow var(--transition-base), transform var(--transition-base); }
+.model-card:hover { transform: translateY(-3px); border-color: var(--primary); box-shadow: 0 8px 20px rgba(36,133,80,0.10); }
+.model-card.active { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, var(--card)); }
+.model-card { cursor: pointer; }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+<main>
+<div class="flex h-screen" style="font-family: var(--font-sans)">
+  <!-- Sidebar -->
+  <aside class="flex flex-col shrink-0" style="width: 240px; border-right: 1px solid var(--sidebar-border); background: linear-gradient(180deg, #1e1813 0%, #1a1510 40%, #15110d 100%); position: relative; overflow: hidden">
+    <div class="flex items-center gap-3 px-4 py-3">
+      
+      <div class="flex-1 min-w-0">
+        <div class="truncate font-semibold" style="font-size:15px;font-family:var(--font-serif);color:var(--sidebar-accent-foreground)">ai智能数字人导游</div>
+        <div class="truncate" style="font-size:12px;color:var(--sidebar-foreground);opacity:0.55">管理后台</div>
+      </div>
+    </div>
+    <div class="px-4 pt-1 pb-2" style="font-family:var(--font-mono);font-weight:700;font-size:11px;letter-spacing:0.12em;color:var(--sidebar-foreground);opacity:0.42;text-transform:uppercase">导航</div>
+    <nav class="flex flex-col gap-1 px-3">
+      <a href="admin-dashboard.html" data-nav-key="dashboard" class="flex items-center gap-3 py-2 px-2.5 w-full no-underline" style="border-radius:10px;border:1px solid transparent;color:color-mix(in srgb,var(--sidebar-accent-foreground) 72%,transparent);font-size:14px;transition:background 0.16s ease,border-color 0.16s ease,color 0.16s ease">
+        <i data-lucide="layout-dashboard" class="flex items-center justify-center shrink-0" style="width:28px;height:28px;font-size:16px;border-radius:8px;background:color-mix(in srgb,var(--sidebar-accent-foreground) 6%,transparent)"></i>
+        <span class="truncate">总览</span>
+      </a>
+      <a href="knowledge-manage.html" data-nav-key="knowledge" class="flex items-center gap-3 py-2 px-2.5 w-full no-underline" style="border-radius:10px;border:1px solid transparent;color:color-mix(in srgb,var(--sidebar-accent-foreground) 72%,transparent);font-size:14px;transition:background 0.16s ease,border-color 0.16s ease,color 0.16s ease">
+        <i data-lucide="book-open" class="flex items-center justify-center shrink-0" style="width:22px;height:22px;font-size:14px;border-radius:8px;background:color-mix(in srgb,var(--sidebar-accent-foreground) 6%,transparent)"></i>
+        <span class="truncate">知识管理</span>
+      </a>
+      <a href="analytics-report.html" data-nav-key="analytics" class="flex items-center gap-3 py-2 px-2.5 w-full no-underline" style="border-radius:10px;border:1px solid transparent;color:color-mix(in srgb,var(--sidebar-accent-foreground) 72%,transparent);font-size:14px;transition:background 0.16s ease,border-color 0.16s ease,color 0.16s ease">
+        <i data-lucide="bar-chart-3" class="flex items-center justify-center shrink-0" style="width:22px;height:22px;font-size:14px;border-radius:8px;background:color-mix(in srgb,var(--sidebar-accent-foreground) 6%,transparent)"></i>
+        <span class="truncate">数据大屏</span>
+      </a>
+      <a href="avatar-config.html" data-nav-key="avatar" data-active="true" class="flex items-center gap-3 py-2 px-2.5 w-full no-underline" style="border-radius:10px;border:1px solid color-mix(in srgb,var(--sidebar-border) 28%,transparent);background:color-mix(in srgb,var(--sidebar-accent-foreground) 10%,transparent);color:var(--sidebar-accent-foreground);font-size:14px;transition:background 0.16s ease,border-color 0.16s ease">
+        <i data-lucide="user-circle" class="flex items-center justify-center shrink-0" style="width:28px;height:28px;font-size:16px;border-radius:8px;background:color-mix(in srgb,var(--sidebar-accent-foreground) 12%,transparent)"></i>
+        <span class="truncate">数字人配置</span>
+      </a>
+      <a href="display-assets.html" data-nav-key="assets" class="flex items-center gap-3 py-2 px-2.5 w-full no-underline" style="border-radius:10px;border:1px solid transparent;color:color-mix(in srgb,var(--sidebar-accent-foreground) 72%,transparent);font-size:14px;transition:background 0.16s ease,border-color 0.16s ease,color 0.16s ease">
+        <i data-lucide="image" class="flex items-center justify-center shrink-0" style="width:28px;height:28px;font-size:16px;border-radius:8px;background:color-mix(in srgb,var(--sidebar-accent-foreground) 6%,transparent)"></i>
+        <span class="truncate">资源替换</span>
+      </a>
+<a href="blind-spot-manage.html" data-nav-key="blindspot" class="flex items-center gap-3 py-2 px-2.5 w-full no-underline" style="border-radius: 2px; border: 1px solid transparent; color: color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent); font-size: 12px; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease">
+        <i data-lucide="eye-off" class="flex items-center justify-center shrink-0" style="width: 22px; height: 22px; font-size: 14px; border-radius: 2px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)"></i>
+        <span class="truncate">知识盲区</span>
+      </a>
+    </nav>
+    <div class="mt-auto mx-3 mb-4" style="border-radius: 2px; border: 1px solid color-mix(in srgb, var(--gold-400) 14%, transparent); background: color-mix(in srgb, var(--sidebar-accent-foreground) 3%, transparent); overflow: hidden">
+      <div style="padding: 10px 12px; border-bottom: 1px solid color-mix(in srgb, var(--sidebar-border) 40%, transparent)">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <div style="width: 8px; height: 8px; border-radius: 2px; background: var(--chart-3); box-shadow: 0 0 6px var(--chart-3)"></div>
+          <span style="font-size: 10px; color: var(--chart-3); font-weight: 600; letter-spacing: 0.06em">运行中</span>
+          <div style="flex:1;min-width:0"></div>
+          <span style="font-size: 9px; color: var(--sidebar-foreground); opacity: 0.4">v2.1</span>
+        </div>
+      </div>
+      <div style="padding: 8px 12px">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <div class="flex items-center justify-center shrink-0" style="width: 28px; height: 28px; border-radius: 2px; background: var(--gold-500); color: #fff; font-size: 13px; font-weight: 700">管</div>
+          <div class="flex-1 min-w-0">
+            <div style="font-size: 11px; font-weight: 600; color: var(--sidebar-accent-foreground)">系统管理员</div>
+            <div style="font-size: 9px; color: var(--sidebar-foreground); opacity: 0.45; margin-top: 1px">admin@lingshan.com</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="flex-1 min-w-0 overflow-auto" style="background-color: var(--background); padding: 12px">
+    <div class="flex flex-col gap-3 max-w-[1280px] mx-auto page-fade-in">
+
+      <!-- Hero -->
+      <div style="border-radius:16px;overflow:hidden;border:1px solid var(--border);background:linear-gradient(155deg,#241d16 0%,#2e2620 50%,#3a3028 100%);box-shadow:var(--shadow-sm)">
+        <div class="px-5 py-4 flex flex-col gap-3">
+          <div>
+            <h1 class="m-0" style="font-family:var(--font-serif);font-size:clamp(32px,3.6vw,48px);line-height:1.08;letter-spacing:-0.03em;color:var(--secondary-foreground);text-wrap:balance;word-break:keep-all;overflow-wrap:break-word;max-width:20ch">数字人配置</h1>
+            <p class="m-0 mt-3 max-w-3xl" style="font-size:12px;line-height:1.5;color:color-mix(in srgb,var(--secondary-foreground) 56%,transparent)">切换数字人形象 · 调整语音音色 · 预览实时效果</p>
+          </div>
+          <div class="flex items-center gap-8 flex-wrap">
+            <div>
+              <span class="block" style="font-size:34px;font-weight:600;line-height:1.05;letter-spacing:-0.03em;color:var(--secondary-foreground);font-family:var(--font-serif)">3</span>
+              <span class="block mt-1" style="font-size:12px;color:color-mix(in srgb,var(--secondary-foreground) 48%,transparent)">可选形象</span>
+            </div>
+            <div style="width:1px;height:44px;background:color-mix(in srgb,var(--secondary-foreground) 14%,transparent);flex:none"></div>
+            <div>
+              <span class="block" style="font-size:34px;font-weight:600;line-height:1.05;letter-spacing:-0.03em;color:var(--secondary-foreground);font-family:var(--font-serif)">4</span>
+              <span class="block mt-1" style="font-size:12px;color:color-mix(in srgb,var(--secondary-foreground) 48%,transparent)">可选音色</span>
+            </div>
+            <div style="width:1px;height:44px;background:color-mix(in srgb,var(--secondary-foreground) 14%,transparent);flex:none"></div>
+            <div>
+              <span class="block" style="font-size:34px;font-weight:600;line-height:1.05;letter-spacing:-0.03em;color:var(--secondary-foreground);font-family:var(--font-serif)">清岚</span>
+              <span class="block mt-1" style="font-size:12px;color:color-mix(in srgb,var(--secondary-foreground) 48%,transparent)">当前形象</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stat Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="stat-card flex flex-col gap-3 p-4" style="border-radius:14px;border:1px solid var(--border);background:linear-gradient(180deg,color-mix(in srgb,var(--primary) 8%,var(--card)) 0%,var(--card) 100%);box-shadow:var(--shadow-xs)">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex-1 min-w-0">
+              <div class="truncate" style="font-size:12px;color:var(--muted-foreground)">当前数字人形象</div>
+              <div class="mt-1" style="font-family:var(--font-serif);font-size:clamp(28px,3vw,36px);line-height:1.1;color:var(--foreground)" id="statAvatarName">明彻法师</div>
+            </div>
+            <div class="flex items-center justify-center shrink-0" style="width:36px;height:36px;border-radius:2px;background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary)">
+              <i data-lucide="user" style="width:16px;height:16px"></i>
+            </div>
+          </div>
+          <p class="m-0" style="font-size:11px;line-height:1.6;color:var(--muted-foreground)" id="statAvatarDesc">庄重安定 · 佛教文化讲解。</p>
+        </div>
+        <div class="stat-card flex flex-col gap-3 p-4" style="border-radius:2px;border:1px solid var(--border);background:linear-gradient(180deg,color-mix(in srgb,var(--gold-400) 8%,var(--card)) 0%,var(--card) 100%);box-shadow:var(--shadow-xs)">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex-1 min-w-0">
+              <div class="truncate" style="font-size:12px;color:var(--muted-foreground)">当前语音音色</div>
+              <div class="mt-1" style="font-family:var(--font-serif);font-size:clamp(28px,3vw,36px);line-height:1.1;color:var(--foreground)" id="statVoiceName">温柔女声</div>
+            </div>
+            <div class="flex items-center justify-center shrink-0" style="width:36px;height:36px;border-radius:2px;background:color-mix(in srgb,var(--gold-400) 18%,transparent);color:var(--gold-600)">
+              <i data-lucide="mic" style="width:16px;height:16px"></i>
+            </div>
+          </div>
+          <p class="m-0" style="font-size:11px;line-height:1.6;color:var(--muted-foreground)" id="statVoiceDesc">龙婉。</p>
+        </div>
+      </div>
+
+      <!-- Digital Human Workbench -->
+      <div style="border-radius:14px;border:1px solid var(--border);background:var(--card);box-shadow:var(--shadow-xs);overflow:hidden">
+        <div class="px-4 pt-3 pb-1">
+          <h2 class="m-0" style="font-family:var(--font-serif);font-size:24px;line-height:1.08;letter-spacing:-0.03em">数字人工作台</h2>
+          <p class="m-0 mt-2" style="font-size:13px;color:var(--muted-foreground)">调整游客端当前使用的形象、语音音色和演示状态。</p>
+        </div>
+        <div class="flex flex-col lg:flex-row gap-3 p-4">
+          <!-- Left Column: Model + Voice -->
+          <div class="flex-1 flex flex-col gap-3">
+            <!-- Appearance -->
+            <div style="border:1px solid var(--border);border-radius:12px;padding:18px;background:linear-gradient(180deg,var(--muted),var(--card))">
+              <div class="flex items-center justify-between gap-3 mb-4">
+                <strong style="font-size:15px;color:var(--foreground)">外观形象</strong>
+                <small style="font-size:12px;color:var(--muted-foreground)">三套数字人导览气质可切换</small>
+              </div>
+              <div class="grid grid-cols-3 gap-3">
+                <!-- Monk -->
+                <div class="model-card active flex flex-col items-center gap-2 p-4" style="border:2px solid var(--primary);border-radius:12px;background:color-mix(in srgb,var(--primary) 6%,var(--card));cursor:pointer;text-align:center" data-model="monk" onclick="selectModel(this,'monk')">
+                  <div class="flex items-center justify-center" style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#8b4513,#a06a2c);color:#fff;font-family:var(--font-serif);font-size:28px;font-weight:700">明</div>
+                  <strong style="font-size:14px;color:var(--foreground)">明彻法师</strong>
+                  <small style="font-size:11px;color:var(--muted-foreground);line-height:1.4">庄重安定 · 佛教文化讲解</small>
+                  <div class="hidden model-check" style="width:20px;height:20px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;position:absolute;top:-4px;right:-4px">✓</div>
+                </div>
+                <!-- Hanfu -->
+                <div class="model-card flex flex-col items-center gap-2 p-4" style="border:1px solid var(--border);border-radius:12px;cursor:pointer;text-align:center" data-model="hanfu" onclick="selectModel(this,'hanfu')">
+                  <div class="flex items-center justify-center" style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#7daa92,#4f6b63);color:#fff;font-family:var(--font-serif);font-size:28px;font-weight:700">清</div>
+                  <strong style="font-size:14px;color:var(--foreground)">清岚</strong>
+                  <small style="font-size:11px;color:var(--muted-foreground);line-height:1.4">雅致温润 · 文化叙事导览</small>
+                </div>
+                <!-- Modern -->
+                <div class="model-card flex flex-col items-center gap-2 p-4" style="border:1px solid var(--border);border-radius:12px;cursor:pointer;text-align:center" data-model="modern" onclick="selectModel(this,'modern')">
+                  <div class="flex items-center justify-center" style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#243447,#2f7f79);color:#fff;font-family:var(--font-serif);font-size:28px;font-weight:700">景</div>
+                  <strong style="font-size:14px;color:var(--foreground)">景行</strong>
+                  <small style="font-size:11px;color:var(--muted-foreground);line-height:1.4">亲切利落 · 现代智能导览</small>
+                </div>
+              </div>
+            </div>
+            <!-- Voice -->
+            <div style="border:1px solid var(--border);border-radius:12px;padding:18px;background:linear-gradient(180deg,var(--muted),var(--card))">
+              <div class="flex items-center justify-between gap-3 mb-4">
+                <strong style="font-size:15px;color:var(--foreground)">语音音色</strong>
+                <small style="font-size:12px;color:var(--muted-foreground)">保存后应用到游客端回答语音</small>
+              </div>
+              <div class="flex flex-col gap-3">
+                <div class="flex items-center gap-3">
+                  <span style="font-size:13px;color:var(--muted-foreground);min-width:48px">音色</span>
+                  <select onchange="updateVoice(this)" style="height:42px;padding:0 36px 0 14px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--foreground);font-size:14px;font-weight:500;cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23675a4e%22 stroke-width=%222%22 stroke-linecap=%22round%22><path d=%22m6 9 6 6 6-6%22/></svg>');background-repeat:no-repeat;background-position:right 10px center;flex:1;max-width:240px">
+                    <option value="gentle-female">温柔女声 · 龙婉</option>
+                    <option value="calm-female">知性女声 · 龙小夏</option>
+                    <option value="deep-male">沉稳男声 · 龙三叔</option>
+                    <option value="lively-female">活泼女声 · 龙安亲</option>
+                  </select>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span style="font-size:13px;color:var(--muted-foreground);min-width:48px">语速</span>
+                  <input type="range" min="80" max="150" value="100" step="5" style="flex:1;max-width:240px;accent-color:var(--primary)" id="speechRate">
+                  <span style="font-size:13px;color:var(--foreground);font-weight:600;min-width:36px" id="speechRateVal">100</span>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span style="font-size:13px;color:var(--muted-foreground);min-width:48px">音量</span>
+                  <input type="range" min="50" max="100" value="80" step="5" style="flex:1;max-width:240px;accent-color:var(--primary)" id="volume">
+                  <span style="font-size:13px;color:var(--foreground);font-weight:600;min-width:36px" id="volumeVal">80</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Preview -->
+          <div class="flex flex-col gap-3" style="width:100%;max-width:400px">
+            <div style="border:1px solid var(--border);border-radius:12px;padding:18px;background:linear-gradient(180deg,var(--muted),var(--card));flex:1;display:flex;flex-direction:column">
+              <div class="flex items-center justify-between gap-3 mb-4">
+                <strong style="font-size:15px;color:var(--foreground)">实时预览</strong>
+
+              </div>
+              <div class="flex items-center justify-center flex-1" style="border:1px solid var(--border);border-radius:12px;background:#faf7f0;min-height:360px">
+                <div class="flex flex-col items-center gap-3" style="color:var(--muted-foreground)">
+                  <div id="previewEmoji" style="font-size:64px;transition:transform 0.3s ease">🧘</div>
+                  <span id="previewLabel" style="font-size:14px;font-weight:600;color:var(--foreground)">清岚 · 空闲状态</span>
+                  <small style="font-size:12px">3D模型预览区（答辩时加载完整模型）</small>
+                </div>
+              </div>
+              <div class="flex flex-wrap gap-2 mt-4">
+                <button onclick="setEmotion('idle')" class="emotion-btn active inline-flex items-center justify-center" style="min-height:34px;padding:0 14px;border:1px solid var(--primary);border-radius:10px;background:var(--primary);color:var(--primary-foreground);font-size:12px;font-weight:600;cursor:pointer">空闲</button>
+                <button onclick="setEmotion('smile')" class="emotion-btn inline-flex items-center justify-center" style="min-height:34px;padding:0 14px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--foreground);font-size:12px;font-weight:600;cursor:pointer">微笑</button>
+                <button onclick="setEmotion('sorry')" class="emotion-btn inline-flex items-center justify-center" style="min-height:34px;padding:0 14px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--foreground);font-size:12px;font-weight:600;cursor:pointer">致歉</button>
+                <button onclick="toggleSpeaking()" class="emotion-btn inline-flex items-center justify-center" id="speakingBtn" style="min-height:34px;padding:0 14px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--foreground);font-size:12px;font-weight:600;cursor:pointer">模拟说话</button>
+              </div>
+            </div>
+            <div class="flex gap-3">
+              <button onclick="saveConfig()" style="flex:1;height:46px;border:1px solid var(--primary);border-radius:10px;background:var(--primary);color:var(--primary-foreground);font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px color-mix(in srgb,var(--primary) 30%,transparent)">保存数字人配置</button>
+              <button onclick="resetConfig()" style="height:46px;padding:0 18px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--foreground);font-size:14px;font-weight:600;cursor:pointer">恢复默认</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+(function(){
+  var navItems = document.querySelectorAll('[data-nav-key]');
+  function applyActive(item,isActive){
+    if(isActive){item.style.background='color-mix(in srgb,var(--sidebar-accent-foreground) 10%,transparent)';item.style.borderColor='color-mix(in srgb,var(--sidebar-border) 28%,transparent)';item.style.color='var(--sidebar-accent-foreground)';var icon=item.querySelector('i');if(icon)icon.style.background='color-mix(in srgb,var(--sidebar-accent-foreground) 12%,transparent)';}
+    else{item.style.background='transparent';item.style.borderColor='transparent';item.style.color='color-mix(in srgb,var(--sidebar-accent-foreground) 72%,transparent)';var icon=item.querySelector('i');if(icon)icon.style.background='color-mix(in srgb,var(--sidebar-accent-foreground) 6%,transparent)';}
+  }
+  navItems.forEach(function(item){var isActive=item.getAttribute('data-active')==='true';applyActive(item,isActive);item.addEventListener('mouseenter',function(){if(item.getAttribute('data-active')!=='true'){item.style.background='color-mix(in srgb,var(--sidebar-accent-foreground) 6%,transparent)';item.style.color='var(--sidebar-accent-foreground)';}});item.addEventListener('mouseleave',function(){applyActive(item,item.getAttribute('data-active')==='true');});});
+})();
+</script>
+
+<script>
+// Model selection
+var modelData = {
+  monk:   { name: '明彻法师', desc: '庄重安定 · 佛教文化讲解。' },
+  hanfu:  { name: '清岚',     desc: '雅致温润 · 文化叙事导览。' },
+  modern: { name: '景行',     desc: '亲切利落 · 现代智能导览。' }
+};
+window.selectModel = function(el, model) {
+  document.querySelectorAll('.model-card').forEach(function(c) {
+    c.classList.remove('active');
+    c.style.border = '1px solid var(--border)';
+    c.style.background = '';
+  });
+  el.classList.add('active');
+  el.style.border = '2px solid var(--primary)';
+  el.style.background = 'color-mix(in srgb,var(--primary) 8%,var(--card))';
+  // Update stat card
+  if (modelData[model]) {
+    document.getElementById('statAvatarName').textContent = modelData[model].name;
+    document.getElementById('statAvatarDesc').textContent = modelData[model].desc;
+  }
+};
+
+// Voice update
+var voiceMap = {
+  'gentle-female': { name: '温柔女声', desc: '龙婉。' },
+  'calm-female':   { name: '知性女声', desc: '龙小夏。' },
+  'deep-male':     { name: '沉稳男声', desc: '龙三叔。' },
+  'lively-female': { name: '活泼女声', desc: '龙安亲。' }
+};
+window.updateVoice = function(sel) {
+  var v = voiceMap[sel.value];
+  if (v) {
+    document.getElementById('statVoiceName').textContent = v.name;
+    document.getElementById('statVoiceDesc').textContent = v.desc;
+  }
+};
+
+// Emotion preview
+window.setEmotion = function(type) {
+  var emoji = document.getElementById('previewEmoji');
+  var label = document.getElementById('previewLabel');
+  var buttons = document.querySelectorAll('.emotion-btn');
+  var speakingBtn = document.getElementById('speakingBtn');
+  buttons.forEach(function(b){b.style.background='var(--card)';b.style.color='var(--foreground)';b.style.borderColor='var(--border)';b.classList.remove('active');});
+  if (type==='idle'){emoji.textContent='🧘';label.textContent='清岚 · 空闲状态';buttons[0].style.background='var(--primary)';buttons[0].style.color='var(--primary-foreground)';buttons[0].style.borderColor='var(--primary)';buttons[0].classList.add('active');speakingBtn.textContent='模拟说话';}
+  else if (type==='smile'){emoji.textContent='😊';label.textContent='清岚 · 微笑问候';buttons[1].style.background='var(--primary)';buttons[1].style.color='var(--primary-foreground)';buttons[1].style.borderColor='var(--primary)';buttons[1].classList.add('active');}
+  else if (type==='sorry'){emoji.textContent='🙏';label.textContent='清岚 · 致歉状态';buttons[2].style.background='var(--primary)';buttons[2].style.color='var(--primary-foreground)';buttons[2].style.borderColor='var(--primary)';buttons[2].classList.add('active');}
+};
+
+window.toggleSpeaking = function() {
+  var btn = document.getElementById('speakingBtn');
+  var label = document.getElementById('previewLabel');
+  if (btn.textContent === '模拟说话') {
+    btn.textContent = '停止说话';
+    btn.style.background = 'var(--gold-500)';
+    btn.style.color = '#fff7eb';
+    btn.style.borderColor = 'var(--gold-500)';
+    label.textContent = '清岚 · 说话中 🔊';
+  } else {
+    btn.textContent = '模拟说话';
+    btn.style.background = 'var(--card)';
+    btn.style.color = 'var(--foreground)';
+    btn.style.borderColor = 'var(--border)';
+    label.textContent = '清岚 · 空闲状态';
+  }
+};
+
+// Save / Reset
+window.saveConfig = function() {
+  var toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:999;padding:14px 22px;border-radius:10px;background:var(--primary);color:var(--primary-foreground);font-size:14px;font-weight:600;box-shadow:var(--shadow-lg);animation:fadeIn 0.3s ease';
+  toast.textContent = '✓ 数字人配置已保存';
+  document.body.appendChild(toast);
+  setTimeout(function(){toast.style.opacity='0';toast.style.transition='opacity 0.3s ease';setTimeout(function(){toast.remove()},300)},1500);
+};
+
+window.resetConfig = function() {
+  document.querySelector('.model-card.active').classList.remove('active');
+  document.querySelector('.model-card.active') && document.querySelector('.model-card.active').style.border = '1px solid var(--border)';
+  document.querySelector('.model-card.active') && (document.querySelector('.model-card.active').style.background = '');
+  var first = document.querySelectorAll('.model-card')[0];
+  selectModel(first, 'monk');
+  document.getElementById('speechRate').value = 100;
+  document.getElementById('speechRateVal').textContent = '100';
+  document.getElementById('volume').value = 80;
+  document.getElementById('volumeVal').textContent = '80';
+  setEmotion('idle');
+};
+
+// Sliders
+document.getElementById('speechRate').addEventListener('input',function(){document.getElementById('speechRateVal').textContent=this.value});
+document.getElementById('volume').addEventListener('input',function(){document.getElementById('volumeVal').textContent=this.value});
+</script>
+</main>
+<script>lucide.createIcons();</script>
+</body>
+</html>

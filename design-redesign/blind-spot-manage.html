@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识盲区监控</title>
+    <style id="theme-vars">
+:root {
+  /* ── 品牌色：灵山青绿 ── */
+  --brand-50: #f0fdf6;
+  --brand-100: #d7f5e3;
+  --brand-200: #a8e9c0;
+  --brand-300: #6fd89b;
+  --brand-400: #44c07a;
+  --brand-500: #2fa363;
+  --brand-600: #248550;
+  --brand-700: #1c6c42;
+  --brand-800: #185636;
+  --brand-900: #13462d;
+
+  /* ── 金色点缀（取 Codepen 暖金灵感） ── */
+  --gold-300: #e8c876;
+  --gold-400: #d9a441;
+  --gold-500: #c8922c;
+  --gold-600: #8a5d22;
+  --gold-700: #6b4513;
+
+  /* ── 表面色（取 Codepen 暖调） ── */
+  --background: #f6efe4;
+  --muted: #f0e9dc;
+  --card: #fffaf2;
+  --popover: #fffaf2;
+
+  /* ── 文字 ── */
+  --foreground: #241d16;
+  --muted-foreground: #675a4e;
+  --card-foreground: #241d16;
+  --popover-foreground: #241d16;
+  --accent-foreground: #241d16;
+  --secondary-foreground: #fff7eb;
+
+  /* ── 交互 ── */
+  --primary: var(--brand-600);
+  --primary-foreground: #fefefe;
+  --accent: #efe4d3;
+  --input: #e3d9cc;
+  --border: #d4c8b8;
+  --secondary: #241d16;
+  --ring: var(--brand-500);
+
+  /* ── 反馈 ── */
+  --destructive: #c93c3c;
+  --destructive-foreground: #fffaf2;
+
+  /* ── 图表色 ── */
+  --chart-1: #248550;
+  --chart-2: #8faab3;
+  --chart-3: #2fa363;
+  --chart-4: #d9a441;
+  --chart-5: #c47c4a;
+
+  /* ── 侧栏（深色木质调） ── */
+  --sidebar: #ebe3d5;
+  --sidebar-foreground: #241d16;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: #17120e;
+  --sidebar-accent-foreground: #fff7eb;
+  --sidebar-border: #332b23;
+  --sidebar-ring: var(--ring);
+
+  /* ── 兼容别名 ── */
+  --bg-background: var(--background);
+  --bg-card: var(--card);
+  --bg-popover: var(--popover);
+  --bg-muted: var(--muted);
+  --text-foreground: var(--foreground);
+  --text-card-foreground: var(--card-foreground);
+  --text-popover-foreground: var(--popover-foreground);
+  --text-primary-foreground: var(--primary-foreground);
+  --text-secondary-foreground: var(--secondary-foreground);
+  --text-muted-foreground: var(--muted-foreground);
+  --text-accent-foreground: var(--accent-foreground);
+  --text-destructive-foreground: var(--destructive-foreground);
+  --accent-primary: var(--primary);
+  --accent-secondary: var(--secondary);
+  --accent-input: var(--input);
+  --accent-ring: var(--ring);
+  --status-destructive: var(--destructive);
+
+  /* ── 排版 ── */
+  --font-sans: Inter, "Noto Sans SC", ui-sans-serif, sans-serif;
+  --font-serif: "Noto Serif SC", "Cormorant Garamond", ui-serif, serif;
+  --font-mono: "JetBrains Mono", "Roboto Mono", monospace;
+  --tracking-normal: 0em;
+
+  /* ── 圆角 ── */
+  --radius: 12px;
+
+  /* ── 间距 ── */
+  --spacing: 4px;
+
+  /* ── 阴影 ── */
+  --shadow-2xs: 0 1px 2px rgba(23,18,14,0.04);
+  --shadow-xs:  0 1px 3px rgba(23,18,14,0.06);
+  --shadow-sm:  0 2px 6px rgba(23,18,14,0.08);
+  --shadow:     0 3px 12px rgba(23,18,14,0.10);
+  --shadow-md:  0 6px 20px rgba(23,18,14,0.12);
+  --shadow-lg:  0 10px 32px rgba(23,18,14,0.14);
+  --shadow-xl:  0 16px 48px rgba(23,18,14,0.16);
+  --shadow-2xl: 0 24px 64px rgba(23,18,14,0.18);
+
+  /* ── 过渡 ── */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.22s ease;
+
+  /* ── 自定义状态色 ── */
+  --status-orange: #e8922c;
+  --status-green: var(--chart-3);
+  --status-gray: #8c8580;
+}
+
+.dark {
+  --background: #1a1612;
+  --muted: #1f1b17;
+  --card: #26221d;
+  --popover: #2c2722;
+  --foreground: #f0ece5;
+  --muted-foreground: #b8b09f;
+  --card-foreground: #f0ece5;
+  --popover-foreground: #f0ece5;
+  --accent-foreground: #f0ece5;
+  --secondary-foreground: #f0ece5;
+  --primary: var(--brand-500);
+  --primary-foreground: #0a1e0f;
+  --accent: #3d342b;
+  --input: #352f28;
+  --border: #342d26;
+  --secondary: #3d342b;
+  --ring: var(--brand-400);
+  --destructive: #e85d5d;
+  --destructive-foreground: #faf5f0;
+  --chart-1: #44c07a;
+  --chart-2: #9bb5c0;
+  --chart-3: #6fd89b;
+  --chart-4: #d9a441;
+  --chart-5: #e8c876;
+  --sidebar: #1f1b17;
+  --sidebar-foreground: #f0ece5;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: #332b23;
+  --sidebar-accent-foreground: #f0ece5;
+  --sidebar-border: #342d26;
+  --sidebar-ring: var(--ring);
+  --bg-background: var(--background);
+  --bg-card: var(--card);
+  --bg-popover: var(--popover);
+  --bg-muted: var(--muted);
+  --text-foreground: var(--foreground);
+  --text-card-foreground: var(--card-foreground);
+  --text-popover-foreground: var(--popover-foreground);
+  --text-primary-foreground: var(--primary-foreground);
+  --text-secondary-foreground: var(--secondary-foreground);
+  --text-muted-foreground: var(--muted-foreground);
+  --text-accent-foreground: var(--accent-foreground);
+  --text-destructive-foreground: var(--destructive-foreground);
+  --accent-primary: var(--primary);
+  --accent-secondary: var(--secondary);
+  --accent-input: var(--input);
+  --accent-ring: var(--ring);
+  --status-destructive: var(--destructive);
+  --shadow-2xs: 0 1px 2px rgba(0,0,0,0.18);
+  --shadow-2xl: 0 24px 64px rgba(0,0,0,0.35);
+  --status-orange: #e8a040;
+  --status-green: var(--chart-3);
+  --status-gray: #9e9792;
+}
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @layer base {
+    body { background: var(--bg-background); color: var(--text-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+    body { font-feature-settings: "cv02","cv03","cv04","cv11"; -webkit-font-smoothing: antialiased; }
+  }
+
+  .stat-card {
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+  }
+  .stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .chart-card {
+    transition: box-shadow var(--transition-base);
+  }
+  .chart-card:hover {
+    box-shadow: var(--shadow);
+  }
+
+  tbody tr {
+    transition: background var(--transition-fast);
+  }
+  tbody tr:hover {
+    background: color-mix(in srgb, var(--primary) 6%, transparent);
+  }
+
+  button:active {
+    transform: scale(0.97);
+    transition: transform 0.1s ease;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--chart-3) 30%, transparent); }
+    50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--chart-3) 0%, transparent); }
+  }
+  .status-pulse {
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  .page-fade-in {
+    animation: fadeIn 0.4s ease both;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Toast 动画 ── */
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateY(16px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes toastOut {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to   { opacity: 0; transform: translateY(16px) scale(0.96); }
+  }
+  .toast-enter { animation: toastIn 0.22s ease both; }
+  .toast-exit  { animation: toastOut 0.18s ease both; }
+
+  /* ── Modal 遮罩动画 ── */
+  @keyframes overlayIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(24px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .modal-overlay-enter { animation: overlayIn 0.18s ease both; }
+  .modal-panel-enter   { animation: modalIn 0.22s ease both; }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+<main>
+<div class="flex h-screen" style="font-family: var(--font-sans)">
+  <!-- ═══════════ SIDEBAR ═══════════ -->
+  <aside class="flex flex-col shrink-0" style="width: 240px; border-right: 1px solid var(--sidebar-border); background: linear-gradient(180deg, #1e1813 0%, #1a1510 40%, #15110d 100%); position: relative; overflow: hidden">
+    <div style="position: absolute; inset: 0; pointer-events: none; opacity: 0.06; background: radial-gradient(ellipse 70% 30% at 50% 0%, var(--gold-400) 0%, transparent 70%), radial-gradient(ellipse 50% 40% at 80% 100%, var(--primary) 0%, transparent 60%)"></div>
+    <div style="position: relative; z-index: 1; padding: 18px 16px 12px; border-bottom: 1px solid color-mix(in srgb, var(--gold-400) 12%, transparent); margin-bottom: 4px; text-align: center">
+      <div style="font-size: 10px; font-family: var(--font-sans); font-weight: 500; color: var(--gold-400); letter-spacing: 0.28em; margin-bottom: 8px; opacity: 0.7">AI DIGITAL GUIDE</div>
+      <div style="font-size: 22px; font-family: var(--font-serif); font-weight: 700; color: var(--gold-400); letter-spacing: 0.08em; line-height: 1.1; text-shadow: 0 1px 2px rgba(0,0,0,0.4)">智能数字人导游</div>
+      <div style="font-size: 10px; color: var(--sidebar-foreground); opacity: 0.4; margin-top: 6px; letter-spacing: 0.18em">管 理 后 台</div>
+    </div>
+    <div class="px-4 pt-1 pb-2" style="font-family: var(--font-mono); font-weight: 700; font-size: 10px; letter-spacing: 0.12em; color: var(--sidebar-foreground); opacity: 0.42;">导航</div>
+    <nav class="flex flex-col gap-1 px-3">
+      <a href="admin-dashboard.html" data-nav-key="dashboard" data-dom-id="nav-dashboard" class="flex items-center gap-3 py-2 px-2.5 w-full no-underline" style="border-radius: 2px; border: 1px solid transparent; color: color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent); font-size: 12px; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease">
+        <i data-lucide="layout-dashboard" class="flex items-center justify-center shrink-0" style="width: 22px; height: 22px; font-size: 14px; border-radius: 2px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)"></i>
+        <span class="truncate">总览</span>
+      </a>
+      <a href="#" data-nav-key="knowledge" data-dom-id="nav-knowledge" class="flex items-center gap-3 py-2 px-2.5 w-full no-underline" style="border-radius: 2px; border: 1px solid transparent; color: color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent); font-size: 12px; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease">
+        <i data-lucide="book-open" class="flex items-center justify-center shrink-0" style="width: 22px; height: 22px; font-size: 14px; border-radius: 2px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)"></i>
+        <span class="truncate">知识管理</span>
+      </a>
+      <a href="blind-spot-manage.html" data-nav-key="blindspot" data-dom-id="nav-blindspot" data-active="true" class="flex items-center gap-3 py-2 px-2.5 w-full no-underline" style="border-radius: 2px; border: 1px solid color-mix(in srgb, var(--sidebar-border) 28%, transparent); background: color-mix(in srgb, var(--sidebar-accent-foreground) 10%, transparent); color: var(--sidebar-accent-foreground); font-size: 12px; transition: background 0.16s ease, border-color 0.16s ease">
+        <i data-lucide="eye-off" class="flex items-center justify-center shrink-0" style="width: 22px; height: 22px; font-size: 14px; border-radius: 2px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 12%, transparent)"></i>
+        <span class="truncate">知识盲区</span>
+      </a>
+      <a href="analytics-report.html" data-nav-key="analytics" data-dom-id="nav-analytics" class="flex items-center gap-3 py-2 px-2.5 w-full no-underline" style="border-radius: 2px; border: 1px solid transparent; color: color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent); font-size: 12px; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease">
+        <i data-lucide="bar-chart-3" class="flex items-center justify-center shrink-0" style="width: 22px; height: 22px; font-size: 14px; border-radius: 2px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)"></i>
+        <span class="truncate">数据大屏</span>
+      </a>
+      <a href="avatar-config.html" data-nav-key="avatar" class="flex items-center gap-3 py-2 px-2.5 w-full no-underline" style="border-radius: 2px; border: 1px solid transparent; color: color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent); font-size: 12px; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease">
+        <i data-lucide="user-circle" class="flex items-center justify-center shrink-0" style="width: 22px; height: 22px; font-size: 14px; border-radius: 2px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)"></i>
+        <span class="truncate">数字人配置</span>
+      </a>
+      <a href="display-assets.html" data-nav-key="assets" class="flex items-center gap-3 py-2 px-2.5 w-full no-underline" style="border-radius: 2px; border: 1px solid transparent; color: color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent); font-size: 12px; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease">
+        <i data-lucide="image" class="flex items-center justify-center shrink-0" style="width: 22px; height: 22px; font-size: 14px; border-radius: 2px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)"></i>
+        <span class="truncate">资源替换</span>
+      </a>
+    </nav>
+    <div class="mt-auto mx-3 mb-4" style="border-radius: 2px; border: 1px solid color-mix(in srgb, var(--gold-400) 14%, transparent); background: color-mix(in srgb, var(--sidebar-accent-foreground) 3%, transparent); overflow: hidden">
+      <div style="padding: 10px 12px; border-bottom: 1px solid color-mix(in srgb, var(--sidebar-border) 40%, transparent)">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <div style="width: 8px; height: 8px; border-radius: 2px; background: var(--chart-3); box-shadow: 0 0 6px var(--chart-3)"></div>
+          <span style="font-size: 10px; color: var(--chart-3); font-weight: 600; letter-spacing: 0.06em">运行中</span>
+          <div style="flex:1;min-width:0"></div>
+          <span style="font-size: 9px; color: var(--sidebar-foreground); opacity: 0.4">v2.1</span>
+        </div>
+      </div>
+      <div style="padding: 8px 12px">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <div class="flex items-center justify-center shrink-0" style="width: 28px; height: 28px; border-radius: 2px; background: var(--gold-500); color: #fff; font-size: 13px; font-weight: 700">管</div>
+          <div class="flex-1 min-w-0">
+            <div style="font-size: 11px; font-weight: 600; color: var(--sidebar-accent-foreground)">系统管理员</div>
+            <div style="font-size: 9px; color: var(--sidebar-foreground); opacity: 0.45; margin-top: 1px">admin@lingshan.com</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══════════ MAIN CONTENT ═══════════ -->
+  <main class="flex-1 min-w-0 overflow-auto" style="background-color: var(--background); padding: 12px">
+    <div class="flex flex-col gap-3 max-w-[1280px] mx-auto">
+
+      <!-- ── Hero Header ── -->
+      <div style="border-radius: 2px; overflow: hidden; border: 1px solid var(--border); background: linear-gradient(155deg, #241d16 0%, #2e2620 50%, #3a3028 100%); box-shadow: var(--shadow-sm)">
+        <div class="px-5 py-3 flex flex-col gap-3">
+          <div>
+            <h1 class="m-0" style="font-family: var(--font-serif); font-size: clamp(36px, 4vw, 56px); line-height: 1.02; letter-spacing: -0.03em; color: var(--secondary-foreground); text-wrap: balance; word-break: keep-all; overflow-wrap: break-word; max-width: 76ch">知识盲区监控</h1>
+            <p class="m-0 mt-3 max-w-5xl" style="font-size: 12px; line-height: 1.7; color: color-mix(in srgb, var(--secondary-foreground) 62%, transparent)">实时追踪游客提问中未被知识库覆盖的高频问题，及时发现并补齐知识盲区，确保AI数字人回答质量。</p>
+          </div>
+          <div class="flex items-center gap-3 flex-wrap">
+            <span class="inline-flex items-center gap-2 px-3 min-h-8 shrink-0" style="border-radius: 2px; background: color-mix(in srgb, var(--secondary-foreground) 10%, transparent); border: 1px solid color-mix(in srgb, var(--secondary-foreground) 16%, transparent); font-size: 11px; color: var(--secondary-foreground); white-space: nowrap">
+              <span style="width: 8px; height: 8px; border-radius: 2px; background: var(--chart-3); box-shadow: 0 0 0 5px color-mix(in srgb, var(--chart-3) 18%, transparent)" class="status-pulse"></span>
+              监控运行中
+            </span>
+            <span class="inline-flex items-center gap-2 px-3 min-h-8 shrink-0" style="border-radius: 2px; background: color-mix(in srgb, var(--secondary-foreground) 10%, transparent); border: 1px solid color-mix(in srgb, var(--secondary-foreground) 16%, transparent); font-size: 11px; color: var(--secondary-foreground); white-space: nowrap">
+              数据更新于 1 分钟前
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Stats Cards ── -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div id="stat-total" class="stat-card flex flex-col gap-3 p-4" style="border-radius: 2px; border: 1px solid var(--border); background: linear-gradient(180deg, var(--card) 0%, color-mix(in srgb, var(--primary) 4%, var(--card)) 100%); box-shadow: var(--shadow-xs)">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex-1 min-w-0">
+              <div class="truncate" style="font-size: 12px; color: var(--muted-foreground)">总盲区数</div>
+              <div class="mt-1 whitespace-nowrap" style="font-family: var(--font-serif); font-size: clamp(32px, 3.2vw, 42px); line-height: 1.04; letter-spacing: -0.03em; color: var(--foreground)">6</div>
+            </div>
+            <div class="flex items-center justify-center shrink-0" style="width: 36px; height: 36px; border-radius: 2px; background: color-mix(in srgb, var(--primary) 16%, transparent); color: var(--primary)">
+              <i data-lucide="eye-off" style="width: 16px; height: 16px"></i>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="inline-flex items-center justify-center whitespace-nowrap shrink-0" style="min-height: 26px; padding: 0 10px; border-radius: 2px; background: color-mix(in srgb, var(--status-orange) 14%, transparent); font-family: var(--font-mono); font-weight: 600; font-size: 10px; letter-spacing: 0.04em; color: var(--status-orange)">4待处理</span>
+            <span class="truncate" style="font-size: 12px; color: var(--muted-foreground)">需补充FAQ</span>
+          </div>
+        </div>
+
+        <div id="stat-open" class="stat-card flex flex-col gap-3 p-4" style="border-radius: 2px; border: 1px solid var(--border); background: linear-gradient(180deg, var(--card) 0%, color-mix(in srgb, var(--status-orange) 4%, var(--card)) 100%); box-shadow: var(--shadow-xs)">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex-1 min-w-0">
+              <div class="truncate" style="font-size: 12px; color: var(--muted-foreground)">待处理</div>
+              <div class="mt-1 whitespace-nowrap" style="font-family: var(--font-serif); font-size: clamp(32px, 3.2vw, 42px); line-height: 1.04; letter-spacing: -0.03em; color: var(--foreground)">4</div>
+            </div>
+            <div class="flex items-center justify-center shrink-0" style="width: 36px; height: 36px; border-radius: 2px; background: color-mix(in srgb, var(--status-orange) 18%, transparent); color: var(--status-orange)">
+              <i data-lucide="alert-circle" style="width: 16px; height: 16px"></i>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="truncate" style="font-size: 12px; color: var(--muted-foreground)">累计出现 120 次</span>
+          </div>
+        </div>
+
+        <div id="stat-resolved" class="stat-card flex flex-col gap-3 p-4" style="border-radius: 2px; border: 1px solid var(--border); background: linear-gradient(180deg, var(--card) 0%, color-mix(in srgb, var(--chart-3) 4%, var(--card)) 100%); box-shadow: var(--shadow-xs)">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex-1 min-w-0">
+              <div class="truncate" style="font-size: 12px; color: var(--muted-foreground)">已解决</div>
+              <div class="mt-1 whitespace-nowrap" style="font-family: var(--font-serif); font-size: clamp(32px, 3.2vw, 42px); line-height: 1.04; letter-spacing: -0.03em; color: var(--foreground)">1</div>
+            </div>
+            <div class="flex items-center justify-center shrink-0" style="width: 36px; height: 36px; border-radius: 2px; background: color-mix(in srgb, var(--chart-3) 16%, transparent); color: var(--chart-3)">
+              <i data-lucide="check-circle" style="width: 16px; height: 16px"></i>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="truncate" style="font-size: 12px; color: var(--muted-foreground)">已补充FAQ</span>
+          </div>
+        </div>
+
+        <div id="stat-ignored" class="stat-card flex flex-col gap-3 p-4" style="border-radius: 2px; border: 1px solid var(--border); background: linear-gradient(180deg, var(--card) 0%, color-mix(in srgb, var(--status-gray) 4%, var(--card)) 100%); box-shadow: var(--shadow-xs)">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex-1 min-w-0">
+              <div class="truncate" style="font-size: 12px; color: var(--muted-foreground)">已忽略</div>
+              <div class="mt-1 whitespace-nowrap" style="font-family: var(--font-serif); font-size: clamp(32px, 3.2vw, 42px); line-height: 1.04; letter-spacing: -0.03em; color: var(--foreground)">1</div>
+            </div>
+            <div class="flex items-center justify-center shrink-0" style="width: 36px; height: 36px; border-radius: 2px; background: color-mix(in srgb, var(--status-gray) 16%, transparent); color: var(--status-gray)">
+              <i data-lucide="x-circle" style="width: 16px; height: 16px"></i>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="truncate" style="font-size: 12px; color: var(--muted-foreground)">无需处理</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Filter Toolbar ── -->
+      <div class="flex items-center gap-3 flex-wrap">
+        <select id="filter-status" style="min-height: 36px; padding: 0 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--card); color: var(--foreground); font-family: var(--font-sans); font-size: 12px; outline: none; cursor: pointer; transition: border-color var(--transition-fast), box-shadow var(--transition-fast)" onfocus="this.style.borderColor='var(--ring)'; this.style.boxShadow='0 0 0 3px color-mix(in srgb, var(--ring) 14%, transparent)'" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none'">
+          <option value="all">全部状态</option>
+          <option value="open">待处理</option>
+          <option value="resolved">已解决</option>
+          <option value="ignored">已忽略</option>
+        </select>
+        <div style="position: relative; flex: 1; min-width: 240px; max-width: 360px">
+          <i data-lucide="search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--muted-foreground); pointer-events: none"></i>
+          <input id="filter-search" type="text" placeholder="搜索问题关键词..." style="width: 100%; min-height: 36px; padding: 0 14px 0 40px; border-radius: 6px; border: 1px solid var(--border); background: var(--card); color: var(--foreground); font-family: var(--font-sans); font-size: 12px; outline: none; transition: border-color var(--transition-fast), box-shadow var(--transition-fast); box-sizing: border-box" onfocus="this.style.borderColor='var(--ring)'; this.style.boxShadow='0 0 0 3px color-mix(in srgb, var(--ring) 14%, transparent)'" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none'">
+        </div>
+        <span id="filter-result-count" style="font-size: 12px; color: var(--muted-foreground); white-space: nowrap">共 6 条记录</span>
+      </div>
+
+      <!-- ── Table Card ── -->
+      <div style="border-radius: 2px; border: 1px solid var(--border); overflow: hidden; background: var(--card); box-shadow: var(--shadow-xs)">
+        <div class="px-4 pt-3 pb-1 flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h2 class="m-0" style="font-family: var(--font-serif); font-size: 26px; line-height: 1.08; letter-spacing: -0.03em; text-wrap: balance; word-break: keep-all; overflow-wrap: break-word">盲区列表</h2>
+            <p class="m-0 mt-2 max-w-5xl" style="font-size: 12px; line-height: 1.6; color: var(--muted-foreground)">游客提问中未被知识库覆盖的高频问题，点击"补充FAQ"一键生成答案。</p>
+          </div>
+        </div>
+        <div class="px-4 pb-4 overflow-x-auto">
+          <table id="blindspot-table" style="width: 100%; border-collapse: collapse">
+            <thead>
+              <tr>
+                <th class="text-left" style="padding: 0 0 14px; font-family: var(--font-mono); font-weight: 700; font-size: 10px; letter-spacing: 0.12em; color: var(--muted-foreground); white-space: nowrap; min-width: 220px">问题内容</th>
+                <th class="text-right" style="padding: 0 10px 14px; font-family: var(--font-mono); font-weight: 700; font-size: 10px; letter-spacing: 0.12em; color: var(--muted-foreground); white-space: nowrap">出现次数</th>
+                <th class="text-right" style="padding: 0 10px 14px; font-family: var(--font-mono); font-weight: 700; font-size: 10px; letter-spacing: 0.12em; color: var(--muted-foreground); white-space: nowrap">首次出现</th>
+                <th class="text-right" style="padding: 0 10px 14px; font-family: var(--font-mono); font-weight: 700; font-size: 10px; letter-spacing: 0.12em; color: var(--muted-foreground); white-space: nowrap">最近出现</th>
+                <th class="text-center" style="padding: 0 10px 14px; font-family: var(--font-mono); font-weight: 700; font-size: 10px; letter-spacing: 0.12em; color: var(--muted-foreground); white-space: nowrap">状态</th>
+                <th class="text-center" style="padding: 0 0 14px; font-family: var(--font-mono); font-weight: 700; font-size: 10px; letter-spacing: 0.12em; color: var(--muted-foreground); white-space: nowrap; min-width: 120px">操作</th>
+              </tr>
+            </thead>
+            <tbody id="blindspot-tbody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ═══════════ FAQ MODAL ═══════════ -->
+<div id="faq-modal-overlay" style="display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.48); align-items: center; justify-content: center; padding: 24px" onclick="if(event.target===this) closeFaqModal()">
+  <div id="faq-modal-panel" style="width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; border-radius: 2px; border: 1px solid var(--border); background: var(--card); box-shadow: var(--shadow-2xl); padding: 32px; display: flex; flex-direction: column; gap: 20px">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h2 class="m-0" style="font-family: var(--font-serif); font-size: 24px; line-height: 1.08; letter-spacing: -0.03em; color: var(--foreground)">补充FAQ</h2>
+        <p class="m-0 mt-1" style="font-size: 12px; color: var(--muted-foreground)">为此盲区问题创建知识库答案，解决后将自动标记为已处理。</p>
+      </div>
+      <button onclick="closeFaqModal()" style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 2px; border: none; background: transparent; color: var(--muted-foreground); cursor: pointer; transition: background var(--transition-fast)" onmouseenter="this.style.background='color-mix(in srgb, var(--muted-foreground) 10%, transparent)'" onmouseleave="this.style.background='transparent'">
+        <i data-lucide="x" style="width: 15px; height: 15px"></i>
+      </button>
+    </div>
+
+    <input type="hidden" id="faq-blindspot-id">
+
+    <div class="flex flex-col gap-1">
+      <label style="font-family: var(--font-mono); font-weight: 700; font-size: 10px; letter-spacing: 0.12em; color: var(--muted-foreground); text-transform: uppercase">盲区问题</label>
+      <div id="faq-blindspot-question" style="min-height: 36px; padding: 0 14px; display: flex; align-items: center; border-radius: 6px; border: 1px solid var(--border); background: var(--muted); color: var(--foreground); font-size: 12px; opacity: 0.85"></div>
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <label for="faq-question-input" style="font-family: var(--font-mono); font-weight: 700; font-size: 10px; letter-spacing: 0.12em; color: var(--muted-foreground); text-transform: uppercase">FAQ 标题 / 问题</label>
+      <input id="faq-question-input" type="text" placeholder="输入FAQ问题标题..." style="min-height: 36px; padding: 0 14px; border-radius: 2px; border: 1px solid var(--border); background: var(--bg-background); color: var(--foreground); font-family: var(--font-sans); font-size: 12px; outline: none; transition: border-color var(--transition-fast), box-shadow var(--transition-fast)" onfocus="this.style.borderColor='var(--ring)'; this.style.boxShadow='0 0 0 3px color-mix(in srgb, var(--ring) 14%, transparent)'" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none'">
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <label for="faq-answer-textarea" style="font-family: var(--font-mono); font-weight: 700; font-size: 10px; letter-spacing: 0.12em; color: var(--muted-foreground); text-transform: uppercase">FAQ 答案</label>
+      <textarea id="faq-answer-textarea" rows="5" placeholder="输入详细答案内容..." style="min-height: 90px; padding: 14px; border-radius: 2px; border: 1px solid var(--border); background: var(--bg-background); color: var(--foreground); font-family: var(--font-sans); font-size: 12px; line-height: 1.6; outline: none; resize: vertical; transition: border-color var(--transition-fast), box-shadow var(--transition-fast)" onfocus="this.style.borderColor='var(--ring)'; this.style.boxShadow='0 0 0 3px color-mix(in srgb, var(--ring) 14%, transparent)'" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none'"></textarea>
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <label for="faq-category-select" style="font-family: var(--font-mono); font-weight: 700; font-size: 10px; letter-spacing: 0.12em; color: var(--muted-foreground); text-transform: uppercase">FAQ 分类</label>
+      <select id="faq-category-select" style="min-height: 36px; padding: 0 14px; border-radius: 2px; border: 1px solid var(--border); background: var(--bg-background); color: var(--foreground); font-family: var(--font-sans); font-size: 12px; outline: none; cursor: pointer; transition: border-color var(--transition-fast), box-shadow var(--transition-fast)" onfocus="this.style.borderColor='var(--ring)'; this.style.boxShadow='0 0 0 3px color-mix(in srgb, var(--ring) 14%, transparent)'" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none'">
+        <option value="">请选择分类</option>
+        <option value="attractions">景区景点</option>
+        <option value="culture">文化典故</option>
+        <option value="facilities">设施服务</option>
+        <option value="tickets">门票交通</option>
+        <option value="food">美食特产</option>
+      </select>
+    </div>
+
+    <div class="flex items-center justify-end gap-3 pt-2">
+      <button id="faq-cancel-btn" onclick="closeFaqModal()" style="min-height: 36px; padding: 0 16px; border-radius: 2px; border: 1px solid var(--border); background: transparent; color: var(--foreground); font-family: var(--font-sans); font-size: 12px; font-weight: 500; cursor: pointer; transition: background var(--transition-fast)" onmouseenter="this.style.background='color-mix(in srgb, var(--muted-foreground) 8%, transparent)'" onmouseleave="this.style.background='transparent'">取消</button>
+      <button id="faq-submit-btn" onclick="submitFaq()" style="min-height: 36px; padding: 0 24px; border-radius: 2px; border: none; background: var(--primary); color: var(--primary-foreground); font-family: var(--font-sans); font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity var(--transition-fast), transform var(--transition-fast); box-shadow: var(--shadow-xs)">
+        提交FAQ
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ TOAST CONTAINER ═══════════ -->
+<div id="toast-container" style="position: fixed; bottom: 32px; right: 32px; z-index: 1100; display: flex; flex-direction: column-reverse; gap: 12px; pointer-events: none"></div>
+</main>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   Data Layer — 盲区数据集
+   ═══════════════════════════════════════════════════════ */
+var blindSpots = [
+  { id: 1, question: "请问灵山大佛有多少年历史了？", count: 42, firstSeen: "2026-06-01", lastSeen: "2026-07-10", status: "open" },
+  { id: 2, question: "梵宫里面可以拍照吗？",         count: 38, firstSeen: "2026-06-05", lastSeen: "2026-07-09", status: "open" },
+  { id: 3, question: "九龙灌浴表演几点开始？",       count: 25, firstSeen: "2026-06-10", lastSeen: "2026-07-08", status: "open" },
+  { id: 4, question: "拈花湾有什么特色小吃？",       count: 18, firstSeen: "2026-06-15", lastSeen: "2026-07-07", status: "open" },
+  { id: 5, question: "景区有导游服务吗？",           count: 15, firstSeen: "2026-06-20", lastSeen: "2026-07-06", status: "resolved" },
+  { id: 6, question: "灵山的门票多少钱？",           count: 12, firstSeen: "2026-06-22", lastSeen: "2026-07-05", status: "ignored" }
+];
+
+/* ── Status label / color map ── */
+var statusLabels = { open: "待处理", resolved: "已解决", ignored: "已忽略" };
+var statusColors = {
+  open:     { bg: "color-mix(in srgb, var(--status-orange) 14%, transparent)", dot: "var(--status-orange)", text: "var(--status-orange)" },
+  resolved: { bg: "color-mix(in srgb, var(--status-green) 12%, transparent)",  dot: "var(--status-green)",  text: "var(--status-green)" },
+  ignored:  { bg: "color-mix(in srgb, var(--status-gray) 12%, transparent)",   dot: "var(--status-gray)",   text: "var(--status-gray)" }
+};
+
+/* ═══════════════════════════════════════════════════════
+   Render — 表格 & 统计
+   ═══════════════════════════════════════════════════════ */
+function getFilteredData() {
+  var statusFilter = document.getElementById('filter-status').value;
+  var searchText   = (document.getElementById('filter-search').value || '').trim().toLowerCase();
+  return blindSpots.filter(function(item) {
+    if (statusFilter !== 'all' && item.status !== statusFilter) return false;
+    if (searchText && item.question.toLowerCase().indexOf(searchText) === -1) return false;
+    return true;
+  });
+}
+
+function renderTable() {
+  var data   = getFilteredData();
+  var tbody  = document.getElementById('blindspot-tbody');
+  var html   = '';
+  for (var i = 0; i < data.length; i++) {
+    var item = data[i];
+    var sc   = statusColors[item.status];
+    var label = statusLabels[item.status];
+
+    var actionHtml = '';
+    if (item.status === 'open') {
+      actionHtml =
+        '<button onclick="openFaqModal(' + item.id + ')" style="min-height: 30px; padding: 0 12px; border-radius: 2px; border: none; background: var(--primary); color: var(--primary-foreground); font-family: var(--font-sans); font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity var(--transition-fast); box-shadow: var(--shadow-2xs); white-space: nowrap"' +
+        ' onmouseenter="this.style.opacity=\'0.88\'" onmouseleave="this.style.opacity=\'1\'">补充FAQ</button>';
+    } else {
+      actionHtml =
+        '<span style="font-size: 12px; color: var(--muted-foreground)">--</span>';
+    }
+
+    html +=
+      '<tr style="border-top: 1px solid color-mix(in srgb, var(--border) 74%, transparent)">' +
+        '<td style="padding: 12px 0; font-size: 12px; min-width: 220px; max-width: 320px">' +
+          '<div class="truncate font-semibold" style="margin-bottom: 2px">' + escapeHtml(item.question) + '</div>' +
+          '<div class="truncate" style="font-size: 11px; color: var(--muted-foreground)">ID: ' + item.id + '</div>' +
+        '</td>' +
+        '<td class="text-right whitespace-nowrap" style="padding: 12px 12px; font-size: 12px; font-weight: 600">' + item.count + '次</td>' +
+        '<td class="text-right whitespace-nowrap" style="padding: 12px 12px; font-size: 12px; color: var(--muted-foreground)">' + item.firstSeen + '</td>' +
+        '<td class="text-right whitespace-nowrap" style="padding: 12px 12px; font-size: 12px; color: var(--muted-foreground)">' + item.lastSeen + '</td>' +
+        '<td class="text-center" style="padding: 12px 12px">' +
+          '<span class="inline-flex items-center gap-1 whitespace-nowrap" style="min-height: 24px; padding: 0 10px; border-radius: 2px; background: ' + sc.bg + '; font-size: 11px; color: ' + sc.text + '">' +
+            '<span style="width: 6px; height: 6px; border-radius: 2px; background: ' + sc.dot + '; opacity: 0.72"></span>' + label +
+          '</span>' +
+        '</td>' +
+        '<td class="text-center" style="padding: 12px 0">' + actionHtml + '</td>' +
+      '</tr>';
+  }
+
+  if (data.length === 0) {
+    html = '<tr style="border-top: 1px solid color-mix(in srgb, var(--border) 74%, transparent)">' +
+           '<td colspan="6" style="padding: 48px 0; text-align: center; color: var(--muted-foreground); font-size: 12px">暂无匹配的盲区记录</td>' +
+           '</tr>';
+  }
+
+  tbody.innerHTML = html;
+
+  /* update filter count */
+  document.getElementById('filter-result-count').textContent = '共 ' + data.length + ' 条记录';
+
+  /* refresh lucide icons in action buttons if any */
+  if (window.lucide) lucide.createIcons();
+}
+
+function updateStats() {
+  var total    = blindSpots.length;
+  var open     = blindSpots.filter(function(x){ return x.status === 'open'; }).length;
+  var resolved = blindSpots.filter(function(x){ return x.status === 'resolved'; }).length;
+  var ignored  = blindSpots.filter(function(x){ return x.status === 'ignored'; }).length;
+
+  document.querySelector('#stat-total .mt-1').textContent    = total;
+  document.querySelector('#stat-open .mt-1').textContent      = open;
+  document.querySelector('#stat-resolved .mt-1').textContent  = resolved;
+  document.querySelector('#stat-ignored .mt-1').textContent   = ignored;
+}
+
+function escapeHtml(str) {
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Filter Events
+   ═══════════════════════════════════════════════════════ */
+document.getElementById('filter-status').addEventListener('change', renderTable);
+document.getElementById('filter-search').addEventListener('input', renderTable);
+
+/* ═══════════════════════════════════════════════════════
+   FAQ Modal
+   ═══════════════════════════════════════════════════════ */
+function openFaqModal(id) {
+  var item = blindSpots.find(function(x){ return x.id === id; });
+  if (!item) return;
+
+  document.getElementById('faq-blindspot-id').value       = item.id;
+  document.getElementById('faq-blindspot-question').textContent = item.question;
+  document.getElementById('faq-question-input').value     = item.question;
+  document.getElementById('faq-answer-textarea').value    = '';
+  document.getElementById('faq-category-select').value    = '';
+
+  var overlay = document.getElementById('faq-modal-overlay');
+  var panel   = document.getElementById('faq-modal-panel');
+  overlay.style.display = 'flex';
+  /* re-trigger animations */
+  overlay.classList.remove('modal-overlay-enter');
+  panel.classList.remove('modal-panel-enter');
+  void overlay.offsetWidth; /* force reflow */
+  overlay.classList.add('modal-overlay-enter');
+  panel.classList.add('modal-panel-enter');
+
+  document.body.style.overflow = 'hidden';
+}
+
+function closeFaqModal() {
+  document.getElementById('faq-modal-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+/* ESC to close */
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && document.getElementById('faq-modal-overlay').style.display === 'flex') {
+    closeFaqModal();
+  }
+});
+
+/* ═══════════════════════════════════════════════════════
+   Submit FAQ
+   ═══════════════════════════════════════════════════════ */
+function submitFaq() {
+  var id       = parseInt(document.getElementById('faq-blindspot-id').value, 10);
+  var question = (document.getElementById('faq-question-input').value || '').trim();
+  var answer   = (document.getElementById('faq-answer-textarea').value || '').trim();
+  var category = document.getElementById('faq-category-select').value;
+
+  if (!question) { showToast('请输入FAQ问题标题', 'error'); return; }
+  if (!answer)   { showToast('请输入FAQ答案内容', 'error'); return; }
+  if (!category)  { showToast('请选择FAQ分类',     'error'); return; }
+
+  /* Simulate POST /api/admin/blind-spots/{id}/resolve-with-faq */
+  var item = blindSpots.find(function(x){ return x.id === id; });
+  if (item) {
+    item.status = 'resolved';
+  }
+
+  /* refresh */
+  updateStats();
+  renderTable();
+  closeFaqModal();
+  showToast('FAQ已成功补充，盲区"' + question + '"已标记为已解决', 'success');
+}
+
+/* ═══════════════════════════════════════════════════════
+   Toast
+   ═══════════════════════════════════════════════════════ */
+function showToast(message, type) {
+  var container = document.getElementById('toast-container');
+  var toast     = document.createElement('div');
+
+  var bg, border, text;
+  if (type === 'error') {
+    bg     = 'var(--destructive)';
+    border = 'var(--destructive)';
+    text   = 'var(--destructive-foreground)';
+  } else {
+    bg     = 'var(--primary)';
+    border = 'var(--primary)';
+    text   = 'var(--primary-foreground)';
+  }
+
+  toast.style.cssText =
+    'min-height: 44px; padding: 0 16px; display: flex; align-items: center; gap: 10px; border-radius: 2px; border: 1px solid ' + border + '; background: ' + bg + '; color: ' + text + '; font-family: var(--font-sans); font-size: 12px; font-weight: 500; box-shadow: var(--shadow-lg); pointer-events: auto; cursor: default; max-width: 340px';
+  toast.classList.add('toast-enter');
+
+  var iconName = type === 'error' ? 'alert-circle' : 'check-circle';
+  toast.innerHTML = '<i data-lucide="' + iconName + '" style="width: 15px; height: 15px; flex-shrink: 0"></i><span>' + escapeHtml(message) + '</span>';
+
+  container.appendChild(toast);
+  if (window.lucide) lucide.createIcons({ attrs: { style: 'width:18px;height:18px;flex-shrink:0' } });
+
+  /* auto-dismiss after 3.5s */
+  setTimeout(function() {
+    toast.classList.remove('toast-enter');
+    toast.classList.add('toast-exit');
+    toast.addEventListener('animationend', function() {
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
+    });
+  }, 3500);
+
+  /* click to dismiss immediately */
+  toast.addEventListener('click', function() {
+    toast.classList.remove('toast-enter');
+    toast.classList.add('toast-exit');
+    toast.addEventListener('animationend', function() {
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
+    });
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   Sidebar Navigation Hover
+   ═══════════════════════════════════════════════════════ */
+(function(){
+  var navItems = document.querySelectorAll('[data-nav-key]');
+  function applyActive(item, isActive) {
+    if (isActive) {
+      item.style.background = 'color-mix(in srgb, var(--sidebar-accent-foreground) 10%, transparent)';
+      item.style.borderColor = 'color-mix(in srgb, var(--sidebar-border) 28%, transparent)';
+      item.style.color = 'var(--sidebar-accent-foreground)';
+      var icon = item.querySelector('i');
+      if (icon) icon.style.background = 'color-mix(in srgb, var(--sidebar-accent-foreground) 12%, transparent)';
+    } else {
+      item.style.background = 'transparent';
+      item.style.borderColor = 'transparent';
+      item.style.color = 'color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent)';
+      var icon = item.querySelector('i');
+      if (icon) icon.style.background = 'color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)';
+    }
+  }
+  navItems.forEach(function(item) {
+    var isActive = item.getAttribute('data-active') === 'true';
+    applyActive(item, isActive);
+    item.addEventListener('mouseenter', function() {
+      if (item.getAttribute('data-active') !== 'true') {
+        item.style.background = 'color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)';
+        item.style.color = 'var(--sidebar-accent-foreground)';
+      }
+    });
+    item.addEventListener('mouseleave', function() {
+      applyActive(item, item.getAttribute('data-active') === 'true');
+    });
+  });
+})();
+</script>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   Initial Render
+   ═══════════════════════════════════════════════════════ */
+renderTable();
+updateStats();
+</script>
+
+<script>lucide.createIcons();</script>
+</body>
+</html>

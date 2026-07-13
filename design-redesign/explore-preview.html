@@ -1,0 +1,2105 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>景点探索 · 第一版拉取预览</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    font-family: "Noto Serif SC","STKaiti","KaiTi","STSong",ui-serif,serif;
+    overflow: hidden;
+  }
+
+  /* ══════════════ 页面基底 ══════════════ */
+  .tourist-page {
+    position: relative;
+    width: 100%; height: 100vh; height: 100dvh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    background: #1a1612;
+    color: #f0ece5;
+  }
+
+  /* ══════════════ ① 背景层 ══════════════ */
+  .scenic-bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+  .scenic-bg-img {
+    position: absolute; inset: 0;
+    background: url('assets/bg-alt.jpg') center/cover no-repeat;
+    filter: blur(6px) saturate(0.5) brightness(0.45);
+    transform: scale(1.06);
+  }
+  .scenic-bg-overlay {
+    position: absolute; inset: 0;
+    background: rgba(20,16,10,0.65);
+  }
+
+  /* ══════════════ ② 顶栏 ══════════════ */
+  .back-btn {
+    position: absolute;
+    top: 32px; left: 32px;
+    z-index: 25;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 14px 28px;
+    border: 1px solid rgba(255,250,242,0.13);
+    border-radius: 8px;
+    background: rgba(23,18,14,0.85);
+    color: rgba(232,228,219,0.55);
+    font-family: inherit; font-size: 20px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    outline: none;
+  }
+  .back-btn:hover {
+    border-color: rgba(255,255,255,0.22);
+    background: rgba(20,18,12,0.92);
+    color: rgba(232,228,219,0.85);
+  }
+  .back-arrow { display: inline-block; transition: transform 0.3s ease; }
+  .back-btn:hover .back-arrow { transform: translateX(-3px); }
+  .back-btn:focus-visible { outline: 2px solid #d9a441; outline-offset: 3px; }
+
+  .top-right {
+    position: absolute;
+    top: 32px; right: 32px;
+    z-index: 20;
+    display: flex; flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+  }
+  .top-brand {
+    color: rgba(232,228,219,0.88);
+    font-family: "STKaiti","KaiTi","STSong",serif;
+    font-size: clamp(24px, 2.8vw, 40px);
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    line-height: 1.2;
+  }
+  .top-status-row {
+    display: flex; flex-direction: column; gap: 5px;
+  }
+  .status-item {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 16px; font-weight: 400;
+    letter-spacing: 0.06em;
+    color: rgba(232,228,219,0.55);
+    font-family: system-ui, sans-serif;
+  }
+  .status-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 1px solid rgba(255,250,242,0.16);
+  }
+  .status-dot--ready  { background: #d9a441; }
+  .status-dot--warm   { background: #e8a840; animation: dot-pulse 1.6s ease-in-out infinite; }
+  .status-dot--live   { background: #5ec9a4; }
+  .status-dot--weather { background: #6bb8e8; }
+  @keyframes dot-pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.4 } }
+
+  /* ══════════════ ③ 主舞台: 三栏 Grid ══════════════ */
+  .tourist-stage {
+    position: relative; z-index: 10;
+    flex: 1; min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(160px, 340px) 1fr minmax(160px, 340px);
+    gap: 12px;
+    align-items: stretch;
+    padding: 20px 20px 0;
+    margin-top: 0;
+  }
+
+  /* ── 左侧对话卡片 (绝对定位) ── */
+  .side-card {
+    position: absolute;
+    left: 50px; bottom: 108px;
+    z-index: 15;
+    width: 480px; height: 520px;
+    background: rgba(23,18,14,0.88);
+    border: 1px solid rgba(255,250,242,0.11);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .side-card-head {
+    flex-shrink: 0;
+    position: relative;
+  }
+  .side-card-tabs {
+    display: flex;
+  }
+  .side-card-tab {
+    flex: 1;
+    padding: 7px 0;
+    border: none;
+    background: transparent;
+    color: rgba(232,228,219,0.35);
+    font-family: inherit; font-size: 20px;
+    font-weight: 600; letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: color 0.25s ease;
+    position: relative;
+  }
+  .side-card-tab.active {
+    color: rgba(232,228,219,0.75);
+  }
+  .side-card-tab.active::after {
+    content: "";
+    position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 24px; height: 2px;
+    border-radius: 1px;
+    background: #d9a441;
+  }
+  .side-card-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 10px 12px;
+    display: flex; flex-direction: column;
+    gap: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(232,228,219,0.15) transparent;
+  }
+  .side-card-body.hidden { display: none; }
+  .side-card-body::-webkit-scrollbar {
+    width: 4px;
+  }
+  .side-card-body::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .side-card-body::-webkit-scrollbar-thumb {
+    background: rgba(232,228,219,0.15);
+    border-radius: 2px;
+  }
+  .side-card-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(217,164,65,0.25);
+  }
+
+  /* 消息气泡 */
+  .msg-item {
+    display: flex; flex-direction: column;
+    max-width: 100%;
+  }
+  .msg-item.user {
+    align-items: flex-end;
+  }
+  .msg-item.assistant {
+    align-items: flex-start;
+  }
+  .msg-bubble {
+    max-width: 90%;
+    padding: 9px 14px;
+    border-radius: 10px;
+    font-size: 18px; line-height: 1.55;
+    letter-spacing: 0.03em;
+    word-break: break-word;
+  }
+  .msg-item.user .msg-bubble {
+    background: rgba(217,164,65,0.12);
+    border: none;
+    color: rgba(232,228,219,0.9);
+    border-bottom-right-radius: 4px;
+  }
+  .msg-item.assistant .msg-bubble {
+    background: rgba(232,228,219,0.05);
+    border: none;
+    color: rgba(232,228,219,0.85);
+    border-bottom-left-radius: 4px;
+  }
+  /* 折叠态：问题收到回复后缩为一行 */
+  .msg-item.user.collapsed .msg-bubble {
+    max-height: 22px; overflow: hidden;
+    white-space: nowrap; text-overflow: ellipsis;
+    opacity: 0.45; font-size: 11px;
+    padding: 3px 9px; border-radius: 6px;
+    border-bottom-right-radius: 2px;
+  }
+
+  /* 来源引用标注 */
+  .source-ref {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: rgba(217,164,65,0.22);
+    color: #d9a441; font-size: 9px; font-weight: 700;
+    font-family: system-ui, sans-serif;
+    cursor: pointer; vertical-align: middle; margin: 0 2px;
+    transition: background 0.2s ease;
+  }
+  .source-ref:hover { background: rgba(217,164,65,0.45); }
+
+  /* 资料来源列表 */
+  .source-list {
+    list-style: none; padding: 0; margin: 0;
+    display: grid; gap: 8px;
+  }
+  .source-item {
+    padding: 10px;
+    border: 1px solid rgba(232,228,219,0.08);
+    border-radius: 8px;
+    background: rgba(232,228,219,0.04);
+    transition: border-color 0.3s ease, background 0.3s ease;
+  }
+  .source-item.highlight {
+    border-color: rgba(217,164,65,0.5);
+    background: rgba(217,164,65,0.08);
+  }
+  .source-card {
+    padding: 10px;
+    border: 1px solid rgba(232,228,219,0.08);
+    border-radius: 8px;
+    background: rgba(232,228,219,0.04);
+    transition: border-color 0.3s ease, background 0.3s ease;
+  }
+  .source-card.highlight {
+    border-color: rgba(217,164,65,0.5);
+    background: rgba(217,164,65,0.08);
+  }
+  .source-item h4, .source-card h4 {
+    display: flex; align-items: center; gap: 6px;
+    margin: 0 0 5px;
+    color: rgba(232,228,219,0.85); font-size: 12px; font-weight: 600;
+  }
+  .source-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: rgba(217,164,65,0.2);
+    color: #d9a441; font-size: 10px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .source-item p, .source-card p {
+    margin: 0 0 3px;
+    color: rgba(232,228,219,0.5); font-size: 11px; line-height: 1.5;
+  }
+  .source-meta {
+    color: rgba(232,228,219,0.25); font-size: 10px;
+  }
+
+  /* AI回复状态 —— 温和边框脉冲替代发光 */
+  .side-card.speaking {
+    border-color: rgba(217,164,65,0.35);
+    transition: border-color 0.6s ease;
+  }
+
+  /* ══════════════ ④ 右侧探索工具卡片 (绝对定位, 2x2 大卡) ══════════════ */
+  .right-card {
+    position: absolute;
+    right: 36px; top: 186px; bottom: 108px;
+    z-index: 15;
+    width: 450px; height: auto;    background: rgba(23,18,14,0.88);
+    border: 1px solid rgba(255,250,242,0.11);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .right-card-head {
+    flex-shrink: 0;
+    position: relative;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(232,228,219,0.06);
+    color: rgba(232,228,219,0.5);
+    font-family: "STKaiti","KaiTi",serif;
+    font-size: 12px; font-weight: 600;
+    letter-spacing: 0.06em;
+  }
+  .right-card-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 10px 12px;
+    display: flex; flex-direction: column;
+    gap: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(232,228,219,0.15) transparent;
+  }
+  .right-card-body::-webkit-scrollbar { width: 4px; }
+  .right-card-body::-webkit-scrollbar-track { background: transparent; }
+  .right-card-body::-webkit-scrollbar-thumb { background: rgba(232,228,219,0.15); border-radius: 2px; }
+  .right-card-body::-webkit-scrollbar-thumb:hover { background: rgba(217,164,65,0.25); }
+
+  /* ── 一级：2×2 大卡片网格 ── */
+  .service-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 8px;
+    flex: 1;
+  }
+  /* 大探索卡片 */
+  .explore-card {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 8px;
+    padding: 14px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(232,228,219,0.10);
+    background: rgba(232,228,219,0.03);
+    cursor: pointer;
+    text-align: center;
+    min-height: 0;
+    transition: all 0.3s ease;
+    outline: none;
+    position: relative;
+    overflow: hidden;
+  }
+  .explore-card:hover {
+    border-color: rgba(217,164,65,0.35);
+    background: rgba(217,164,65,0.06);
+  }
+  .explore-card:active { transform: scale(0.96); }
+  .explore-card:focus-visible { outline: 2px solid #d9a441; outline-offset: 2px; }
+
+  .explore-card-icon {
+    width: 50px; height: 50px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    flex-shrink: 0;
+    transition: transform 0.3s ease;
+  }
+  .explore-card:hover .explore-card-icon { transform: scale(1.1); }
+
+  .explore-card--scenic .explore-card-icon { background: rgba(217,164,65,0.15); color: #d9a441; }
+  .explore-card--area   .explore-card-icon { background: rgba(94,201,164,0.15);  color: #5ec9a4; }
+  .explore-card--type   .explore-card-icon { background: rgba(107,184,232,0.15); color: #6bb8e8; }
+  .explore-card--photo  .explore-card-icon { background: rgba(232,168,64,0.15);  color: #e8a840; }
+
+  .explore-card-title {
+    font-family: "STKaiti","KaiTi","STSong",serif;
+    font-size: 20px; font-weight: 600;
+    color: rgba(232,228,219,0.82);
+    letter-spacing: 0.05em;
+    line-height: 1.3;
+  }
+  .explore-card-desc {
+    font-size: 14px; font-weight: 400;
+    color: rgba(232,228,219,0.3);
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+    font-family: system-ui, sans-serif;
+  }
+
+  /* 保留旧 service-btn / service-sub 作为隐藏兼容（不再显示） */
+  .service-btn { display: none; }
+  .service-sub { display: none; }
+
+  /* ══════════════ 二级+三级子导航 ══════════════ */
+  /* 三级页面（景点列表）—— 复用 scenic-card 样式 */
+  .level3-view {
+    display: none;
+    flex: 1; min-height: 0;
+    flex-direction: column;
+  }
+  .level3-view.open { display: flex; }
+
+  /* 子导航卡片：区域/类型选择 (2x2 or stacked) */
+  .sub-nav-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 4px 8px;
+    flex: 1;
+    align-content: start;
+  }
+  .sub-nav-card {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 6px;
+    padding: 12px 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(232,228,219,0.10);
+    background: rgba(232,228,219,0.03);
+    cursor: pointer;
+    text-align: center;
+    min-height: 72px;
+    transition: all 0.3s ease;
+    outline: none;
+  }
+  .sub-nav-card:hover {
+    border-color: rgba(217,164,65,0.35);
+    background: rgba(217,164,65,0.06);
+  }
+  .sub-nav-card:active { transform: scale(0.96); }
+  .sub-nav-card:focus-visible { outline: 2px solid #d9a441; outline-offset: 2px; }
+
+  .sub-nav-card-icon {
+    font-size: 22px; line-height: 1;
+  }
+  .sub-nav-card-title {
+    font-family: "STKaiti","KaiTi","STSong",serif;
+    font-size: 13px; font-weight: 600;
+    color: rgba(232,228,219,0.82);
+    letter-spacing: 0.05em;
+    line-height: 1.2;
+  }
+  .sub-nav-card-count {
+    font-size: 9px; font-weight: 400;
+    color: rgba(232,228,219,0.3);
+    letter-spacing: 0.04em;
+    font-family: system-ui, sans-serif;
+  }
+
+  /* ══════════════ 二级页面：景点卡片 ══════════════ */
+  .level1-view {
+    display: flex; flex: 1; min-height: 0; flex-direction: column;
+  }
+  .level1-view.hidden { display: none; }
+  .level2-view {
+    display: none;
+    flex: 1; min-height: 0;
+    flex-direction: column;
+  }
+  .level2-view.open { display: flex; }
+  .l2-back-row {
+    flex-shrink: 0;
+    padding: 0 12px 8px;
+  }
+  .l2-back-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 0;
+    border: none; background: transparent;
+    color: rgba(232,228,219,0.4);
+    font-family: inherit; font-size: 16px; cursor: pointer;
+    transition: color 0.25s ease;
+  }
+  .l2-back-btn:hover { color: #d9a441; }
+  .l2-back-arrow { font-size: 18px; transition: transform 0.3s ease; }
+  .l2-back-btn:hover .l2-back-arrow { transform: translateX(-2px); }
+
+  .l2-scroll {
+    flex: 1; min-height: 0;
+    overflow-y: auto; padding: 0 12px 8px;
+    display: flex; flex-direction: column; gap: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(232,228,219,0.1) transparent;
+  }
+  .l2-scroll::-webkit-scrollbar { width: 3px; }
+  .l2-scroll::-webkit-scrollbar-thumb { background: rgba(232,228,219,0.1); border-radius: 2px; }
+  .l2-scroll::-webkit-scrollbar-track { background: transparent; }
+
+  /* ── 景点卡片（带图片缩略图）── */
+  .scenic-card {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px;
+    border: 1px solid rgba(232,228,219,0.10);
+    border-radius: 8px;
+    background: rgba(232,228,219,0.03);
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  .scenic-card:hover {
+    border-color: rgba(217,164,65,0.35);
+    background: rgba(217,164,65,0.06);
+  }
+  .scenic-card:active { transform: scale(0.97); }
+
+  .scenic-card-img {
+    width: 58px; height: 58px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    border: 1px solid rgba(217,164,65,0.25);
+    background: rgba(232,228,219,0.04);
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .scenic-card-img img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .scenic-card-img-placeholder {
+    color: rgba(217,164,65,0.25);
+    font-size: 12px;
+    font-weight: 600;
+    font-family: system-ui, sans-serif;
+    letter-spacing: 0.03em;
+  }
+
+  .scenic-card-info {
+    flex: 1; min-width: 0;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .scenic-card-info h4 {
+    margin: 0;
+    color: rgba(232,228,219,0.82); font-size: 13px; font-weight: 600;
+    letter-spacing: 0.04em;
+    line-height: 1.3;
+  }
+  .scenic-card-info p {
+    margin: 0; color: rgba(232,228,219,0.33);
+    font-size: 10px; line-height: 1.4;
+    letter-spacing: 0.03em;
+  }
+
+  /* 景区分区标题 */
+  .scenic-section-divider {
+    padding: 6px 0 2px;
+    font-family: "STKaiti","KaiTi",serif;
+    font-size: 11px; font-weight: 600;
+    color: rgba(217,164,65,0.45);
+    letter-spacing: 0.06em;
+    text-align: center;
+    border-bottom: 1px solid rgba(217,164,65,0.10);
+    margin-bottom: 2px;
+  }
+
+  /* ══════════════ 拍照识景 二级页面 ══════════════ */
+  .photo-l2 {
+    display: none;
+    flex: 1; min-height: 0;
+    flex-direction: column;
+  }
+  .photo-l2.open { display: flex; }
+
+  /* 拍照主按钮区域 */
+  .photo-capture-area {
+    flex-shrink: 0;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 10px;
+    padding: 16px 0 10px;
+  }
+  .photo-capture-btn {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    border: 2px solid rgba(232,168,64,0.4);
+    background: rgba(232,168,64,0.12);
+    color: #e8a840;
+    font-size: 28px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.3s ease;
+    outline: none;
+  }
+  .photo-capture-btn:hover {
+    border-color: rgba(232,168,64,0.7);
+    background: rgba(232,168,64,0.22);
+  }
+  .photo-capture-btn:active { transform: scale(0.92); }
+  .photo-capture-btn:focus-visible { outline: 2px solid #e8a840; outline-offset: 3px; }
+
+  .photo-capture-label {
+    color: rgba(232,228,219,0.5);
+    font-size: 12px; font-weight: 400;
+    letter-spacing: 0.04em;
+    font-family: "STKaiti","KaiTi",serif;
+  }
+
+  /* 识别结果卡片 */
+  .photo-result {
+    display: none;
+    flex-shrink: 0;
+    margin: 0 8px 8px;
+    padding: 10px;
+    border: 1px solid rgba(94,201,164,0.25);
+    border-radius: 8px;
+    background: rgba(94,201,164,0.06);
+  }
+  .photo-result.show { display: block; }
+  .photo-result-head {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 8px;
+  }
+  .photo-result-icon {
+    width: 36px; height: 36px;
+    border-radius: 6px;
+    background: rgba(94,201,164,0.15);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .photo-result-info { flex: 1; min-width: 0; }
+  .photo-result-info h4 {
+    margin: 0 0 2px;
+    font-size: 13px; font-weight: 600;
+    color: #5ec9a4;
+    letter-spacing: 0.04em;
+  }
+  .photo-result-info span {
+    font-size: 10px; color: rgba(232,228,219,0.3);
+    letter-spacing: 0.03em;
+  }
+  .photo-result-detail {
+    font-size: 11px; color: rgba(232,228,219,0.55);
+    line-height: 1.5; letter-spacing: 0.03em;
+  }
+
+  /* 分享区域 */
+  .share-section {
+    flex-shrink: 0;
+    margin: 0 8px 8px;
+    padding: 10px;
+    border: 1px solid rgba(232,228,219,0.08);
+    border-radius: 8px;
+    background: rgba(232,228,219,0.03);
+  }
+  .share-section-label {
+    font-size: 11px; font-weight: 600;
+    color: rgba(232,228,219,0.4);
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+    font-family: "STKaiti","KaiTi",serif;
+  }
+  .share-actions {
+    display: flex; gap: 6px;
+    flex-wrap: wrap;
+  }
+  .share-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 6px 12px;
+    border: 1px solid rgba(232,228,219,0.12);
+    border-radius: 8px;
+    background: rgba(232,228,219,0.04);
+    color: rgba(232,228,219,0.6);
+    font-family: inherit; font-size: 11px;
+    font-weight: 500; letter-spacing: 0.03em;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    outline: none;
+  }
+  .share-btn:hover {
+    border-color: rgba(217,164,65,0.3);
+    background: rgba(217,164,65,0.08);
+    color: #d9a441;
+  }
+  .share-btn:active { transform: scale(0.95); }
+  .share-btn:focus-visible { outline: 2px solid #d9a441; outline-offset: 2px; }
+  .share-btn-icon { font-size: 14px; flex-shrink: 0; }
+
+  /* 拍照提示引导 */
+  .photo-guide {
+    flex: 1; min-height: 0;
+    overflow-y: auto;
+    padding: 0 8px 8px;
+    display: flex; flex-direction: column; gap: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(232,228,219,0.1) transparent;
+  }
+  .photo-guide::-webkit-scrollbar { width: 3px; }
+  .photo-guide::-webkit-scrollbar-thumb { background: rgba(232,228,219,0.1); border-radius: 2px; }
+  .photo-guide::-webkit-scrollbar-track { background: transparent; }
+  .photo-guide-tip {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 8px;
+    border: 1px solid rgba(232,228,219,0.06);
+    border-radius: 6px;
+    background: rgba(232,228,219,0.02);
+    font-size: 10px; color: rgba(232,228,219,0.35);
+    letter-spacing: 0.03em;
+    line-height: 1.4;
+  }
+  .photo-guide-tip-icon {
+    font-size: 14px; flex-shrink: 0; opacity: 0.6;
+  }
+
+  /* ══════════════ ⑤ 中央: 数字人区域 ══════════════ */
+  .chat-center {
+    grid-column: 2; grid-row: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    position: relative; z-index: 2;
+    width: 100%; height: 100%;
+    min-height: 0;
+  }
+  .center-caption {
+    margin-bottom: 12px; text-align: center;
+    display: flex; align-items: baseline; justify-content: center; gap: 12px;
+  }
+  .center-caption .caption-kicker { font-size: 30px;
+    color: #f8e7bb;
+    font-family: "STKaiti","KaiTi",serif;
+    font-size: 17px; font-weight: 700; letter-spacing: 0.1em;
+  }
+  .caption-weather {
+    color: rgba(232,228,219,0.28);
+    font-family: system-ui, sans-serif;
+    font-size: 11px; font-weight: 400;
+    letter-spacing: 0.04em;
+  }
+  .caption-kicker {
+    color: #f8e7bb;
+    font-family: "STKaiti","KaiTi",serif;
+    font-size: 17px; font-weight: 700; letter-spacing: 0.1em;
+  }
+
+  /* 顶部居中：数字人名称条 */
+  .top-caption {
+    position: absolute;
+    top: 16px; left: 50%; transform: translateX(-50%);
+    z-index: 20;
+    display: flex; align-items: baseline; justify-content: center; gap: 12px;
+    white-space: nowrap;
+  }
+  .top-caption .caption-kicker { font-size: 30px; }
+  .top-caption .caption-weather { color: rgba(232,228,219,0.25); }
+
+  /* 景区人数状态灯 */
+  .crowd-indicator {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,250,242,0.11);
+    background: rgba(23,18,14,0.6);
+    font-size: 17px; font-weight: 400;
+    color: rgba(232,228,219,0.7);
+    letter-spacing: 0.04em;
+    font-family: system-ui, sans-serif;
+    white-space: nowrap;
+    cursor: default;
+  }
+  .crowd-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 1px solid rgba(255,250,242,0.16);
+  }
+  .crowd-indicator[data-level="green"] .crowd-dot { background: #5ec9a4; }
+  .crowd-indicator[data-level="yellow"] .crowd-dot { background: #e8a840; }
+  .crowd-indicator[data-level="red"] .crowd-dot { background: #d45a3a; }
+
+  .avatar-stage {
+    position: relative; z-index: 2;
+    width: min(640px, 44vw);
+    height: min(600px, 82vh);
+    margin: 0 auto;
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent;
+  }
+  .avatar-stage iframe {
+    border: none; width: 100%; height: 100%;
+  }
+  .avatar-stage::after {
+    content: "";
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 140px;
+    z-index: 3;
+    pointer-events: none;
+    background: linear-gradient(to bottom, transparent 0%, #1a1612 100%);
+  }
+
+  /* ══════════════ ⑥ 底部输入栏 (绝对定位) ══════════════ */
+  .input-row {
+    position: absolute;
+    bottom: 36px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    width: min(700px, 88vw);
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+  }
+  .input-field {
+    flex: 1;
+    height: 64px;
+    padding: 0 24px;
+    border: 1px solid rgba(232,228,219,0.12);
+    border-radius: 10px;
+    background: rgba(23,18,14,0.78);
+    color: rgba(232,228,219,0.82);
+    font-family: inherit; font-size: 22px;
+    letter-spacing: 0.03em;
+    outline: none;
+    transition: border-color 0.25s ease;
+  }
+  .input-field::placeholder {
+    color: rgba(232,228,219,0.25);
+  }
+  .input-field:focus {
+    border-color: rgba(217,164,65,0.35);
+  }
+  .voice-btn {
+    flex-shrink: 0;
+    width: auto;
+    height: 64px;
+    padding: 0 32px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(217,164,65,0.3);
+    border-radius: 999px;
+    background: rgba(217,164,65,0.14);
+    color: #d9a441;
+    font-family: inherit;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    outline: none;
+    white-space: nowrap;
+  }
+  .voice-btn:hover {
+    border-color: rgba(217,164,65,0.5);
+    background: rgba(217,164,65,0.22);
+  }
+  .voice-btn:active { transform: scale(0.95); }
+  .voice-btn:focus-visible { outline: 2px solid #d9a441; outline-offset: 3px; }
+  .voice-btn.recording {
+    border-color: #b84c3b;
+    background: rgba(184,76,59,0.22);
+    color: #f0c0c0;
+    animation: voice-active 1.2s ease-in-out infinite;
+  }
+  @keyframes voice-active {
+    0%,100% { box-shadow: 0 0 0 0 rgba(184,76,59,0.3); }
+    50%     { box-shadow: 0 0 0 8px rgba(184,76,59,0); }
+  }
+
+  .image-btn {
+    flex-shrink: 0;
+    width: auto;
+    height: 64px;
+    padding: 0 24px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(94,201,164,0.25);
+    border-radius: 999px;
+    background: rgba(94,201,164,0.1);
+    color: #5ec9a4;
+    font-family: inherit;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    outline: none;
+    white-space: nowrap;
+  }
+  .image-btn:hover {
+    border-color: rgba(94,201,164,0.55);
+    background: rgba(94,201,164,0.22);
+  }
+  .image-btn:active { transform: scale(0.95); }
+  .image-btn:focus-visible { outline: 2px solid #5ec9a4; outline-offset: 3px; }
+
+  /* ══════════════ ⑦ 移动端快捷入口 (桌面隐藏) ══════════════ */
+  .mobile-chips-row {
+    display: none;
+    flex-wrap: wrap; gap: 8px;
+    padding: 8px 12px;
+    justify-content: center;
+    z-index: 12;
+  }
+  .mobile-chip {
+    padding: 6px 14px;
+    border: 1px solid rgba(232,228,219,0.12);
+    border-radius: 999px;
+    background: rgba(13,12,10,0.6);
+    color: rgba(232,228,219,0.55);
+    font-family: inherit; font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+  }
+  .mobile-chip:hover {
+    border-color: rgba(217,164,65,0.35);
+    color: rgba(232,228,219,0.8);
+    background: rgba(217,164,65,0.08);
+  }
+
+  /* ══════════════ 响应式 ══════════════ */
+  @media (max-width: 1300px) {
+    .side-card { width: 380px; height: 450px; }
+    .side-card { width: 380px; height: 450px; left: 20px; bottom: 116px; }
+    .right-card { width: 350px; height: 450px; right: 20px; bottom: 108px; 
+    .tourist-stage {
+      grid-template-columns: minmax(160px, 280px) 1fr minmax(160px, 260px);
+      padding: 0 12px;
+    }
+    .avatar-stage {
+      width: min(420px, 36vw);
+      height: min(440px, 62vh);
+    }
+    .input-row {
+      width: min(480px, 86vw);
+    }
+    .explore-card { padding: 8px 5px; gap: 4px; }
+    .explore-card-icon { width: 28px; height: 28px; font-size: 14px; }
+    .explore-card-title { font-size: 12px; }
+    .explore-card-desc { font-size: 8px; }
+    .scenic-card-img { width: 48px; height: 48px; }
+    .photo-capture-btn { width: 60px; height: 60px; font-size: 24px; }
+  }
+
+  @media (max-width: 720px) {
+    .tourist-page {
+      overflow-y: auto;
+      padding: 14px 10px;
+    }
+    .back-btn {
+      top: 14px; left: 14px;
+      padding: 7px 16px;
+      font-size: 12px;
+    }
+    .top-right {
+      top: 14px; right: 14px;
+    }
+    .top-brand {
+      font-size: 16px;
+    }
+    .tourist-stage {
+      display: flex; flex-direction: column;
+      padding: 0;
+      margin-top: 50px;
+      gap: 12px;
+      flex: none;
+    }
+    .side-card {
+      position: relative;
+      left: auto; bottom: auto;
+      width: 100%; height: auto;
+      min-height: 200px;
+      order: 3;
+    }
+    .right-card {
+      position: relative;
+      right: auto; bottom: auto;
+      width: 100%; height: auto;
+      min-height: 320px;
+      order: 4;
+    }
+    .chat-center {
+      order: 1;
+      padding: 0;
+    }
+    .avatar-stage {
+      width: min(52vh, 78vw);
+      height: min(360px, 52vh);
+    }
+    .input-row {
+      position: relative;
+      bottom: auto; left: auto; transform: none;
+      width: calc(100% - 16px);
+      gap: 8px;
+      order: 2;
+    }
+    .mobile-chips-row {
+      display: flex;
+    }
+    .voice-btn,
+    .image-btn {
+      padding: 0 14px; height: 44px; font-size: 13px;
+    }
+    /* 窄屏字体放大 */
+    .msg-bubble     { font-size: 18px !important; padding: 12px 16px !important; }
+    .explore-card-title { font-size: 18px !important; }
+    .explore-card-desc  { font-size: 12px !important; }
+    .side-card-tab   { font-size: 16px !important; }
+    .scenic-card-info h4  { font-size: 20px !important; }
+    .scenic-card-info p   { font-size: 16px !important; }
+    .scenic-card-img { width: 56px; height: 56px; }
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@500;600;700&display=swap" rel="stylesheet">
+
+<style>body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}</style>
+</head>
+<body>
+
+<div class="tourist-page">
+  <!-- ① 背景层 -->
+  <div class="scenic-bg" aria-hidden="true">
+    <div class="scenic-bg-img"></div>
+    <div class="scenic-bg-overlay"></div>
+  </div>
+
+  <!-- ② 顶栏 -->
+  <button class="back-btn" onclick="history.back()">
+    <span class="back-arrow">←</span> 返回
+  </button>
+  <div class="top-right">
+    <span class="top-brand">灵山智慧导览</span>
+    <div class="top-status-row">
+      <span class="status-item"><span class="status-dot status-dot--live"></span> 人物模型 · 可使用</span>
+      <span class="status-item"><span class="status-dot status-dot--ready"></span> 语音模型 · 已就绪</span>
+      <span class="status-item"><span class="status-dot status-dot--warm"></span> 语音识别 · 准备中</span>
+    </div>
+  </div>
+
+  <!-- 顶部居中：数字人名称 -->
+  <div class="top-caption">
+    <span class="crowd-indicator" data-level="green" id="crowdStatus" aria-label="景区拥挤度">
+      <span class="crowd-dot"></span>
+      <span class="crowd-label">畅行</span>
+    </span>
+    <span class="caption-kicker">清岚 · 景点探索助手</span>
+    <span class="caption-weather">☀️ 22°C 晴</span>
+  </div>
+
+  <!-- ③ 主舞台: 三栏Grid + 绝对定位卡片 -->
+  <div class="tourist-stage">
+
+    <!-- 中央: 数字人 -->
+    <div class="chat-center">
+      <div class="avatar-stage">
+        <iframe src="http://localhost:9999/avatar-3d-preview.html"></iframe>
+      </div>
+    </div>
+
+    <!-- 输入栏 (DOM 位置: chat-center 之后, right-card 之前; 桌面绝对定位) -->
+    <div class="input-row">
+      <button class="image-btn" aria-label="拍照识景">拍照识景</button>
+      <input
+        type="text"
+        class="input-field"
+        placeholder="想了解哪个景点？告诉清岚…"
+        aria-label="输入问题"
+      />
+      <button class="voice-btn" aria-label="语音提问">语音提问</button>
+    </div>
+
+    <!-- 左侧对话卡片 (绝对定位浮动) -->
+    <div class="side-card" id="chatCard">
+      <div class="side-card-head">
+        <div class="side-card-tabs">
+          <button class="side-card-tab active" data-tab="chat">对话</button>
+          <button class="side-card-tab" data-tab="source">来源</button>
+        </div>
+      </div>
+      <div class="side-card-body" id="chatCardBody"></div>
+      <div class="side-card-body hidden" id="sourceCardBody">
+        <ul class="source-list" id="sourceList"></ul>
+      </div>
+    </div>
+
+    <!-- 右侧探索工具卡片 (绝对定位浮动, 2x2 大卡) -->
+    <div class="right-card">
+      <div class="right-card-head">探索工具</div>
+      <div class="right-card-body">
+        <!-- 一级页面：2×2 大卡片 -->
+        <div class="level1-view" id="level1View">
+          <div class="service-grid" id="serviceGrid">
+            <!-- 景点推荐 大卡 -->
+            <button class="explore-card explore-card--scenic" data-service="scenic" id="btnScenic" aria-label="景点推荐">
+              <span class="explore-card-icon">🏯</span>
+              <span class="explore-card-title">景点推荐</span>
+              <span class="explore-card-desc">22处景点 · 含拈花湾</span>
+            </button>
+            <!-- 按区域浏览 大卡 -->
+            <button class="explore-card explore-card--area" data-service="area" aria-label="按区域浏览">
+              <span class="explore-card-icon">📍</span>
+              <span class="explore-card-title">按区域浏览</span>
+              <span class="explore-card-desc">大佛·灌浴·梵宫</span>
+            </button>
+            <!-- 按类型浏览 大卡 -->
+            <button class="explore-card explore-card--type" data-service="type" aria-label="按类型浏览">
+              <span class="explore-card-icon">🏛️</span>
+              <span class="explore-card-title">按类型浏览</span>
+              <span class="explore-card-desc">建筑·景观·展馆</span>
+            </button>
+            <!-- 拍照识景 大卡 -->
+            <button class="explore-card explore-card--photo" data-service="explore_photo" aria-label="拍照识景">
+              <span class="explore-card-icon">📸</span>
+              <span class="explore-card-title">拍照识景</span>
+              <span class="explore-card-desc">AR识别·扫码讲解</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 二级页面：景点卡片列表（带图片缩略图） -->
+        <div class="level2-view" id="level2View">
+          <div class="l2-back-row">
+            <button class="l2-back-btn" id="btnBackLevel2">
+              <span class="l2-back-arrow">←</span> 返回探索工具
+            </button>
+          </div>
+          <div class="l2-scroll" id="l2Scroll">
+            <div class="scenic-card" data-scenic="灵山大照壁">
+              <div class="scenic-card-img">
+                <img src="assets/灵山大照壁.png" alt="灵山大照壁" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>灵山大照壁</h4>
+                <p>长39.8m高7m · 华夏第一壁 · 赵朴初题字</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="五明桥">
+              <div class="scenic-card-img">
+                <img src="assets/五明桥.png" alt="五明桥" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>五明桥</h4>
+                <p>5座汉白玉石拱桥 · 佛教五明智慧 · 横跨香水海</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="佛足坛">
+              <div class="scenic-card-img">
+                <img src="assets/佛足坛.png" alt="佛足坛" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>佛足坛</h4>
+                <p>巨型青铜佛足印 · 32种吉祥图案 · 朝圣核心</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="五智门">
+              <div class="scenic-card-img">
+                <img src="assets/五智门.png" alt="五智门" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>五智门</h4>
+                <p>高16.8m石牌坊 · 五方五佛六度 · 核心区入口</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="菩提大道">
+              <div class="scenic-card-img">
+                <img src="assets/菩提大道.png" alt="菩提大道" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>菩提大道</h4>
+                <p>长约250m林荫道 · 印度菩提树 · 禅意拱廊</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="九龙灌浴">
+              <div class="scenic-card-img">
+                <img src="assets/九龙灌浴.png" alt="九龙灌浴" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>九龙灌浴</h4>
+                <p>总高27.2m · 鎏金太子佛 · 定时音乐表演</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="降魔浮雕">
+              <div class="scenic-card-img">
+                <img src="assets/降魔浮雕.png" alt="降魔浮雕" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>降魔浮雕</h4>
+                <p>长26m巨型石雕 · 佛陀成道历程 · 艺术珍品</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="阿育王柱">
+              <div class="scenic-card-img">
+                <img src="assets/阿育王柱.png" alt="阿育王柱" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>阿育王柱</h4>
+                <p>高16.9m重180吨 · 整块花岗岩 · 佛法东传标志</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="百子戏弥勒">
+              <div class="scenic-card-img">
+                <img src="assets/百子戏弥勒.png" alt="百子戏弥勒" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>百子戏弥勒</h4>
+                <p>高3m青铜群雕 · 百子嬉戏 · 多子多福</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="祥符禅寺">
+              <div class="scenic-card-img">
+                <img src="assets/祥符禅寺.png" alt="祥符禅寺" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>祥符禅寺</h4>
+                <p>唐代古刹30亩 · 千年禅宗祖庭 · 江南第一钟</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="灵山大佛">
+              <div class="scenic-card-img">
+                <img src="assets/灵山大佛.png" alt="灵山大佛" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>灵山大佛</h4>
+                <p>高88m · 世界最高青铜立佛 · 灵山地标</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="佛教文化博览馆">
+              <div class="scenic-card-img">
+                <img src="assets/佛教文化博览馆.png" alt="佛教文化博览馆" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>佛教文化博览馆</h4>
+                <p>10000㎡三层展馆 · 万佛殿 · 免费参观</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="灵山梵宫">
+              <div class="scenic-card-img">
+                <img src="assets/灵山梵宫.png" alt="灵山梵宫" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>灵山梵宫</h4>
+                <p>72000㎡ · 东方卢浮宫 · 非遗艺术殿堂</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="五印坛城">
+              <div class="scenic-card-img">
+                <img src="assets/五印坛城.png" alt="五印坛城" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>五印坛城</h4>
+                <p>高30m藏式碉楼 · 小布达拉宫 · 转经祈福</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="曼飞龙塔">
+              <div class="scenic-card-img">
+                <img src="assets/曼飞龙塔.png" alt="曼飞龙塔" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>曼飞龙塔</h4>
+                <p>主塔16.9m · 傣族佛教风格 · 南传佛教建筑</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="无尽意斋">
+              <div class="scenic-card-img">
+                <img src="assets/无尽意斋.png" alt="无尽意斋" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>无尽意斋</h4>
+                <p>600㎡四合院 · 禅意书斋 · 文化雅集</p>
+              </div>
+            </div>
+
+            <!-- 拈花湾景区 -->
+            <div class="scenic-section-divider">拈花湾 · 禅意小镇</div>
+            <div class="scenic-card" data-scenic="拈花广场">
+              <div class="scenic-card-img">
+                <img src="assets/拈花广场.png" alt="拈花广场" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>拈花广场</h4>
+                <p>8000㎡ · 拈花微笑雕塑 · 大型活动场地</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="梵天花海">
+              <div class="scenic-card-img">
+                <img src="assets/梵天花海.png" alt="梵天花海" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>梵天花海</h4>
+                <p>30000㎡四季花田 · 格桑花海 · 禅意打卡</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="香月花街">
+              <div class="scenic-card-img">
+                <img src="assets/香月花街.png" alt="香月花街" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>香月花街</h4>
+                <p>长800m禅意街区 · 手作店铺 · 夜游胜地</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="拈花堂">
+              <div class="scenic-card-img">
+                <img src="assets/拈花堂.png" alt="拈花堂" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>拈花堂</h4>
+                <p>1200㎡禅堂 · 禅修体验 · 抄经品茗</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="五灯湖">
+              <div class="scenic-card-img">
+                <img src="assets/五灯湖.png" alt="五灯湖" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>五灯湖</h4>
+                <p>5000㎡景观湖 · 水上栈道 · 水幕表演</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="鹿鸣谷">
+              <div class="scenic-card-img">
+                <img src="assets/鹿鸣谷.png" alt="鹿鸣谷" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>鹿鸣谷</h4>
+                <p>20000㎡山林 · 天然氧吧 · 徒步静修</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 二级页面：拍照识景 -->
+        <div class="photo-l2" id="photoLevel2View">
+          <div class="l2-back-row">
+            <button class="l2-back-btn" id="btnBackPhotoL2">
+              <span class="l2-back-arrow">←</span> 返回探索工具
+            </button>
+          </div>
+          <!-- 拍照按钮区域 -->
+          <div class="photo-capture-area">
+            <button class="photo-capture-btn" id="btnCapture" aria-label="拍照识图">
+              📷
+            </button>
+            <span class="photo-capture-label">点击拍照，AI 识景</span>
+          </div>
+          <!-- 识别结果卡片（初始隐藏） -->
+          <div class="photo-result" id="photoResult">
+            <div class="photo-result-head">
+              <div class="photo-result-icon">🏯</div>
+              <div class="photo-result-info">
+                <h4 id="photoResultTitle">识别中...</h4>
+                <span id="photoResultConfidence">置信度 --%</span>
+              </div>
+            </div>
+            <p class="photo-result-detail" id="photoResultDetail"></p>
+          </div>
+          <!-- 分享区域 -->
+          <div class="share-section">
+            <div class="share-section-label">一键分享</div>
+            <div class="share-actions">
+              <button class="share-btn" data-share="copy" aria-label="复制链接">
+                <span class="share-btn-icon">🔗</span> 复制链接
+              </button>
+              <button class="share-btn" data-share="wechat" aria-label="分享到微信">
+                <span class="share-btn-icon">💬</span> 微信好友
+              </button>
+              <button class="share-btn" data-share="moments" aria-label="分享到朋友圈">
+                <span class="share-btn-icon">🟢</span> 朋友圈
+              </button>
+              <button class="share-btn" data-share="save" aria-label="保存图片">
+                <span class="share-btn-icon">💾</span> 保存图片
+              </button>
+            </div>
+          </div>
+          <!-- 使用提示 -->
+          <div class="photo-guide">
+            <div class="photo-guide-tip">
+              <span class="photo-guide-tip-icon">💡</span>对准景点建筑或标识牌，拍摄效果最佳
+            </div>
+            <div class="photo-guide-tip">
+              <span class="photo-guide-tip-icon">🌤️</span>光线充足时识别准确率更高
+            </div>
+            <div class="photo-guide-tip">
+              <span class="photo-guide-tip-icon">📖</span>识别成功后将自动展示景点讲解
+            </div>
+          </div>
+        </div>
+                <!-- 二级页面：按区域浏览 -->
+        <div class="level2-view" id="areaLevel2View">
+          <div class="l2-back-row">
+            <button class="l2-back-btn" id="btnBackArea">
+              <span class="l2-back-arrow">←</span> 返回探索工具
+            </button>
+          </div>
+          <div class="sub-nav-grid">
+            <button class="sub-nav-card sub-nav-card--scenic" data-zone="入口区" aria-label="入口区">
+              <span class="sub-nav-card-icon">🚪</span>
+              <span class="sub-nav-card-title">入口区</span>
+              <span class="sub-nav-card-count">4处景点</span>
+            </button>
+            <button class="sub-nav-card sub-nav-card--area" data-zone="中轴区" aria-label="中轴区">
+              <span class="sub-nav-card-icon">🏛️</span>
+              <span class="sub-nav-card-title">中轴区</span>
+              <span class="sub-nav-card-count">6处景点</span>
+            </button>
+            <button class="sub-nav-card sub-nav-card--type" data-zone="大佛区" aria-label="大佛区">
+              <span class="sub-nav-card-icon">🪷</span>
+              <span class="sub-nav-card-title">大佛区</span>
+              <span class="sub-nav-card-count">2处景点</span>
+            </button>
+            <button class="sub-nav-card sub-nav-card--photo" data-zone="滨湖区" aria-label="滨湖区">
+              <span class="sub-nav-card-icon">🌊</span>
+              <span class="sub-nav-card-title">滨湖区</span>
+              <span class="sub-nav-card-count">4处景点</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Level3: 区域 → 入口区 -->
+        <div class="level3-view" id="zoneLevel3_入口区">
+          <div class="l2-back-row">
+            <button class="l2-back-btn zone-back-btn" aria-label="返回区域列表">
+              <span class="l2-back-arrow">←</span> 返回区域列表
+            </button>
+          </div>
+          <div class="l2-scroll">
+            <div class="scenic-card" data-scenic="灵山大照壁">
+              <div class="scenic-card-img">
+                <img src="assets/灵山大照壁.png" alt="灵山大照壁" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>灵山大照壁</h4>
+                <p>华夏第一壁 · 赵朴初题字</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="五明桥">
+              <div class="scenic-card-img">
+                <img src="assets/五明桥.png" alt="五明桥" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>五明桥</h4>
+                <p>5座汉白玉石拱桥 · 佛教五明智慧</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="佛足坛">
+              <div class="scenic-card-img">
+                <img src="assets/佛足坛.png" alt="佛足坛" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>佛足坛</h4>
+                <p>佛祖脚印复刻 · 32种吉祥图案</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="五智门">
+              <div class="scenic-card-img">
+                <img src="assets/五智门.png" alt="五智门" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>五智门</h4>
+                <p>高16.8m石牌坊 · 核心区入口</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Level3: 区域 → 中轴区 -->
+        <div class="level3-view" id="zoneLevel3_中轴区">
+          <div class="l2-back-row">
+            <button class="l2-back-btn zone-back-btn" aria-label="返回区域列表">
+              <span class="l2-back-arrow">←</span> 返回区域列表
+            </button>
+          </div>
+          <div class="l2-scroll">
+            <div class="scenic-card" data-scenic="菩提大道">
+              <div class="scenic-card-img">
+                <img src="assets/菩提大道.png" alt="菩提大道" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>菩提大道</h4>
+                <p>250m菩提林荫道 · 禅意拱廊</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="九龙灌浴">
+              <div class="scenic-card-img">
+                <img src="assets/九龙灌浴.png" alt="九龙灌浴" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>九龙灌浴</h4>
+                <p>27.2m动态群雕 · 定时音乐表演</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="降魔浮雕">
+              <div class="scenic-card-img">
+                <img src="assets/降魔浮雕.png" alt="降魔浮雕" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>降魔浮雕</h4>
+                <p>26m巨型石雕 · 佛陀成道</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="阿育王柱">
+              <div class="scenic-card-img">
+                <img src="assets/阿育王柱.png" alt="阿育王柱" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>阿育王柱</h4>
+                <p>16.9m花岗岩石柱 · 佛法东传</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="百子戏弥勒">
+              <div class="scenic-card-img">
+                <img src="assets/百子戏弥勒.png" alt="百子戏弥勒" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>百子戏弥勒</h4>
+                <p>青铜群雕 · 多子多福</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="祥符禅寺">
+              <div class="scenic-card-img">
+                <img src="assets/祥符禅寺.png" alt="祥符禅寺" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>祥符禅寺</h4>
+                <p>唐代古刹 · 千年禅宗祖庭</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Level3: 区域 → 大佛区 -->
+        <div class="level3-view" id="zoneLevel3_大佛区">
+          <div class="l2-back-row">
+            <button class="l2-back-btn zone-back-btn" aria-label="返回区域列表">
+              <span class="l2-back-arrow">←</span> 返回区域列表
+            </button>
+          </div>
+          <div class="l2-scroll">
+            <div class="scenic-card" data-scenic="灵山大佛">
+              <div class="scenic-card-img">
+                <img src="assets/灵山大佛.png" alt="灵山大佛" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>灵山大佛</h4>
+                <p>88m世界最高青铜立佛</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="佛教文化博览馆">
+              <div class="scenic-card-img">
+                <img src="assets/佛教文化博览馆.png" alt="佛教文化博览馆" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>佛教文化博览馆</h4>
+                <p>10000㎡三层展馆 · 万佛殿</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Level3: 区域 → 滨湖区 -->
+        <div class="level3-view" id="zoneLevel3_滨湖区">
+          <div class="l2-back-row">
+            <button class="l2-back-btn zone-back-btn" aria-label="返回区域列表">
+              <span class="l2-back-arrow">←</span> 返回区域列表
+            </button>
+          </div>
+          <div class="l2-scroll">
+            <div class="scenic-card" data-scenic="灵山梵宫">
+              <div class="scenic-card-img">
+                <img src="assets/灵山梵宫.png" alt="灵山梵宫" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>灵山梵宫</h4>
+                <p>72000㎡ · 东方卢浮宫</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="五印坛城">
+              <div class="scenic-card-img">
+                <img src="assets/五印坛城.png" alt="五印坛城" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>五印坛城</h4>
+                <p>藏式碉楼 · 小布达拉宫</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="曼飞龙塔">
+              <div class="scenic-card-img">
+                <img src="assets/曼飞龙塔.png" alt="曼飞龙塔" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>曼飞龙塔</h4>
+                <p>傣族佛塔 · 南传佛教建筑</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="无尽意斋">
+              <div class="scenic-card-img">
+                <img src="assets/无尽意斋.png" alt="无尽意斋" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>无尽意斋</h4>
+                <p>赵朴初故居复刻 · 四合院</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- 二级页面：按类型浏览 -->
+        <div class="level2-view" id="typeLevel2View">
+          <div class="l2-back-row">
+            <button class="l2-back-btn" id="btnBackType">
+              <span class="l2-back-arrow">←</span> 返回探索工具
+            </button>
+          </div>
+          <div class="sub-nav-grid">
+            <button class="sub-nav-card sub-nav-card--scenic" data-type="佛教建筑" aria-label="佛教建筑">
+              <span class="sub-nav-card-icon">🏯</span>
+              <span class="sub-nav-card-title">佛教建筑</span>
+              <span class="sub-nav-card-count">9处景点</span>
+            </button>
+            <button class="sub-nav-card sub-nav-card--area" data-type="广场景观" aria-label="广场景观">
+              <span class="sub-nav-card-icon">⛲</span>
+              <span class="sub-nav-card-title">广场景观</span>
+              <span class="sub-nav-card-count">6处景点</span>
+            </button>
+            <button class="sub-nav-card sub-nav-card--type" data-type="文化展馆" aria-label="文化展馆">
+              <span class="sub-nav-card-icon">📚</span>
+              <span class="sub-nav-card-title">文化展馆</span>
+              <span class="sub-nav-card-count">1处景点</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Level3: 类型 → 佛教建筑 -->
+        <div class="level3-view" id="typeLevel3_佛教建筑">
+          <div class="l2-back-row">
+            <button class="l2-back-btn type-back-btn" aria-label="返回类型列表">
+              <span class="l2-back-arrow">←</span> 返回类型列表
+            </button>
+          </div>
+          <div class="l2-scroll">
+            <div class="scenic-card" data-scenic="灵山大照壁">
+              <div class="scenic-card-img">
+                <img src="assets/灵山大照壁.png" alt="灵山大照壁" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>灵山大照壁</h4>
+                <p>华夏第一壁 · 赵朴初题字</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="五明桥">
+              <div class="scenic-card-img">
+                <img src="assets/五明桥.png" alt="五明桥" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>五明桥</h4>
+                <p>5座汉白玉石拱桥 · 佛教五明智慧</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="五智门">
+              <div class="scenic-card-img">
+                <img src="assets/五智门.png" alt="五智门" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>五智门</h4>
+                <p>高16.8m石牌坊 · 核心区入口</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="祥符禅寺">
+              <div class="scenic-card-img">
+                <img src="assets/祥符禅寺.png" alt="祥符禅寺" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>祥符禅寺</h4>
+                <p>唐代古刹 · 千年禅宗祖庭</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="灵山大佛">
+              <div class="scenic-card-img">
+                <img src="assets/灵山大佛.png" alt="灵山大佛" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>灵山大佛</h4>
+                <p>88m世界最高青铜立佛</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="灵山梵宫">
+              <div class="scenic-card-img">
+                <img src="assets/灵山梵宫.png" alt="灵山梵宫" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>灵山梵宫</h4>
+                <p>72000㎡ · 东方卢浮宫</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="五印坛城">
+              <div class="scenic-card-img">
+                <img src="assets/五印坛城.png" alt="五印坛城" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>五印坛城</h4>
+                <p>藏式碉楼 · 小布达拉宫</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="曼飞龙塔">
+              <div class="scenic-card-img">
+                <img src="assets/曼飞龙塔.png" alt="曼飞龙塔" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>曼飞龙塔</h4>
+                <p>傣族佛塔 · 南传佛教建筑</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="无尽意斋">
+              <div class="scenic-card-img">
+                <img src="assets/无尽意斋.png" alt="无尽意斋" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>无尽意斋</h4>
+                <p>赵朴初故居复刻 · 四合院</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Level3: 类型 → 广场景观 -->
+        <div class="level3-view" id="typeLevel3_广场景观">
+          <div class="l2-back-row">
+            <button class="l2-back-btn type-back-btn" aria-label="返回类型列表">
+              <span class="l2-back-arrow">←</span> 返回类型列表
+            </button>
+          </div>
+          <div class="l2-scroll">
+            <div class="scenic-card" data-scenic="佛足坛">
+              <div class="scenic-card-img">
+                <img src="assets/佛足坛.png" alt="佛足坛" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>佛足坛</h4>
+                <p>佛祖脚印复刻 · 32种吉祥图案</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="菩提大道">
+              <div class="scenic-card-img">
+                <img src="assets/菩提大道.png" alt="菩提大道" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>菩提大道</h4>
+                <p>250m菩提林荫道 · 禅意拱廊</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="九龙灌浴">
+              <div class="scenic-card-img">
+                <img src="assets/九龙灌浴.png" alt="九龙灌浴" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>九龙灌浴</h4>
+                <p>27.2m动态群雕 · 定时音乐表演</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="降魔浮雕">
+              <div class="scenic-card-img">
+                <img src="assets/降魔浮雕.png" alt="降魔浮雕" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>降魔浮雕</h4>
+                <p>26m巨型石雕 · 佛陀成道</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="阿育王柱">
+              <div class="scenic-card-img">
+                <img src="assets/阿育王柱.png" alt="阿育王柱" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>阿育王柱</h4>
+                <p>16.9m花岗岩石柱 · 佛法东传</p>
+              </div>
+            </div>
+            <div class="scenic-card" data-scenic="百子戏弥勒">
+              <div class="scenic-card-img">
+                <img src="assets/百子戏弥勒.png" alt="百子戏弥勒" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>百子戏弥勒</h4>
+                <p>青铜群雕 · 多子多福</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Level3: 类型 → 文化展馆 -->
+        <div class="level3-view" id="typeLevel3_文化展馆">
+          <div class="l2-back-row">
+            <button class="l2-back-btn type-back-btn" aria-label="返回类型列表">
+              <span class="l2-back-arrow">←</span> 返回类型列表
+            </button>
+          </div>
+          <div class="l2-scroll">
+            <div class="scenic-card" data-scenic="佛教文化博览馆">
+              <div class="scenic-card-img">
+                <img src="assets/佛教文化博览馆.png" alt="佛教文化博览馆" loading="lazy" />
+              </div>
+              <div class="scenic-card-info">
+                <h4>佛教文化博览馆</h4>
+                <p>10000㎡三层展馆 · 万佛殿</p>
+              </div>
+            </div>
+          </div>
+        </div
+      </div>
+    </div>
+  </div>
+>
+                <!-- ⑦ 移动端快捷入口 -->
+  <div class="mobile-chips-row">
+    <button class="mobile-chip">热门景点</button>
+    <button class="mobile-chip">按区域浏览</button>
+    <button class="mobile-chip">拍照识景</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  const chatBody    = document.getElementById('chatCardBody');
+  const sourceBody  = document.getElementById('sourceCardBody');
+  const sourceList  = document.getElementById('sourceList');
+  const tabs        = document.querySelectorAll('.side-card-tab');
+
+  /* ── 资料来源 ── */
+  const sources = [
+    { title: '灵山大照壁', text: '长39.8米高7米"华夏第一壁"，赵朴初先生亲笔题写"灵山胜境"四字，背面刻有《小灵山》诗作。', meta: '景区官方资料 · 第1页' },
+    { title: '九龙灌浴', text: '总高27.2米大型音乐动态群雕，太子佛高7.2米重12吨，九条飞龙同时喷出水柱沐浴太子佛，再现佛祖诞生场景。', meta: '景区官方资料 · 第5页' },
+    { title: '灵山大佛', text: '通高88米（佛体79米+莲花座9米），耗铜725吨，由2000块铸铜面板拼接而成，目前世界最高青铜立佛像。', meta: '景区官方资料 · 第8页' },
+    { title: '灵山梵宫', text: '建筑面积72000㎡，五座莲花圣塔，内部汇集东阳木雕、琉璃《华藏世界》、星空穹顶等非遗艺术，被誉为"东方卢浮宫"。', meta: '景区官方资料 · 第10页' },
+    { title: '五印坛城', text: '五层重檐藏式碉楼，高约30米，白墙红边金顶，环绕108个纯铜转经筒，有"小布达拉宫"之称。', meta: '景区官方资料 · 第12页' },
+  ];
+
+  /* ── 对话（景点探索场景）── */
+  const messages = [
+    { role: 'user',      text: '从入口开始，帮我介绍一下灵山' },
+    { role: 'assistant', text: '灵山胜境沿中轴线展开，共16处核心景点。从南门入园，首先经过灵山大照壁（"华夏第一壁"）和五明桥（象征佛教五种智慧），接着是佛足坛（佛祖脚印复刻）和五智门（高16.8米石牌坊）。穿过菩提大道后，便抵达九龙灌浴——总高27.2米的动态群雕，每天定时上演"花开见佛"表演。' },
+    { role: 'user',      text: '中段还有哪些不容错过的？' },
+    { role: 'assistant', text: '中轴线中段有降魔浮雕（长26米的巨型石雕，再现佛陀成道历程）、阿育王柱（高16.9米、重180吨的整块花岗岩石柱）和百子戏弥勒（高3米的青铜群雕，寓意多子多福）。之后是千年古刹祥符禅寺（始建于唐贞观年间），寺内有12.8吨重的"江南第一钟"。' },
+    { role: 'user',      text: '终点的大佛和梵宫呢？' },
+    { role: 'assistant', text: '中轴线终点是灵山大佛——高88米的世界最高青铜立佛，登216级台阶可抱佛脚祈福。大佛座基内还有佛教文化博览馆（三层共10000㎡，万佛殿9999尊小佛）。西侧香水海边矗立着灵山梵宫（72000㎡的"东方卢浮宫"）和五印坛城（藏式"小布达拉宫"），隔湖相望，构成佛教三大语系建筑群落。' },
+  ];
+
+  function renderChat() {
+    let html = '';
+    messages.forEach((m, i) => {
+      if (m.role === 'user') {
+        const hasReply = messages[i + 1] && messages[i + 1].role === 'assistant';
+        html += `<div class="msg-item user${hasReply ? ' collapsed' : ''}">
+          <div class="msg-bubble">${m.text}</div>
+        </div>`;
+      } else {
+        html += `<div class="msg-item assistant">
+          <div class="msg-bubble">${m.text}</div>
+        </div>`;
+      }
+    });
+    chatBody.innerHTML = html;
+
+    /* 绑定来源引用点击 */
+    chatBody.querySelectorAll('.source-ref').forEach(el => {
+      el.addEventListener('click', function() {
+        const idx = parseInt(this.dataset.src);
+        switchTab('source');
+        highlightSource(idx);
+      });
+    });
+  }
+
+  function renderSources() {
+    sourceList.innerHTML = sources.map((s, i) => `
+      <li class="source-card" data-src-idx="${i}">
+        <h4><span class="source-num">${i + 1}</span>${s.title}</h4>
+        <p>${s.text}</p>
+        <span class="source-meta">${s.meta}</span>
+      </li>
+    `).join('');
+  }
+
+  function switchTab(name) {
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+    chatBody.classList.toggle('hidden', name !== 'chat');
+    sourceBody.classList.toggle('hidden', name !== 'source');
+  }
+
+  function highlightSource(idx) {
+    renderSources();
+    const card = sourceList.querySelector(`[data-src-idx="${idx}"]`);
+    if (card) {
+      card.classList.add('highlight');
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => card.classList.remove('highlight'), 2500);
+    }
+  }
+
+  tabs.forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+
+  /* ── 探索大卡片点击 ── */
+  document.querySelectorAll('.explore-card').forEach(btn => {
+    btn.addEventListener('click', () => {
+      // 「景点推荐」→ 切换到二级景点列表
+      if (btn.dataset.service === 'scenic') {
+        document.getElementById('level1View').classList.add('hidden');
+        document.getElementById('level2View').classList.add('open');
+        return;
+      }
+      // 「按区域浏览」→ 切换到区域二级页面
+      if (btn.dataset.service === 'area') {
+        document.getElementById('level1View').classList.add('hidden');
+        document.getElementById('areaLevel2View').classList.add('open');
+        return;
+      }
+      // 「按类型浏览」→ 切换到类型二级页面
+      if (btn.dataset.service === 'type') {
+        document.getElementById('level1View').classList.add('hidden');
+        document.getElementById('typeLevel2View').classList.add('open');
+        return;
+      }
+      // 「拍照识景」→ 切换到拍照二级页面
+      if (btn.dataset.service === 'explore_photo') {
+        document.getElementById('level1View').classList.add('hidden');
+        document.getElementById('photoLevel2View').classList.add('open');
+        return;
+      }
+    });
+  });
+
+  /* ── 景区卡片点击 → 触发左侧讲解 + 游览建议 ── */
+  document.querySelectorAll('.scenic-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const name = card.dataset.scenic;
+      // --- Mock：模拟后端返回 ---
+      const mockExplanation = {
+        '灵山大照壁': '照壁采用优质青石精心雕刻，表面打磨光滑，纹理细腻，正面鎏金大字由赵朴初先生题写，笔力遒劲，鎏金工艺让字体在阳光下熠熠生辉。北立面刻有赵老诗作《小灵山》，诗中对比印度灵鹫山与中国小灵山，彰显中华佛教文化的自信与底蕴。照壁两侧与碧波荡漾的太湖交相辉映，构成“湖光山色共一楼”的壮美景观，成为景区入口处最具代表性的打卡景观。',
+        '五明桥': '五座石桥形态规整、气势统一，桥面平整宽阔，桥栏由优质汉白玉打造，质地细腻，上面雕刻着莲花、飞天、神兽等精美佛教图案，线条流畅、栩栩如生。石桥倒映在香水海的碧波之中，如五条洁白玉带横卧水面，意境悠远。佛教认为人类文明的核心可归为五大类，漫步过桥的过程，便是寓意着逐步获得五种智慧、开启禅意觉悟之路的过程。',
+        '佛足坛': '佛足坛由整块青铜精心铸造，采用古法铸造工艺，表面光滑细腻，完美呈现出佛祖脚印的32种吉祥瑞相，每一处纹路都清晰可辨，是佛教徒千百年供奉的神圣遗迹。相传佛祖涅槃前，特意留下双足印并嘱托弟子：“佛足所至，即为佛地”，这对佛足也因此被称为“两足尊”，是佛教文化中“福德圆满、智慧无量”的象征。',
+        '五智门': '五智门由优质汉白玉精雕细琢而成，雕刻工艺精湛绝伦，门柱上雕刻着佛教六度智慧的相关经文，字体工整、苍劲有力；门楣处饰有飞天、神兽、莲花等吉祥图案，造型栩栩如生，尽显佛教艺术的庄严与精美。整座牌坊气势恢宏，矗立在景区中轴线上，与后方的灵山大佛在同一直线上，穿过这道门，便正式从“凡俗之境”踏入“禅意圣地”，开启核心朝圣之旅。',
+        '菩提大道': '菩提大道两侧的菩提树均为从印度引进的正宗树种，树形挺拔、枝叶繁茂，树枝交错缠绕，形成天然的禅意拱廊，遮挡烈日的同时，也增添了静谧的氛围。地面采用特殊防滑材料铺设，平整宽阔，四季保持常绿，行走其上倍感舒适。',
+        '九龙灌浴': '大型音乐动态群雕由莲花铜雕、九条飞龙、八名供养人等核心元素组成，莲花底座由四个大力士造型雕塑托起，底部是圆形大理石水池，池水清澈见底，周围环绕九条形态各异的飞龙和八名供养人雕塑。',
+        '降魔浮雕': '浮雕采用高浮雕与浅浮雕相结合的精湛手法，分层刻画场景，层次感十足。浮雕中央，佛陀端坐于菩提树下，神情坚定、目光如炬，尽显佛法的无畏与庄严；两侧，魔王波旬率领魔女、魔兵，以美色、财富、武力等各种方式诱惑、威胁佛陀，魔女身姿妖娆、魔兵面目狰狞，与佛陀的沉稳无畏形成鲜明对比。',
+        '阿育王柱': '阿育王柱由整块优质花岗岩精心雕刻而成，雕刻工艺精湛，柱身表面打磨光滑，刻有“阿育王柱”四个大字及相关梵文经文，字体工整、苍劲有力，历经多年风雨依旧清晰可辨。柱头雕刻的四头狮子，形态威严、栩栩如生，每头狮子的表情、姿态都各不相同，尽显王者风范。',
+        '百子戏弥勒': '青铜群雕采用优质青铜铸造，经过特殊防腐处理，色泽温润，造型精美。群雕中，弥勒佛呈舒适的卧姿，袒胸露腹，嘴角上扬，笑容憨厚可掬，尽显“大肚能容天下难容之事”的包容气度。',
+        '祥符禅寺': '祥符禅寺布局严谨、错落有致，整体采用仿唐重檐歇山式建筑风格，红墙黛瓦、飞檐翘角，尽显唐代古建的庄严与恢弘。大雄宝殿内供奉着释迦牟尼佛及迦叶、阿难两大弟子，佛像庄严慈祥，香火鼎盛，是信徒礼佛的核心场所；钟楼内悬挂着一口重12.8吨的“祥符禅钟”，钟声浑厚洪亮，响彻整个灵山山谷。',
+        '灵山大佛': '具体位置：祥符禅寺北侧，秦履峰南侧，矗立在景区最高处，是整个灵山胜境的核心地标，可俯瞰整个景区及太湖风光。 建筑/景观参数：佛像高88m（主体高度79m+莲花瓣高度9m），含台基总高101.5m，耗铜量达725吨，由2000块铸铜面板拼接而成， 导览资料补充：灵山大佛：解析佛像手印的佛教含义，216级台阶的文化寓意（1…',
+        '佛教文化博览馆': '佛教文化博览馆设于灵山大佛三层座基内，是灵山博物馆的核心组成部分，整体装修融合佛教元素与现代设计理念，恢弘大气且充满禅意。一层展厅以“五方五佛”与中国佛教四大名山为核心，陈列着数十尊佛像复刻品、历代佛教法器、名山文化卷轴，搭配实景沙盘，直观展现五台山、普陀山等名山的地理格局与宗教地位；二层展厅以时间为轴线，通过图文展板…',
+        '灵山梵宫': '灵山梵宫于2008年建成，凭借其极致的艺术价值与恢弘的建筑规模，被誉为“东方卢浮宫”。建筑外立面以米黄色石材为基底，雕刻着莲花、飞天、经文等佛教元素，五座莲花圣塔矗立其上，塔刹采用鎏金工艺，在阳光下熠熠生辉。',
+        '五印坛城': '五印坛城以西藏拉萨布达拉宫雪村大门为原型设计山门，门楣处雕刻着藏文经文与吉祥八宝图案，气势庄严。整座建筑白墙如练，红边勾勒出建筑轮廓，鎏金铜瓦打造的屋顶在阳光与湖水的映衬下，闪耀着金色光芒，四门的瑞兽雕塑造型生动，各有寓意：马宝象征吉祥如意，孔雀代表智慧光明，共命鸟寓意和睦友爱，象宝象征太平盛世。',
+        '曼飞龙塔': '曼飞龙塔又称“白塔”，是灵山胜境中代表南传佛教文化的核心建筑，完全复刻了云南西双版纳曼飞龙白塔的形制与工艺。主塔矗立在圆形须弥座中央，塔身呈葫芦状，自上而下逐渐收窄，塔刹高耸，鎏金装饰熠熠生辉；八座小塔环绕主塔分布，呈八角形排列，塔身造型与主塔相似，比例协调，形成“众星拱月”的格局。',
+        '无尽意斋': '无尽意斋于2008年建成，完全以赵朴初先生北京西城区的故居为原型复刻建造，一砖一瓦、一草一木都力求还原故居的原貌。建筑为典型的北京四合院格局，青砖灰瓦古朴厚重，木质梁柱雕刻着简洁的吉祥图案，雕花门窗采用榫卯结构，尽显中式建筑的精巧。',
+        '拈花广场': '拈花广场是进入拈花湾禅意小镇的第一站，也是小镇的灵魂节点，整体设计融合中式禅意与日式简约风格，低调而不失雅致。广场中央的“拈花微笑”雕塑是核心景观，雕塑展现佛陀手持莲花、面带温和微笑的模样，身姿挺拔，鎏金表面在阳光下熠熠生辉，细节雕刻精湛，佛陀的衣纹、神态都栩栩如生，传递出宁静祥和的禅意。',
+        '梵天花海': '梵天花海是拈花湾禅意小镇的“自然名片”，整体规划错落有致，根据季节变化种植不同花卉，实现“四季有花、四季有景”。春季格桑花、波斯菊竞相绽放，粉色、白色、紫色的花朵铺满大地，宛如童话世界；夏季硫华菊、百日草盛开，色彩艳丽，生机盎然；秋季波斯菊再次绽放，搭配金黄的芦苇，尽显秋日诗意；冬季虽花卉较少，但步道两侧的绿植依旧翠绿…',
+        '香月花街': '香月花街是拈花湾禅意小镇的“灵魂街巷”，整体建筑风格融合中式禅意与日式町屋特色，白墙黛瓦与木质门窗相映成趣，飞檐翘角上悬挂着中式灯笼，夜间点亮后氛围感十足。街道地面的青石板经过岁月打磨，光滑温润，两侧种植着翠竹、海棠等绿植，搭配小型水景与禅意雕塑，一步一景，处处彰显禅意。',
+        '拈花堂': '拈花堂是拈花湾禅意小镇的“静心之地”，整体建筑低调内敛，隐藏在翠竹、松柏之中，白墙黛瓦与周边绿植相映成趣，营造出“闹中取静”的禅意氛围。堂内装修简洁大气，没有多余的装饰，墙面悬挂着禅意诗句与佛教经文，地面铺设木质地板，干净整洁。',
+        '五灯湖': '五灯湖是拈花湾禅意小镇的“水景核心”，湖面开阔，湖水清澈，湖底的鹅卵石清晰可见，岸边种植着垂柳、翠竹、荷花等绿植，夏季荷花盛开时，荷叶亭亭玉立，荷花娇艳欲滴，尽显江南水乡的柔美与禅意。',
+        '鹿鸣谷': '具体位置：拈花湾小镇西侧，梵天花海北侧，地处山林之间，是小镇内最静谧的自然景观区，远离主客流，山林植被茂密，空气清新。 建筑/景观参数：占地约20000㎡，核心为山林景观，种植着香樟、松柏、翠竹等多种绿植，植被覆盖率达90%以上；谷内设有木质步道，总长约1',
+      };
+
+      const text = mockExplanation[name] || `关于「${name}」的详细介绍将由导游为您呈现。`;
+      // 推入对话
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'msg-item user collapsed';
+      msgDiv.innerHTML = `<div class="msg-bubble">请介绍${name}</div>`;
+      document.getElementById('chatCardBody').appendChild(msgDiv);
+      const replyDiv = document.createElement('div');
+      replyDiv.className = 'msg-item assistant';
+      replyDiv.innerHTML = `<div class="msg-bubble">${text}</div>`;
+      document.getElementById('chatCardBody').appendChild(replyDiv);
+      document.getElementById('chatCardBody').scrollTop = document.getElementById('chatCardBody').scrollHeight;
+      // 状态呼吸光
+      document.getElementById('chatCard').classList.add('speaking');
+
+      // 返回一级页面
+      backToLevel1();
+    });
+  });
+
+  /* ── 返回按钮：二级 → 一级 ── */
+  function closeAllViews() {
+    document.getElementById('level2View').classList.remove('open');
+    document.getElementById('areaLevel2View').classList.remove('open');
+    document.getElementById('typeLevel2View').classList.remove('open');
+    document.getElementById('photoLevel2View').classList.remove('open');
+    // close all level3 views
+    document.querySelectorAll('.level3-view.open').forEach(v => v.classList.remove('open'));
+  }
+
+  function backToLevel1() {
+    closeAllViews();
+    document.getElementById('level1View').classList.remove('hidden');
+  }
+
+  document.getElementById('btnBackLevel2').addEventListener('click', backToLevel1);
+  document.getElementById('btnBackArea').addEventListener('click', backToLevel1);
+  document.getElementById('btnBackType').addEventListener('click', backToLevel1);
+  document.getElementById('btnBackPhotoL2').addEventListener('click', backToLevel1);
+
+  /* ── 三级导航：区域子页 click → 进入 zone L3（隐藏 L2） ── */
+  document.querySelectorAll('.sub-nav-card[data-zone]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const zone = btn.dataset.zone;
+      // 隐藏当前 L2（但不隐藏 level1View 标记，因为已在子页内）
+      document.getElementById('areaLevel2View').classList.remove('open');
+      // 打开 L3
+      document.getElementById('zoneLevel3_' + zone).classList.add('open');
+    });
+  });
+
+  /* ── 三级导航：类型子页 click → 进入 type L3（隐藏 L2） ── */
+  document.querySelectorAll('.sub-nav-card[data-type]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const type = btn.dataset.type;
+      document.getElementById('typeLevel2View').classList.remove('open');
+      document.getElementById('typeLevel3_' + type).classList.add('open');
+    });
+  });
+
+  /* ── 三级返回 → 回到二级子导航 ── */
+  document.querySelectorAll('.zone-back-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      btn.closest('.level3-view').classList.remove('open');
+      document.getElementById('areaLevel2View').classList.add('open');
+    });
+  });
+
+  document.querySelectorAll('.type-back-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      btn.closest('.level3-view').classList.remove('open');
+      document.getElementById('typeLevel2View').classList.add('open');
+    });
+  });
+
+  /* ── 拍照识景：拍照按钮 ── */
+  const btnCapture  = document.getElementById('btnCapture');
+  const photoResult = document.getElementById('photoResult');
+  const resultTitle = document.getElementById('photoResultTitle');
+  const resultConf  = document.getElementById('photoResultConfidence');
+  const resultDetail = document.getElementById('photoResultDetail');
+
+  const mockSpotData = [
+    { name: '灵山大佛',   conf: 97, detail: '灵山大佛通高88米，是目前世界上最高的青铜立佛像，由1560块青铜壁板拼装焊接而成。' },
+    { name: '九龙灌浴',   conf: 94, detail: '九龙灌浴是灵山胜境的大型动态群雕，再现佛祖诞生场景，每天定时表演。' },
+    { name: '灵山梵宫',   conf: 92, detail: '灵山梵宫被誉为"东方卢浮宫"，建筑面积达7万余平方米，融合东西方艺术。' },
+    { name: '降魔浮雕',   conf: 89, detail: '降魔浮雕为大型青铜浮雕壁画，描绘佛祖成道历程，气势恢宏。' },
+    { name: '五印坛城',   conf: 86, detail: '五印坛城为藏传佛教风格建筑，金碧辉煌，展示坛城文化。' },
+  ];
+
+  btnCapture.addEventListener('click', () => {
+    // 模拟识别中
+    btnCapture.style.transform = 'scale(0.92)';
+    btnCapture.style.animation = 'voice-active 0.8s ease-in-out 3';
+    btnCapture.textContent = '🔍';
+    photoResult.classList.add('show');
+    resultTitle.textContent = '正在识别…';
+    resultConf.textContent = 'AI 分析中';
+    resultDetail.textContent = '';
+
+    setTimeout(() => {
+      btnCapture.style.transform = '';
+      btnCapture.style.animation = '';
+      btnCapture.textContent = '📷';
+      // 随机选一个景点
+      const spot = mockSpotData[Math.floor(Math.random() * mockSpotData.length)];
+      resultTitle.textContent = spot.name;
+      resultConf.textContent = `置信度 ${spot.conf}%`;
+      resultDetail.textContent = spot.detail;
+      // 推入左侧对话
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'msg-item user collapsed';
+      msgDiv.innerHTML = `<div class="msg-bubble">📷 拍照识景: ${spot.name}</div>`;
+      document.getElementById('chatCardBody').appendChild(msgDiv);
+      const replyDiv = document.createElement('div');
+      replyDiv.className = 'msg-item assistant';
+      replyDiv.innerHTML = `<div class="msg-bubble">${spot.detail}</div>`;
+      document.getElementById('chatCardBody').appendChild(replyDiv);
+      document.getElementById('chatCardBody').scrollTop = document.getElementById('chatCardBody').scrollHeight;
+      document.getElementById('chatCard').classList.add('speaking');
+    }, 1500);
+  });
+
+  /* ── 拍照识景：分享按钮 ── */
+  document.querySelectorAll('.share-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const type = btn.dataset.share;
+      const spotName = resultTitle.textContent;
+      const spotDetail = resultDetail.textContent;
+      if (!spotName || spotName === '识别中...' || spotName === '正在识别…') {
+        alert('请先拍照识别景点');
+        return;
+      }
+      const shareText = `🏯 灵山智慧导览 — ${spotName}\n${spotDetail}\n—— 来自「清岚」AI导览员`;
+      if (type === 'copy') {
+        navigator.clipboard.writeText(shareText).then(() => {
+          alert('✅ 已复制到剪贴板！');
+        }).catch(() => {
+          alert(shareText);
+        });
+      } else if (type === 'wechat') {
+        alert('请截图后分享到微信好友');
+      } else if (type === 'moments') {
+        alert('请截图后分享到朋友圈');
+      } else if (type === 'save') {
+        alert('请长按截图保存到相册');
+      }
+    });
+  });
+
+  renderChat();
+  renderSources();
+
+  /* ── 状态感知：有AI回复时添加 speaking 呼吸光效 ── */
+  const sideCard = document.getElementById('chatCard');
+  const hasAssistant = messages.some(m => m.role === 'assistant');
+  if (hasAssistant) {
+    sideCard.classList.add('speaking');
+  } else {
+    sideCard.classList.remove('speaking');
+  }
+})();
+</script>
+
+</body>
+</html>

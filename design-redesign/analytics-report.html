@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据大屏</title>
+    <style id="theme-vars">
+:root {
+  /* ── 品牌色：灵山青绿 ── */
+  --brand-50: #f0fdf6;
+  --brand-100: #d7f5e3;
+  --brand-200: #a8e9c0;
+  --brand-300: #6fd89b;
+  --brand-400: #44c07a;
+  --brand-500: #2fa363;
+  --brand-600: #248550;
+  --brand-700: #1c6c42;
+  --brand-800: #185636;
+  --brand-900: #13462d;
+
+  /* ── 金色点缀（取 Codepen 暖金灵感） ── */
+  --gold-300: #e8c876;
+  --gold-400: #d9a441;
+  --gold-500: #c8922c;
+  --gold-600: #8a5d22;
+  --gold-700: #6b4513;
+
+  /* ── 表面色（取 Codepen 暖调） ── */
+  --background: #f6efe4;
+  --muted: #f0e9dc;
+  --card: #fffaf2;
+  --popover: #fffaf2;
+
+  /* ── 文字 ── */
+  --foreground: #241d16;
+  --muted-foreground: #675a4e;
+  --card-foreground: #241d16;
+  --popover-foreground: #241d16;
+  --accent-foreground: #241d16;
+  --secondary-foreground: #fff7eb;
+
+  /* ── 交互 ── */
+  --primary: var(--brand-600);
+  --primary-foreground: #fefefe;
+  --accent: #efe4d3;
+  --input: #e3d9cc;
+  --border: #d4c8b8;
+  --secondary: #241d16;
+  --ring: var(--brand-500);
+
+  /* ── 反馈 ── */
+  --destructive: #c93c3c;
+  --destructive-foreground: #fffaf2;
+
+  /* ── 图表色 ── */
+  --chart-1: #248550;
+  --chart-2: #8faab3;
+  --chart-3: #2fa363;
+  --chart-4: #d9a441;
+  --chart-5: #c47c4a;
+
+  /* ── 侧栏（深色木质调） ── */
+  --sidebar: #ebe3d5;
+  --sidebar-foreground: #241d16;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: #17120e;
+  --sidebar-accent-foreground: #fff7eb;
+  --sidebar-border: #332b23;
+  --sidebar-ring: var(--ring);
+
+  /* ── 兼容别名 ── */
+  --bg-background: var(--background);
+  --bg-card: var(--card);
+  --bg-popover: var(--popover);
+  --bg-muted: var(--muted);
+  --text-foreground: var(--foreground);
+  --text-card-foreground: var(--card-foreground);
+  --text-popover-foreground: var(--popover-foreground);
+  --text-primary-foreground: var(--primary-foreground);
+  --text-secondary-foreground: var(--secondary-foreground);
+  --text-muted-foreground: var(--muted-foreground);
+  --text-accent-foreground: var(--accent-foreground);
+  --text-destructive-foreground: var(--destructive-foreground);
+  --accent-primary: var(--primary);
+  --accent-secondary: var(--secondary);
+  --accent-input: var(--input);
+  --accent-ring: var(--ring);
+  --status-destructive: var(--destructive);
+
+  /* ── 排版 ── */
+  --font-sans: Inter, "Noto Sans SC", ui-sans-serif, sans-serif;
+  --font-serif: "Noto Serif SC", "Cormorant Garamond", ui-serif, serif;
+  --font-mono: "JetBrains Mono", "Roboto Mono", monospace;
+  --tracking-normal: 0em;
+
+  /* ── 圆角 ── */
+  --radius: 12px;
+
+  /* ── 间距 ── */
+  --spacing: 4px;
+
+  /* ── 阴影（只有必要层级，克制使用） ── */
+  --shadow-2xs: 0 1px 2px rgba(23,18,14,0.04);
+  --shadow-xs:  0 1px 3px rgba(23,18,14,0.06);
+  --shadow-sm:  0 2px 6px rgba(23,18,14,0.08);
+  --shadow:     0 3px 12px rgba(23,18,14,0.10);
+  --shadow-md:  0 6px 20px rgba(23,18,14,0.12);
+  --shadow-lg:  0 10px 32px rgba(23,18,14,0.14);
+  --shadow-xl:  0 16px 48px rgba(23,18,14,0.16);
+  --shadow-2xl: 0 24px 64px rgba(23,18,14,0.18);
+
+  /* ── 过渡 ── */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.22s ease;
+}
+
+.dark {
+  /* surface */
+  --background: #1a1612;
+  --muted: #1f1b17;
+  --card: #26221d;
+  --popover: #2c2722;
+
+  /* text */
+  --foreground: #f0ece5;
+  --muted-foreground: #b8b09f;
+  --card-foreground: #f0ece5;
+  --popover-foreground: #f0ece5;
+  --accent-foreground: #f0ece5;
+  --secondary-foreground: #f0ece5;
+
+  /* action */
+  --primary: var(--brand-500);
+  --primary-foreground: #0a1e0f;
+  --accent: #3d342b;
+  --input: #352f28;
+  --border: #342d26;
+  --secondary: #3d342b;
+  --ring: var(--brand-400);
+
+  /* feedback */
+  --destructive: #e85d5d;
+  --destructive-foreground: #faf5f0;
+
+  /* chart */
+  --chart-1: #44c07a;
+  --chart-2: #9bb5c0;
+  --chart-3: #6fd89b;
+  --chart-4: #d9a441;
+  --chart-5: #e8c876;
+
+  /* sidebar */
+  --sidebar: #1f1b17;
+  --sidebar-foreground: #f0ece5;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: #332b23;
+  --sidebar-accent-foreground: #f0ece5;
+  --sidebar-border: #342d26;
+  --sidebar-ring: var(--ring);
+
+  /* compatibility aliases */
+  --bg-background: var(--background);
+  --bg-card: var(--card);
+  --bg-popover: var(--popover);
+  --bg-muted: var(--muted);
+  --text-foreground: var(--foreground);
+  --text-card-foreground: var(--card-foreground);
+  --text-popover-foreground: var(--popover-foreground);
+  --text-primary-foreground: var(--primary-foreground);
+  --text-secondary-foreground: var(--secondary-foreground);
+  --text-muted-foreground: var(--muted-foreground);
+  --text-accent-foreground: var(--accent-foreground);
+  --text-destructive-foreground: var(--destructive-foreground);
+  --accent-primary: var(--primary);
+  --accent-secondary: var(--secondary);
+  --accent-input: var(--input);
+  --accent-ring: var(--ring);
+  --status-destructive: var(--destructive);
+  --shadow-2xs: 0 1px 2px rgba(0,0,0,0.18);
+  --shadow-2xl: 0 24px 64px rgba(0,0,0,0.35);
+}
+
+    </style>
+    <style id="component-vars">
+/* ═══════════════════════════════════════════════════════════════
+   components.css — Design System Component Definitions
+   Auto-extracted from preview/component-*.html
+   DO NOT EDIT MANUALLY — regenerate via extract-components-css.mjs
+   ═══════════════════════════════════════════════════════════════ */
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+    <style type="text/tailwindcss">
+  
+  @layer base {
+    body { background: var(--bg-background); color: var(--text-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+    body { font-feature-settings: "cv02","cv03","cv04","cv11"; -webkit-font-smoothing: antialiased; }
+  }
+
+  /* ── 卡片悬浮升空 ── */
+  .stat-card {
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+  }
+  .stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* ── 图表卡片 ── */
+  .chart-card {
+    transition: box-shadow var(--transition-base);
+  }
+  .chart-card:hover {
+    box-shadow: var(--shadow);
+  }
+
+  /* ── 表格行悬浮 ── */
+  tbody tr {
+    transition: background var(--transition-fast);
+  }
+  tbody tr:hover {
+    background: color-mix(in srgb, var(--primary) 6%, transparent);
+  }
+
+  /* ── 按钮通用点击反馈 ── */
+  button:active {
+    transform: scale(0.97);
+    transition: transform 0.1s ease;
+  }
+
+  /* ── 状态徽章动画 ── */
+  @keyframes pulse-dot {
+    0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--chart-3) 30%, transparent); }
+    50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--chart-3) 0%, transparent); }
+  }
+  .status-pulse {
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  /* ── 页面淡入 ── */
+  .page-fade-in {
+    animation: fadeIn 0.4s ease both;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main>
+<div class="flex h-screen" style="font-family: var(--font-sans)">
+  <aside class="flex flex-col shrink-0" style="width: 240px; border-right: 1px solid var(--sidebar-border); background: linear-gradient(180deg, #1e1813 0%, #1a1510 40%, #15110d 100%); position: relative; overflow: hidden">
+    <!-- 侧栏装饰纹理 -->
+    <div style="position: absolute; inset: 0; pointer-events: none; opacity: 0.06; background: radial-gradient(ellipse 70% 30% at 50% 0%, var(--gold-400) 0%, transparent 70%), radial-gradient(ellipse 50% 40% at 80% 100%, var(--primary) 0%, transparent 60%)"></div>
+    <div style="position: relative; z-index: 1; padding: 18px 16px 12px; border-bottom: 1px solid color-mix(in srgb, var(--gold-400) 12%, transparent); margin-bottom: 4px; text-align: center">
+      <div style="font-size: 10px; font-family: var(--font-sans); font-weight: 500; color: var(--gold-400); letter-spacing: 0.28em; margin-bottom: 8px; opacity: 0.7">AI DIGITAL GUIDE</div>
+      <div style="font-size: 22px; font-family: var(--font-serif); font-weight: 700; color: var(--gold-400); letter-spacing: 0.08em; line-height: 1.1; text-shadow: 0 1px 2px rgba(0,0,0,0.4)">智能数字人导游</div>
+      <div style="font-size: 10px; color: var(--sidebar-foreground); opacity: 0.4; margin-top: 6px; letter-spacing: 0.18em">管 理 后 台</div>
+    </div>
+    <div class="px-4 pt-1 pb-2" style="font-family: var(--font-mono); font-weight: 700; font-size: 10px; letter-spacing: 0.12em; color: var(--sidebar-foreground); opacity: 0.42;">导航</div>
+    <nav class="flex flex-col gap-1 px-3">
+      <a href="#" data-nav-key="dashboard" data-dom-id="nav-dashboard" class="flex items-center gap-3 py-2 px-2.5 w-full no-underline" style="border-radius: 2px; border: 1px solid transparent; color: color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent); font-size: 13px; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease">
+        <i data-lucide="layout-dashboard" class="flex items-center justify-center shrink-0" style="width: 22px; height: 22px; font-size: 13px; border-radius: 2px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)"></i>
+        <span class="truncate">总览</span>
+      </a>
+      <a href="#" data-nav-key="knowledge" data-dom-id="nav-knowledge" class="flex items-center gap-3 py-2 px-2.5 w-full no-underline" style="border-radius: 2px; border: 1px solid transparent; color: color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent); font-size: 13px; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease">
+        <i data-lucide="book-open" class="flex items-center justify-center shrink-0" style="width: 22px; height: 22px; font-size: 13px; border-radius: 2px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)"></i>
+        <span class="truncate">知识管理</span>
+      </a>
+      <a href="#" data-nav-key="analytics" data-dom-id="nav-analytics" data-active="true" class="flex items-center gap-3 py-2 px-2.5 w-full no-underline" style="border-radius: 2px; border: 1px solid color-mix(in srgb, var(--sidebar-border) 28%, transparent); background: color-mix(in srgb, var(--sidebar-accent-foreground) 10%, transparent); color: var(--sidebar-accent-foreground); font-size: 13px; transition: background 0.16s ease, border-color 0.16s ease">
+        <i data-lucide="bar-chart-3" class="flex items-center justify-center shrink-0" style="width: 22px; height: 22px; font-size: 13px; border-radius: 2px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 12%, transparent)"></i>
+        <span class="truncate">数据大屏</span>
+      </a>
+      <a href="blind-spot-manage.html" data-nav-key="blindspot" class="flex items-center gap-3 py-2 px-2.5 w-full no-underline" style="border-radius: 2px; border: 1px solid transparent; color: color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent); font-size: 13px; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease">
+        <i data-lucide="eye-off" class="flex items-center justify-center shrink-0" style="width: 22px; height: 22px; font-size: 13px; border-radius: 2px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)"></i>
+        <span class="truncate">知识盲区</span>
+      </a>
+      <a href="avatar-config.html" data-nav-key="avatar" class="flex items-center gap-3 py-2 px-2.5 w-full no-underline" style="border-radius: 2px; border: 1px solid transparent; color: color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent); font-size: 13px; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease">
+        <i data-lucide="user-circle" class="flex items-center justify-center shrink-0" style="width: 22px; height: 22px; font-size: 13px; border-radius: 2px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)"></i>
+        <span class="truncate">数字人配置</span>
+      </a>
+      <a href="display-assets.html" data-nav-key="assets" class="flex items-center gap-3 py-2 px-2.5 w-full no-underline" style="border-radius: 2px; border: 1px solid transparent; color: color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent); font-size: 13px; transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease">
+        <i data-lucide="image" class="flex items-center justify-center shrink-0" style="width: 22px; height: 22px; font-size: 13px; border-radius: 2px; background: color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)"></i>
+        <span class="truncate">资源替换</span>
+      </a>
+    </nav>
+    <div class="mt-auto mx-3 mb-4" style="border-radius: 2px; border: 1px solid color-mix(in srgb, var(--gold-400) 14%, transparent); background: color-mix(in srgb, var(--sidebar-accent-foreground) 3%, transparent); overflow: hidden">
+      <div style="padding: 10px 12px; border-bottom: 1px solid color-mix(in srgb, var(--sidebar-border) 40%, transparent)">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <div style="width: 8px; height: 8px; border-radius: 2px; background: var(--chart-3); box-shadow: 0 0 6px var(--chart-3)"></div>
+          <span style="font-size: 10px; color: var(--chart-3); font-weight: 600; letter-spacing: 0.06em">运行中</span>
+          <div style="flex:1;min-width:0"></div>
+          <span style="font-size: 9px; color: var(--sidebar-foreground); opacity: 0.4">v2.1</span>
+        </div>
+      </div>
+      <div style="padding: 8px 12px">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <div class="flex items-center justify-center shrink-0" style="width: 28px; height: 28px; border-radius: 2px; background: var(--gold-500); color: #fff; font-size: 13px; font-weight: 700">管</div>
+          <div class="flex-1 min-w-0">
+            <div style="font-size: 11px; font-weight: 600; color: var(--sidebar-accent-foreground)">系统管理员</div>
+            <div style="font-size: 9px; color: var(--sidebar-foreground); opacity: 0.45; margin-top: 1px">admin@lingshan.com</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <main class="flex-1 min-w-0 overflow-auto" style="background-color: var(--background); padding: 12px">
+    <div class="flex flex-col gap-3 max-w-[1280px] mx-auto">
+
+      <!-- ── Hero Header ── -->
+      <div style="border-radius: 2px; overflow: hidden; border: 1px solid var(--border); background: linear-gradient(155deg, #241d16 0%, #2e2620 50%, #3a3028 100%); box-shadow: var(--shadow-sm)">
+        <div class="px-5 py-3 flex flex-col gap-3">
+          <div>
+            <h1 class="m-0" style="font-family: var(--font-serif); font-size: clamp(28px, 3vw, 40px); line-height: 1.02; letter-spacing: -0.03em; color: var(--secondary-foreground); text-wrap: balance; word-break: keep-all; overflow-wrap: break-word; max-width: 76ch">数据大屏</h1>
+            <p class="m-0 mt-3 max-w-5xl" style="font-size: 15px; line-height: 1.7; color: color-mix(in srgb, var(--secondary-foreground) 62%, transparent)">运营分析 · 景点关注 · 游客画像 · 问答趋势 · 盲区监控</p>
+          </div>
+          <div class="flex items-center gap-3 flex-wrap">
+            <span class="inline-flex items-center gap-2 px-3 min-h-8 shrink-0" style="border-radius: 2px; background: color-mix(in srgb, var(--secondary-foreground) 10%, transparent); border: 1px solid color-mix(in srgb, var(--secondary-foreground) 16%, transparent); font-size: 12px; color: var(--secondary-foreground); white-space: nowrap">
+              <span style="width: 6px; height: 6px; border-radius: 2px; background: var(--chart-3); box-shadow: 0 0 0 5px color-mix(in srgb, var(--chart-3) 18%, transparent)" class="status-pulse"></span>
+              系统运行正常
+            </span>
+            <span class="inline-flex items-center gap-2 px-3 min-h-8 shrink-0" style="border-radius: 2px; background: color-mix(in srgb, var(--secondary-foreground) 10%, transparent); border: 1px solid color-mix(in srgb, var(--secondary-foreground) 16%, transparent); font-size: 12px; color: var(--secondary-foreground); white-space: nowrap">
+              数据更新于 2 分钟前
+            </span>
+            <span class="inline-flex items-center gap-2 px-3 min-h-8 shrink-0" style="border-radius: 2px; background: color-mix(in srgb, var(--secondary-foreground) 10%, transparent); border: 1px solid color-mix(in srgb, var(--secondary-foreground) 16%, transparent); font-size: 12px; color: var(--secondary-foreground); white-space: nowrap">
+              今日入园 3,862 人
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 景区实时指标 ── -->
+      <div style="border-radius: 2px; border: 1px solid var(--border); background: var(--card); box-shadow: var(--shadow-xs); overflow: hidden">
+        <div class="px-4 pt-3 pb-1">
+          <h2 class="m-0" style="font-family: var(--font-serif); font-size: 22px; line-height: 1.08; letter-spacing: -0.03em">景区实时指标</h2>
+          <p class="m-0 mt-2" style="font-size: 12px; line-height: 1.6; color: var(--muted-foreground)">基于闸机数据与在线预约量的实时预估，每 5 分钟自动刷新</p>
+        </div>
+        <div class="px-4 pb-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="flex items-start gap-4 p-4" style="border-radius: 2px; border: 1px solid var(--border); background: linear-gradient(135deg, color-mix(in srgb, var(--chart-3) 8%, var(--card)) 0%, var(--card) 100%)">
+              <div class="flex items-center justify-center shrink-0" style="width: 48px; height: 48px; border-radius: 2px; background: color-mix(in srgb, var(--chart-3) 16%, transparent); color: var(--chart-3)">
+                <i data-lucide="users" style="width: 24px; height: 24px"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div style="font-size: 12px; color: var(--muted-foreground); margin-bottom: 2px">今日预估游客数</div>
+                <div style="font-family: var(--font-serif); font-size: clamp(28px, 2.8vw, 36px); line-height: 1.04; letter-spacing: -0.02em; color: var(--foreground)">8,520 人</div>
+                <div style="font-size: 11px; color: var(--muted-foreground); margin-top: 4px">基于闸机数据 + 在线预约量预估（实时刷新）</div>
+              </div>
+            </div>
+            <div class="flex items-start gap-4 p-4" style="border-radius: 2px; border: 1px solid var(--border); background: linear-gradient(135deg, color-mix(in srgb, var(--gold-400) 8%, var(--card)) 0%, var(--card) 100%)">
+              <div class="flex items-center justify-center shrink-0" style="width: 48px; height: 48px; border-radius: 2px; background: color-mix(in srgb, var(--gold-400) 16%, transparent); color: var(--gold-600)">
+                <i data-lucide="sun" style="width: 24px; height: 24px"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div style="font-size: 12px; color: var(--muted-foreground); margin-bottom: 2px">今日天气</div>
+                <div style="font-family: var(--font-serif); font-size: clamp(28px, 2.8vw, 36px); line-height: 1.04; letter-spacing: -0.02em; color: var(--foreground)">晴转多云 26°C ~ 32°C</div>
+                <div style="font-size: 11px; color: var(--muted-foreground); margin-top: 4px">东南风 3级 · 湿度 58% · 适宜游览</div>
+              </div>
+            </div>
+            <div class="flex items-start gap-4 p-4" style="border-radius: 2px; border: 1px solid var(--border); background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 6%, var(--card)) 0%, var(--card) 100%)">
+              <div class="flex items-center justify-center shrink-0" style="width: 48px; height: 48px; border-radius: 2px; background: color-mix(in srgb, var(--primary) 16%, transparent); color: var(--primary)">
+                <i data-lucide="activity" style="width: 24px; height: 24px"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div style="font-size: 12px; color: var(--muted-foreground); margin-bottom: 2px">数据接入状态</div>
+                <div style="font-family: var(--font-serif); font-size: clamp(24px, 2.4vw, 30px); line-height: 1.04; letter-spacing: -0.02em; color: var(--chart-3)">● 已连接</div>
+                <div style="font-size: 11px; color: var(--muted-foreground); margin-top: 4px">闸机系统实时数据接入 · 60s 自动同步</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 四张摘要统计卡片 ── -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="stat-card flex flex-col gap-3 p-4" style="border-radius: 2px; border: 1px solid var(--border); background: linear-gradient(180deg, var(--card) 0%, color-mix(in srgb, var(--primary) 4%, var(--card)) 100%); box-shadow: var(--shadow-xs)">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex-1 min-w-0">
+              <div class="truncate" style="font-size: 12px; color: var(--muted-foreground)">总咨询量</div>
+              <div class="mt-1 whitespace-nowrap" style="font-family: var(--font-serif); font-size: clamp(28px, 2.6vw, 36px); line-height: 1.04; letter-spacing: -0.03em; color: var(--foreground)">18,620</div>
+            </div>
+            <div class="flex items-center justify-center shrink-0" style="width: 36px; height: 36px; border-radius: 2px; background: color-mix(in srgb, var(--primary) 16%, transparent); color: var(--primary)">
+              <i data-lucide="message-square-text" style="width: 16px; height: 16px"></i>
+            </div>
+          </div>
+          <div style="font-size: 11px; color: var(--muted-foreground)">累计问答日志规模</div>
+        </div>
+
+        <div class="stat-card flex flex-col gap-3 p-4" style="border-radius: 2px; border: 1px solid var(--border); background: linear-gradient(180deg, var(--card) 0%, color-mix(in srgb, var(--chart-2) 4%, var(--card)) 100%); box-shadow: var(--shadow-xs)">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex-1 min-w-0">
+              <div class="truncate" style="font-size: 12px; color: var(--muted-foreground)">平均响应</div>
+              <div class="mt-1 whitespace-nowrap" style="font-family: var(--font-serif); font-size: clamp(28px, 2.6vw, 36px); line-height: 1.04; letter-spacing: -0.03em; color: var(--foreground)">2.3s</div>
+            </div>
+            <div class="flex items-center justify-center shrink-0" style="width: 36px; height: 36px; border-radius: 2px; background: color-mix(in srgb, var(--chart-2) 18%, transparent); color: var(--chart-2)">
+              <i data-lucide="clock" style="width: 16px; height: 16px"></i>
+            </div>
+          </div>
+          <div style="font-size: 11px; color: var(--muted-foreground)">按已记录问答日志计算</div>
+        </div>
+
+        <div class="stat-card flex flex-col gap-3 p-4" style="border-radius: 2px; border: 1px solid var(--border); background: linear-gradient(180deg, var(--card) 0%, color-mix(in srgb, var(--gold-400) 4%, var(--card)) 100%); box-shadow: var(--shadow-xs)">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex-1 min-w-0">
+              <div class="truncate" style="font-size: 12px; color: var(--muted-foreground)">活跃游客</div>
+              <div class="mt-1 whitespace-nowrap" style="font-family: var(--font-serif); font-size: clamp(28px, 2.6vw, 36px); line-height: 1.04; letter-spacing: -0.03em; color: var(--foreground)">12,405</div>
+            </div>
+            <div class="flex items-center justify-center shrink-0" style="width: 36px; height: 36px; border-radius: 2px; background: color-mix(in srgb, var(--gold-400) 18%, transparent); color: var(--gold-600)">
+              <i data-lucide="users" style="width: 16px; height: 16px"></i>
+            </div>
+          </div>
+          <div style="font-size: 11px; color: var(--muted-foreground)">当前已沉淀 5 类游客分层</div>
+        </div>
+
+        <div class="stat-card flex flex-col gap-3 p-4" style="border-radius: 2px; border: 1px solid var(--border); background: linear-gradient(180deg, var(--card) 0%, color-mix(in srgb, var(--chart-1) 4%, var(--card)) 100%); box-shadow: var(--shadow-xs)">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex-1 min-w-0">
+              <div class="truncate" style="font-size: 12px; color: var(--muted-foreground)">待补高频问题</div>
+              <div class="mt-1 whitespace-nowrap" style="font-family: var(--font-serif); font-size: clamp(28px, 2.6vw, 36px); line-height: 1.04; letter-spacing: -0.03em; color: var(--foreground)">42</div>
+            </div>
+            <div class="flex items-center justify-center shrink-0" style="width: 36px; height: 36px; border-radius: 2px; background: color-mix(in srgb, var(--chart-1) 16%, transparent); color: var(--chart-1)">
+              <i data-lucide="alert-triangle" style="width: 16px; height: 16px"></i>
+            </div>
+          </div>
+          <div style="font-size: 11px; color: var(--muted-foreground)">高频未命中待补录问题</div>
+        </div>
+      </div>
+
+      <!-- ── 第一行图表：景点关注度排名 + 游客群体构成 ── -->
+      <div class="grid grid-cols-1 gap-3" style="grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr)">
+        <div class="chart-card" style="border-radius: 2px; border: 1px solid var(--border); overflow: hidden; background: var(--card); box-shadow: var(--shadow-xs)">
+          <div class="px-4 pt-3 pb-1">
+            <h2 class="m-0" style="font-family: var(--font-serif); font-size: 22px; line-height: 1.08; letter-spacing: -0.03em">景点关注度排名</h2>
+            <p class="m-0 mt-2" style="font-size: 12px; line-height: 1.6; color: var(--muted-foreground)">各景点 AI 问答关注量统计（累计）</p>
+          </div>
+          <div class="px-4 pb-4" style="min-height: 280px; position: relative">
+            <canvas id="chart-scenic-bar" width="400" height="280" style="max-width: 100%; display: block"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card" style="border-radius: 2px; border: 1px solid var(--border); overflow: hidden; background: var(--card); box-shadow: var(--shadow-xs)">
+          <div class="px-4 pt-3 pb-1">
+            <h2 class="m-0" style="font-family: var(--font-serif); font-size: 22px; line-height: 1.08; letter-spacing: -0.03em">游客群体构成</h2>
+            <p class="m-0 mt-2" style="font-size: 12px; line-height: 1.6; color: var(--muted-foreground)">12,405 人 · 5 类分层</p>
+          </div>
+          <div class="px-4 pb-4" style="min-height: 280px; position: relative">
+            <canvas id="chart-visitor-doughnut" width="280" height="280" style="max-width: 240px; max-height: 240px; margin: 0 auto; display: block"></canvas>
+            <div class="flex items-center justify-center gap-3 mt-4 flex-wrap">
+              <div class="flex items-center gap-2"><span style="width: 10px; height: 10px; border-radius: 2px; background: var(--chart-1); flex: none"></span><span class="truncate" style="font-size: 11px; color: var(--muted-foreground)">亲子家庭 34.5%</span></div>
+              <div class="flex items-center gap-2"><span style="width: 10px; height: 10px; border-radius: 2px; background: var(--chart-2); flex: none"></span><span class="truncate" style="font-size: 11px; color: var(--muted-foreground)">银发游客 25.5%</span></div>
+              <div class="flex items-center gap-2"><span style="width: 10px; height: 10px; border-radius: 2px; background: var(--chart-4); flex: none"></span><span class="truncate" style="font-size: 11px; color: var(--muted-foreground)">文化爱好者 22.9%</span></div>
+              <div class="flex items-center gap-2"><span style="width: 10px; height: 10px; border-radius: 2px; background: var(--chart-3); flex: none"></span><span class="truncate" style="font-size: 11px; color: var(--muted-foreground)">年轻游客 12.6%</span></div>
+              <div class="flex items-center gap-2"><span style="width: 10px; height: 10px; border-radius: 2px; background: var(--chart-5); flex: none"></span><span class="truncate" style="font-size: 11px; color: var(--muted-foreground)">境外游客 4.6%</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 第二行图表：近30天问答趋势 + 问答路径分布 ── -->
+      <div class="grid grid-cols-1 gap-3" style="grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)">
+        <div class="chart-card" style="border-radius: 2px; border: 1px solid var(--border); overflow: hidden; background: var(--card); box-shadow: var(--shadow-xs)">
+          <div class="px-4 pt-3 pb-1">
+            <h2 class="m-0" style="font-family: var(--font-serif); font-size: 22px; line-height: 1.08; letter-spacing: -0.03em">近 30 天问答量趋势</h2>
+            <p class="m-0 mt-2" style="font-size: 12px; line-height: 1.6; color: var(--muted-foreground)">10,520 次 · 日均约 351 次</p>
+          </div>
+          <div class="px-4 pb-4" style="min-height: 240px; position: relative">
+            <canvas id="chart-qa-trend" width="400" height="220" style="max-width: 100%; display: block"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card" style="border-radius: 2px; border: 1px solid var(--border); overflow: hidden; background: var(--card); box-shadow: var(--shadow-xs)">
+          <div class="px-4 pt-3 pb-1">
+            <h2 class="m-0" style="font-family: var(--font-serif); font-size: 22px; line-height: 1.08; letter-spacing: -0.03em">问答路径分布</h2>
+            <p class="m-0 mt-2" style="font-size: 12px; line-height: 1.6; color: var(--muted-foreground)">10,520 次 · 按回答策略分类</p>
+          </div>
+          <div class="px-4 pb-4" style="min-height: 240px; position: relative">
+            <canvas id="chart-path-bar" width="400" height="220" style="max-width: 100%; display: block"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 第三行：知识库待补充 Top 10 + 运营指标快照 ── -->
+      <div class="grid grid-cols-1 gap-3" style="grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)">
+        <div style="border-radius: 2px; border: 1px solid var(--border); overflow: hidden; background: var(--card); box-shadow: var(--shadow-xs)">
+          <div class="px-4 pt-3 pb-1">
+            <h2 class="m-0" style="font-family: var(--font-serif); font-size: 22px; line-height: 1.08; letter-spacing: -0.03em">知识库待补充 Top 10</h2>
+            <p class="m-0 mt-2" style="font-size: 12px; line-height: 1.6; color: var(--muted-foreground)">高频未命中查询，建议优先补录</p>
+          </div>
+          <div class="px-4 pb-4 overflow-x-auto">
+            <table style="width: 100%; border-collapse: collapse">
+              <thead>
+                <tr>
+                  <th class="text-left" style="padding: 0 0 10px; font-family: var(--font-mono); font-weight: 700; font-size: 11px; letter-spacing: 0.08em; color: var(--muted-foreground); white-space: nowrap; width: 48px">#</th>
+                  <th class="text-left" style="padding: 0 0 10px; font-family: var(--font-mono); font-weight: 700; font-size: 11px; letter-spacing: 0.08em; color: var(--muted-foreground); white-space: nowrap">查询内容</th>
+                  <th class="text-right" style="padding: 0 0 10px; font-family: var(--font-mono); font-weight: 700; font-size: 11px; letter-spacing: 0.08em; color: var(--muted-foreground); white-space: nowrap; width: 80px">命中次数</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-top: 1px solid color-mix(in srgb, var(--border) 74%, transparent)">
+                  <td style="padding: 10px 0; font-family: var(--font-mono); font-size: 12px; color: var(--muted-foreground); white-space: nowrap">01</td>
+                  <td class="truncate" style="padding: 10px 8px; font-size: 13px; max-width: 240px">灵山大佛有多少年历史</td>
+                  <td class="text-right whitespace-nowrap" style="padding: 10px 0; font-family: var(--font-mono); font-size: 12px; font-weight: 600">1,240</td>
+                </tr>
+                <tr style="border-top: 1px solid color-mix(in srgb, var(--border) 74%, transparent)">
+                  <td style="padding: 10px 0; font-family: var(--font-mono); font-size: 12px; color: var(--muted-foreground); white-space: nowrap">02</td>
+                  <td class="truncate" style="padding: 10px 8px; font-size: 13px; max-width: 240px">梵宫开放时间</td>
+                  <td class="text-right whitespace-nowrap" style="padding: 10px 0; font-family: var(--font-mono); font-size: 12px; font-weight: 600">1,080</td>
+                </tr>
+                <tr style="border-top: 1px solid color-mix(in srgb, var(--border) 74%, transparent)">
+                  <td style="padding: 10px 0; font-family: var(--font-mono); font-size: 12px; color: var(--muted-foreground); white-space: nowrap">03</td>
+                  <td class="truncate" style="padding: 10px 8px; font-size: 13px; max-width: 240px">九龙灌浴表演时间今天</td>
+                  <td class="text-right whitespace-nowrap" style="padding: 10px 0; font-family: var(--font-mono); font-size: 12px; font-weight: 600">960</td>
+                </tr>
+                <tr style="border-top: 1px solid color-mix(in srgb, var(--border) 74%, transparent)">
+                  <td style="padding: 10px 0; font-family: var(--font-mono); font-size: 12px; color: var(--muted-foreground); white-space: nowrap">04</td>
+                  <td class="truncate" style="padding: 10px 8px; font-size: 13px; max-width: 240px">拈花湾门票多少钱</td>
+                  <td class="text-right whitespace-nowrap" style="padding: 10px 0; font-family: var(--font-mono); font-size: 12px; font-weight: 600">880</td>
+                </tr>
+                <tr style="border-top: 1px solid color-mix(in srgb, var(--border) 74%, transparent)">
+                  <td style="padding: 10px 0; font-family: var(--font-mono); font-size: 12px; color: var(--muted-foreground); white-space: nowrap">05</td>
+                  <td class="truncate" style="padding: 10px 8px; font-size: 13px; max-width: 240px">五印坛城的建筑风格</td>
+                  <td class="text-right whitespace-nowrap" style="padding: 10px 0; font-family: var(--font-mono); font-size: 12px; font-weight: 600">790</td>
+                </tr>
+                <tr style="border-top: 1px solid color-mix(in srgb, var(--border) 74%, transparent)">
+                  <td style="padding: 10px 0; font-family: var(--font-mono); font-size: 12px; color: var(--muted-foreground); white-space: nowrap">06</td>
+                  <td class="truncate" style="padding: 10px 8px; font-size: 13px; max-width: 240px">灵山景区停车场收费标准</td>
+                  <td class="text-right whitespace-nowrap" style="padding: 10px 0; font-family: var(--font-mono); font-size: 12px; font-weight: 600">720</td>
+                </tr>
+                <tr style="border-top: 1px solid color-mix(in srgb, var(--border) 74%, transparent)">
+                  <td style="padding: 10px 0; font-family: var(--font-mono); font-size: 12px; color: var(--muted-foreground); white-space: nowrap">07</td>
+                  <td class="truncate" style="padding: 10px 8px; font-size: 13px; max-width: 240px">祥符禅寺的素斋怎么样</td>
+                  <td class="text-right whitespace-nowrap" style="padding: 10px 0; font-family: var(--font-mono); font-size: 12px; font-weight: 600">650</td>
+                </tr>
+                <tr style="border-top: 1px solid color-mix(in srgb, var(--border) 74%, transparent)">
+                  <td style="padding: 10px 0; font-family: var(--font-mono); font-size: 12px; color: var(--muted-foreground); white-space: nowrap">08</td>
+                  <td class="truncate" style="padding: 10px 8px; font-size: 13px; max-width: 240px">降魔浮雕代表了什么含义</td>
+                  <td class="text-right whitespace-nowrap" style="padding: 10px 0; font-family: var(--font-mono); font-size: 12px; font-weight: 600">580</td>
+                </tr>
+                <tr style="border-top: 1px solid color-mix(in srgb, var(--border) 74%, transparent)">
+                  <td style="padding: 10px 0; font-family: var(--font-mono); font-size: 12px; color: var(--muted-foreground); white-space: nowrap">09</td>
+                  <td class="truncate" style="padding: 10px 8px; font-size: 13px; max-width: 240px">从无锡站怎么到灵山</td>
+                  <td class="text-right whitespace-nowrap" style="padding: 10px 0; font-family: var(--font-mono); font-size: 12px; font-weight: 600">520</td>
+                </tr>
+                <tr style="border-top: 1px solid color-mix(in srgb, var(--border) 74%, transparent)">
+                  <td style="padding: 10px 0; font-family: var(--font-mono); font-size: 12px; color: var(--muted-foreground); white-space: nowrap">10</td>
+                  <td class="truncate" style="padding: 10px 8px; font-size: 13px; max-width: 240px">灵山景区有轮椅租借吗</td>
+                  <td class="text-right whitespace-nowrap" style="padding: 10px 0; font-family: var(--font-mono); font-size: 12px; font-weight: 600">470</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="border-radius: 2px; border: 1px solid var(--border); overflow: hidden; background: var(--card); box-shadow: var(--shadow-xs)">
+          <div class="px-4 pt-3 pb-1">
+            <h2 class="m-0" style="font-family: var(--font-serif); font-size: 22px; line-height: 1.08; letter-spacing: -0.03em">运营指标快照</h2>
+            <p class="m-0 mt-2" style="font-size: 12px; line-height: 1.6; color: var(--muted-foreground)">系统核心资产与运行参数一览</p>
+          </div>
+          <div class="px-4 pb-4">
+            <div class="flex flex-col gap-0">
+              <div class="flex items-center justify-between py-2.5" style="border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent)">
+                <div class="flex items-center gap-3">
+                  <span style="font-family: var(--font-mono); font-size: 11px; color: var(--muted-foreground); opacity: 0.7; min-width: 22px">01</span>
+                  <span style="font-size: 13px; color: var(--foreground)">知识条目总数</span>
+                </div>
+                <span style="font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--primary)">2,846</span>
+              </div>
+              <div class="flex items-center justify-between py-2.5" style="border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent)">
+                <div class="flex items-center gap-3">
+                  <span style="font-family: var(--font-mono); font-size: 11px; color: var(--muted-foreground); opacity: 0.7; min-width: 22px">02</span>
+                  <span style="font-size: 13px; color: var(--foreground)">FAQ 条目数</span>
+                </div>
+                <span style="font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--foreground)">356</span>
+              </div>
+              <div class="flex items-center justify-between py-2.5" style="border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent)">
+                <div class="flex items-center gap-3">
+                  <span style="font-family: var(--font-mono); font-size: 11px; color: var(--muted-foreground); opacity: 0.7; min-width: 22px">03</span>
+                  <span style="font-size: 13px; color: var(--foreground)">导览路线模板</span>
+                </div>
+                <span style="font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--foreground)">12</span>
+              </div>
+              <div class="flex items-center justify-between py-2.5" style="border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent)">
+                <div class="flex items-center gap-3">
+                  <span style="font-family: var(--font-mono); font-size: 11px; color: var(--muted-foreground); opacity: 0.7; min-width: 22px">04</span>
+                  <span style="font-size: 13px; color: var(--foreground)">问答日志总量</span>
+                </div>
+                <span style="font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--foreground)">18,620</span>
+              </div>
+              <div class="flex items-center justify-between py-2.5" style="border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent)">
+                <div class="flex items-center gap-3">
+                  <span style="font-family: var(--font-mono); font-size: 11px; color: var(--muted-foreground); opacity: 0.7; min-width: 22px">05</span>
+                  <span style="font-size: 13px; color: var(--foreground)">游客画像总量</span>
+                </div>
+                <span style="font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--foreground)">12,405</span>
+              </div>
+              <div class="flex items-center justify-between py-2.5" style="border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent)">
+                <div class="flex items-center gap-3">
+                  <span style="font-family: var(--font-mono); font-size: 11px; color: var(--muted-foreground); opacity: 0.7; min-width: 22px">06</span>
+                  <span style="font-size: 13px; color: var(--foreground)">缓存条目数</span>
+                </div>
+                <span style="font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--foreground)">1,240</span>
+              </div>
+              <div class="flex items-center justify-between py-2.5" style="border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent)">
+                <div class="flex items-center gap-3">
+                  <span style="font-family: var(--font-mono); font-size: 11px; color: var(--muted-foreground); opacity: 0.7; min-width: 22px">07</span>
+                  <span style="font-size: 13px; color: var(--foreground)">平均延迟 (ms)</span>
+                </div>
+                <span style="font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--chart-3)">2,300</span>
+              </div>
+              <div class="flex items-center justify-between py-2.5" style="border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent)">
+                <div class="flex items-center gap-3">
+                  <span style="font-family: var(--font-mono); font-size: 11px; color: var(--muted-foreground); opacity: 0.7; min-width: 22px">08</span>
+                  <span style="font-size: 13px; color: var(--foreground)">盲区问题数</span>
+                </div>
+                <span style="font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--destructive)">42</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<style>
+  @media (min-width: 1024px) {
+    [data-chart-grid] { grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); }
+  }
+</style>
+
+<script>
+(function(){
+  var navItems = document.querySelectorAll('[data-nav-key]');
+  function applyActive(item, isActive) {
+    if (isActive) {
+      item.style.background = 'color-mix(in srgb, var(--sidebar-accent-foreground) 10%, transparent)';
+      item.style.borderColor = 'color-mix(in srgb, var(--sidebar-border) 28%, transparent)';
+      item.style.color = 'var(--sidebar-accent-foreground)';
+      var icon = item.querySelector('i');
+      if (icon) icon.style.background = 'color-mix(in srgb, var(--sidebar-accent-foreground) 12%, transparent)';
+    } else {
+      item.style.background = 'transparent';
+      item.style.borderColor = 'transparent';
+      item.style.color = 'color-mix(in srgb, var(--sidebar-accent-foreground) 72%, transparent)';
+      var icon = item.querySelector('i');
+      if (icon) icon.style.background = 'color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)';
+    }
+  }
+  navItems.forEach(function(item) {
+    var isActive = item.getAttribute('data-active') === 'true';
+    applyActive(item, isActive);
+    item.addEventListener('mouseenter', function() {
+      if (item.getAttribute('data-active') !== 'true') {
+        item.style.background = 'color-mix(in srgb, var(--sidebar-accent-foreground) 6%, transparent)';
+        item.style.color = 'var(--sidebar-accent-foreground)';
+      }
+    });
+    item.addEventListener('mouseleave', function() {
+      applyActive(item, item.getAttribute('data-active') === 'true');
+    });
+  });
+})();
+</script>
+
+<script>
+(function(){
+  var scenicCtx = document.getElementById('chart-scenic-bar');
+  if (scenicCtx) {
+    new Chart(scenicCtx, {
+      type: 'bar',
+      data: {
+        labels: ['灵山大佛', '灵山梵宫', '九龙灌浴', '拈花湾', '五印坛城', '五智门', '降魔浮雕', '祥符禅寺'],
+        datasets: [{
+          data: [3240, 2870, 2310, 1980, 1620, 1340, 980, 890],
+          backgroundColor: [
+            'color-mix(in srgb, var(--chart-1) 82%, transparent)',
+            'color-mix(in srgb, var(--chart-3) 72%, transparent)',
+            'color-mix(in srgb, var(--chart-4) 72%, transparent)',
+            'color-mix(in srgb, var(--chart-2) 72%, transparent)',
+            'color-mix(in srgb, var(--chart-5) 68%, transparent)',
+            'color-mix(in srgb, var(--primary) 64%, transparent)',
+            'color-mix(in srgb, var(--muted-foreground) 52%, transparent)',
+            'color-mix(in srgb, var(--muted-foreground) 42%, transparent)'
+          ],
+          borderColor: 'var(--card)',
+          borderWidth: 2,
+          borderRadius: 6,
+          borderSkipped: false
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'var(--foreground)',
+            titleColor: 'var(--background)',
+            bodyColor: 'var(--background)',
+            cornerRadius: 12,
+            padding: 12,
+            titleFont: { family: 'var(--font-sans)', size: 13 },
+            bodyFont: { family: 'var(--font-mono)', size: 12 },
+            callbacks: {
+              label: function(ctx) { return ctx.raw.toLocaleString() + ' 次关注'; }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'color-mix(in srgb, var(--border) 72%, transparent)' },
+            border: { display: false },
+            ticks: {
+              color: 'var(--muted-foreground)',
+              font: { family: 'var(--font-mono)', size: 11 },
+              callback: function(v) { return v >= 1000 ? (v/1000).toFixed(1)+'k' : v; }
+            }
+          },
+          y: {
+            grid: { display: false },
+            border: { display: false },
+            ticks: {
+              color: 'var(--foreground)',
+              font: { family: 'var(--font-sans)', size: 12, weight: '500' }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  var visitorCtx = document.getElementById('chart-visitor-doughnut');
+  if (visitorCtx) {
+    new Chart(visitorCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['亲子家庭', '银发游客', '文化爱好者', '年轻游客', '境外游客'],
+        datasets: [{
+          data: [4280, 3160, 2840, 1560, 565],
+          backgroundColor: [
+            'var(--chart-1)',
+            'var(--chart-2)',
+            'var(--chart-4)',
+            'var(--chart-3)',
+            'var(--chart-5)'
+          ],
+          borderColor: 'var(--card)',
+          borderWidth: 3,
+          hoverBorderWidth: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        cutout: '58%',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'var(--foreground)',
+            titleColor: 'var(--background)',
+            bodyColor: 'var(--background)',
+            cornerRadius: 12,
+            padding: 12,
+            titleFont: { family: 'var(--font-sans)', size: 13 },
+            bodyFont: { family: 'var(--font-mono)', size: 12 },
+            callbacks: {
+              label: function(ctx) {
+                var total = ctx.dataset.data.reduce(function(a,b){return a+b;},0);
+                var pct = ((ctx.raw/total)*100).toFixed(1);
+                return ctx.raw.toLocaleString() + ' 人 (' + pct + '%)';
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  var qaCtx = document.getElementById('chart-qa-trend');
+  if (qaCtx) {
+    var days = [];
+    var qaData = [];
+    for (var i = 0; i < 30; i++) {
+      days.push('D' + (i + 1));
+      qaData.push(Math.floor(300 + Math.random() * 150));
+    }
+    new Chart(qaCtx, {
+      type: 'line',
+      data: {
+        labels: days,
+        datasets: [{
+          data: qaData,
+          borderColor: 'var(--chart-3)',
+          backgroundColor: 'color-mix(in srgb, var(--chart-3) 12%, transparent)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 2,
+          pointHoverRadius: 5,
+          pointBackgroundColor: 'var(--chart-3)',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'var(--foreground)',
+            titleColor: 'var(--background)',
+            bodyColor: 'var(--background)',
+            cornerRadius: 12,
+            padding: 12,
+            titleFont: { family: 'var(--font-sans)', size: 13 },
+            bodyFont: { family: 'var(--font-mono)', size: 12 },
+            callbacks: {
+              label: function(ctx) { return ctx.raw + ' 次问答'; }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            border: { display: false },
+            ticks: {
+              color: 'var(--muted-foreground)',
+              font: { family: 'var(--font-mono)', size: 10 },
+              maxTicksLimit: 10
+            }
+          },
+          y: {
+            grid: { color: 'color-mix(in srgb, var(--border) 72%, transparent)' },
+            border: { display: false },
+            ticks: {
+              color: 'var(--muted-foreground)',
+              font: { family: 'var(--font-mono)', size: 11 },
+              callback: function(v) { return v; }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  var pathCtx = document.getElementById('chart-path-bar');
+  if (pathCtx) {
+    new Chart(pathCtx, {
+      type: 'bar',
+      data: {
+        labels: ['FAQ直答', 'RAG检索', '知识图谱', '盲区转人工'],
+        datasets: [{
+          data: [4860, 3240, 1580, 840],
+          backgroundColor: [
+            'color-mix(in srgb, var(--chart-1) 82%, transparent)',
+            'color-mix(in srgb, var(--chart-3) 72%, transparent)',
+            'color-mix(in srgb, var(--chart-4) 72%, transparent)',
+            'color-mix(in srgb, var(--chart-5) 68%, transparent)'
+          ],
+          borderColor: 'var(--card)',
+          borderWidth: 2,
+          borderRadius: 6,
+          borderSkipped: false
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'var(--foreground)',
+            titleColor: 'var(--background)',
+            bodyColor: 'var(--background)',
+            cornerRadius: 12,
+            padding: 12,
+            titleFont: { family: 'var(--font-sans)', size: 13 },
+            bodyFont: { family: 'var(--font-mono)', size: 12 },
+            callbacks: {
+              label: function(ctx) {
+                var total = 10520;
+                var pct = ((ctx.raw/total)*100).toFixed(1);
+                return ctx.raw.toLocaleString() + ' 次 (' + pct + '%)';
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'color-mix(in srgb, var(--border) 72%, transparent)' },
+            border: { display: false },
+            ticks: {
+              color: 'var(--muted-foreground)',
+              font: { family: 'var(--font-mono)', size: 11 },
+              callback: function(v) { return v >= 1000 ? (v/1000).toFixed(1)+'k' : v; }
+            }
+          },
+          y: {
+            grid: { display: false },
+            border: { display: false },
+            ticks: {
+              color: 'var(--foreground)',
+              font: { family: 'var(--font-sans)', size: 12, weight: '500' }
+            }
+          }
+        }
+      }
+    });
+  }
+})();
+</script>
+    </main>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

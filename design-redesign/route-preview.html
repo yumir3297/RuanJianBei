@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智能路线 · 第一版拉取预览</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    font-family: "Noto Serif SC","STKaiti","KaiTi","STSong",ui-serif,serif;
+    overflow: hidden;
+  }
+
+  /* ══════════════ 页面基底 ══════════════ */
+  .tourist-page {
+    position: relative;
+    width: 100%; height: 100vh; height: 100dvh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    background: #1a1612;
+    color: #f0ece5;
+  }
+
+  /* ══════════════ ① 背景层 ══════════════ */
+  .scenic-bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+  .scenic-bg-img {
+    position: absolute; inset: 0;
+    background: url('assets/bg-alt.jpg') center/cover no-repeat;
+    filter: blur(10px) saturate(0.3) brightness(0.4);
+    transform: scale(1.06);
+  }
+  .scenic-bg-overlay {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 35%, transparent 0%, rgba(20,16,10,0.55) 80%),
+      radial-gradient(ellipse 80% 50% at 50% 100%, rgba(22,18,10,0.5) 0%, transparent 70%);
+  }
+
+  /* ══════════════ ② 顶栏 ══════════════ */
+  .back-btn {
+    position: absolute;
+    top: 32px; left: 32px;
+    z-index: 25;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 14px 28px;
+    border: 1px solid rgba(255,250,242,0.11);
+    border-radius: 999px;
+    background: rgba(255,250,242,0.05);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    color: rgba(232,228,219,0.55);
+    font-family: inherit; font-size: 20px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    outline: none;
+  }
+  .back-btn:hover {
+    border-color: rgba(255,250,242,0.19);
+    background: rgba(255,255,255,0.09);
+    color: rgba(232,228,219,0.85);
+  }
+  .back-arrow { display: inline-block; transition: transform 0.3s ease; }
+  .back-btn:hover .back-arrow { transform: translateX(-3px); }
+  .back-btn:focus-visible { outline: 2px solid #d9a441; outline-offset: 3px; }
+
+  .top-right {
+    position: absolute;
+    top: 32px; right: 32px;
+    z-index: 20;
+    display: flex; flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+  }
+  .top-brand {
+    color: rgba(232,228,219,0.88);
+    font-family: "STKaiti","KaiTi","STSong",serif;
+    font-size: clamp(24px, 2.8vw, 40px);
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    text-shadow: 0 0 30px rgba(217,164,65,0.1);
+    line-height: 1.2;
+  }
+  .top-status-row {
+    display: flex; flex-direction: column; gap: 5px;
+  }
+  .status-item {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 16px; font-weight: 400;
+    letter-spacing: 0.06em;
+    color: rgba(232,228,219,0.55);
+    font-family: system-ui, sans-serif;
+  }
+  .status-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .status-dot--ready  { background: #d9a441; box-shadow: 0 0 4px rgba(217,164,65,0.5); }
+  .status-dot--warm   { background: #e8a840; box-shadow: 0 0 4px rgba(232,168,64,0.5); animation: dot-pulse 1.6s ease-in-out infinite; }
+  .status-dot--live   { background: #5ec9a4; box-shadow: 0 0 4px rgba(94,201,164,0.5); }
+  .status-dot--weather { background: #6bb8e8; box-shadow: 0 0 4px rgba(107,184,232,0.5); }
+  @keyframes dot-pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.4 } }
+
+  /* ══════════════ ③ 主舞台: 三栏 Grid ══════════════ */
+  .tourist-stage {
+    position: relative; z-index: 10;
+    flex: 1; min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(160px, 340px) 1fr minmax(160px, 340px);
+    gap: 12px;
+    align-items: stretch;
+    padding: 20px 20px 0;
+    margin-top: 0;
+  }
+
+  /* ── 左侧对话卡片 (绝对定位) ── */
+  .side-card {
+    position: absolute;
+    left: 50px; bottom: 108px;
+    z-index: 15;
+    width: 480px; height: 520px;
+    background: rgba(23,18,14,0.88);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .side-card-head {
+    flex-shrink: 0;
+    position: relative;
+  }
+  .side-card-tabs {
+    display: flex;
+  }
+  .side-card-tab {
+    flex: 1;
+    padding: 10px 0;
+    border: none;
+    background: transparent;
+    color: rgba(232,228,219,0.35);
+    font-family: inherit; font-size: 20px;
+    font-weight: 600; letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: color 0.25s ease;
+    position: relative;
+  }
+  .side-card-tab.active {
+    color: rgba(232,228,219,0.75);
+  }
+  .side-card-tab.active::after {
+    content: "";
+    position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 24px; height: 2px;
+    border-radius: 1px;
+    background: #d9a441;
+  }
+  .side-card-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 12px 14px;
+    display: flex; flex-direction: column;
+    gap: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(232,228,219,0.15) transparent;
+  }
+  .side-card-body.hidden { display: none; }
+  .side-card-body::-webkit-scrollbar {
+    width: 4px;
+  }
+  .side-card-body::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .side-card-body::-webkit-scrollbar-thumb {
+    background: rgba(232,228,219,0.15);
+    border-radius: 2px;
+  }
+  .side-card-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(217,164,65,0.25);
+  }
+
+  /* 消息气泡 */
+  .msg-item {
+    display: flex; flex-direction: column;
+    max-width: 100%;
+  }
+  .msg-item.user {
+    align-items: flex-end;
+  }
+  .msg-item.assistant {
+    align-items: flex-start;
+  }
+  .msg-bubble {
+    max-width: 90%;
+    padding: 9px 14px;
+    border-radius: 10px;
+    font-size: 18px; line-height: 1.55;
+    letter-spacing: 0.03em;
+    word-break: break-word;
+  }
+  .msg-item.user .msg-bubble {
+    background: rgba(217,164,65,0.12);
+    border: none;
+    color: rgba(232,228,219,0.9);
+    border-bottom-right-radius: 4px;
+  }
+  .msg-item.assistant .msg-bubble {
+    background: rgba(232,228,219,0.05);
+    border: none;
+    color: rgba(232,228,219,0.85);
+    border-bottom-left-radius: 4px;
+  }
+  /* 折叠态：问题收到回复后缩为一行 */
+  .msg-item.user.collapsed .msg-bubble {
+    max-height: 24px; overflow: hidden;
+    white-space: nowrap; text-overflow: ellipsis;
+    opacity: 0.45; font-size: 16px;
+    padding: 4px 10px; border-radius: 6px;
+    border-bottom-right-radius: 2px;
+  }
+
+  /* 来源引用标注 */
+  .source-ref {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: rgba(217,164,65,0.22);
+    color: #d9a441; font-size: 9px; font-weight: 700;
+    font-family: system-ui, sans-serif;
+    cursor: pointer; vertical-align: middle; margin: 0 2px;
+    transition: background 0.2s ease;
+  }
+  .source-ref:hover { background: rgba(217,164,65,0.45); }
+
+  /* 资料来源列表 */
+  .source-list {
+    list-style: none; padding: 0; margin: 0;
+    display: grid; gap: 8px;
+  }
+  .source-item {
+    padding: 10px;
+    border: 1px solid rgba(232,228,219,0.08);
+    border-radius: 8px;
+    background: rgba(232,228,219,0.04);
+    transition: border-color 0.3s ease, background 0.3s ease;
+  }
+  .source-item.highlight {
+    border-color: rgba(217,164,65,0.5);
+    background: rgba(217,164,65,0.08);
+  }
+  .source-card {
+    padding: 10px;
+    border: 1px solid rgba(232,228,219,0.08);
+    border-radius: 8px;
+    background: rgba(232,228,219,0.04);
+    transition: border-color 0.3s ease, background 0.3s ease;
+  }
+  .source-card.highlight {
+    border-color: rgba(217,164,65,0.5);
+    background: rgba(217,164,65,0.08);
+  }
+  .source-item h4, .source-card h4 {
+    display: flex; align-items: center; gap: 6px;
+    margin: 0 0 5px;
+    color: rgba(232,228,219,0.85); font-size: 18px; font-weight: 600;
+  }
+  .source-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(217,164,65,0.2);
+    color: #d9a441; font-size: 13px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .source-item p, .source-card p {
+    margin: 0 0 3px;
+    color: rgba(232,228,219,0.55); font-size: 16px; line-height: 1.5;
+  }
+  .source-meta {
+    color: rgba(232,228,219,0.3); font-size: 14px;
+  }
+
+  /* 金色呼吸动画 — 当AI回复存在时 */
+  .side-card.speaking {
+    animation: card-breathe 3s ease-in-out infinite;
+  }
+  @keyframes card-breathe {
+    0%, 100% { box-shadow: 0 0 0 rgba(217,164,65,0); }
+    50% { box-shadow: 0 0 40px rgba(217,164,65,0.08); }
+  }
+
+  /* ══════════════ ④ 右侧快捷卡片 (绝对定位) ══════════════ */
+  .right-card {
+    position: absolute;
+    right: 36px; top: 186px; bottom: 108px;
+    z-index: 15;
+    width: 450px; height: auto;
+    background: rgba(23,18,14,0.88);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .right-card-head {
+    flex-shrink: 0;
+    position: relative;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(232,228,219,0.06);
+    color: rgba(232,228,219,0.5);
+    font-family: "STKaiti","KaiTi",serif;
+    font-size: 20px; font-weight: 600;
+    letter-spacing: 0.06em;
+  }
+  .right-card-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 10px 12px;
+    display: flex; flex-direction: column;
+    gap: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(232,228,219,0.15) transparent;
+  }
+  .right-card-body::-webkit-scrollbar { width: 4px; }
+  .right-card-body::-webkit-scrollbar-track { background: transparent; }
+  .right-card-body::-webkit-scrollbar-thumb { background: rgba(232,228,219,0.15); border-radius: 2px; }
+  .right-card-body::-webkit-scrollbar-thumb:hover { background: rgba(217,164,65,0.25); }
+  .service-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 8px;
+    flex: 1;
+  }
+
+  /* 大卡片 */
+  .explore-card {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 8px;
+    padding: 14px 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(232,228,219,0.10);
+    background: rgba(232,228,219,0.03);
+    cursor: pointer;
+    text-align: center;
+    min-height: 0;
+    transition: all 0.3s ease;
+    outline: none;
+    position: relative;
+    overflow: hidden;
+  }
+  .explore-card:hover {
+    border-color: rgba(217,164,65,0.35);
+    background: rgba(217,164,65,0.06);
+  }
+  .explore-card:active { transform: scale(0.96); }
+  .explore-card:focus-visible { outline: 2px solid #d9a441; outline-offset: 2px; }
+
+  .explore-card-icon {
+    width: 50px; height: 50px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    flex-shrink: 0;
+    transition: transform 0.3s ease;
+  }
+  .explore-card:hover .explore-card-icon { transform: scale(1.1); }
+
+  .explore-card--scenic .explore-card-icon { background: rgba(217,164,65,0.15); color: #d9a441; }
+  .explore-card--area   .explore-card-icon { background: rgba(94,201,164,0.15);  color: #5ec9a4; }
+  .explore-card--type   .explore-card-icon { background: rgba(107,184,232,0.15); color: #6bb8e8; }
+  .explore-card--photo  .explore-card-icon { background: rgba(232,168,64,0.15);  color: #e8a840; }
+
+  .explore-card-title {
+    font-family: "STKaiti","KaiTi","STSong",serif;
+    font-size: 20px; font-weight: 600;
+    color: rgba(232,228,219,0.82);
+    letter-spacing: 0.05em;
+    line-height: 1.3;
+  }
+  .explore-card-desc {
+    font-size: 14px; font-weight: 400;
+    color: rgba(232,228,219,0.3);
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+    font-family: system-ui, sans-serif;
+  }
+
+  .service-btn { display: none; }
+  .service-sub { display: none; }
+
+  /* ══════════════ 二级页面 ══════════════ */
+  .level1-view {
+    display: flex; flex: 1; min-height: 0; flex-direction: column;
+  }
+  .level1-view.hidden { display: none; }
+  .level2-view {
+    display: none;
+    flex: 1; min-height: 0;
+    flex-direction: column;
+  }
+  .level2-view.open { display: flex; }
+  .level3-view {
+    display: none;
+    flex: 1; min-height: 0;
+    flex-direction: column;
+  }
+  .level3-view.open { display: flex; }
+  .sub-nav-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 4px 8px;
+    flex: 1;
+    align-content: start;
+  }
+  .sub-nav-card {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 6px;
+    padding: 12px 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(232,228,219,0.10);
+    background: rgba(232,228,219,0.03);
+    cursor: pointer;
+    text-align: center;
+    min-height: 72px;
+    transition: all 0.3s ease;
+    outline: none;
+  }
+  .sub-nav-card:hover {
+    border-color: rgba(217,164,65,0.35);
+    background: rgba(217,164,65,0.06);
+  }
+  .sub-nav-card-icon { font-size: 32px; line-height: 1; }
+  .sub-nav-card-title {
+    font-family: "STKaiti","KaiTi","STSong",serif;
+    font-size: 20px; font-weight: 600;
+    color: rgba(232,228,219,0.82);
+    letter-spacing: 0.05em; line-height: 1.2;
+  }
+  .sub-nav-card-count {
+    font-size: 14px; font-weight: 400;
+    color: rgba(232,228,219,0.3);
+    letter-spacing: 0.04em;
+    font-family: system-ui, sans-serif;
+  }
+  .l2-back-row {
+    flex-shrink: 0;
+    padding: 0 12px 8px;
+  }
+  .l2-back-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 0;
+    border: none; background: transparent;
+    color: rgba(232,228,219,0.4);
+    font-family: inherit; font-size: 16px; cursor: pointer;
+    transition: color 0.25s ease;
+  }
+  .l2-back-btn:hover { color: #d9a441; }
+  .l2-back-arrow { font-size: 18px; transition: transform 0.3s ease; }
+  .l2-back-btn:hover .l2-back-arrow { transform: translateX(-2px); }
+
+  .l2-scroll {
+    flex: 1; min-height: 0;
+    overflow-y: auto; padding: 0 12px 8px;
+    display: flex; flex-direction: column; gap: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(232,228,219,0.1) transparent;
+  }
+  .l2-scroll::-webkit-scrollbar { width: 3px; }
+  .l2-scroll::-webkit-scrollbar-thumb { background: rgba(232,228,219,0.1); border-radius: 2px; }
+  .l2-scroll::-webkit-scrollbar-track { background: transparent; }
+
+  .scenic-card {
+    padding: 10px 12px;
+    border: 1px solid rgba(232,228,219,0.10);
+    border-radius: 6px;
+    background: rgba(232,228,219,0.03);
+    cursor: pointer;
+    transition: border-color 0.3s ease, background 0.3s ease;
+  }
+  .scenic-card:hover {
+    border-color: rgba(217,164,65,0.35);
+    background: rgba(217,164,65,0.05);
+  }
+  .scenic-card h4 {
+    display: flex; align-items: center; gap: 8px;
+    margin: 0 0 6px;
+    color: rgba(232,228,219,0.75); font-size: 19px; font-weight: 600;
+  }
+  .scenic-card .scenic-dot {
+    width: 8px; height: 8px; border-radius: 2px;
+    background: #d9a441; flex-shrink: 0;
+  }
+  .scenic-card p {
+    margin: 0; color: rgba(232,228,219,0.4);
+    font-size: 15px; line-height: 1.5;
+  }
+
+  /* ══════════════ ⑤ 中央: 数字人区域 ══════════════ */
+  .chat-center {
+    grid-column: 2; grid-row: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    position: relative; z-index: 2;
+    width: 100%; height: 100%;
+    min-height: 0;
+  }
+  .center-caption {
+    margin-bottom: 12px; text-align: center;
+    display: flex; align-items: baseline; justify-content: center; gap: 12px;
+  }
+  .center-caption .caption-kicker {
+    color: #f8e7bb;
+    font-family: "STKaiti","KaiTi",serif;
+    font-size: 17px; font-weight: 700; letter-spacing: 0.1em;
+    text-shadow: 0 0 20px rgba(217,164,65,0.15);
+  }
+  .caption-weather {
+    color: rgba(232,228,219,0.28);
+    font-family: system-ui, sans-serif;
+    font-size: 11px; font-weight: 400;
+    letter-spacing: 0.04em;
+  }
+  .caption-kicker {
+    color: #f8e7bb;
+    font-family: "STKaiti","KaiTi",serif;
+    font-size: 17px; font-weight: 700; letter-spacing: 0.1em;
+    text-shadow: 0 0 20px rgba(217,164,65,0.15);
+  }
+
+  /* 顶部居中：数字人名称条 */
+  .top-caption {
+    position: absolute;
+    top: 16px; left: 50%; transform: translateX(-50%);
+    z-index: 20;
+    display: flex; align-items: baseline; justify-content: center; gap: 12px;
+    white-space: nowrap;
+  }
+  .top-caption .caption-kicker { font-size: 30px; }
+  .top-caption .caption-weather { color: rgba(232,228,219,0.35); font-size: 17px; }
+
+  /* 景区人数状态灯 */
+  .crowd-indicator {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,250,242,0.11);
+    background: rgba(23,18,14,0.6);
+    font-size: 17px; font-weight: 400;
+    color: rgba(232,228,219,0.7);
+    letter-spacing: 0.04em;
+    font-family: system-ui, sans-serif;
+    white-space: nowrap;
+    cursor: default;
+  }
+  .crowd-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 1px solid rgba(255,250,242,0.16);
+  }
+  .crowd-indicator[data-level="green"] .crowd-dot { background: #5ec9a4; }
+  .crowd-indicator[data-level="yellow"] .crowd-dot { background: #e8a840; }
+  .crowd-indicator[data-level="red"] .crowd-dot { background: #d45a3a; }
+
+  .avatar-stage {
+    position: relative; z-index: 2;
+    width: min(640px, 44vw);
+    height: min(600px, 82vh);
+    margin: 0 auto;
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent;
+  }
+  .avatar-stage iframe {
+    border: none; width: 100%; height: 100%;
+  }
+  .avatar-stage::after {
+    content: "";
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 140px;
+    z-index: 3;
+    pointer-events: none;
+    background: linear-gradient(to bottom, transparent 0%, #1a1612 100%);
+  }
+
+  /* ══════════════ ⑥ 底部输入栏 (绝对定位) ══════════════ */
+  .input-row {
+    position: absolute;
+    bottom: 36px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    width: min(700px, 88vw);
+    display: flex; align-items: center; justify-content: center; gap: 16px;
+  }
+  .input-field {
+    flex: 1;
+    height: 64px;
+    padding: 0 24px;
+    border: 1px solid rgba(232,228,219,0.12);
+    border-radius: 12px;
+    background: rgba(23,18,14,0.78);
+    color: rgba(232,228,219,0.82);
+    font-family: inherit; font-size: 22px;
+    letter-spacing: 0.03em;
+    outline: none;
+    transition: border-color 0.25s ease;
+  }
+  .input-field::placeholder {
+    font-size: 20px; color: rgba(232,228,219,0.25);
+  }
+  .input-field:focus {
+    border-color: rgba(217,164,65,0.35);
+  }
+  .voice-btn {
+    flex-shrink: 0;
+    width: auto;
+    height: 64px;
+    padding: 0 32px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(217,164,65,0.3);
+    border-radius: 999px;
+    background: rgba(217,164,65,0.14);
+    color: #d9a441;
+    font-family: inherit;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    outline: none;
+    white-space: nowrap;
+  }
+  .voice-btn:hover {
+    border-color: rgba(217,164,65,0.45);
+    background: rgba(217,164,65,0.2);
+    box-shadow: 0 0 20px rgba(217,164,65,0.15);
+  }
+  .voice-btn:active { transform: scale(0.95); }
+  .voice-btn:focus-visible { outline: 2px solid #d9a441; outline-offset: 3px; }
+  .voice-btn.recording {
+    border-color: #b84c3b;
+    background: rgba(184,76,59,0.22);
+    color: #f0c0c0;
+    animation: voice-active 1.2s ease-in-out infinite;
+  }
+  @keyframes voice-active {
+    0%,100% { box-shadow: 0 0 0 0 rgba(184,76,59,0.3); }
+    50%     { box-shadow: 0 0 0 8px rgba(184,76,59,0); }
+  }
+
+  .image-btn {
+    flex-shrink: 0;
+    width: auto;
+    height: 64px;
+    padding: 0 24px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(94,201,164,0.25);
+    border-radius: 999px;
+    background: rgba(94,201,164,0.1);
+    color: #5ec9a4;
+    font-family: inherit;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    outline: none;
+    white-space: nowrap;
+  }
+  .image-btn:hover {
+    border-color: rgba(94,201,164,0.45);
+    background: rgba(94,201,164,0.2);
+    box-shadow: 0 0 20px rgba(94,201,164,0.15);
+  }
+  .image-btn:active { transform: scale(0.95); }
+  .image-btn:focus-visible { outline: 2px solid #5ec9a4; outline-offset: 3px; }
+
+  /* ══════════════ ⑦ 移动端快捷入口 (桌面隐藏) ══════════════ */
+  .mobile-chips-row {
+    display: none;
+    flex-wrap: wrap; gap: 8px;
+    padding: 8px 12px;
+    justify-content: center;
+    z-index: 12;
+  }
+  .mobile-chip {
+    padding: 6px 14px;
+    border: 1px solid rgba(232,228,219,0.12);
+    border-radius: 999px;
+    background: rgba(13,12,10,0.6);
+    color: rgba(232,228,219,0.55);
+    font-family: inherit; font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+  }
+  .mobile-chip:hover {
+    border-color: rgba(217,164,65,0.35);
+    color: rgba(232,228,219,0.8);
+    background: rgba(217,164,65,0.08);
+  }
+
+  /* ══════════════ 响应式 ══════════════ */
+   @media (max-width: 1300px) {
+    .side-card { width: 380px; height: 450px; left: 20px; bottom: 108px; }
+    .right-card { width: 350px; height: 450px; right: 20px; bottom: 108px; }
+    .tourist-stage {
+      grid-template-columns: minmax(140px, 280px) 1fr minmax(140px, 280px);
+      padding: 0 12px;
+      gap: 8px;
+    }
+    .avatar-stage {
+      width: min(380px, 34vw);
+      height: min(420px, 60vh);
+    }
+    .input-row {
+      width: min(440px, 80vw);
+    }
+  }
+
+  @media (max-width: 1080px) {
+    .side-card { width: 300px; height: 400px; left: 12px; bottom: 108px; }
+    .right-card { width: 300px; height: 400px; right: 12px; bottom: 108px; }
+    .tourist-stage {
+      grid-template-columns: 1fr 2fr 1fr;
+      padding: 0 8px;
+    }
+    .input-row {
+      width: min(380px, 78vw);
+    }
+  }
+
+  @media (max-width: 720px) {
+    .tourist-page {
+      overflow-y: auto;
+      padding: 14px 10px;
+    }
+    .back-btn {
+      top: 14px; left: 14px;
+      padding: 7px 16px;
+      font-size: 12px;
+    }
+    .top-right {
+      top: 14px; right: 14px;
+    }
+    .top-brand {
+      font-size: 16px;
+    }
+    .tourist-stage {
+      display: flex; flex-direction: column;
+      padding: 0;
+      margin-top: 50px;
+      gap: 12px;
+      flex: none;
+    }
+    .side-card {
+      position: relative;
+      left: auto; bottom: auto;
+      width: 100%; height: auto;
+      min-height: 200px;
+      order: 3;
+    }
+    .right-card {
+      position: relative;
+      right: auto; bottom: auto;
+      width: 100%; height: auto;
+      min-height: 200px;
+      order: 4;
+    }
+    .chat-center {
+      order: 1;
+      padding: 0;
+    }
+    .avatar-stage {
+      width: min(52vh, 78vw);
+      height: min(360px, 52vh);
+    }
+    .input-row {
+      position: relative;
+      bottom: auto; left: auto; transform: none;
+      width: calc(100% - 16px);
+      gap: 8px;
+      order: 2;
+    }
+    .mobile-chips-row {
+      display: flex;
+    }
+    .voice-btn,
+    .image-btn {
+      padding: 0 14px; height: 44px; font-size: 13px;
+    }
+    /* 窄屏字体放大 */
+    .msg-bubble     { font-size: 18px !important; padding: 12px 16px !important; }
+    .explore-card-title { font-size: 18px !important; }
+    .side-card-tab   { font-size: 16px !important; }
+    .scenic-card-info h4  { font-size: 20px !important; }
+    .scenic-card-info p   { font-size: 16px !important; }
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@500;600;700&display=swap" rel="stylesheet">
+
+<style>body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}</style>
+</head>
+<body>
+
+<div class="tourist-page">
+  <!-- ① 背景层 -->
+  <div class="scenic-bg" aria-hidden="true">
+    <div class="scenic-bg-img"></div>
+    <div class="scenic-bg-overlay"></div>
+  </div>
+
+  <!-- ② 顶栏 -->
+  <button class="back-btn" onclick="history.back()">
+    <span class="back-arrow">←</span> 返回
+  </button>
+  <div class="top-right">
+    <span class="top-brand">灵山智慧导览</span>
+    <div class="top-status-row">
+      <span class="status-item"><span class="status-dot status-dot--live"></span> 人物模型 · 可使用</span>
+      <span class="status-item"><span class="status-dot status-dot--ready"></span> 语音模型 · 已就绪</span>
+      <span class="status-item"><span class="status-dot status-dot--warm"></span> 语音识别 · 准备中</span>
+    </div>
+  </div>
+
+  <!-- 顶部居中：数字人名称 -->
+  <div class="top-caption">
+    <span class="crowd-indicator" data-level="green" id="crowdStatus" aria-label="景区拥挤度">
+      <span class="crowd-dot"></span>
+      <span class="crowd-label">畅行</span>
+    </span>
+    <span class="caption-kicker">清岚 · 路线规划师</span>
+    <span class="caption-weather">☀️ 22°C 晴</span>
+  </div>
+
+  <!-- ③ 主舞台: 三栏Grid + 绝对定位卡片 -->
+  <div class="tourist-stage">
+
+    <!-- 中央: 数字人 -->
+    <div class="chat-center">
+      <div class="avatar-stage">
+        <iframe src="http://localhost:9999/avatar-3d-preview.html"></iframe>
+      </div>
+    </div>
+
+    <!-- 输入栏 (DOM 位置: chat-center 之后, right-card 之前; 桌面绝对定位) -->
+    <div class="input-row">
+      <button class="image-btn" aria-label="拍照识景">拍照识景</button>
+      <input
+        type="text"
+        class="input-field"
+        placeholder="想去哪里？清岚帮你规划路线…"
+        aria-label="输入问题"
+      />
+      <button class="voice-btn" aria-label="语音提问">语音提问</button>
+    </div>
+
+    <!-- 左侧对话卡片 (绝对定位浮动) -->
+    <div class="side-card" id="chatCard">
+      <div class="side-card-head">
+        <div class="side-card-tabs">
+          <button class="side-card-tab active" data-tab="chat">对话</button>
+          <button class="side-card-tab" data-tab="source">来源</button>
+        </div>
+      </div>
+      <div class="side-card-body" id="chatCardBody"></div>
+      <div class="side-card-body hidden" id="sourceCardBody">
+        <ul class="source-list" id="sourceList"></ul>
+      </div>
+    </div>
+
+    <!-- 右侧快捷卡片 (绝对定位浮动) -->
+    <div class="right-card">
+      <div class="right-card-head">路线规划</div>
+      <div class="right-card-body">
+        <!-- 一级页面 -->
+        <div class="level1-view" id="level1View">
+          <div class="service-grid" id="serviceGrid">
+            <button class="explore-card explore-card--scenic" data-service="官方推荐" aria-label="官方推荐">
+              <span class="explore-card-icon">📜</span>
+              <span class="explore-card-title">官方推荐</span>
+              <span class="explore-card-desc">景区官方设计</span>
+            </button>
+            <button class="explore-card explore-card--area" data-service="半日精选" aria-label="半日精选">
+              <span class="explore-card-icon">⚡</span>
+              <span class="explore-card-title">半日精选</span>
+              <span class="explore-card-desc">时间紧也能玩好</span>
+            </button>
+            <button class="explore-card explore-card--type" data-service="主题体验" aria-label="主题体验">
+              <span class="explore-card-icon">📸</span>
+              <span class="explore-card-title">主题体验</span>
+              <span class="explore-card-desc">按兴趣定制玩法</span>
+            </button>
+            <button class="explore-card explore-card--photo" data-service="特色路线" aria-label="特色路线">
+              <span class="explore-card-icon">🌅</span>
+              <span class="explore-card-title">特色路线</span>
+              <span class="explore-card-desc">不一样的灵山</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="level2-view" id="routeLevel2_官方推荐">
+          <div class="l2-back-row">
+            <button class="l2-back-btn route-cat-back-btn" aria-label="返回路线分类">
+              <span class="l2-back-arrow">←</span> 返回路线分类
+            </button>
+          </div>
+          <div class="sub-nav-grid">
+            <button class="sub-nav-card sub-nav-card--scenic" data-route="历史文化爱好者路线" aria-label="历史文化爱好者路线">
+              <span class="sub-nav-card-icon">📜</span>
+              <span class="sub-nav-card-title">历史文化爱好者路线</span>
+              <span class="sub-nav-card-count">6小时深度游</span>
+            </button>
+            <button class="sub-nav-card sub-nav-card--scenic" data-route="自然风光爱好者路线" aria-label="自然风光爱好者路线">
+              <span class="sub-nav-card-icon">📜</span>
+              <span class="sub-nav-card-title">自然风光爱好者路线</span>
+              <span class="sub-nav-card-count">5小时全景游</span>
+            </button>
+            <button class="sub-nav-card sub-nav-card--scenic" data-route="亲子家庭路线" aria-label="亲子家庭路线">
+              <span class="sub-nav-card-icon">📜</span>
+              <span class="sub-nav-card-title">亲子家庭路线</span>
+              <span class="sub-nav-card-count">4小时轻松游</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="level2-view" id="routeLevel2_半日精选">
+          <div class="l2-back-row">
+            <button class="l2-back-btn route-cat-back-btn" aria-label="返回路线分类">
+              <span class="l2-back-arrow">←</span> 返回路线分类
+            </button>
+          </div>
+          <div class="sub-nav-grid">
+            <button class="sub-nav-card sub-nav-card--area" data-route="省力快捷游" aria-label="省力快捷游">
+              <span class="sub-nav-card-icon">⚡</span>
+              <span class="sub-nav-card-title">省力快捷游</span>
+              <span class="sub-nav-card-count">2-2.5小时速览</span>
+            </button>
+            <button class="sub-nav-card sub-nav-card--area" data-route="半日精华游" aria-label="半日精华游">
+              <span class="sub-nav-card-icon">⚡</span>
+              <span class="sub-nav-card-title">半日精华游</span>
+              <span class="sub-nav-card-count">3.5-4小时全景</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="level2-view" id="routeLevel2_主题体验">
+          <div class="l2-back-row">
+            <button class="l2-back-btn route-cat-back-btn" aria-label="返回路线分类">
+              <span class="l2-back-arrow">←</span> 返回路线分类
+            </button>
+          </div>
+          <div class="sub-nav-grid">
+            <button class="sub-nav-card sub-nav-card--type" data-route="拍照出片游" aria-label="拍照出片游">
+              <span class="sub-nav-card-icon">📸</span>
+              <span class="sub-nav-card-title">拍照出片游</span>
+              <span class="sub-nav-card-count">3小时精选</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="level2-view" id="routeLevel2_特色路线">
+          <div class="l2-back-row">
+            <button class="l2-back-btn route-cat-back-btn" aria-label="返回路线分类">
+              <span class="l2-back-arrow">←</span> 返回路线分类
+            </button>
+          </div>
+          <div class="sub-nav-grid">
+            <button class="sub-nav-card sub-nav-card--photo" data-route="夕阳禅意游" aria-label="夕阳禅意游">
+              <span class="sub-nav-card-icon">🌅</span>
+              <span class="sub-nav-card-title">夕阳禅意游</span>
+              <span class="sub-nav-card-count">2.5小时落日线</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="level3-view" id="routeLevel3_历史文化爱好者路线">
+          <div class="l2-back-row">
+            <button class="l2-back-btn route-back-btn" aria-label="返回路线列表">
+              <span class="l2-back-arrow">←</span> 返回路线列表
+            </button>
+          </div>
+          <div class="l2-scroll">
+            <div class="scenic-card" data-route="历史文化爱好者路线" data-route-plan="南门入园→灵山大照壁（华夏第一壁）→胜境广场→佛手广场（天下第一掌）→祥符禅寺（千年古刹历史讲解）→杏坛广场→佛前广场→灵山大佛（佛教造像艺术解析）→灵山梵宫（佛教艺术殿堂深度游）→五印坛城（藏传佛教文化体验）→三圣殿（佛教历史文化展示）→出口" data-route-guide="灵山大照壁：全长39.8米，最高处7米，最厚处1.9米，由深浮雕花岗石拼块贴面而成，中间是一幅以"灵山胜境"为主题的大型浮雕，展现了佛教文化的博大精深；祥符禅寺：重点讲解玄奘法师与"小灵山"的渊源，古井与银杏的历史故事，江南第一钟的文化意义，以及祥符禅寺千年兴衰的历史轨迹；灵山大佛：解析佛像手印的佛教含义，216级台阶的文化寓意（108烦恼与108愿望），青铜铸造工艺的历史与现代科技的结合，以及"五方五佛"的理念" data-route-exp="在祥符禅寺参与撞钟祈福，聆听12.8吨重的江南第一钟敲响，感受佛教文化的庄严与神圣；在梵宫欣赏《吉祥颂》演出，体验全息投影、水雾等现代科技与佛教文化的完美融合" data-route-duration="6小时深度游">
+              <div class="scenic-card-info">
+                <h4>历史文化爱好者路线</h4>
+                <p> · 6小时深度游</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="level3-view" id="routeLevel3_自然风光爱好者路线">
+          <div class="l2-back-row">
+            <button class="l2-back-btn route-back-btn" aria-label="返回路线列表">
+              <span class="l2-back-arrow">←</span> 返回路线列表
+            </button>
+          </div>
+          <div class="l2-scroll">
+            <div class="scenic-card" data-route="自然风光爱好者路线" data-route-plan="南门入园→佛足坛→九龙灌浴（观赏表演）→菩提大道（欣赏太湖风光）→灵山大佛（登顶俯瞰全景）→曼飞龙塔（园林景观）→灵山精舍（禅意园林）→梵宫广场→出口" data-route-guide="菩提大道：介绍两侧景观植物的佛教文化意义（如菩提树枝繁叶茂，象征着佛教文化的繁荣昌盛），欣赏太湖与青龙山、白虎山的自然风貌，感受"前有照、后有靠、左右有抱"的风水格局；灵山大佛：重点讲解大佛选址的地理优势，俯瞰太湖、马山半岛的绝佳视角，以及大佛与自然环境的和谐融合，感受人与自然的完美统一；曼飞龙塔：介绍傣族佛教建筑风格，园林景观设计理念，与自然环境的和谐融合，展现不同民族佛教文化与自然的关系" data-route-exp="在九龙灌浴接取祈福圣水，寓意吉祥安康，同时欣赏水幕与阳光交织出的七彩佛光；在灵山大佛平台拍摄太湖日落，金色阳光洒在大佛身上，佛光普照，与太湖波光粼粼的水面交相辉映，美不胜收" data-route-duration="5小时全景游">
+              <div class="scenic-card-info">
+                <h4>自然风光爱好者路线</h4>
+                <p> · 5小时全景游</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="level3-view" id="routeLevel3_亲子家庭路线">
+          <div class="l2-back-row">
+            <button class="l2-back-btn route-back-btn" aria-label="返回路线列表">
+              <span class="l2-back-arrow">←</span> 返回路线列表
+            </button>
+          </div>
+          <div class="l2-scroll">
+            <div class="scenic-card" data-route="亲子家庭路线" data-route-plan="南门入园→九龙灌浴（观赏动态表演）→佛手广场（摸"天下第一掌"）→百子戏弥勒（亲子互动）→梵宫（欣赏艺术作品）→五印坛城（体验藏式文化）→出口" data-route-guide="九龙灌浴：用生动语言讲述释迦牟尼诞生的故事，让孩子理解佛教文化中的慈悲精神，解释"九龙吐水"的传说与"花开见佛"的仪式感，激发孩子对传统文化的兴趣；百子戏弥勒：介绍雕塑中孩童的不同形态，引导孩子感受"皆大欢喜"的生活态度，让孩子在轻松愉快的氛围中理解佛教文化的核心价值观；梵宫：简化艺术术语，重点介绍色彩、造型等直观元素，激发孩子的艺术兴趣，如穹顶天象图中的飞天形象、《华藏世界》琉璃作品的七彩光芒等" data-route-exp="参与"抱佛脚"亲子活动，让孩子在家长的陪伴下登顶大佛，感受大佛的宏伟气势，培养勇气与探索精神；在梵宫圣坛观看互动表演《吉祥颂》，通过全息投影、水雾等现代科技，让孩子直观感受佛陀修行成佛的故事，激发对传统文化的兴趣" data-route-duration="4小时轻松游">
+              <div class="scenic-card-info">
+                <h4>亲子家庭路线</h4>
+                <p> · 4小时轻松游</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="level3-view" id="routeLevel3_省力快捷游">
+          <div class="l2-back-row">
+            <button class="l2-back-btn route-back-btn" aria-label="返回路线列表">
+              <span class="l2-back-arrow">←</span> 返回路线列表
+            </button>
+          </div>
+          <div class="l2-scroll">
+            <div class="scenic-card" data-route="省力快捷游" data-route-plan="灵山大照壁→五明桥→佛足坛→五智门→九龙灌浴→灵山大佛→佛教文化博览馆→灵山梵宫" data-route-guide="介绍照壁全长39.8米、赵朴初题字由来。在此快速合影后继续前行，不必停留过久。；简单解说五门六柱象征五方五佛与六度波罗蜜，穿过此门意味着正式踏入禅意圣地。；讲解释迦牟尼诞生时花开见佛、九龙沐浴的故事。景观总高27.2米，太子佛鎏金高7.2米。" data-route-exp="在五智门下拍摄大佛与中轴线同框照；观赏九龙灌浴表演，接取九龙圣水祈求吉祥安康" data-route-duration="2-2.5小时速览">
+              <div class="scenic-card-info">
+                <h4>省力快捷游</h4>
+                <p>时间紧凑的游客、体力有限的长者 · 2-2.5小时速览</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="level3-view" id="routeLevel3_半日精华游">
+          <div class="l2-back-row">
+            <button class="l2-back-btn route-back-btn" aria-label="返回路线列表">
+              <span class="l2-back-arrow">←</span> 返回路线列表
+            </button>
+          </div>
+          <div class="l2-scroll">
+            <div class="scenic-card" data-route="半日精华游" data-route-plan="灵山大照壁→五明桥→佛足坛→五智门→菩提大道→九龙灌浴→降魔浮雕→阿育王柱→百子戏弥勒→祥符禅寺→灵山大佛→佛教文化博览馆→灵山梵宫→五印坛城→曼飞龙塔" data-route-guide="大照壁的赵朴初题字奠定佛教基调，五明桥的五种智慧引导游客从凡俗踏入禅境。；长约250米的朝圣步道，两侧近百棵从印度引进的正宗菩提树形成天然拱廊。；全景区最震撼的动态景观。大型音乐群雕总高27.2米。表演后可接取龙头喷出的祈福水。" data-route-exp="在菩提大道林荫拱廊中漫步，感受佛陀悟道之地的氛围；在九龙灌浴观赏震撼表演后，接取祈福圣水" data-route-duration="3.5-4小时全景">
+              <div class="scenic-card-info">
+                <h4>半日精华游</h4>
+                <p>只有半天时间的自由行游客 · 3.5-4小时全景</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="level3-view" id="routeLevel3_拍照出片游">
+          <div class="l2-back-row">
+            <button class="l2-back-btn route-back-btn" aria-label="返回路线列表">
+              <span class="l2-back-arrow">←</span> 返回路线列表
+            </button>
+          </div>
+          <div class="l2-scroll">
+            <div class="scenic-card" data-route="拍照出片游" data-route-plan="灵山大照壁→五明桥→佛足坛→九龙灌浴→降魔浮雕→百子戏弥勒→灵山大佛→灵山梵宫→五印坛城→曼飞龙塔" data-route-guide="全长39.8米、高7米的青石照壁。清晨光线从太湖方向斜射，鎏金大字在晨光中熠熠生辉。；五座汉白玉石拱桥并列横跨香水海。可利用多桥并列的纵深层次，将后方五智门纳入背景。；莲花铜雕缓缓绽放、太子佛升起自转、九条飞龙同时喷出数十米水柱。注意拍摄设备防水。" data-route-exp="清晨入园，利用晨光在灵山大照壁拍摄第一帧；在九龙灌浴抓拍花开见佛与九龙喷水的震撼瞬间" data-route-duration="3小时精选">
+              <div class="scenic-card-info">
+                <h4>拍照出片游</h4>
+                <p>摄影爱好者、社交媒体分享型游客 · 3小时精选</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="level3-view" id="routeLevel3_夕阳禅意游">
+          <div class="l2-back-row">
+            <button class="l2-back-btn route-back-btn" aria-label="返回路线列表">
+              <span class="l2-back-arrow">←</span> 返回路线列表
+            </button>
+          </div>
+          <div class="l2-scroll">
+            <div class="scenic-card" data-route="夕阳禅意游" data-route-plan="灵山梵宫→五印坛城→曼飞龙塔→无尽意斋→灵山大佛→祥符禅寺→百子戏弥勒→阿育王柱→降魔浮雕→九龙灌浴→菩提大道→五智门→佛足坛→五明桥→灵山大照壁" data-route-guide="下午入园后先从梵宫开始，此时上午团队游客基本离开，场馆内部人流较少。；从梵宫步行至香水海湖心岛的五印坛城。108个纯铜转经筒构成小布达拉宫的独特视觉。；隐藏在山林间的赵朴初先生纪念馆，以其北京西城区故居为原型复刻。正房分为生平事迹厅、灵山渊源厅、书法作品厅。" data-route-exp="下午入园后先参观梵宫，避开上午人流高峰；在无尽意斋了解赵朴初先生与灵山的深厚渊源" data-route-duration="2.5小时落日线">
+              <div class="scenic-card-info">
+                <h4>夕阳禅意游</h4>
+                <p>下午入园的游客、摄影追光者 · 2.5小时落日线</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+<!-- ⑦ 移动端快捷入口 -->
+  <div class="mobile-chips-row">
+    <button class="mobile-chip">官方推荐</button>
+    <button class="mobile-chip">半日精选</button>
+    <button class="mobile-chip">主题体验</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  const chatBody    = document.getElementById('chatCardBody');
+  const sourceBody  = document.getElementById('sourceCardBody');
+  const sourceList  = document.getElementById('sourceList');
+  const tabs        = document.querySelectorAll('.side-card-tab');
+
+  const sources = [
+    { title: '历史文化爱好者路线', text: '...', meta: '灵山胜境：历史、文化、景点特色与个性化游览指南.docx - 历史文化爱好者路线（6小时深度游）' },
+    { title: '自然风光爱好者路线', text: '...', meta: '灵山胜境：历史、文化、景点特色与个性化游览指南.docx - 自然风光爱好者路线（5小时全景游）' },
+    { title: '亲子家庭路线', text: '...', meta: '灵山胜境：历史、文化、景点特色与个性化游览指南.docx - 亲子家庭路线（4小时轻松游）' },
+    { title: '省力快捷游', text: '专为不想走太多路、时间紧张的游客设计。聚焦入口区、九龙灌浴、大佛和梵宫四大核心，跳过菩提大道等中轴长步道。全程步行距离约2-3公里，平路为主。...', meta: '基于灵山胜境知识库设计——省力快捷游' },
+    { title: '拍照出片游', text: '精选灵山视觉效果最佳的10个景点，按上午光线方向编排。从入口太湖倒影到中轴动态雕塑，从大佛高空俯拍到滨湖异域建筑群。灵山胜境汇集汉传、藏传、南传三大语系佛教建筑，一处拍摄三种风格。...', meta: '基于灵山胜境知识库设计——拍照出片游' },
+    { title: '半日精华游', text: '为只有半天但想全面了解灵山的游客设计。以灵活节奏串联入口区、中轴区、大佛区、滨湖区四大区域各取精华，15个途经点覆盖景区主线核心内容。...', meta: '基于灵山胜境知识库设计——半日精华游' },
+    { title: '夕阳禅意游', text: '专为下午入园的游客设计。一反常规游览顺序，先从滨湖区的梵宫和坛城开始参观，然后在日落前抵达灵山大佛。日落之后沿中轴线缓步回程，暮色中的景区静谧深远。...', meta: '基于灵山胜境知识库设计——夕阳禅意游' },
+  ];
+
+  const routeStops = {
+    '历史文化爱好者路线': ['南门入园','灵山大照壁（华夏第一壁）','胜境广场','佛手广场（天下第一掌）','祥符禅寺（千年古刹历史讲解）','杏坛广场','佛前广场','灵山大佛（佛教造像艺术解析）','灵山梵宫（佛教艺术殿堂深度游）','五印坛城（藏传佛教文化体验）','三圣殿（佛教历史文化展示）','出口'],
+    '自然风光爱好者路线': ['南门入园','佛足坛','九龙灌浴（观赏表演）','菩提大道（欣赏太湖风光）','灵山大佛（登顶俯瞰全景）','曼飞龙塔（园林景观）','灵山精舍（禅意园林）','梵宫广场','出口'],
+    '亲子家庭路线': ['南门入园','九龙灌浴（观赏动态表演）','佛手广场（摸"天下第一掌"）','百子戏弥勒（亲子互动）','梵宫（欣赏艺术作品）','五印坛城（体验藏式文化）','出口'],
+    '省力快捷游': ['灵山大照壁','五明桥','佛足坛','五智门','九龙灌浴','灵山大佛','佛教文化博览馆','灵山梵宫'],
+    '拍照出片游': ['灵山大照壁','五明桥','佛足坛','九龙灌浴','降魔浮雕','百子戏弥勒','灵山大佛','灵山梵宫','五印坛城','曼飞龙塔'],
+    '半日精华游': ['灵山大照壁','五明桥','佛足坛','五智门','菩提大道','九龙灌浴','降魔浮雕','阿育王柱','百子戏弥勒','祥符禅寺','灵山大佛','佛教文化博览馆','灵山梵宫','五印坛城','曼飞龙塔'],
+    '夕阳禅意游': ['灵山梵宫','五印坛城','曼飞龙塔','无尽意斋','灵山大佛','祥符禅寺','百子戏弥勒','阿育王柱','降魔浮雕','九龙灌浴','菩提大道','五智门','佛足坛','五明桥','灵山大照壁'],
+  };
+
+  function fmtRouteStops(stops) {
+    var arr = stops.map(function(s, i) {
+      var num = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮'][i] || (i+1);
+      return '<span class="route-stop">' + num + ' ' + s + '</span>';
+    });
+    var arrow = '<span class="route-arrow">↓</span>';
+    return '<div class="route-stops-list">' + arr.join(arrow) + '</div>';
+  }
+
+  const messages = [
+    { role: 'user', text: '帮我推荐一条合适的路线吧' },
+    { role: 'assistant', text: '为您整理了7条灵山游览路线：<br><br><b>📜 官方推荐</b>：历史文化爱好者路线（6小时深度）、自然风光爱好者路线（5小时全景）、亲子家庭路线（4小时轻松）<br><b>⚡ 半日精选</b>：省力快捷游（2-2.5小时）、半日精华游（3.5-4小时）<br><b>📸 主题体验</b>：拍照出片游（3小时精选）<br><b>🌅 特色路线</b>：夕阳禅意游（2.5小时落日线）<br><br>点击右下角分类选择感兴趣的路线，我会为您逐一讲解途经点和体验推荐。' },
+  ];
+
+  function renderChat() {
+    var h = '';
+    messages.forEach(function(m, i) {
+      if (m.role === 'user') {
+        var r = messages[i + 1] && messages[i + 1].role === 'assistant';
+        h += '<div class="msg-item user' + (r ? ' collapsed' : '') + '"><div class="msg-bubble">' + m.text + '</div></div>';
+      } else {
+        h += '<div class="msg-item assistant"><div class="msg-bubble">' + m.text + '</div></div>';
+      }
+    });
+    chatBody.innerHTML = h;
+  }
+
+  function renderSources() {
+    sourceList.innerHTML = sources.map(function(s, i) {
+      return '<li class="source-card" data-src-idx="' + i + '"><h4><span class="source-num">' + (i + 1) + '</span>' + s.title + '</h4><p>' + s.text + '</p><span class="source-meta">' + s.meta + '</span></li>';
+    }).join('');
+  }
+
+  function switchTab(name) {
+    tabs.forEach(function(t) { t.classList.toggle('active', t.dataset.tab === name); });
+    chatBody.classList.toggle('hidden', name !== 'chat');
+    sourceBody.classList.toggle('hidden', name !== 'source');
+  }
+
+  function highlightSource(idx) {
+    renderSources();
+    var c = sourceList.querySelector('[data-src-idx="' + idx + '"]');
+    if (c) { c.classList.add('highlight'); c.scrollIntoView({behavior:'smooth',block:'center'}); setTimeout(function(){ c.classList.remove('highlight'); }, 2500); }
+  }
+
+  tabs.forEach(function(t) { t.addEventListener('click', function() { switchTab(t.dataset.tab); }); });
+
+  function closeAllViews() {
+    var l2s = document.querySelectorAll('.level2-view.open');
+    for (var i = 0; i < l2s.length; i++) l2s[i].classList.remove('open');
+    var l3s = document.querySelectorAll('.level3-view.open');
+    for (var i = 0; i < l3s.length; i++) l3s[i].classList.remove('open');
+  }
+  function backToLevel1() {
+    closeAllViews();
+    document.getElementById('level1View').classList.remove('hidden');
+  }
+
+  var exploreBtns = document.querySelectorAll('.explore-card');
+  for (var i = 0; i < exploreBtns.length; i++) {
+    exploreBtns[i].addEventListener('click', function() {
+      var s = this.dataset.service;
+      closeAllViews();
+      document.getElementById('level1View').classList.add('hidden');
+      var l2 = document.getElementById('routeLevel2_' + s);
+      if (l2) l2.classList.add('open');
+    });
+  }
+
+  var subNavBtns = document.querySelectorAll('.sub-nav-card[data-route]');
+  for (var j = 0; j < subNavBtns.length; j++) {
+    subNavBtns[j].addEventListener('click', function() {
+      var rn = this.dataset.route;
+      var openL2s = document.querySelectorAll('.level2-view.open');
+      for (var k = 0; k < openL2s.length; k++) openL2s[k].classList.remove('open');
+      var l3 = document.getElementById('routeLevel3_' + rn.replace(/ /g, '_'));
+      if (l3) l3.classList.add('open');
+    });
+  }
+
+  var scenicCards = document.querySelectorAll('.scenic-card[data-route]');
+  for (var m = 0; m < scenicCards.length; m++) {
+    scenicCards[m].addEventListener('click', function() {
+      var name = this.dataset.route;
+      var plan = this.dataset.routePlan;
+      var guide = this.dataset.routeGuide;
+      var exp = this.dataset.routeExp;
+      var dur = this.dataset.routeDuration;
+
+      var text = '<b>' + dur + '</b><br><br>' + guide + '。' + exp + '。';
+      var stops = routeStops[name] || [];
+      if (stops.length > 0) text += fmtRouteStops(stops);
+
+      var m = document.createElement('div');
+      m.className = 'msg-item user collapsed';
+      m.innerHTML = '<div class="msg-bubble">请介绍' + name + '</div>';
+      chatBody.appendChild(m);
+      var r = document.createElement('div');
+      r.className = 'msg-item assistant';
+      r.innerHTML = '<div class="msg-bubble">' + text + '</div>';
+      chatBody.appendChild(r);
+      chatBody.scrollTop = chatBody.scrollHeight;
+      document.getElementById('chatCard').classList.add('speaking');
+    });
+  }
+
+  var catBackBtns = document.querySelectorAll('.route-cat-back-btn');
+  for (var n = 0; n < catBackBtns.length; n++) {
+    catBackBtns[n].addEventListener('click', backToLevel1);
+  }
+  var routeBackBtns = document.querySelectorAll('.route-back-btn');
+  for (var p = 0; p < routeBackBtns.length; p++) {
+    routeBackBtns[p].addEventListener('click', function(e) {
+      e.stopPropagation();
+      var l3 = this.closest('.level3-view');
+      l3.classList.remove('open');
+      backToLevel1();
+    });
+  }
+
+  renderChat(); renderSources();
+  var sideCard = document.getElementById('chatCard');
+  if (messages.some(function(m) { return m.role === 'assistant'; })) sideCard.classList.add('speaking');
+})();
+</script>
+
+</body>
+</html>

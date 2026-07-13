@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>灵山智慧导览 · Landing 预览</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #1a1612;
+    --surface:  rgba(255,255,255,0.03);
+    --border:   rgba(255,250,242,0.07);
+    --text:     #f0f2f5;
+    --muted:    rgba(255,255,255,0.25);
+    --muted-hv: rgba(255,255,255,0.65);
+    --accent:   #248550;
+    --accent-bg:rgba(36,133,80,0.12);
+    --accent-bd:rgba(36,133,80,0.18);
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Inter, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", ui-sans-serif, sans-serif;
+    overflow: hidden;
+  }
+
+  /* ══════════════ 主布局：全屏基底 + 左文浮层 + 右图70% ══════════════ */
+  .container {
+    position: relative;
+    height: 100vh;
+    height: 100dvh;
+    background: var(--bg);
+  }
+
+  /* ── 右侧图片区（70% 宽度）── */
+  .visual {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 70%;
+    overflow: hidden;
+  }
+
+  .visual .img-stack {
+    position: absolute;
+    inset: 0;
+  }
+
+  .visual .img-stack img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: opacity;
+  }
+
+  .visual .img-stack img.active { opacity: 1; }
+
+  /* 图片左侧衔接渐变（黑 → 透 → 图片） */
+  .visual::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to right,
+      var(--bg) 0%,
+      rgba(11, 11, 15, 0.8) 5%,
+      rgba(11, 11, 15, 0.35) 15%,
+      transparent 25%
+    );
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* ── 左侧文字链接区（透明浮层）── */
+  .panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 30%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 48px;
+    z-index: 3;
+    /* 无背景色 — 完全透明 */
+  }
+
+  /* 底部景点标签 */
+  .scene-label {
+    position: absolute;
+    bottom: 36px;
+    right: 48px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 22px;
+    border-radius: 999px;
+    background: rgba(11, 11, 15, 0.5);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    z-index: 3;
+    transition: opacity 0.6s ease;
+  }
+
+  .scene-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  .scene-name {
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: rgba(255,255,255,0.85);
+  }
+
+  .panel-accent {
+    width: 36px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--accent);
+    margin-bottom: 32px;
+  }
+
+  /* ── 文字链接（核心效果）── */
+  .link-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 28px;
+  }
+
+  .nav-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0;
+    border: none;
+    background: none;
+    color: var(--muted);
+    font-size: clamp(36px, 4.2vw, 56px);
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    text-align: left;
+    transition: color 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    font-family: inherit;
+    line-height: 1.15;
+  }
+
+  .nav-link:hover,
+  .nav-link.active {
+    color: var(--muted-hv);
+  }
+
+  /* 箭头动画 */
+  .link-arrow {
+    display: inline-flex;
+    align-items: center;
+    color: var(--muted);
+    transform: scale(0.35, 0.55);
+    transform-origin: left center;
+    transition:
+      transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+      color 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+  }
+
+  .link-arrow svg {
+    display: block;
+  }
+
+  .nav-link:hover .link-arrow,
+  .nav-link.active .link-arrow {
+    transform: scale(1, 1);
+    color: var(--muted-hv);
+  }
+
+  /* ── 描述文字 ── */
+  .panel-desc {
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 15px;
+    line-height: 1.75;
+    margin-bottom: 32px;
+    max-width: 380px;
+  }
+
+  /* ── 分隔线 ── */
+  .panel-divider {
+    height: 1px;
+    background: var(--border);
+    margin-bottom: 24px;
+  }
+
+  /* ── 特性标签 ── */
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 40px;
+  }
+
+  .tag {
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    background: var(--accent-bg);
+    border: 1px solid var(--accent-bd);
+    color: rgba(59, 130, 246, 0.8);
+  }
+
+  /* ── 页脚 ── */
+  .panel-footer {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.18);
+    letter-spacing: 0.03em;
+  }
+
+  /* ══════════════ 响应式 ══════════════ */
+  @media (max-width: 860px) {
+    .panel {
+      width: 100%;
+      top: auto;
+      bottom: 0;
+      padding: 40px 28px;
+      background: linear-gradient(to top, rgba(11,11,15,0.92) 0%, rgba(11,11,15,0.4) 60%, transparent 100%);
+    }
+
+    .visual {
+      width: 100%;
+    }
+
+    .visual::before {
+      background: linear-gradient(
+        to bottom,
+        var(--bg) 0%,
+        rgba(11, 11, 15, 0.5) 15%,
+        transparent 30%
+      );
+    }
+
+    .nav-link {
+      font-size: clamp(28px, 6vw, 40px);
+    }
+
+    .scene-label {
+      bottom: 24px;
+      right: 24px;
+    }
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@500;600;700&display=swap" rel="stylesheet">
+
+<style>body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- ══ 左侧：景点大图 ══ -->
+  <div class="visual">
+    <div class="img-stack">
+      <img
+        src="assets/test-image.jpg"
+        alt="测试图片"
+        class="active"
+        data-id="buddha"
+      />
+      <img
+        src="assets/灵山梵宫.png"
+        alt="灵山梵宫"
+        data-id="palace"
+      />
+      <img
+        src="assets/九龙灌浴.png"
+        alt="九龙灌浴"
+        data-id="dragon"
+      />
+      <img
+        src="assets/五智门.png"
+        alt="五智门"
+        data-id="gate"
+      />
+      <img
+        src="assets/菩提大道.png"
+        alt="菩提大道"
+        data-id="bodhi"
+      />
+      <img
+        src="assets/香月花街.png"
+        alt="香月花街"
+        data-id="street"
+      />
+    </div>
+
+    <!-- 底部景点标签 -->
+    <div class="scene-label">
+      <span class="scene-dot"></span>
+      <span class="scene-name" id="sceneName">灵山大佛</span>
+    </div>
+  </div>
+
+  <!-- ══ 右侧：文字链接 ══ -->
+  <div class="panel">
+    <div class="panel-accent"></div>
+
+    <div class="link-list">
+      <button
+        class="nav-link active"
+        data-target="tourist"
+        data-image="buddha"
+        data-label="灵山大佛"
+      >
+        游客端
+        <span class="link-arrow">
+          <svg width="150" height="28" viewBox="0 0 150 28" fill="none">
+            <path d="M0.5 14H149M149 14L136 1.5M149 14L136 26.5" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+        </span>
+      </button>
+
+      <button
+        class="nav-link"
+        data-target="admin"
+        data-image="palace"
+        data-label="灵山梵宫"
+      >
+        管理后台
+        <span class="link-arrow">
+          <svg width="150" height="28" viewBox="0 0 150 28" fill="none">
+            <path d="M0.5 14H149M149 14L136 1.5M149 14L136 26.5" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+        </span>
+      </button>
+    </div>
+
+    <p class="panel-desc">
+      指尖轻触，开启灵山胜境智慧之旅。<br>
+      AI 数字人导游伴您遍览胜境风华。
+    </p>
+
+    <div class="panel-divider"></div>
+
+    <footer class="panel-footer">灵山胜境景区 &copy; 2026 | 软件杯参赛作品</footer>
+  </div>
+</div>
+
+<!-- ══════════════ 交互脚本 ══════════════ -->
+<script>
+(function() {
+  const links = document.querySelectorAll('.nav-link');
+  const images = document.querySelectorAll('.img-stack img');
+  const sceneName = document.getElementById('sceneName');
+
+  links.forEach(link => {
+    link.addEventListener('mouseenter', function() {
+      // 所有链接取消 active
+      links.forEach(l => l.classList.remove('active'));
+      this.classList.add('active');
+
+      // 切换图片
+      const targetId = this.dataset.image;
+      images.forEach(img => {
+        img.classList.toggle('active', img.dataset.id === targetId);
+      });
+
+      // 更新底部标签
+      sceneName.textContent = this.dataset.label;
+    });
+  });
+
+  // 游客端 / 管理后台 都只是预览，点击无跳转（后续接入 Vue Router 时替换）
+  links.forEach(link => {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      const target = this.dataset.target;
+      console.log('→ 点击了:', target, '(预览模式，未接入路由)');
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
