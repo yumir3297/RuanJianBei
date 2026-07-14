@@ -73,10 +73,12 @@ body,
 body {
   margin: 0;
   min-width: 320px;
-  font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", "Noto Serif SC", "STKaiti", "KaiTi", sans-serif;
   font-size: var(--text-base);
   line-height: 1.65;
   color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   background:
     radial-gradient(ellipse 60% 40% at 50% 45%, rgba(196, 155, 76, 0.08), transparent),
     linear-gradient(180deg, var(--lingshan-paper) 0%, #ede8e0 100%);

@@ -2,7 +2,6 @@
   <section class="knowledge-layout">
     <header class="panel-card knowledge-hero">
       <div class="hero-copy">
-        <span class="hero-kicker">SCENIC KNOWLEDGE OPS</span>
         <h2>知识资产管理</h2>
         <p>
           统一维护景区讲解资料、游客高频问题与运营补录内容，让导览回答可检索、可追溯，也更适合现场答辩展示。
@@ -53,11 +52,12 @@
           <span class="stat-icon">
             <el-icon><component :is="card.icon" /></el-icon>
           </span>
-          <span class="stat-kicker">{{ card.kicker }}</span>
         </div>
-        <strong class="stat-value">{{ formatNumber(card.value) }}</strong>
-        <span class="stat-label">{{ card.label }}</span>
-        <p class="stat-note">{{ card.note }}</p>
+        <div class="stat-body">
+          <span class="stat-label">{{ card.label }}</span>
+          <strong class="stat-value">{{ formatNumber(card.value) }}</strong>
+          <p class="stat-note">{{ card.note }}</p>
+        </div>
       </article>
     </div>
 
@@ -65,7 +65,6 @@
       <article class="panel-card knowledge-table-card">
         <div class="card-heading">
           <div>
-            <span class="card-kicker">ASSET SNAPSHOT</span>
             <h3>知识资产快照</h3>
             <p>围绕景区知识池进行检视、筛选与编辑，支撑讲解内容、游客问答与后续盲区补录。</p>
           </div>
@@ -124,33 +123,30 @@
               </template>
             </el-table-column>
 
-            <el-table-column prop="source" label="来源" min-width="220">
+            <el-table-column prop="source" label="来源" width="160" show-overflow-tooltip>
               <template #default="{ row }">
-                <div class="source-cell">
-                  <span>{{ sourceLabel(row.source) }}</span>
-                  <small>{{ sourceNote(row.source) }}</small>
-                </div>
+                <span class="source-text">{{ sourceLabel(row.source) }}</span>
               </template>
             </el-table-column>
 
-            <el-table-column label="别名" min-width="200">
+            <el-table-column label="别名" width="160">
               <template #default="{ row }">
                 <div v-if="row.aliases?.length" class="alias-list">
                   <el-tag
-                    v-for="alias in row.aliases.slice(0, 3)"
+                    v-for="alias in row.aliases.slice(0, 2)"
                     :key="alias"
                     size="small"
                     effect="plain"
                   >
                     {{ alias }}
                   </el-tag>
-                  <span v-if="row.aliases.length > 3" class="alias-more">+{{ row.aliases.length - 3 }}</span>
+                  <span v-if="row.aliases.length > 2" class="alias-more">+{{ row.aliases.length - 2 }}</span>
                 </div>
                 <span v-else class="muted-text">暂无别名</span>
               </template>
             </el-table-column>
 
-            <el-table-column label="操作" width="156" fixed="right">
+            <el-table-column label="操作" width="148">
               <template #default="{ row }">
                 <div class="table-actions">
                   <el-button type="primary" size="small" @click="openDialog(row)">编辑</el-button>
@@ -179,7 +175,6 @@
         <article class="panel-card side-card">
           <div class="side-heading">
             <div>
-              <span class="card-kicker">OPERATIONS</span>
               <h3>运营动作区</h3>
             </div>
             <el-tag size="small" type="success" effect="plain">核心操作</el-tag>
@@ -215,7 +210,6 @@
         <article class="panel-card side-card">
           <div class="side-heading">
             <div>
-              <span class="card-kicker">STATUS BOARD</span>
               <h3>当前工作面</h3>
             </div>
           </div>
@@ -243,7 +237,6 @@
         <article class="panel-card side-card guidance-card">
           <div class="side-heading">
             <div>
-              <span class="card-kicker">GOVERNANCE</span>
               <h3>录入规范提示</h3>
             </div>
           </div>
@@ -263,7 +256,6 @@
       class="knowledge-dialog"
     >
       <div class="dialog-intro">
-        <span class="card-kicker">EDITOR</span>
         <p>维护可展示、可检索、可回答的景区知识内容，建议同步补齐来源与别名。</p>
       </div>
 
@@ -501,7 +493,7 @@ const statusToneClass = computed(() => {
 const summaryCards = computed(() => [
   {
     key: "knowledge-total",
-    kicker: "KNOWLEDGE",
+    kicker: "",
     value: entries.value.length,
     label: "知识资产总量",
     note: "支撑景区讲解、问答与资料追溯的底层内容。",
@@ -511,7 +503,7 @@ const summaryCards = computed(() => [
   },
   {
     key: "category-coverage",
-    kicker: "COVERAGE",
+    kicker: "",
     value: categoryCount.value,
     label: "分类覆盖",
     note: "反映当前景区知识维度是否完整、清晰。",
@@ -521,7 +513,7 @@ const summaryCards = computed(() => [
   },
   {
     key: "aliases",
-    kicker: "ALIAS",
+    kicker: "",
     value: aliasConfiguredCount.value,
     label: "已配置别名",
     note: "便于识别游客口语化问法与景点俗称。",
@@ -531,7 +523,7 @@ const summaryCards = computed(() => [
   },
   {
     key: "manual-entry",
-    kicker: "CURATION",
+    kicker: "",
     value: manualEntryCount.value,
     label: "人工补录条目",
     note: "体现后台持续维护与运营补充能力。",
@@ -719,7 +711,7 @@ onMounted(() => {
 <style scoped>
 .knowledge-layout {
   display: grid;
-  gap: 20px;
+  gap: 12px;
 }
 
 .knowledge-hero {
@@ -728,25 +720,10 @@ onMounted(() => {
   justify-content: space-between;
   gap: 28px;
   overflow: hidden;
-  padding: 28px 30px;
-  background:
-    linear-gradient(118deg, rgba(42, 75, 58, 0.98), rgba(87, 104, 74, 0.94)),
-    var(--lingshan-green-deep);
-  color: #fff;
-}
-
-.knowledge-hero::after {
-  position: absolute;
-  top: -88px;
-  right: 7%;
-  width: 248px;
-  height: 248px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 50%;
-  box-shadow:
-    0 0 0 34px rgba(255, 255, 255, 0.04),
-    0 0 0 78px rgba(255, 255, 255, 0.025);
-  content: "";
+  padding: 20px 24px;
+  background: linear-gradient(155deg, #241d16 0%, #2e2620 50%, #3a3028 100%);
+  border: 1px solid #342d26;
+  color: #fff7eb;
 }
 
 .knowledge-hero > * {
@@ -754,29 +731,16 @@ onMounted(() => {
   z-index: 1;
 }
 
-.hero-kicker,
-.card-kicker,
-.stat-kicker {
-  font-family: Georgia, "Times New Roman", serif;
-  letter-spacing: 0.14em;
-}
-
-.hero-kicker {
-  color: #f7ddb7;
-  font-size: 11px;
-}
-
 .hero-copy h2 {
   margin: 10px 0 8px;
-  font-family: Georgia, "STSong", serif;
-  font-size: clamp(28px, 4vw, 40px);
+  font-size: clamp(22px, 3vw, 30px);
   font-weight: 600;
 }
 
 .hero-copy p {
   max-width: 720px;
   margin: 0;
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 247, 235, 0.56);
   line-height: 1.7;
 }
 
@@ -793,7 +757,7 @@ onMounted(() => {
   gap: 8px;
   padding: 8px 12px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 999px;
+  border-radius: 0;
   background: rgba(255, 255, 255, 0.1);
   font-size: 13px;
   white-space: nowrap;
@@ -813,7 +777,7 @@ onMounted(() => {
 .hero-status {
   padding: 16px 18px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 18px;
+  border-radius: 0;
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(8px);
 }
@@ -833,7 +797,7 @@ onMounted(() => {
 
 .hero-status p {
   margin: 0;
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 247, 235, 0.56);
   font-size: 13px;
   line-height: 1.65;
 }
@@ -852,83 +816,74 @@ onMounted(() => {
 
 .stat-card {
   position: relative;
-  display: grid;
-  gap: 8px;
-  min-height: 172px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #d4c8b8;
+  border-radius: 0;
+  background: #fffaf2;
+  box-shadow: none;
   overflow: hidden;
-  padding: 20px;
-  border: 1px solid color-mix(in srgb, var(--accent) 18%, white);
-  border-radius: 18px;
-  background:
-    radial-gradient(circle at 100% 0, var(--accent-soft), transparent 44%),
-    rgba(255, 255, 255, 0.94);
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.07);
-}
-
-.stat-card::after {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 56%;
-  height: 4px;
-  border-radius: 0 999px 0 0;
-  background: var(--accent);
-  content: "";
 }
 
 .stat-card-top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .stat-icon {
   display: grid;
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   place-items: center;
-  border-radius: 12px;
+  border-radius: 2px;
   background: var(--accent-soft);
   color: var(--accent);
-  font-size: 19px;
+  font-size: 17px;
+  flex-shrink: 0;
 }
 
-.stat-kicker {
-  color: color-mix(in srgb, var(--accent) 72%, #64748b);
-  font-size: 9px;
+.stat-body {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
 }
 
 .stat-value {
-  margin-top: 10px;
-  color: #0f172a;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(30px, 4vw, 42px);
+  color: #241d16;
+  font-size: 17px;
+  font-weight: 700;
   line-height: 1;
 }
 
 .stat-label {
-  color: #475569;
-  font-size: 13px;
+  color: #675a4e;
+  font-size: 12px;
 }
 
 .stat-note {
   margin: 0;
-  color: #64748b;
-  font-size: 12px;
-  line-height: 1.6;
+  color: #675a4e;
+  font-size: 11px;
+  line-height: 1.5;
 }
 
 .knowledge-main {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
-  gap: 16px;
+  gap: 12px;
   align-items: start;
 }
 
 .knowledge-table-card,
 .side-card {
-  padding: 22px;
+  padding: 18px;
+  border: 1px solid #d4c8b8;
+  background: #fffaf2;
 }
 
 .card-heading,
@@ -942,29 +897,24 @@ onMounted(() => {
 .card-heading h3,
 .side-heading h3 {
   margin: 5px 0 4px;
-  color: #0f172a;
-  font-family: Georgia, "STSong", serif;
-  font-size: 21px;
+  color: #241d16;
+  font-size: 17px;
+  font-weight: 600;
 }
 
 .card-heading p,
 .side-heading p {
   margin: 0;
-  color: #64748b;
+  color: #675a4e;
   font-size: 12px;
   line-height: 1.55;
-}
-
-.card-kicker {
-  color: #0f766e;
-  font-size: 9px;
 }
 
 .heading-meta {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #64748b;
+  color: #675a4e;
   font-size: 12px;
   white-space: nowrap;
 }
@@ -974,9 +924,9 @@ onMounted(() => {
   gap: 12px;
   margin: 18px 0 16px;
   padding: 14px;
-  border: 1px solid rgba(102, 128, 107, 0.12);
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(245, 247, 242, 0.92), rgba(255, 255, 255, 0.96));
+  border: 1px solid #d4c8b8;
+  border-radius: 0;
+  background: #fffaf2;
 }
 
 .search-input {
@@ -990,34 +940,33 @@ onMounted(() => {
 
 .table-shell {
   overflow: hidden;
-  border: 1px solid rgba(93, 105, 92, 0.12);
-  border-radius: 16px;
+  border: 1px solid #d4c8b8;
+  border-radius: 0;
   background: rgba(255, 255, 255, 0.9);
 }
 
-.title-cell strong,
-.source-cell span {
-  display: block;
-  color: #20352a;
+.source-text {
+  color: #241d16;
+  font-size: 13px;
 }
 
-.title-cell p,
-.source-cell small {
+.title-cell strong {
+  display: block;
+  color: #241d16;
+}
+
+.title-cell p {
   display: block;
   margin: 5px 0 0;
-  color: #64748b;
+  color: #675a4e;
   font-size: 12px;
   line-height: 1.55;
 }
 
-.source-cell small {
-  color: var(--lingshan-gold-deep);
-}
-
 .category-tag {
-  border-color: rgba(102, 128, 107, 0.18);
-  color: var(--lingshan-green-deep);
-  background: rgba(232, 240, 233, 0.72);
+  border-color: rgba(184, 137, 79, 0.18);
+  color: #8a5d22;
+  background: rgba(248, 236, 216, 0.72);
 }
 
 .alias-list {
@@ -1029,7 +978,7 @@ onMounted(() => {
 
 .alias-more,
 .muted-text {
-  color: #94a3b8;
+  color: #675a4e;
   font-size: 12px;
 }
 
@@ -1047,7 +996,7 @@ onMounted(() => {
 }
 
 .pagination-note {
-  color: #64748b;
+  color: #675a4e;
   font-size: 12px;
 }
 
@@ -1061,26 +1010,26 @@ onMounted(() => {
   display: grid;
   gap: 12px;
   padding: 16px;
-  border: 1px solid rgba(93, 105, 92, 0.1);
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(252, 250, 245, 0.95), rgba(255, 255, 255, 0.96));
+  border: 1px solid #d4c8b8;
+  border-radius: 0;
+  background: #fffaf2;
 }
 
 .action-copy strong {
   display: block;
-  color: #20352a;
-  font-size: 15px;
+  color: #241d16;
+  font-size: 14px;
 }
 
 .action-copy p {
   margin: 6px 0 0;
-  color: #64748b;
+  color: #675a4e;
   font-size: 12px;
   line-height: 1.65;
 }
 
 .action-item.compact {
-  background: rgba(239, 247, 242, 0.82);
+  background: rgba(247, 240, 230, 0.82);
 }
 
 .status-list {
@@ -1095,9 +1044,9 @@ onMounted(() => {
   justify-content: space-between;
   gap: 12px;
   padding: 13px 14px;
-  border-radius: 14px;
-  background: #f8faf8;
-  color: #475569;
+  border-radius: 0;
+  background: #f0e9dc;
+  color: #675a4e;
   font-size: 13px;
 }
 
@@ -1106,21 +1055,21 @@ onMounted(() => {
 }
 
 .tone-ready {
-  color: #0f766e;
+  color: #8a5d22;
 }
 
 .tone-busy {
-  color: #b45309;
+  color: #c47c4a;
 }
 
 .tone-waiting {
-  color: #64748b;
+  color: #675a4e;
 }
 
 .guidance-card ul {
   margin: 16px 0 0;
   padding-left: 18px;
-  color: #475569;
+  color: #675a4e;
 }
 
 .guidance-card li {
@@ -1131,14 +1080,14 @@ onMounted(() => {
 .dialog-intro {
   margin-bottom: 14px;
   padding: 14px 16px;
-  border: 1px solid rgba(93, 105, 92, 0.12);
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(245, 247, 242, 0.95), rgba(255, 255, 255, 0.96));
+  border: 1px solid #d4c8b8;
+  border-radius: 0;
+  background: #fffaf2;
 }
 
 .dialog-intro p {
   margin: 6px 0 0;
-  color: #64748b;
+  color: #675a4e;
   font-size: 12px;
   line-height: 1.6;
 }
@@ -1151,8 +1100,8 @@ onMounted(() => {
 }
 
 :deep(.knowledge-table .el-table__header th) {
-  background: #f4f6f1;
-  color: #42594b;
+  background: #f0e9dc;
+  color: #241d16;
   font-weight: 700;
 }
 
@@ -1164,15 +1113,116 @@ onMounted(() => {
   background: #fcfaf5 !important;
 }
 
+:deep(.knowledge-table .el-table--striped .el-table__body tr.el-table__row--striped td) {
+  background: #f5f0e8;
+}
+
 :deep(.knowledge-dialog .el-dialog__header) {
   padding-bottom: 8px;
-  border-bottom: 1px solid rgba(93, 105, 92, 0.1);
+  border-bottom: 1px solid #d4c8b8;
 }
 
 :deep(.knowledge-dialog .el-dialog__title) {
-  color: #20352a;
-  font-family: "STKaiti", "KaiTi", "FangSong", serif;
-  font-size: 24px;
+  color: #241d16;
+  font-family: inherit;
+  font-size: 20px;
+}
+
+:deep(.knowledge-hero .el-button) {
+  --el-button-bg-color: rgba(255, 247, 235, 0.08);
+  --el-button-border-color: rgba(255, 247, 235, 0.15);
+  --el-button-text-color: #fff7eb;
+  --el-button-hover-bg-color: rgba(255, 247, 235, 0.15);
+  --el-button-hover-border-color: rgba(255, 247, 235, 0.25);
+  --el-button-hover-text-color: #fff7eb;
+}
+
+:deep(.knowledge-table-card .el-pagination.is-background .el-pager li:not(.is-disabled).is-active) {
+  --el-pagination-bg-color: #241d16;
+  --el-pagination-text-color: #fff7eb;
+}
+
+:deep(.table-actions .el-button--primary) {
+  --el-button-bg-color: #241d16;
+  --el-button-border-color: #241d16;
+  --el-button-text-color: #fff7eb;
+  --el-button-hover-bg-color: #3a3028;
+  --el-button-hover-border-color: #3a3028;
+  --el-button-hover-text-color: #fff7eb;
+}
+
+:deep(.table-actions .el-button--danger) {
+  --el-button-text-color: #c93c3c;
+}
+
+:deep(.knowledge-hero .el-button--primary) {
+  --el-button-bg-color: #8a5d22;
+  --el-button-border-color: #8a5d22;
+  --el-button-text-color: #fff7eb;
+  --el-button-hover-bg-color: #a06c28;
+  --el-button-hover-border-color: #a06c28;
+  --el-button-hover-text-color: #fff7eb;
+}
+
+:deep(.side-card .el-tag--success) {
+  --el-tag-bg-color: rgba(138, 93, 34, 0.08);
+  --el-tag-border-color: rgba(138, 93, 34, 0.18);
+  --el-tag-text-color: #8a5d22;
+}
+
+:deep(.action-item .el-button) {
+  --el-button-bg-color: #fffaf2;
+  --el-button-border-color: #d4c8b8;
+  --el-button-text-color: #241d16;
+  --el-button-hover-bg-color: #f0e9dc;
+  --el-button-hover-border-color: #b8a890;
+  --el-button-hover-text-color: #241d16;
+  --el-button-active-bg-color: #e8dfd2;
+  --el-button-active-border-color: #b8a890;
+  --el-button-active-text-color: #241d16;
+  box-shadow: none;
+  outline: none;
+}
+
+:deep(.action-item .el-button .el-icon) {
+  color: var(--el-button-text-color);
+}
+
+:deep(.action-item .el-button.is-loading .el-icon) {
+  color: #675a4e;
+}
+
+:deep(.action-item .el-button:focus-visible) {
+  outline: 2px solid #8a5d22;
+  outline-offset: 1px;
+}
+
+:deep(.action-item .el-button--primary) {
+  --el-button-bg-color: #241d16;
+  --el-button-border-color: #241d16;
+  --el-button-text-color: #fff7eb;
+  --el-button-hover-bg-color: #3a3028;
+  --el-button-hover-border-color: #3a3028;
+  --el-button-hover-text-color: #fff7eb;
+  --el-button-active-bg-color: #1a1510;
+  --el-button-active-border-color: #1a1510;
+  --el-button-active-text-color: #fff7eb;
+  box-shadow: none;
+  outline: none;
+}
+
+:deep(.action-item .el-button--primary.is-plain) {
+  --el-button-bg-color: rgba(36, 29, 22, 0.06);
+  --el-button-border-color: #241d16;
+  --el-button-text-color: #241d16;
+  --el-button-hover-bg-color: #241d16;
+  --el-button-hover-border-color: #241d16;
+  --el-button-hover-text-color: #fff7eb;
+  --el-button-active-bg-color: #1a1510;
+  --el-button-active-border-color: #1a1510;
+  --el-button-active-text-color: #fff7eb;
+  box-shadow: none;
+  outline: none;
 }
 
 @media (max-width: 1320px) {

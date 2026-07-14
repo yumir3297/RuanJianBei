@@ -5,6 +5,9 @@ import { useAuthStore } from "../stores/auth";
 const LandingPage = () => import("../views/LandingPage.vue");
 const HomePage = () => import("../views/HomePage.vue");
 const ChatView = () => import("../views/tourist/ChatView.vue");
+const ExploreView = () => import("../views/tourist/ExploreView.vue");
+const RouteView = () => import("../views/tourist/RouteView.vue");
+const QuizView = () => import("../views/tourist/QuizView.vue");
 const ModeSelectView = () => import("../views/tourist/ModeSelectView.vue");
 const Dashboard = () => import("../views/admin/Dashboard.vue");
 const AdminLogin = () => import("../views/admin/AdminLogin.vue");
@@ -39,6 +42,21 @@ const router = createRouter({
       path: "/tourist",
       name: "chat",
       component: ChatView,
+    },
+    {
+      path: "/tourist/explore",
+      name: "tourist-explore",
+      component: ExploreView,
+    },
+    {
+      path: "/tourist/routes",
+      name: "tourist-routes",
+      component: RouteView,
+    },
+    {
+      path: "/tourist/quiz",
+      name: "tourist-quiz",
+      component: QuizView,
     },
     {
       path: "/admin/login",

@@ -1,56 +1,89 @@
 <template>
   <section class="display-assets-layout">
-    <header class="panel-card assets-hero">
+    <header class="assets-hero">
       <div>
-        <span class="hero-kicker">SCENIC MATERIALS</span>
         <h2>页面资源替换</h2>
-        <p>集中维护游客端页面中的可替换视觉资源。当前先开放数字人页面风景背景的管理入口。</p>
+        <p>统一管理游客端视觉资源，支持风景背景与轮播配图的上传替换。</p>
       </div>
       <div class="hero-actions">
         <span v-if="lastUpdatedAt" class="hero-updated">更新于 {{ lastUpdatedAt }}</span>
-        <el-button :loading="pageLoading" @click="loadPageData">刷新配置</el-button>
+        <el-button :loading="pageLoading" @click="loadPageData" size="small" class="hero-refresh-btn">刷新配置</el-button>
       </div>
     </header>
 
-    <div class="stat-grid" v-loading="pageLoading && !initialized">
-      <article
-        class="stat-card"
-        :style="{ '--accent': '#2563eb', '--accent-soft': '#e1ebff' }"
-      >
-        <span class="stat-kicker">BACKGROUND</span>
-        <strong class="stat-value">{{ backgroundAsset.asset_url ? "已设置" : "未设置" }}</strong>
-        <span class="stat-label">游客端风景背景</span>
-        <p class="stat-note">
-          {{ backgroundAsset.asset_url ? "已接入自定义景区背景图。" : "当前仍使用内置默认背景。" }}
-        </p>
+    <div class="stat-row" v-loading="pageLoading && !initialized">
+      <article class="stat-item">
+        <div class="stat-icon stat-icon-blue">
+          <el-icon :size="16"><PictureFilled /></el-icon>
+        </div>
+        <div class="stat-body">
+          <div class="stat-title">游客端风景背景</div>
+          <div class="stat-desc">
+            {{ backgroundAsset.asset_url ? "已接入自定义景区背景图" : "当前使用内置默认背景" }}
+          </div>
+        </div>
+        <span :class="['stat-badge', { 'stat-badge-set': backgroundAsset.asset_url }]">
+          {{ backgroundAsset.asset_url ? "已设置" : "未设置" }}
+        </span>
+      </article>
+      <article class="stat-item">
+        <div class="stat-icon stat-icon-gold">
+          <el-icon :size="16"><Collection /></el-icon>
+        </div>
+        <div class="stat-body">
+          <div class="stat-title">Landing 页景区背景</div>
+          <div class="stat-desc">
+            {{ landingImages.length ? `已上传 ${landingImages.length} 张景区实景照片` : "当前使用默认景区图集" }}
+          </div>
+        </div>
+        <span :class="['stat-badge', { 'stat-badge-set': landingImages.length }]">
+          {{ landingImages.length ? `${landingImages.length} 张` : "未设置" }}
+        </span>
       </article>
     </div>
 
-    <article class="panel-card asset-card">
+    <article class="panel-card">
       <div class="section-heading">
         <div>
-          <span class="section-kicker">ASSET REPLACEMENT</span>
-          <h3>图片替换功能区</h3>
-          <p>这里专门放页面可替换素材。第一阶段先接入游客端风景背景，后续可继续扩展按钮贴图、场景装饰等资源。</p>
+          <h3>游客端欢迎语</h3>
+          <p>首页及导览入口页的欢迎文案，用于建立第一印象。</p>
         </div>
-        <el-tag size="small" type="success" effect="plain">可扩展</el-tag>
+        <el-button v-if="!welcomeTextEditing" size="small" @click="welcomeTextEditing = true">编辑</el-button>
+      </div>
+      <div v-if="!welcomeTextEditing" class="welcome-display">
+        <p>{{ welcomeTextValue || DEFAULT_WELCOME }}</p>
+      </div>
+      <div v-else class="welcome-edit-area">
+        <textarea v-model="welcomeTextValue" rows="3" placeholder="请输入游客端欢迎语" class="welcome-textarea"></textarea>
+        <div class="welcome-edit-actions">
+          <el-button size="small" type="primary" :loading="welcomeTextSaving" @click="handleSaveWelcomeText">保存</el-button>
+          <el-button size="small" :disabled="welcomeTextSaving" @click="handleCancelWelcomeText">取消</el-button>
+        </div>
+      </div>
+    </article>
+
+    <article class="panel-card">
+      <div class="section-heading">
+        <div>
+          <h3>游客端风景背景</h3>
+          <p>替换数字人对话页面中的风景背景图。</p>
+        </div>
+        <el-tag size="small" type="success" effect="plain">已接入</el-tag>
       </div>
 
-      <div class="asset-subcard">
-        <div class="block-head">
-          <strong>游客端风景背景</strong>
-          <small>支持 JPG / PNG / WEBP，建议横向景区实景图</small>
-        </div>
+      <div class="card-body">
+        <div class="field-hint">支持 JPG / PNG / WEBP，建议横向景区实景图</div>
 
-        <div class="asset-preview">
+        <div class="asset-preview" @click="openBackgroundPicker">
           <img
             v-if="backgroundPreviewUrl"
             :src="backgroundPreviewUrl"
             alt="游客端背景预览"
           />
           <div v-else class="asset-placeholder">
-            <strong>当前未设置自定义背景</strong>
-            <span>上传后将用于游客端数字人页面背景</span>
+            <el-icon :size="30"><UploadFilled /></el-icon>
+            <strong>点击上传游客端背景图</strong>
+            <span>支持 JPG / PNG / WEBP，建议横向实景照片</span>
           </div>
         </div>
 
@@ -68,9 +101,10 @@
         </div>
 
         <div class="asset-actions">
-          <el-button @click="openBackgroundPicker">选择图片</el-button>
+          <el-button @click="openBackgroundPicker" size="small">选择图片</el-button>
           <el-button
             type="primary"
+            size="small"
             :loading="backgroundUploading"
             :disabled="!selectedBackgroundFile"
             @click="handleUploadBackground"
@@ -78,21 +112,83 @@
             应用背景
           </el-button>
           <el-button
+            size="small"
             :disabled="!backgroundAsset.asset_url || backgroundUploading"
             @click="handleClearBackground"
           >
-            清除自定义背景
+            清除
           </el-button>
         </div>
       </div>
+    </article>
 
-      <div class="asset-guidance">
-        <strong>后续可继续加入</strong>
-        <ul>
-          <li>首页主视觉背景替换</li>
-          <li>游客端功能卡装饰图替换</li>
-          <li>答辩演示专用主题素材切换</li>
-        </ul>
+    <article class="panel-card">
+      <div class="section-heading">
+        <div>
+          <h3>Landing 页景区背景图</h3>
+          <p>上传景区实景照片，自动替换 Landing 页右侧大图区轮播背景。</p>
+        </div>
+        <el-tag size="small" :type="landingImages.length ? 'success' : 'info'" effect="plain">
+          {{ landingImages.length ? `${landingImages.length} 张` : "0 张" }}
+        </el-tag>
+      </div>
+
+      <div class="card-body">
+        <div
+          class="landing-upload-zone"
+          @click="openLandingPicker"
+        >
+          <el-icon :size="32"><UploadFilled /></el-icon>
+          <strong>点击上传景区背景图</strong>
+          <span>支持 JPG / PNG / WEBP，建议横向实景照片，可批量选择</span>
+        </div>
+
+        <input
+          ref="landingInputRef"
+          class="hidden-input"
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          multiple
+          @change="handleLandingFileSelect"
+        />
+
+        <div v-if="landingImages.length" class="landing-gallery">
+          <div
+            v-for="(img, idx) in landingImages"
+            :key="img.id"
+            class="landing-gallery-item"
+          >
+            <img :src="img.src" :alt="img.name" />
+            <div class="landing-item-overlay">
+              <span class="landing-item-name">{{ img.name }}</span>
+              <button
+                type="button"
+                class="landing-item-remove"
+                @click.stop="removeLandingImage(idx)"
+                title="删除"
+              >&times;</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="asset-actions">
+          <el-button @click="openLandingPicker" size="small">选择图片</el-button>
+          <el-button
+            type="primary"
+            size="small"
+            :disabled="!landingImages.length"
+            @click="handleApplyLanding"
+          >
+            应用轮播背景
+          </el-button>
+          <el-button
+            size="small"
+            :disabled="!landingImages.length"
+            @click="handleClearLanding"
+          >
+            清空全部
+          </el-button>
+        </div>
       </div>
     </article>
   </section>
@@ -101,18 +197,24 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
+import { Collection, PictureFilled, UploadFilled } from "@element-plus/icons-vue";
 
 import {
   clearTouristBackground,
   fetchDisplayAssets,
   uploadTouristBackground,
+  updateWelcomeText,
 } from "../../api/admin";
 import { API_BASE_URL } from "../../api/http";
+import { invalidateScenicBackground } from "../../composables/useScenicBackground";
+
+const LANDING_STORAGE_KEY = "a5-landing-images-v1";
 
 const initialized = ref(false);
 const pageLoading = ref(false);
 const lastUpdatedAt = ref("");
 const backgroundInputRef = ref(null);
+const landingInputRef = ref(null);
 const selectedBackgroundFile = ref(null);
 const selectedBackgroundPreviewUrl = ref("");
 const backgroundUploading = ref(false);
@@ -122,39 +224,34 @@ const backgroundAsset = ref({
   updated_at: "",
 });
 
+const DEFAULT_WELCOME = "欢迎来到灵山胜境，愿您在此感受千年佛韵，尽享山水之美。";
+const welcomeTextValue = ref(DEFAULT_WELCOME);
+const welcomeTextEditing = ref(false);
+const welcomeTextSaving = ref(false);
+
+const landingImages = ref([]);
+
 const backgroundPreviewUrl = computed(() =>
   selectedBackgroundPreviewUrl.value || resolveAssetUrl(backgroundAsset.value.asset_url),
 );
 
 function resolveAssetUrl(assetUrl) {
-  if (!assetUrl) {
-    return "";
-  }
-  if (/^https?:\/\//i.test(assetUrl)) {
-    return assetUrl;
-  }
+  if (!assetUrl) return "";
+  if (/^https?:\/\//i.test(assetUrl)) return assetUrl;
   return new URL(assetUrl, `${API_BASE_URL}/`).href;
 }
 
 function formatNow() {
   return new Intl.DateTimeFormat("zh-CN", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
+    month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
   }).format(new Date());
 }
 
 function formatUpdatedAt(value) {
-  if (!value) {
-    return "";
-  }
+  if (!value) return "";
   try {
     return new Intl.DateTimeFormat("zh-CN", {
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
+      month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
     }).format(new Date(value));
   } catch {
     return value;
@@ -168,17 +265,67 @@ function revokeBackgroundPreview() {
   }
 }
 
-function openBackgroundPicker() {
-  backgroundInputRef.value?.click();
-}
+function openBackgroundPicker() { backgroundInputRef.value?.click(); }
 
 function handleBackgroundFileChange(event) {
   const file = event.target?.files?.[0] || null;
   selectedBackgroundFile.value = file;
   revokeBackgroundPreview();
-  if (file) {
-    selectedBackgroundPreviewUrl.value = URL.createObjectURL(file);
+  if (file) selectedBackgroundPreviewUrl.value = URL.createObjectURL(file);
+}
+
+function loadLandingImages() {
+  try { const raw = localStorage.getItem(LANDING_STORAGE_KEY); if (raw) landingImages.value = JSON.parse(raw); }
+  catch { landingImages.value = []; }
+}
+
+function saveLandingImages() { localStorage.setItem(LANDING_STORAGE_KEY, JSON.stringify(landingImages.value)); }
+
+function openLandingPicker() { landingInputRef.value?.click(); }
+
+function handleLandingFileSelect(event) {
+  const files = event.target?.files;
+  if (!files || !files.length) return;
+  let loaded = 0;
+  const total = files.length;
+  for (const file of files) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      landingImages.value.push({
+        id: Date.now() + Math.random().toString(36).slice(2),
+        name: file.name,
+        src: e.target.result,
+      });
+      loaded++;
+      if (loaded === total) {
+        saveLandingImages();
+        lastUpdatedAt.value = formatNow();
+        ElMessage.success(`已添加 ${total} 张背景图`);
+      }
+    };
+    reader.readAsDataURL(file);
   }
+  if (landingInputRef.value) landingInputRef.value.value = "";
+}
+
+function removeLandingImage(idx) {
+  landingImages.value.splice(idx, 1);
+  saveLandingImages();
+  lastUpdatedAt.value = formatNow();
+  ElMessage.success("已移除背景图");
+}
+
+function handleApplyLanding() {
+  saveLandingImages();
+  lastUpdatedAt.value = formatNow();
+  invalidateScenicBackground();
+  ElMessage.success("Landing 页轮播背景已应用");
+}
+
+function handleClearLanding() {
+  ElMessageBox.confirm("确定清空所有 Landing 页背景图吗？", "提示", { type: "warning" })
+    .then(() => { landingImages.value = []; saveLandingImages(); lastUpdatedAt.value = formatNow(); ElMessage.success("已清空全部背景图"); })
+    .catch(() => {});
 }
 
 async function loadDisplayAssetState() {
@@ -188,12 +335,14 @@ async function loadDisplayAssetState() {
     file_name: assets?.tourist_background?.file_name || "",
     updated_at: assets?.tourist_background?.updated_at || "",
   };
+  welcomeTextValue.value = assets?.welcome_text || DEFAULT_WELCOME;
 }
 
 async function loadPageData() {
   pageLoading.value = true;
   try {
     await loadDisplayAssetState();
+    loadLandingImages();
     initialized.value = true;
     lastUpdatedAt.value = formatNow();
   } catch (error) {
@@ -204,9 +353,7 @@ async function loadPageData() {
 }
 
 async function handleUploadBackground() {
-  if (!selectedBackgroundFile.value) {
-    return;
-  }
+  if (!selectedBackgroundFile.value) return;
   backgroundUploading.value = true;
   try {
     const response = await uploadTouristBackground(selectedBackgroundFile.value);
@@ -215,12 +362,11 @@ async function handleUploadBackground() {
       file_name: response.asset?.file_name || "",
       updated_at: response.asset?.updated_at || "",
     };
-    if (backgroundInputRef.value) {
-      backgroundInputRef.value.value = "";
-    }
+    if (backgroundInputRef.value) backgroundInputRef.value.value = "";
     selectedBackgroundFile.value = null;
     revokeBackgroundPreview();
     lastUpdatedAt.value = formatNow();
+    invalidateScenicBackground();
     ElMessage.success("游客端背景已更新");
   } catch (error) {
     ElMessage.error(`背景上传失败：${error?.response?.data?.detail || error.message}`);
@@ -239,215 +385,220 @@ async function handleClearBackground() {
       file_name: response.asset?.file_name || "",
       updated_at: response.asset?.updated_at || "",
     };
-    if (backgroundInputRef.value) {
-      backgroundInputRef.value.value = "";
-    }
+    if (backgroundInputRef.value) backgroundInputRef.value.value = "";
     selectedBackgroundFile.value = null;
     revokeBackgroundPreview();
     lastUpdatedAt.value = formatNow();
+    invalidateScenicBackground();
     ElMessage.success("自定义背景已清除");
   } catch (error) {
-    if (error !== "cancel") {
-      ElMessage.error(`清除失败：${error?.response?.data?.detail || error.message}`);
-    }
+    if (error !== "cancel") ElMessage.error(`清除失败：${error?.response?.data?.detail || error.message}`);
   } finally {
     backgroundUploading.value = false;
   }
 }
 
-onMounted(() => {
-  loadPageData();
-});
+async function handleSaveWelcomeText() {
+  if (welcomeTextSaving.value) return;
+  welcomeTextSaving.value = true;
+  try {
+    const response = await updateWelcomeText(welcomeTextValue.value);
+    welcomeTextValue.value = response.welcome_text;
+    welcomeTextEditing.value = false;
+    lastUpdatedAt.value = formatNow();
+    invalidateScenicBackground();
+    ElMessage.success("欢迎语已更新");
+  } catch (error) {
+    ElMessage.error(`欢迎语保存失败：${error?.response?.data?.detail || error.message}`);
+    await loadDisplayAssetState();
+  } finally {
+    welcomeTextSaving.value = false;
+  }
+}
 
-onBeforeUnmount(() => {
-  revokeBackgroundPreview();
-});
+function handleCancelWelcomeText() {
+  welcomeTextEditing.value = false;
+  loadDisplayAssetState();
+}
+
+onMounted(() => { loadPageData(); });
+onBeforeUnmount(() => { revokeBackgroundPreview(); });
 </script>
 
 <style scoped>
 .display-assets-layout {
   display: grid;
-  gap: 20px;
+  gap: 12px;
 }
 
 .assets-hero {
-  position: relative;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
-  overflow: hidden;
-  padding: 28px 30px;
-  background:
-    linear-gradient(120deg, rgba(37, 64, 94, 0.96), rgba(73, 112, 126, 0.92)),
-    var(--lingshan-green-deep);
-  color: #fff;
-}
-
-.assets-hero::after {
-  position: absolute;
-  top: -84px;
-  right: 7%;
-  width: 220px;
-  height: 220px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 50%;
-  box-shadow:
-    0 0 0 32px rgba(255, 255, 255, 0.04),
-    0 0 0 74px rgba(255, 255, 255, 0.02);
-  content: "";
-}
-
-.assets-hero > * {
-  position: relative;
-  z-index: 1;
-}
-
-.hero-kicker,
-.stat-kicker,
-.section-kicker {
-  font-family: Georgia, "Times New Roman", serif;
-  letter-spacing: 0.14em;
-}
-
-.hero-kicker {
-  color: #f4dcc0;
-  font-size: 11px;
+  padding: 20px 24px;
+  background: linear-gradient(155deg, #241d16 0%, #2e2620 50%, #3a3028 100%);
+  border: 1px solid #342d26;
+  color: #fff7eb;
 }
 
 .assets-hero h2 {
-  margin: 8px 0 6px;
-  font-family: Georgia, "STSong", serif;
-  font-size: clamp(28px, 4vw, 38px);
+  margin: 0 0 6px;
+  font-size: clamp(22px, 3vw, 30px);
   font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
 }
 
 .assets-hero p {
-  max-width: 720px;
+  max-width: 640px;
   margin: 0;
-  color: rgba(255, 255, 255, 0.78);
-  line-height: 1.68;
+  color: rgba(255, 247, 235, 0.56);
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .hero-actions {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .hero-updated {
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 12px;
+  color: rgba(255, 247, 235, 0.45);
+  font-size: 11px;
 }
 
-.stat-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
+.hero-refresh-btn {
+  --el-button-bg-color: rgba(255, 255, 255, 0.08);
+  --el-button-border-color: rgba(255, 255, 255, 0.14);
+  --el-button-text-color: rgba(255, 247, 235, 0.8);
 }
 
-.stat-card {
+.stat-row {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  min-height: 156px;
-  padding: 20px;
-  border: 1px solid color-mix(in srgb, var(--accent) 18%, white);
-  border-radius: 18px;
-  background:
-    radial-gradient(circle at 100% 0, var(--accent-soft), transparent 44%),
-    rgba(255, 255, 255, 0.94);
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.07);
 }
 
-.stat-kicker {
-  color: color-mix(in srgb, var(--accent) 72%, #64748b);
-  font-size: 9px;
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #d4c8b8;
+  background: #fffaf2;
 }
 
-.stat-value {
-  color: #0f172a;
-  font-family: Georgia, "STSong", serif;
-  font-size: clamp(28px, 3.6vw, 36px);
-  line-height: 1.1;
+.stat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
 }
 
-.stat-label {
-  color: #475569;
-  font-size: 13px;
+.stat-icon-blue {
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
 }
 
-.stat-note {
-  margin: 0;
-  color: #64748b;
+.stat-icon-gold {
+  background: rgba(184, 137, 79, 0.1);
+  color: #8a5d22;
+}
+
+.stat-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.stat-title {
   font-size: 12px;
-  line-height: 1.62;
+  color: #675a4e;
 }
 
-.asset-card {
-  padding: 22px;
+.stat-desc {
+  font-size: 11px;
+  color: #241d16;
+  margin-top: 2px;
 }
 
-.section-heading,
-.block-head {
+.stat-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-height: 22px;
+  padding: 0 10px;
+  font-size: 11px;
+  color: #675a4e;
+  background: rgba(103, 90, 78, 0.08);
+}
+
+.stat-badge-set {
+  color: #1c6c42;
+  background: rgba(36, 133, 80, 0.1);
+}
+
+.panel-card {
+  border: 1px solid #d4c8b8;
+  background: #fffaf2;
+  overflow: hidden;
+}
+
+.section-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  padding: 14px 18px 0;
 }
 
 .section-heading h3 {
-  margin: 5px 0 4px;
-  color: #0f172a;
-  font-family: Georgia, "STSong", serif;
-  font-size: 21px;
+  margin: 0 0 4px;
+  color: #241d16;
+  font-size: 17px;
+  font-weight: 600;
 }
 
-.section-heading p,
-.block-head small {
+.section-heading p {
   margin: 0;
-  color: #64748b;
+  color: #675a4e;
   font-size: 12px;
-  line-height: 1.58;
+  line-height: 1.5;
 }
 
-.section-kicker {
-  color: #0f766e;
-  font-size: 9px;
+.card-body {
+  padding: 14px 18px 18px;
 }
 
-.asset-subcard,
-.asset-guidance {
-  padding: 16px;
-  border: 1px solid rgba(93, 105, 92, 0.12);
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(245, 247, 242, 0.95), rgba(255, 255, 255, 0.96));
-}
-
-.asset-subcard {
-  margin-top: 18px;
-}
-
-.block-head strong,
-.asset-guidance strong {
-  color: #20352a;
-  font-size: 15px;
+.field-hint {
+  color: #675a4e;
+  font-size: 11px;
+  margin-bottom: 10px;
 }
 
 .asset-preview {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 220px;
-  margin-top: 14px;
+  min-height: 140px;
+  border: 2px dashed #d4c8b8;
   overflow: hidden;
-  border: 1px solid rgba(93, 105, 92, 0.12);
-  border-radius: 18px;
-  background: #f5f7f2;
+  background: #f0e9dc;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.asset-preview:hover {
+  border-color: #248550;
 }
 
 .asset-preview img {
   width: 100%;
-  height: 220px;
+  height: 140px;
   object-fit: cover;
   display: block;
 }
@@ -456,49 +607,189 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 6px;
   text-align: center;
-  color: #64748b;
+  color: #675a4e;
+}
+
+.asset-placeholder .el-icon {
+  margin: 0 auto;
+  color: #675a4e;
+  opacity: 0.45;
 }
 
 .asset-file-meta {
   display: grid;
   gap: 4px;
-  margin-top: 14px;
+  margin-top: 10px;
 }
 
 .asset-file-meta strong {
-  color: #20352a;
-  font-size: 14px;
+  color: #241d16;
+  font-size: 13px;
 }
 
 .asset-file-meta span {
-  color: #64748b;
-  font-size: 12px;
+  color: #675a4e;
+  font-size: 11px;
 }
 
 .asset-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 14px;
-}
-
-.asset-guidance {
-  margin-top: 16px;
-}
-
-.asset-guidance ul {
-  margin: 12px 0 0;
-  padding-left: 18px;
-  color: #475569;
-}
-
-.asset-guidance li {
-  margin-bottom: 8px;
-  line-height: 1.6;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .hidden-input {
   display: none;
+}
+
+.welcome-display {
+  padding: 12px 18px 18px;
+}
+
+.welcome-display p {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #e3d9cc;
+  background: #f0e9dc;
+  color: #241d16;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.welcome-edit-area {
+  padding: 0 18px 18px;
+}
+
+.welcome-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px 12px;
+  border: 1px solid #d4c8b8;
+  background: #fffaf2;
+  color: #241d16;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+  outline: none;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.welcome-textarea:focus {
+  border-color: #248550;
+  box-shadow: 0 0 0 3px rgba(36, 133, 80, 0.1);
+}
+
+.welcome-edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.landing-upload-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 120px;
+  border: 2px dashed #d4c8b8;
+  background: #f0e9dc;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  padding: 20px;
+}
+
+.landing-upload-zone:hover {
+  border-color: #248550;
+  background: rgba(36, 133, 80, 0.03);
+}
+
+.landing-upload-zone .el-icon {
+  color: #675a4e;
+  opacity: 0.45;
+}
+
+.landing-upload-zone strong {
+  font-size: 12px;
+  color: #675a4e;
+}
+
+.landing-upload-zone span {
+  font-size: 11px;
+  color: #948c80;
+}
+
+.landing-gallery {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.landing-gallery-item {
+  position: relative;
+  border: 1px solid #e3d9cc;
+  overflow: hidden;
+  background: #faf7f0;
+  height: 80px;
+}
+
+.landing-gallery-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.landing-item-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 3px 6px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.5));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.landing-item-name {
+  font-size: 9px;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 68%;
+}
+
+.landing-item-remove {
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.landing-item-remove:hover {
+  background: rgba(239, 68, 68, 0.65);
+}
+
+@media (max-width: 1280px) {
+  .stat-row {
+    grid-template-columns: 1fr;
+  }
+  .landing-gallery {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 760px) {
@@ -506,6 +797,10 @@ onBeforeUnmount(() => {
   .hero-actions {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .landing-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>

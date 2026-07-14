@@ -2,7 +2,6 @@
   <section class="analytics-layout">
     <header class="panel-card analytics-hero">
       <div class="hero-copy">
-        <span class="eyebrow">OPERATIONS INTELLIGENCE</span>
         <h2>运营分析与知识盲区</h2>
         <p>把游客问答、景点关注和知识缺口放在同一张运营视图中，便于答辩展示与后台运营闭环。</p>
         <div class="hero-tags">
@@ -37,7 +36,6 @@
         :style="{ '--accent': card.accent, '--accent-soft': card.soft }"
       >
         <div class="summary-top">
-          <span class="summary-kicker">{{ card.kicker }}</span>
           <span class="summary-label">{{ card.label }}</span>
         </div>
         <strong class="summary-value">{{ card.value }}</strong>
@@ -49,7 +47,6 @@
       <article class="panel-card chart-card">
         <div class="card-heading">
           <div>
-            <span class="card-kicker">ATTENTION HEATMAP</span>
             <h3>景点关注度排名</h3>
             <p>基于历史问答来源统计，帮助判断游客最关注的景点内容。</p>
           </div>
@@ -63,7 +60,6 @@
       <article class="panel-card chart-card">
         <div class="card-heading">
           <div>
-            <span class="card-kicker">AUDIENCE PROFILE</span>
             <h3>游客群体构成</h3>
             <p>来自游客画像与偏好标签，用于判断讲解内容和服务重点。</p>
           </div>
@@ -91,7 +87,6 @@
       <article class="panel-card chart-card">
         <div class="card-heading">
           <div>
-            <span class="card-kicker">THIRTY DAY TREND</span>
             <h3>近 30 天问答量趋势</h3>
             <p>直接读取真实问答日志，用于展示近阶段服务热度与波峰变化。</p>
           </div>
@@ -105,7 +100,6 @@
       <article class="panel-card chart-card">
         <div class="card-heading">
           <div>
-            <span class="card-kicker">ANSWER ROUTES</span>
             <h3>问答路径分布</h3>
             <p>观察 FAQ、RAG 与盲区命中结构，判断知识库与回答路径的健康度。</p>
           </div>
@@ -122,7 +116,6 @@
         <div class="card-heading">
           <div>
             <div class="title-line">
-              <span class="card-kicker">BLIND SPOT BACKLOG</span>
               <el-tag size="small" type="warning" effect="plain">待补录</el-tag>
             </div>
             <h3>知识库待补充问题 Top 10</h3>
@@ -150,7 +143,6 @@
       <article class="panel-card metrics-card">
         <div class="card-heading">
           <div>
-            <span class="card-kicker">OPERATION SNAPSHOT</span>
             <h3>运营指标快照</h3>
             <p>用于答辩时快速说明知识资产、游客样本和后台当前服务规模。</p>
           </div>
@@ -273,7 +265,7 @@ const hotBlindSpot = computed(() => blindSpots.value[0] || null);
 const summaryCards = computed(() => [
   {
     key: "consultation",
-    kicker: "CONSULTATION",
+    kicker: "",
     label: "总咨询量",
     value: formatNumber(overview.value.chat_log_count || 0),
     note: "累计问答日志规模，体现导览服务使用热度。",
@@ -282,7 +274,7 @@ const summaryCards = computed(() => [
   },
   {
     key: "latency",
-    kicker: "LATENCY",
+    kicker: "",
     label: "平均响应",
     value: `${avgLatency.value}s`,
     note:
@@ -294,7 +286,7 @@ const summaryCards = computed(() => [
   },
   {
     key: "visitor",
-    kicker: "VISITOR",
+    kicker: "",
     label: "活跃游客",
     value: formatNumber(overview.value.visitor_count || 0),
     note:
@@ -306,7 +298,7 @@ const summaryCards = computed(() => [
   },
   {
     key: "blind-spot",
-    kicker: "BLIND SPOT",
+    kicker: "",
     label: "待补高频问题",
     value: hotBlindSpot.value
       ? formatNumber(hotBlindSpot.value.hit_count)
@@ -728,7 +720,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .analytics-layout {
   display: grid;
-  gap: 20px;
+  gap: 12px;
 }
 
 .analytics-hero {
@@ -738,25 +730,10 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 24px;
   overflow: hidden;
-  padding: 30px;
-  background:
-    linear-gradient(118deg, rgba(49, 68, 55, 0.98), rgba(102, 128, 107, 0.95)),
-    #55745e;
-  color: #ffffff;
-}
-
-.analytics-hero::after {
-  position: absolute;
-  top: -92px;
-  right: 6%;
-  width: 250px;
-  height: 250px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 50%;
-  box-shadow:
-    0 0 0 34px rgba(255, 255, 255, 0.04),
-    0 0 0 78px rgba(255, 255, 255, 0.025);
-  content: "";
+  padding: 20px 24px;
+  background: linear-gradient(155deg, #241d16 0%, #2e2620 50%, #3a3028 100%);
+  border: 1px solid #342d26;
+  color: #fff7eb;
 }
 
 .analytics-hero > * {
@@ -764,22 +741,9 @@ onBeforeUnmount(() => {
   z-index: 1;
 }
 
-.eyebrow,
-.summary-kicker,
-.card-kicker {
-  font-family: Georgia, "Times New Roman", serif;
-  letter-spacing: 0.14em;
-}
-
-.eyebrow {
-  color: #e8d2ac;
-  font-size: 11px;
-}
-
 .hero-copy h2 {
   margin: 8px 0 8px;
-  font-family: Georgia, "STSong", serif;
-  font-size: clamp(26px, 4vw, 38px);
+  font-size: clamp(22px, 3vw, 30px);
   font-weight: 600;
 }
 
@@ -823,43 +787,25 @@ onBeforeUnmount(() => {
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: 8px;
 }
 
 .summary-card {
   position: relative;
   display: grid;
-  min-height: 170px;
+  min-height: auto;
   gap: 8px;
   overflow: hidden;
-  padding: 22px;
-  border: 1px solid color-mix(in srgb, var(--accent) 16%, white);
-  border-radius: 18px;
-  background:
-    radial-gradient(circle at 100% 0, var(--accent-soft), transparent 46%),
-    rgba(255, 253, 248, 0.96);
-  box-shadow: 0 14px 32px rgba(57, 70, 58, 0.07);
-}
-
-.summary-card::after {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 56%;
-  height: 4px;
-  border-radius: 0 999px 0 0;
-  background: var(--accent);
-  content: "";
+  padding: 12px;
+  border: 1px solid #d4c8b8;
+  border-radius: 0;
+  background: #fffaf2;
+  box-shadow: none;
 }
 
 .summary-top {
   display: grid;
   gap: 6px;
-}
-
-.summary-kicker {
-  color: color-mix(in srgb, var(--accent) 78%, #64748b);
-  font-size: 10px;
 }
 
 .summary-label {
@@ -869,7 +815,6 @@ onBeforeUnmount(() => {
 
 .summary-value {
   color: #0f172a;
-  font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(30px, 4vw, 42px);
   line-height: 1;
 }
@@ -889,14 +834,16 @@ onBeforeUnmount(() => {
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 8px;
 }
 
 .chart-card,
 .blind-card,
 .metrics-card {
   min-width: 0;
-  padding: 22px;
+  padding: 12px;
+  border: 1px solid #d4c8b8;
+  border-radius: 0;
 }
 
 .card-heading {
@@ -909,7 +856,6 @@ onBeforeUnmount(() => {
 .card-heading h3 {
   margin: 5px 0 4px;
   color: #0f172a;
-  font-family: Georgia, "STSong", serif;
   font-size: 20px;
 }
 
@@ -919,11 +865,6 @@ onBeforeUnmount(() => {
   color: #64748b;
   font-size: 12px;
   line-height: 1.65;
-}
-
-.card-kicker {
-  color: var(--lingshan-green-deep);
-  font-size: 9px;
 }
 
 .title-line {
@@ -989,14 +930,12 @@ onBeforeUnmount(() => {
   border-radius: 999px;
   background: #f3e5cf;
   color: #7b572d;
-  font-family: Georgia, "Times New Roman", serif;
   font-size: 12px;
   font-weight: 700;
 }
 
 .hit-count {
   color: var(--lingshan-gold-deep);
-  font-family: Georgia, "Times New Roman", serif;
   font-size: 18px;
   font-weight: 700;
 }
@@ -1012,15 +951,14 @@ onBeforeUnmount(() => {
   grid-template-columns: auto 1fr auto;
   gap: 10px;
   align-items: center;
-  padding: 13px 14px;
-  border: 1px solid rgba(102, 128, 107, 0.12);
-  border-radius: 12px;
+  padding: 8px 10px;
+  border: 1px solid #d4c8b8;
+  border-radius: 0;
   background: #f8faf8;
 }
 
 .metric-index {
   color: #94a3b8;
-  font-family: Georgia, "Times New Roman", serif;
   font-size: 11px;
 }
 
@@ -1031,7 +969,6 @@ onBeforeUnmount(() => {
 
 .metric-item strong {
   color: var(--lingshan-green-deep);
-  font-family: Georgia, "Times New Roman", serif;
   font-size: 18px;
 }
 

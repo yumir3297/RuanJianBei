@@ -2,7 +2,6 @@
   <section class="avatar-admin-layout">
     <header class="panel-card avatar-hero">
       <div>
-        <span class="hero-kicker">SCENIC PRESENCE</span>
         <h2>数字人配置</h2>
         <p>统一维护游客端导览形象与语音表现，让数字人页面既能讲得清楚，也能展示得更有景区气质。</p>
       </div>
@@ -29,7 +28,6 @@
     <article class="panel-card avatar-workbench">
       <div class="section-heading">
         <div>
-          <span class="section-kicker">DIGITAL HUMAN</span>
           <h3>数字人工作台</h3>
           <p>调整游客端当前使用的形象、语音音色和演示状态，保存后可直接应用到导览页。</p>
         </div>
@@ -79,6 +77,9 @@
                   <el-option label="活泼女声 · 龙安亲" value="lively-female" />
                 </el-select>
               </el-form-item>
+              <el-divider content-position="left">
+                <span style="font-size:12px;color:#6c757d">以下为本机演示偏好，不影响游客端</span>
+              </el-divider>
               <el-form-item label="语速">
                 <el-slider v-model="speechRate" :min="80" :max="150" :step="5" show-input />
               </el-form-item>
@@ -105,6 +106,9 @@
                   :preset="selectedPreset"
                   :emotion="previewEmotion"
                   :is-speaking="previewSpeaking"
+                  :reaction-token="previewReactionToken"
+                  gesture="wave"
+                  :gesture-token="previewGestureToken"
                   @loaded="handlePreviewLoaded"
                   @error="handlePreviewError"
                 />
@@ -118,13 +122,13 @@
                     空闲
                   </el-button>
                   <el-button
-                    @click="previewEmotion = 'happy'; previewSpeaking = true"
+                    @click="previewEmotion = 'happy'; previewSpeaking = true; previewReactionToken += 1"
                     :type="previewEmotion === 'happy' ? 'primary' : 'default'"
                   >
                     微笑
                   </el-button>
                   <el-button
-                    @click="previewEmotion = 'apology'; previewSpeaking = false"
+                    @click="previewEmotion = 'apology'; previewSpeaking = false; previewReactionToken += 1"
                     :type="previewEmotion === 'apology' ? 'primary' : 'default'"
                   >
                     致歉
@@ -133,6 +137,7 @@
                 <el-button @click="previewSpeaking = !previewSpeaking" :type="previewSpeaking ? 'warning' : 'default'">
                   {{ previewSpeaking ? "停止说话" : "模拟说话" }}
                 </el-button>
+                <el-button @click="previewGestureToken += 1">Welcome wave</el-button>
               </div>
             </div>
           </div>
@@ -155,6 +160,7 @@ import ThreeAvatar from "../../components/ThreeAvatar.vue";
 import {
   fetchAvatarConfigs,
   saveAvatarConfig,
+  updateAvatarConfig,
 } from "../../api/admin";
 import {
   DEFAULT_AVATAR_PRESET,
@@ -172,19 +178,23 @@ const modelList = [
   { key: "modern", label: "景行", description: "亲切利落 · 现代智能导览", cssClass: "modern" },
 ];
 
-function loadLocalConfig() {
+function loadLocalPrefs() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      return {
+        speechRate: typeof parsed.speechRate === "number" ? parsed.speechRate : 100,
+        volume: typeof parsed.volume === "number" ? parsed.volume : 80,
+      };
     }
   } catch {
     // ignore invalid local cache
   }
-  return null;
+  return { speechRate: 100, volume: 80 };
 }
 
-const saved = loadLocalConfig();
+const localPrefs = loadLocalPrefs();
 const initialized = ref(false);
 const pageLoading = ref(false);
 const saving = ref(false);
@@ -192,12 +202,14 @@ const lastUpdatedAt = ref("");
 const presetToConfigId = ref({});
 const previewEmotion = ref("neutral");
 const previewSpeaking = ref(false);
+const previewReactionToken = ref(0);
+const previewGestureToken = ref(0);
 const previewError = ref(false);
 
-const selectedPreset = ref(normalizeAvatarPreset(saved?.preset, DEFAULT_AVATAR_PRESET));
-const voiceType = ref(normalizeAvatarVoiceType(saved?.voiceType, DEFAULT_AVATAR_VOICE));
-const speechRate = ref(saved?.speechRate || 100);
-const volume = ref(saved?.volume || 80);
+const selectedPreset = ref(DEFAULT_AVATAR_PRESET);
+const voiceType = ref(DEFAULT_AVATAR_VOICE);
+const speechRate = ref(localPrefs.speechRate);
+const volume = ref(localPrefs.volume);
 
 const currentAvatarLabel = computed(() => {
   return modelList.find((item) => item.key === selectedPreset.value)?.label || "未选择";
@@ -215,7 +227,7 @@ const voiceLabel = computed(() => {
 const summaryCards = computed(() => [
   {
     key: "avatar",
-    kicker: "AVATAR",
+    kicker: "",
     value: currentAvatarLabel.value,
     label: "当前数字人形象",
     note: "决定游客端的第一人物印象与讲解气质。",
@@ -224,7 +236,7 @@ const summaryCards = computed(() => [
   },
   {
     key: "voice",
-    kicker: "VOICE",
+    kicker: "",
     value: voiceLabel.value,
     label: "当前语音音色",
     note: "会直接影响游客端回答播放时的服务感。",
@@ -285,29 +297,39 @@ async function loadPageData() {
 async function handleSave() {
   if (saving.value) return;
   saving.value = true;
-  const config = {
-    preset: selectedPreset.value,
-    voiceType: voiceType.value,
-    speechRate: speechRate.value,
-    volume: volume.value,
-  };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
 
   const targetConfigId = presetToConfigId.value[selectedPreset.value];
-  if (targetConfigId) {
-    try {
-      await saveAvatarConfig(targetConfigId);
-      ElMessage.success("数字人配置已保存并同步到游客端");
-    } catch (error) {
-      ElMessage.error(`本地偏好已保存，但后端激活失败：${error?.response?.data?.detail || error.message || "请检查后端服务"}`);
-    } finally {
-      saving.value = false;
-    }
-  } else {
+  if (!targetConfigId) {
     saving.value = false;
-    ElMessage.warning("本地偏好已保存，但当前形象没有可激活的后端配置");
+    ElMessage.warning("当前选中的形象在后端无对应配置记录");
+    return;
   }
+
+  try {
+    await saveAvatarConfig(targetConfigId);
+  } catch (error) {
+    saving.value = false;
+    ElMessage.error(`形象激活失败：${error?.response?.data?.detail || error.message || "请检查后端服务"}`);
+    return;
+  }
+
+  try {
+    const updated = await updateAvatarConfig(targetConfigId, voiceType.value);
+    voiceType.value = normalizeAvatarVoiceType(updated.voice_type, DEFAULT_AVATAR_VOICE);
+  } catch (error) {
+    saving.value = false;
+    ElMessage.warning(`形象已激活，但音色保存失败：${error?.response?.data?.detail || error.message}`);
+    return;
+  }
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    speechRate: speechRate.value,
+    volume: volume.value,
+  }));
+
+  saving.value = false;
   lastUpdatedAt.value = formatNow();
+  ElMessage.success("数字人配置已保存并同步到游客端");
 }
 
 function handleReset() {
@@ -315,7 +337,7 @@ function handleReset() {
   voiceType.value = DEFAULT_AVATAR_VOICE;
   speechRate.value = 100;
   volume.value = 80;
-  localStorage.removeItem(STORAGE_KEY);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ speechRate: 100, volume: 80 }));
   ElMessage.info("已恢复默认配置");
 }
 
@@ -327,7 +349,7 @@ onMounted(() => {
 <style scoped>
 .avatar-admin-layout {
   display: grid;
-  gap: 20px;
+  gap: 12px;
 }
 
 .avatar-hero {
@@ -335,27 +357,12 @@ onMounted(() => {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 24px;
+  gap: 12px;
   overflow: hidden;
-  padding: 28px 30px;
-  background:
-    linear-gradient(120deg, rgba(42, 75, 58, 0.98), rgba(87, 104, 74, 0.94)),
-    var(--lingshan-green-deep);
-  color: #fff;
-}
-
-.avatar-hero::after {
-  position: absolute;
-  top: -74px;
-  right: 8%;
-  width: 220px;
-  height: 220px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 50%;
-  box-shadow:
-    0 0 0 34px rgba(255, 255, 255, 0.04),
-    0 0 0 78px rgba(255, 255, 255, 0.025);
-  content: "";
+  padding: 20px 24px;
+  background: linear-gradient(155deg, #241d16 0%, #2e2620 50%, #3a3028 100%);
+  border: 1px solid #342d26;
+  color: #fff7eb;
 }
 
 .avatar-hero > * {
@@ -363,29 +370,16 @@ onMounted(() => {
   z-index: 1;
 }
 
-.hero-kicker,
-.stat-kicker,
-.section-kicker {
-  font-family: Georgia, "Times New Roman", serif;
-  letter-spacing: 0.14em;
-}
-
-.hero-kicker {
-  color: #f7ddb7;
-  font-size: 11px;
-}
-
 .avatar-hero h2 {
   margin: 8px 0 6px;
-  font-family: Georgia, "STSong", serif;
-  font-size: clamp(28px, 4vw, 38px);
+  font-size: clamp(22px, 3vw, 30px);
   font-weight: 600;
 }
 
 .avatar-hero p {
   max-width: 760px;
   margin: 0;
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 247, 235, 0.56);
   line-height: 1.68;
 }
 
@@ -403,30 +397,21 @@ onMounted(() => {
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 8px;
 }
 
 .stat-card {
   display: grid;
   gap: 8px;
-  min-height: 156px;
-  padding: 20px;
-  border: 1px solid color-mix(in srgb, var(--accent) 18%, white);
-  border-radius: 18px;
-  background:
-    radial-gradient(circle at 100% 0, var(--accent-soft), transparent 44%),
-    rgba(255, 255, 255, 0.94);
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.07);
-}
-
-.stat-kicker {
-  color: color-mix(in srgb, var(--accent) 72%, #64748b);
-  font-size: 9px;
+  padding: 12px 14px;
+  border: 1px solid #d4c8b8;
+  border-radius: 0;
+  background: #fffaf2;
+  box-shadow: none;
 }
 
 .stat-value {
   color: #0f172a;
-  font-family: Georgia, "STSong", serif;
   font-size: clamp(28px, 3.6vw, 36px);
   line-height: 1.1;
 }
@@ -452,14 +437,13 @@ onMounted(() => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: 8px;
 }
 
 .section-heading h3 {
   margin: 5px 0 4px;
   color: #0f172a;
-  font-family: Georgia, "STSong", serif;
-  font-size: 21px;
+  font-size: 17px;
 }
 
 .section-heading p,
@@ -470,29 +454,24 @@ onMounted(() => {
   line-height: 1.58;
 }
 
-.section-kicker {
-  color: #0f766e;
-  font-size: 9px;
-}
-
 .workbench-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
-  gap: 16px;
+  gap: 8px;
   margin-top: 18px;
 }
 
 .workbench-left,
 .workbench-right {
   display: grid;
-  gap: 16px;
+  gap: 8px;
 }
 
 .sub-block {
   padding: 16px;
-  border: 1px solid rgba(93, 105, 92, 0.12);
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(245, 247, 242, 0.95), rgba(255, 255, 255, 0.96));
+  border: 1px solid #d4c8b8;
+  border-radius: 0;
+  background: #f0e9dc;
 }
 
 .block-head strong {
@@ -511,17 +490,16 @@ onMounted(() => {
   display: grid;
   gap: 10px;
   padding: 15px;
-  border: 1px solid rgba(93, 105, 92, 0.12);
-  border-radius: 16px;
+  border: 1px solid #d4c8b8;
+  border-radius: 0;
   background: rgba(255, 255, 255, 0.92);
   cursor: pointer;
-  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  transition: border-color 160ms ease, transform 160ms ease;
 }
 
 .model-card:hover {
   transform: translateY(-2px);
   border-color: rgba(15, 118, 110, 0.28);
-  box-shadow: 0 10px 24px rgba(57, 70, 58, 0.08);
 }
 
 .model-card.active {
@@ -539,7 +517,7 @@ onMounted(() => {
 .model-placeholder {
   width: 100%;
   height: 100%;
-  border-radius: 50%;
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -602,8 +580,8 @@ onMounted(() => {
   position: relative;
   width: 100%;
   height: 520px;
-  border: 1px solid rgba(93, 105, 92, 0.12);
-  border-radius: 18px;
+  border: 1px solid #d4c8b8;
+  border-radius: 0;
   overflow: hidden;
   background: #f8f9fa;
 }

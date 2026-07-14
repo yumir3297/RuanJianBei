@@ -25,6 +25,8 @@ const props = defineProps({
   isSpeaking: { type: Boolean, default: false },
   visemeTimeline: { type: Array, default: null },
   speechProgress: { type: Number, default: 0 },
+  speechElapsedMs: { type: Number, default: 0 },
+  speechDurationMs: { type: Number, default: 0 },
   speechSyncActive: { type: Boolean, default: false },
 });
 const emit = defineEmits(["loaded", "error"]);
@@ -310,7 +312,17 @@ function getMouthState() {
 
   const timeline = props.visemeTimeline;
   const totalDuration = timeline[timeline.length - 1].end;
-  const elapsedMs = props.speechProgress * totalDuration;
+  const playbackDuration = props.speechDurationMs > 0
+    ? props.speechDurationMs
+    : totalDuration;
+  const playbackElapsed = props.speechElapsedMs > 0
+    ? props.speechElapsedMs
+    : props.speechProgress * playbackDuration;
+  const elapsedMs = THREE.MathUtils.clamp(
+    (playbackElapsed / playbackDuration) * totalDuration,
+    0,
+    totalDuration,
+  );
 
   let lo = 0;
   let hi = timeline.length - 1;

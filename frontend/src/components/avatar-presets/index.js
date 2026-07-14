@@ -22,6 +22,7 @@ export const AVATAR_PRESETS = {
     label: "景行",
     description: "专业活力 · 现代智能导览",
     presetType: "modern",
+    modelUrl: "/models/male-guide.vrm",
   },
 };
 

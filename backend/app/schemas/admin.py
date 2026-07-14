@@ -72,8 +72,18 @@ class TouristBackgroundAssetResponse(BaseModel):
 
 class DisplayAssetsResponse(BaseModel):
     tourist_background: TouristBackgroundAssetResponse
+    welcome_text: str = ""
 
 
 class DisplayAssetUploadResponse(BaseModel):
     message: str
     asset: TouristBackgroundAssetResponse
+
+
+class WelcomeTextUpdateRequest(BaseModel):
+    text: str
+
+
+class WelcomeTextUpdateResponse(BaseModel):
+    message: str
+    welcome_text: str

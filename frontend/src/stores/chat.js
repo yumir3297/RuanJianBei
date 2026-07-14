@@ -6,6 +6,7 @@ import { useAudioPlayer } from "../composables/useAudioPlayer";
 const audioPlayer = useAudioPlayer();
 
 const DEFAULT_STATUS_TEXT = "等待提问";
+const STOPPED_STATUS_TEXT = "已停止输出";
 const UPDATED_CONTEXT_STATUS_TEXT = "已更新游览方向";
 const ANSWER_DONE_STATUS_TEXT = "回答完成";
 const FALLBACK_STATUS_TEXT = "云端语音不可用，已使用浏览器播报";
@@ -42,6 +43,7 @@ export const useChatStore = defineStore("chat", {
     streaming: false,
     voiceFallback: false,
     errorMessage: "",
+    userStopped: false,
   }),
   actions: {
     resetConversationContext() {
@@ -54,10 +56,14 @@ export const useChatStore = defineStore("chat", {
       this.stopOutput();
       this.messages = [];
       this.errorMessage = "";
+      this.userStopped = false;
       lastFailedRequest = null;
       this.resetConversationContext();
     },
     stopOutput() {
+      if (this.streaming) {
+        this.userStopped = true;
+      }
       activeStreamToken += 1;
       if (activeStreamController) {
         activeStreamController.abort();
@@ -66,7 +72,9 @@ export const useChatStore = defineStore("chat", {
       audioPlayer.stop();
       this.streaming = false;
       this.voiceFallback = false;
-      this.statusText = DEFAULT_STATUS_TEXT;
+      if (this.userStopped) {
+        this.statusText = STOPPED_STATUS_TEXT;
+      }
     },
     async sendMessage(query, selection = null, options = {}) {
       if (!query.trim()) {
@@ -75,6 +83,7 @@ export const useChatStore = defineStore("chat", {
 
       this.stopOutput();
       this.errorMessage = "";
+      this.userStopped = false;
       const requestToken = activeStreamToken;
       const streamController = new AbortController();
       activeStreamController = streamController;
@@ -159,8 +168,13 @@ export const useChatStore = defineStore("chat", {
                 duration_ms,
                 () => options.onAudioEnded?.(),
                 text || "",
-                (progress, elapsedMs) =>
-                  options.onSpeechProgress?.(progress, elapsedMs, viseme_timeline || null),
+                (progress, elapsedMs, actualDurationMs) =>
+                  options.onSpeechProgress?.(
+                    progress,
+                    elapsedMs,
+                    viseme_timeline || null,
+                    actualDurationMs,
+                  ),
                 {
                   rate: (options.ttsConfig?.speechRate || 100) / 100,
                   volume: (options.ttsConfig?.volume ?? 80) / 100,
@@ -192,9 +206,11 @@ export const useChatStore = defineStore("chat", {
                 return;
               }
               this.streaming = false;
-              this.statusText = this.voiceFallback
-                ? FALLBACK_DONE_STATUS_TEXT
-                : DEFAULT_STATUS_TEXT;
+              if (!this.userStopped) {
+                this.statusText = this.voiceFallback
+                  ? FALLBACK_DONE_STATUS_TEXT
+                  : DEFAULT_STATUS_TEXT;
+              }
               lastFailedRequest = null;
             },
           },
@@ -204,6 +220,9 @@ export const useChatStore = defineStore("chat", {
         );
       } catch (error) {
         if (isAbortError(error)) {
+          if (this.userStopped) {
+            this.statusText = STOPPED_STATUS_TEXT;
+          }
           return;
         }
         assistantMessage.content = assistantMessage.content

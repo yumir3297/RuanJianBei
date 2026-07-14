@@ -36,6 +36,19 @@ class FakeVisionService(BaseVisionService):
         return None
 
 
+def _post_vision(content=b"test-image", content_type="image/jpeg", params=None):
+    """helper to reduce boilerplate in MIME/size tests"""
+    headers = {}
+    if content_type is not None:
+        headers["Content-Type"] = content_type
+    return TestClient(app).post(
+        "/api/vision/analyze",
+        params=params or {},
+        content=content,
+        headers=headers,
+    )
+
+
 def test_vision_analyze_api_returns_retrieval_query() -> None:
     app.dependency_overrides[get_vision_service] = lambda: FakeVisionService()
     try:
@@ -61,6 +74,59 @@ def test_vision_analyze_api_returns_retrieval_query() -> None:
 
 
 def test_vision_analyze_api_rejects_empty_body() -> None:
-    response = TestClient(app).post("/api/vision/analyze", content=b"")
-
+    response = _post_vision(content=b"", content_type="image/jpeg")
     assert response.status_code == 400
+
+
+# ── MIME whitelist tests ──
+
+def test_vision_allows_jpeg() -> None:
+    response = _post_vision(content_type="image/jpeg")
+    assert response.status_code == 200
+
+
+def test_vision_allows_png() -> None:
+    response = _post_vision(content_type="image/png")
+    assert response.status_code == 200
+
+
+def test_vision_allows_webp() -> None:
+    response = _post_vision(content_type="image/webp")
+    assert response.status_code == 200
+
+
+def test_vision_allows_mime_with_charset_param() -> None:
+    response = _post_vision(content_type="image/jpeg; charset=binary")
+    assert response.status_code == 200
+
+
+def test_vision_rejects_gif() -> None:
+    response = _post_vision(content_type="image/gif")
+    assert response.status_code == 415
+    assert "仅支持" in response.json()["detail"]
+
+
+def test_vision_rejects_text_plain() -> None:
+    response = _post_vision(content_type="text/plain")
+    assert response.status_code == 415
+    assert "仅支持" in response.json()["detail"]
+
+
+def test_vision_rejects_missing_content_type() -> None:
+    response = _post_vision(content_type=None)
+    assert response.status_code == 415
+    assert "仅支持" in response.json()["detail"]
+
+
+def test_vision_rejects_octet_stream() -> None:
+    response = _post_vision(content_type="application/octet-stream")
+    assert response.status_code == 415
+    assert "仅支持" in response.json()["detail"]
+
+
+# ── size limit test ──
+
+def test_vision_rejects_over_5mb() -> None:
+    big = b"x" * (5 * 1024 * 1024 + 1)
+    response = _post_vision(content=big, content_type="image/jpeg")
+    assert response.status_code == 413

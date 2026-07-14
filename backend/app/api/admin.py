@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -30,6 +30,8 @@ from app.schemas.admin import (
     DisplayAssetUploadResponse,
     RAGIndexBuildResponse,
     RAGIndexReport,
+    WelcomeTextUpdateRequest,
+    WelcomeTextUpdateResponse,
 )
 from app.schemas.blind_spot import (
     BlindSpotRead,
@@ -46,6 +48,8 @@ from app.services.display_assets import DisplayAssetService
 
 
 router = APIRouter()
+
+VALID_VOICE_TYPES = {"gentle-female", "calm-female", "deep-male", "lively-female"}
 
 LEGACY_AVATAR_VOICE_MAP = {
     "female_warm": "gentle-female",
@@ -208,6 +212,7 @@ def _to_display_assets_response(service: DisplayAssetService) -> DisplayAssetsRe
     assets = service.get_assets()
     return DisplayAssetsResponse(
         tourist_background=assets["tourist_background"],
+        welcome_text=assets["welcome_text"],
     )
 
 
@@ -251,6 +256,36 @@ async def clear_tourist_background(
     service = _get_display_asset_service(settings)
     asset = service.clear_tourist_background()
     return DisplayAssetUploadResponse(message="Tourist background cleared.", asset=asset)
+
+
+@router.put("/display-assets/welcome-text", response_model=WelcomeTextUpdateResponse)
+async def update_welcome_text(
+    payload: WelcomeTextUpdateRequest,
+    settings: Settings = Depends(get_app_settings),
+) -> WelcomeTextUpdateResponse:
+    service = _get_display_asset_service(settings)
+    text = service.update_welcome_text(payload.text)
+    return WelcomeTextUpdateResponse(message="Welcome text updated.", welcome_text=text)
+
+
+@router.put("/avatar-configs/{config_id}", response_model=AvatarConfigResponse)
+async def update_avatar_config(
+    config_id: int,
+    voice_type: str = Body(..., embed=True),
+    session: Session = Depends(get_db_session),
+) -> AvatarConfigResponse:
+    if voice_type not in VALID_VOICE_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"不支持的音色类型: {voice_type}。仅允许: {', '.join(sorted(VALID_VOICE_TYPES))}",
+        )
+    config = session.query(AvatarConfig).filter(AvatarConfig.id == config_id).first()
+    if config is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Avatar config not found.")
+    config.voice_type = voice_type
+    session.commit()
+    session.refresh(config)
+    return _to_avatar_config_response(config)
 
 
 @router.put("/avatar-configs/{config_id}/activate", response_model=AvatarConfigActivateResponse)

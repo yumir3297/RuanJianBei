@@ -108,13 +108,13 @@ export function useAudioPlayer() {
       if (onProgress) {
         progressTimer = setInterval(() => {
           const elapsed = (ctx.currentTime - startTime) * 1000;
-          onProgress(Math.min(elapsed / (duration * 1000), 1), elapsed);
+          onProgress(Math.min(elapsed / (duration * 1000), 1), elapsed, duration * 1000);
         }, 30);
       }
       source.onended = () => {
         currentSource = null;
         stopMouthLoop();
-        if (progressTimer) { clearInterval(progressTimer); onProgress?.(1, duration * 1000); }
+        if (progressTimer) { clearInterval(progressTimer); onProgress?.(1, duration * 1000, duration * 1000); }
         resolve(duration * 1000);
       };
       source.start(0);
@@ -151,7 +151,11 @@ export function useAudioPlayer() {
       const playbackRate = Math.min(Math.max(playbackOptions.rate || 1, 0.8), 1.5);
       const estimatedDuration = Math.max((durationMs || text.length * 180) / playbackRate, 800);
       let progressTimer = null;
-      const reportProgress = (p) => onProgress?.(Math.min(Math.max(p, 0), 1), Date.now() - startTime);
+      const reportProgress = (p) => onProgress?.(
+        Math.min(Math.max(p, 0), 1),
+        Date.now() - startTime,
+        estimatedDuration,
+      );
       const finish = (d) => { if (progressTimer) { clearInterval(progressTimer); progressTimer = null; } stopMouthLoop(); reportProgress(1); currentUtterance = null; resolve(d); };
       utterance.onstart = () => { reportProgress(0); progressTimer = setInterval(() => reportProgress((Date.now() - startTime) / estimatedDuration), 50); };
       utterance.onboundary = (e) => { if (text.length > 0 && Number.isFinite(e.charIndex)) reportProgress(e.charIndex / text.length); };
@@ -182,9 +186,9 @@ export function useAudioPlayer() {
         await playSpeechSynthesis(current.text, current.durationMs, current.onProgress, current.playbackOptions);
       } else {
         current.playbackOptions?.onMode?.("silent");
-        current.onProgress?.(0, 0);
+        current.onProgress?.(0, 0, current.durationMs);
         await new Promise((r) => setTimeout(r, Math.min(current.durationMs, 3000)));
-        current.onProgress?.(1, current.durationMs);
+        current.onProgress?.(1, current.durationMs, current.durationMs);
       }
       if (generation === stopGeneration && current.onEnded) current.onEnded();
     }

@@ -5,83 +5,26 @@
       <div class="scenic-bg-overlay"></div>
     </div>
 
-    <header class="tourist-top">
-      <span class="tourist-brand">灵山智慧导览</span>
-      <div class="tourist-top-right">
-        <el-tag size="small" effect="plain">{{ explanationLevelLabel }}</el-tag>
-        <el-tag size="small" type="info">{{ chatStore.statusText }}</el-tag>
-        <el-button
-          text
-          :disabled="chatStore.streaming || speechListening || isRecording"
-          @click="handleChangeMode"
-        >
-          切换讲解方式
-        </el-button>
+    <!-- ① 顶栏 -->
+    <button type="button" class="back-btn" @click="handleChangeMode">← 返回</button>
+    <div class="top-right">
+      <span class="top-brand">{{ avatarDisplayName }}</span>
+      <div class="top-status-row">
+        <span class="status-item"><span class="status-dot status-dot--ready"></span>人物模型</span>
+        <span class="status-item"><span class="status-dot status-dot--live"></span>{{ explanationLevelLabel }}</span>
+        <span class="status-item"><span class="status-dot status-dot--weather"></span>{{ chatStore.statusText }}</span>
       </div>
-    </header>
+    </div>
 
     <div class="tourist-stage">
-      <aside class="chat-float left-float">
-        <div class="float-head">
-          <span>实时对话</span>
-          <small>
-            {{
-              interactionStore.breadcrumbs.length
-                ? interactionStore.breadcrumbs.join(" / ")
-                : "我会跟随你的节奏讲解灵山景区"
-            }}
-          </small>
-        </div>
-
-        <div ref="messageListRef" class="message-list">
-          <article
-            v-for="(message, index) in chatStore.messages"
-            :key="`${message.role}-${index}`"
-            :class="['message-item', message.role]"
-          >
-            <strong class="message-speaker">{{ message.role === "user" ? "您" : GUIDE_PERSONA.name }}</strong>
-            <div
-              v-if="message.role === 'assistant'"
-              class="answer-content"
-              v-html="renderAnswer(message.content, index === chatStore.messages.length - 1)"
-              @click="handleCitationClick"
-            ></div>
-            <p v-else>{{ message.content }}</p>
-            <span
-              v-if="
-                message.role === 'assistant'
-                && chatStore.streaming
-                && index === chatStore.messages.length - 1
-                && message.content.length > 0
-              "
-              class="typing-cursor"
-            >|</span>
-          </article>
-        </div>
-
-        <div v-if="chatStore.followups.length" class="followup-panel" aria-label="快捷追问">
-          <div class="followup-heading">
-            <span>继续探索</span>
-            <small>选一个方向继续提问</small>
-          </div>
-          <div class="followup-list">
-            <button
-              v-for="item in chatStore.followups"
-              :key="item.query"
-              type="button"
-              :disabled="chatStore.streaming"
-              @click="handleFollowup(item.query)"
-            >
-              <strong>{{ item.label }}</strong>
-              <span>{{ item.query }}</span>
-            </button>
-          </div>
-        </div>
-      </aside>
-
       <div class="chat-center">
-        <div class="avatar-halo halo-outer"></div>
-        <div class="avatar-halo halo-inner"></div>
+        <div class="top-caption">
+          <span class="crowd-indicator" data-level="green">
+            <span class="crowd-dot"></span>当前景区人数：舒适
+          </span>
+          <span class="caption-kicker">{{ avatarDisplaySubtitle }}</span>
+          <span class="caption-weather">灵山 · 智慧导览</span>
+        </div>
         <div class="avatar-stage">
           <ThreeAvatar
             v-if="!avatarError"
@@ -89,270 +32,135 @@
             :emotion="avatar.currentEmotion.value"
             :is-speaking="avatarState === 'speaking' || avatarState === 'happy'"
             :speech-progress="speechProgress"
+            :speech-elapsed-ms="speechElapsedMs"
+            :speech-duration-ms="speechDurationMs"
             :speech-sync-active="activeAudioSegments > 0"
             :viseme-timeline="visemeTimeline"
             @loaded="handleAvatarLoaded"
             @error="handleAvatarLoadError"
           />
-          <AvatarDisplay
-            v-else
-            :state="avatarState"
-            :emotion="avatar.currentEmotion.value"
-          />
-        </div>
-        <div class="center-caption">
-          <span class="caption-kicker">数字导览中</span>
-          <p>
-            {{
-              interactionStore.breadcrumbs.length
-                ? interactionStore.breadcrumbs.join(" / ")
-                : "随时问我关于灵山的路线、典故和景点"
-            }}
-          </p>
+          <AvatarDisplay v-else :state="avatarState" :emotion="avatar.currentEmotion.value" />
         </div>
       </div>
 
-      <aside class="chat-float right-float">
-        <div class="float-head">
-          <span>快捷操作</span>
-          <small>选择提问方向，或打开识景与资料面板</small>
+      <!-- ③ 左卡片：对话/来源 Tab -->
+      <aside class="side-card" :class="{ speaking: chatStore.streaming }">
+        <div class="side-card-head">
+          <div class="side-card-tabs">
+            <button :class="['side-card-tab', { active: activeTab === 'chat' }]" @click="activeTab = 'chat'">对话</button>
+            <button :class="['side-card-tab', { active: activeTab === 'source' }]" @click="activeTab = 'source'">来源</button>
+          </div>
         </div>
-
-        <div class="quick-section">
-          <button
-            v-for="question in quickQuestions"
-            :key="question"
-            type="button"
-            :disabled="chatStore.streaming"
-            @click="handleQuickQuestion(question)"
-          >
-            {{ question }}
-          </button>
+        <div :class="['side-card-body', { hidden: activeTab !== 'chat' }]" ref="messageListRef">
+          <article v-for="(message, index) in chatStore.messages" :key="`${message.role}-${index}`" :class="['msg-item', message.role, { collapsed: message.role === 'user' && index < chatStore.messages.length - 1 && chatStore.messages[index + 1]?.role === 'assistant' }]">
+            <div v-if="message.role === 'assistant'" class="msg-bubble" v-html="renderAnswer(message.content, index === chatStore.messages.length - 1)" @click="handleCitationClick"></div>
+            <div v-else class="msg-bubble">{{ message.content }}</div>
+            <span v-if="message.role === 'assistant' && chatStore.streaming && index === chatStore.messages.length - 1 && message.content.length > 0" class="typing-cursor">|</span>
+          </article>
+          <div v-if="chatStore.followups.length" class="followup-panel">
+            <button v-for="item in chatStore.followups" :key="item.query" type="button" :disabled="chatStore.streaming" @click="handleFollowup(item.query)">{{ item.label }}</button>
+          </div>
+          <div v-if="chatStore.userStopped && !chatStore.streaming" class="stop-notice" role="status">已停止输出</div>
+          <div v-if="chatStore.errorMessage && !chatStore.streaming" class="error-notice" role="alert">{{ chatStore.errorMessage }}</div>
         </div>
-
-        <div class="explanation-card">
-          <span class="card-label">讲解方式</span>
-          <el-radio-group v-model="explanationLevel" size="small">
-            <el-radio-button value="child">亲子游</el-radio-button>
-            <el-radio-button value="adult">休闲游</el-radio-button>
-            <el-radio-button value="expert">文化深度游</el-radio-button>
-          </el-radio-group>
+        <div :class="['side-card-body', { hidden: activeTab !== 'source' }]">
+          <ul class="source-list" v-if="chatStore.sources.length">
+            <li v-for="(item, index) in chatStore.sources" :key="`${item.title}-${index}`" :class="['source-item', { highlight: sourceHighlightIndex === index }]" :data-source-index="index">
+              <h4><span class="source-num">{{ index + 1 }}</span>{{ item.title }}</h4>
+              <p>{{ item.snippet }}</p>
+              <span class="source-meta">{{ item.source }}</span>
+            </li>
+          </ul>
+          <p v-else class="source-empty">提问后这里会显示参考资料</p>
         </div>
+      </aside>
 
-        <div class="action-group">
-          <button type="button" class="action-chip" @click="toggleVisionPanel">
-            拍照识景
-          </button>
-          <button
-            type="button"
-            :class="['action-chip', { active: sourceDrawerOpen }]"
-            @click="toggleSourceDrawer"
-          >
-            资料来源
-            <em v-if="chatStore.sources.length">{{ chatStore.sources.length }}</em>
-          </button>
+      <!-- ④ 右卡片：快捷服务 -->
+      <aside class="right-card">
+        <div class="right-card-head">{{ explanationLevelLabel }}</div>
+        <div class="right-card-body">
+          <div class="service-grid">
+            <button class="explore-card explore-card--scenic" @click="handleQuickAction('recommend')">
+              <span class="explore-card-icon">🏯</span>
+              <span class="explore-card-title">景点推荐</span>
+              <span class="explore-card-desc">热门景点导览</span>
+            </button>
+            <button class="explore-card explore-card--area" @click="handleQuickAction('photo')">
+              <span class="explore-card-icon">📸</span>
+              <span class="explore-card-title">拍照识景</span>
+              <span class="explore-card-desc">实时景区识别</span>
+            </button>
+            <button class="explore-card explore-card--type" @click="handleQuickAction('route')">
+              <span class="explore-card-icon">🗺️</span>
+              <span class="explore-card-title">路线推荐</span>
+              <span class="explore-card-desc">智能路线规划</span>
+            </button>
+            <button class="explore-card explore-card--photo" @click="handleQuickAction('style')">
+              <span class="explore-card-icon">⚙️</span>
+              <span class="explore-card-title">讲解方式</span>
+              <span class="explore-card-desc">{{ explanationLevelLabel }}</span>
+            </button>
+          </div>
+          <div class="style-selector" v-if="showStyleSelector">
+            <button v-for="s in styleOptions" :key="s.key" :class="{ active: explanationLevel === s.key }" @click="explanationLevel = s.key; showStyleSelector = false">{{ s.label }}</button>
+          </div>
         </div>
       </aside>
     </div>
 
-    <section
-      v-show="visionPanelOpen || visionFile || visionResult"
-      class="overlay-panel vision-drawer"
-      aria-label="图片识别入口"
-    >
-      <div class="vision-heading">
-        <div>
-          <span>拍照识景</span>
-          <small>选择一张景物照片，小灵会结合景区资料继续讲解。</small>
-        </div>
-        <el-button text @click="visionPanelOpen = false">收起</el-button>
-      </div>
+    <!-- ⑤ 底部输入栏 -->
+    <div class="input-row">
+      <button class="image-btn" @click="toggleVisionPanel">拍照识景</button>
+      <input class="input-field" v-model="query" :placeholder="`想去哪里？${avatarDisplayName}帮你规划…`" @keyup.enter="handleSubmit" :disabled="chatStore.streaming" />
+      <button class="voice-btn" :class="{ recording: speechListening || isRecording }" @click="toggleRecording" :disabled="chatStore.streaming || transcribing">{{ speechListening ? '结束语音' : isRecording ? `录音中 ${durationSeconds}s` : '语音提问' }}</button>
+    </div>
 
-      <input
-        ref="visionFileInputRef"
-        class="vision-file-input"
-        type="file"
-        accept="image/png,image/jpeg,image/webp"
-        @change="handleVisionFileChange"
-      />
+    <div v-if="chatStore.errorMessage && !chatStore.streaming" class="voice-error-bar" role="alert">{{ chatStore.errorMessage }}</div>
 
-      <div class="vision-actions">
-        <el-button :disabled="visionAnalyzing || chatStore.streaming" @click="openVisionFilePicker">
-          选择图片
-        </el-button>
-        <el-button
-          type="primary"
-          :loading="visionAnalyzing"
-          :disabled="!visionFile || chatStore.streaming"
-          @click="handleAnalyzeImage"
-        >
-          识别图片
-        </el-button>
-        <el-button v-if="visionResult || visionFile" :disabled="visionAnalyzing" @click="clearVisionState">
-          清除
-        </el-button>
-      </div>
+    <!-- 语音状态条 -->
+    <div v-if="speechListening" class="speech-bar" aria-live="polite">
+      <span class="speech-pulse" aria-hidden="true"></span>
+      <strong>正在聆听</strong>
+      <span>{{ speechPreviewText || '请开始说话…' }}</span>
+    </div>
 
-      <div v-if="visionFile" class="vision-file-card">
-        <img v-if="visionPreviewUrl" :src="visionPreviewUrl" alt="待识别图片预览" />
-        <div>
+    <!-- 语音错误提示 -->
+    <div v-if="voiceErrorMessage" class="voice-error-bar">
+      <span>{{ voiceErrorMessage }}</span>
+    </div>
+
+    <!-- Vision panel (hidden file input) -->
+    <input ref="visionFileInputRef" type="file" accept="image/png,image/jpeg,image/webp" hidden @change="handleVisionFileChange" />
+
+    <!-- Vision result modal -->
+    <div v-if="visionPanelOpen" class="vision-modal" @click.self="closeVisionPanel">
+      <div class="vision-modal-content">
+        <button class="modal-close" @click="closeVisionPanel">✕</button>
+        <h3>拍照识景</h3>
+        <button :disabled="visionAnalyzing || chatStore.streaming" @click="openVisionFilePicker">选择图片</button>
+        <button :disabled="visionAnalyzing || !visionFile || chatStore.streaming" @click="handleAnalyzeImage">
+          {{ visionAnalyzing ? '识别中…' : '识别图片' }}
+        </button>
+        <button v-if="visionFile || visionResult" :disabled="visionAnalyzing" @click="clearVisionPanel">清除</button>
+        <div v-if="visionFile">
+          <img v-if="visionPreviewUrl" :src="visionPreviewUrl" style="max-width:200px" />
           <strong>{{ visionFile.name }}</strong>
-          <span>{{ formatBytes(visionFile.size) }}</span>
         </div>
-      </div>
-
-      <el-alert
-        v-if="visionError"
-        class="vision-alert"
-        type="error"
-        :title="visionError"
-        :closable="false"
-      />
-
-      <div v-if="visionResult" class="vision-result-card">
-        <p class="vision-summary">{{ visionResult.scene_summary || "暂未识别出明确场景。" }}</p>
-        <p v-if="visionResult.candidate_attractions?.length" class="vision-greeting">
-          我看到这可能是 {{ visionResult.candidate_attractions[0] }}，让我为您介绍它。
-        </p>
-        <div v-if="visionResult.candidate_attractions?.length" class="vision-tags">
-          <span>可能是</span>
-          <el-tag
-            v-for="item in visionResult.candidate_attractions"
-            :key="`attraction-${item}`"
-            type="success"
-          >
-            {{ item }}
-          </el-tag>
-        </div>
-        <div v-if="visionResult.visual_tags?.length" class="vision-tags">
-          <span>画面特征</span>
-          <el-tag v-for="item in visionResult.visual_tags" :key="`tag-${item}`">
-            {{ item }}
-          </el-tag>
-        </div>
-        <div class="vision-meta">
-          <span>识别把握：{{ formatConfidence(visionResult.confidence) }}</span>
-        </div>
-        <div class="vision-query">
-          <span>发现的景物特征</span>
-          <div v-if="visionDisplayHints.length" class="vision-query-chips">
-            <el-tag
-              v-for="item in visionDisplayHints"
-              :key="`hint-${item}`"
-              effect="plain"
-              type="warning"
-            >
-              {{ item }}
-            </el-tag>
+        <div v-if="visionError" class="vision-error">{{ visionError }}</div>
+        <div v-if="visionResult" class="vision-result">
+          <p class="vision-summary">{{ visionResult.scene_summary || '暂未识别出明确场景。' }}</p>
+          <div v-if="visionResult.candidate_attractions?.length">
+            <span class="vision-label">可能是</span>
+            <span v-for="item in visionResult.candidate_attractions" :key="item" class="vision-tag">{{ item }}</span>
           </div>
-          <p v-else class="vision-query-note">暂时没有发现明确特征，仍可根据图片概述继续提问。</p>
-          <small class="vision-query-note">这些结果仅作为检索线索，最终讲解仍以景区资料为准。</small>
-        </div>
-        <el-button
-          type="success"
-          :disabled="chatStore.streaming || !visionResult.retrieval_query"
-          @click="askFromImage"
-        >
-          请小灵讲讲这里
-        </el-button>
-      </div>
-    </section>
-
-    <aside
-      v-show="sourceDrawerOpen || sourceHighlightIndex >= 0"
-      class="overlay-panel source-drawer"
-      aria-label="资料来源"
-    >
-      <div class="drawer-head">
-        <div>
-          <span>资料来源</span>
-          <small>所有回答均来自景区官方资料，点击引文编号可高亮定位。</small>
-        </div>
-        <el-button text @click="sourceDrawerOpen = false">收起</el-button>
-      </div>
-
-      <el-empty v-if="chatStore.sources.length === 0" description="提问后这里会显示参考资料" />
-      <ul v-else class="source-list">
-        <li
-          v-for="(item, index) in chatStore.sources"
-          :key="`${item.title}-${index}`"
-          :data-source-index="index"
-          :class="{ 'source-highlight': sourceHighlightIndex === index }"
-        >
-          <h4>
-            <span class="source-number">{{ index + 1 }}</span>
-            {{ item.title }}
-          </h4>
-          <p>{{ item.snippet }}</p>
-          <span class="source-meta">{{ item.source }}</span>
-        </li>
-      </ul>
-    </aside>
-
-    <div class="tourist-input-wrap">
-      <div class="tourist-input-bar">
-        <button type="button" class="input-chip" @click="toggleVisionPanel">
-          拍照识景
-        </button>
-
-        <div class="input-main">
-          <div class="input-topline">
-            <span>
-              {{
-                interactionStore.breadcrumbs.length
-                  ? interactionStore.breadcrumbs.join(" / ")
-                  : "导览助手已准备好"
-              }}
-            </span>
-            <span v-if="speechListening">{{ speechPreviewText || "正在聆听..." }}</span>
+          <div v-if="visionResult.visual_tags?.length">
+            <span class="vision-label">画面特征</span>
+            <span v-for="item in visionResult.visual_tags" :key="item" class="vision-tag">{{ item }}</span>
           </div>
-
-          <el-input
-            v-model="query"
-            type="textarea"
-            :rows="2"
-            resize="none"
-            placeholder="问我关于灵山的路线、景点和典故，例如：灵山大佛有多高？"
-            @keydown.enter.exact.prevent="handleSubmit"
-          />
+          <div class="vision-meta">识别把握：{{ formatConfidence(visionResult.confidence) }}</div>
+          <button :disabled="chatStore.streaming || !visionResult.retrieval_query" @click="askFromImage">请小灵讲讲这里</button>
         </div>
-
-        <button
-          type="button"
-          class="send-btn"
-          :disabled="chatStore.streaming || speechListening || isRecording || transcribing"
-          @click="handleSubmit"
-        >
-          {{ chatStore.streaming ? "发送中" : "发送" }}
-        </button>
-
-        <button
-          v-if="voiceSupported"
-          type="button"
-          :class="['voice-btn', { recording: speechListening || isRecording }]"
-          :disabled="chatStore.streaming || transcribing"
-          @click="toggleRecording"
-        >
-          <template v-if="speechListening">结束语音</template>
-          <template v-else-if="isRecording">结束录音 {{ durationSeconds }}s</template>
-          <template v-else>语音提问</template>
-        </button>
       </div>
-
-      <div v-if="speechListening" class="speech-listening" aria-live="polite">
-        <span class="speech-pulse" aria-hidden="true"></span>
-        <strong>正在聆听</strong>
-        <span>{{ speechPreviewText || "请开始说话，识别文字会实时出现在输入框中。" }}</span>
-      </div>
-
-      <el-alert
-        v-if="voiceErrorMessage"
-        class="speech-alert"
-        type="warning"
-        :title="voiceErrorMessage"
-        :closable="false"
-        show-icon
-      />
     </div>
   </section>
 </template>
@@ -369,6 +177,9 @@ import { useAudioPlayer } from "../../composables/useAudioPlayer";
 import { renderMarkdown } from "../../composables/useMarkdown";
 import { useRecorder } from "../../composables/useRecorder";
 import { useSpeechRecognition } from "../../composables/useSpeechRecognition";
+import { useScenicBackground } from "../../composables/useScenicBackground";
+import { fetchAvatarConfig } from "../../api/admin";
+import { normalizeAvatarPresetFromModelPath, DEFAULT_AVATAR_PRESET } from "../../utils/avatarConfig";
 import { GUIDE_PERSONA, useAvatar } from "../../composables/useAvatar";
 import { useChatStore } from "../../stores/chat";
 import { useInteractionStore } from "../../stores/interaction";
@@ -376,6 +187,7 @@ import { useInteractionStore } from "../../stores/interaction";
 const router = useRouter();
 const chatStore = useChatStore();
 const interactionStore = useInteractionStore();
+const { scenicBgUrl } = useScenicBackground();
 const {
   isRecording,
   isSupported: recorderSupported,
@@ -398,15 +210,27 @@ const audioPlayer = useAudioPlayer();
 const avatarState = avatar.currentState;
 const avatarError = ref(false);
 
-const STORAGE_KEY = "a5-avatar-config-v1";
 const GUIDE_STYLE_STORAGE_KEY = "a5-pending-guide-style-v1";
-const avatarConfig = ref({ modelKey: "hanfu" });
-try {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw) {
-    avatarConfig.value = { ...JSON.parse(raw), modelKey: "hanfu" };
+const avatarConfig = ref({ modelKey: DEFAULT_AVATAR_PRESET, voiceType: "gentle-female" });
+
+const AVATAR_MODEL_MAP = {
+  monk: { name: "明彻法师", subtitle: "明彻法师 · 佛学文化导游" },
+  hanfu: { name: "清岚", subtitle: "清岚 · 文化叙事导游" },
+  modern: { name: "景行", subtitle: "景行 · 智能导览导游" },
+};
+
+const avatarDisplayName = computed(() => AVATAR_MODEL_MAP[avatarConfig.value.modelKey]?.name || "小灵");
+const avatarDisplaySubtitle = computed(() => AVATAR_MODEL_MAP[avatarConfig.value.modelKey]?.subtitle || "清岚 · 数字人导游");
+
+async function loadAvatarConfig() {
+  try {
+    const config = await fetchAvatarConfig();
+    avatarConfig.value.modelKey = normalizeAvatarPresetFromModelPath(config?.model_path, DEFAULT_AVATAR_PRESET);
+    avatarConfig.value.voiceType = config?.voice_type || "gentle-female";
+  } catch {
+    // use default
   }
-} catch {}
+}
 
 const query = ref("");
 const explanationLevel = ref("adult");
@@ -423,12 +247,19 @@ const visionAnalyzing = ref(false);
 const visionError = ref("");
 const visionPanelOpen = ref(false);
 const speechProgress = ref(0);
+const speechElapsedMs = ref(0);
+const speechDurationMs = ref(0);
 const visemeTimeline = ref(null);
 const activeAudioSegments = ref(0);
 const sourceHighlightIndex = ref(-1);
-const sourceDrawerOpen = ref(false);
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-const scenicBgUrl = "var(--lingshan-scenic-bg)";
+const activeTab = ref('chat')
+const showStyleSelector = ref(false)
+const styleOptions = [
+  { key: 'child', label: '儿童' },
+  { key: 'adult', label: '标准' },
+  { key: 'expert', label: '专业' },
+]
 const quickQuestions = [
   "灵山大佛有多高？",
   "推荐游览路线是什么？",
@@ -436,6 +267,22 @@ const quickQuestions = [
   "附近适合拍照的景点有哪些？",
 ];
 let greetingTimer = null;
+
+function handleQuickAction(action) {
+  if (chatStore.streaming) return
+  if (action === 'recommend') submitQuery('推荐灵山值得去的景点')
+  else if (action === 'photo') toggleVisionPanel()
+  else if (action === 'route') submitQuery('帮我规划一条灵山游览路线')
+  else if (action === 'style') showStyleSelector.value = !showStyleSelector.value
+}
+
+function closeVisionPanel() {
+  visionPanelOpen.value = false
+}
+
+function clearVisionPanel() {
+  clearVisionState()
+}
 
 const voiceSupported = computed(() => speechSupported.value || recorderSupported.value);
 const speechPreviewText = computed(() => speechInterimText.value || speechFinalText.value);
@@ -478,7 +325,7 @@ function highlightSource(evidenceId) {
     source => source.evidence_id === `证据${evidenceId}`,
   );
   if (index >= 0) {
-    sourceDrawerOpen.value = true;
+    activeTab.value = "source";
     sourceHighlightIndex.value = index;
     nextTick(() => {
       document.querySelector(`[data-source-index="${index}"]`)?.scrollIntoView({
@@ -492,14 +339,11 @@ function highlightSource(evidenceId) {
   }
 }
 
-function toggleSourceDrawer() {
-  sourceDrawerOpen.value = !sourceDrawerOpen.value;
-}
-
 function handleChangeMode() {
   if (chatStore.streaming || speechListening.value || isRecording.value) {
     return;
   }
+  chatStore.stopOutput();
   audioPlayer.stop();
   router.push("/tourist/select");
 }
@@ -563,6 +407,7 @@ watch(speechListening, (listening, wasListening) => {
 
 onMounted(() => {
   interactionStore.initialize();
+  loadAvatarConfig();
 
   try {
     const pendingStyle = window.sessionStorage.getItem(GUIDE_STYLE_STORAGE_KEY);
@@ -577,7 +422,7 @@ onMounted(() => {
       if (chatStore.messages.length === 0) {
         chatStore.messages.push({
           role: "assistant",
-          content: GUIDE_PERSONA.greeting,
+          content: `您好！我是灵山智慧导游${avatarDisplayName.value}，很高兴陪您一起游览。想了解景点故事、规划路线，或认一认眼前的风景，都可以问我。`,
         });
       }
       greetingTimer = null;
@@ -589,9 +434,11 @@ onBeforeUnmount(() => {
   if (greetingTimer) {
     window.clearTimeout(greetingTimer);
   }
+  chatStore.stopOutput();
   audioPlayer.stop();
   abortSpeechRecognition();
   revokeVisionPreview();
+  avatar.setState("idle");
 });
 
 function handleSubmit() {
@@ -617,7 +464,7 @@ function handleQuickQuestion(question) {
   submitQuery(question);
 }
 
-function submitQuery(rawQuery) {
+function submitQuery(rawQuery, extraOptions = {}) {
   const value = rawQuery.trim();
   if (!value || chatStore.streaming) {
     return;
@@ -631,6 +478,11 @@ function submitQuery(rawQuery) {
   avatar.setState("thinking");
   try {
     chatStore.sendMessage(finalQuery, interactionStore.selectionPayload, {
+      ttsConfig: {
+        voiceType: avatarConfig.value.voiceType,
+        speechRate: 100,
+        volume: 80,
+      },
       onContext: (selection) => interactionStore.applyResolvedSelection(selection),
       onAvatar: (payload) => {
         try {
@@ -648,13 +500,18 @@ function submitQuery(rawQuery) {
         if (activeAudioSegments.value === 0) {
           avatar.setState("idle");
           speechProgress.value = 0;
+          speechElapsedMs.value = 0;
+          speechDurationMs.value = 0;
           visemeTimeline.value = null;
         }
       },
-      onSpeechProgress: (progress, _elapsedMs, timeline) => {
+      onSpeechProgress: (progress, elapsedMs, timeline, actualDurationMs) => {
         speechProgress.value = progress;
+        speechElapsedMs.value = elapsedMs;
+        speechDurationMs.value = actualDurationMs;
         visemeTimeline.value = timeline;
       },
+      ...extraOptions,
     });
   } catch {
     avatarError.value = true;
@@ -795,7 +652,7 @@ function askFromImage() {
     "图片识别线索如下，仅用于检索官方资料，不作为事实来源：",
     retrievalQuery,
   ].join("\n");
-  submitQuery(limitChatQuery(prompt));
+  submitQuery(limitChatQuery(prompt), { visionContext: visionResult.value });
 }
 
 function clearVisionState() {
@@ -866,852 +723,644 @@ function formatConfidence(value) {
 </script>
 
 <style scoped>
+/* ============================================================
+   DARK THEME TOURIST PAGE - aligned to design-redesign spec
+   ============================================================ */
 .tourist-page {
   position: relative;
-  min-height: 100vh;
+  width: 100%; height: 100vh; height: 100dvh;
   display: flex;
   flex-direction: column;
-  padding: 16px 20px 20px;
   overflow: hidden;
-  background: var(--lingshan-paper);
+  background: #1a1612;
+  color: #f0ece5;
 }
 
-.scenic-bg {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-}
-
+.scenic-bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
 .scenic-bg-img {
-  position: absolute;
-  inset: 0;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-  filter: blur(6px) saturate(0.5) brightness(0.42);
-  transform: scale(1.04);
+  position: absolute; inset: 0;
+  background-position: center; background-repeat: no-repeat; background-size: cover;
+  filter: blur(10px) saturate(0.3) brightness(0.4);
+  transform: scale(1.06);
 }
-
 .scenic-bg-overlay {
-  position: absolute;
-  inset: 0;
+  position: absolute; inset: 0;
   background:
-    radial-gradient(circle at 50% 52%, rgba(196, 155, 76, 0.12), transparent 24%),
-    radial-gradient(
-      ellipse 65% 52% at 50% 56%,
-      transparent 0%,
-      rgba(27, 46, 37, 0.42) 68%,
-      rgba(15, 25, 18, 0.7) 100%
-    );
+    radial-gradient(ellipse 60% 40% at 50% 35%, transparent 0%, rgba(20,16,10,0.55) 80%),
+    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(22,18,10,0.5) 0%, transparent 70%);
 }
 
-.tourist-top {
-  position: relative;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+.back-btn {
+  position: absolute; top: 32px; left: 32px; z-index: 25;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 14px 28px;
+  border: 1px solid rgba(255,250,242,0.11);
+  border-radius: 999px;
+  background: rgba(255,250,242,0.05);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: rgba(232,228,219,0.55);
+  font-family: inherit; font-size: 20px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: border-color 0.3s ease, background 0.3s ease, color 0.3s ease;
+  outline: none;
 }
+.back-btn:hover {
+  border-color: rgba(255,250,242,0.19);
+  background: rgba(255,255,255,0.09);
+  color: rgba(232,228,219,0.85);
+}
+.back-btn:focus-visible { outline: 2px solid #d9a441; outline-offset: 3px; }
 
-.tourist-brand {
-  color: rgba(255, 255, 255, 0.9);
-  font-family: "STKaiti", "KaiTi", "STSong", serif;
-  font-size: 18px;
-  letter-spacing: 0.16em;
+.top-right {
+  position: absolute; top: 32px; right: 32px; z-index: 20;
+  display: flex; flex-direction: column;
+  align-items: flex-end; gap: 8px;
 }
-
-.tourist-top-right {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
+.top-brand {
+  color: rgba(232,228,219,0.88);
+  font-family: "STKaiti","KaiTi","STSong",serif;
+  font-size: clamp(24px, 2.8vw, 40px);
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 30px rgba(217,164,65,0.1);
+  line-height: 1.2;
 }
+.top-status-row {
+  display: flex; flex-direction: column; gap: 5px;
+}
+.status-item {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 16px; font-weight: 400;
+  letter-spacing: 0.06em;
+  color: rgba(232,228,219,0.55);
+  font-family: system-ui, sans-serif;
+}
+.status-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%; flex-shrink: 0;
+  border: 1px solid rgba(255,250,242,0.16);
+}
+.status-dot--ready  { background: #d9a441; box-shadow: 0 0 4px rgba(217,164,65,0.5); }
+.status-dot--live   { background: #5ec9a4; box-shadow: 0 0 4px rgba(94,201,164,0.5); }
+.status-dot--weather { background: #6bb8e8; box-shadow: 0 0 4px rgba(107,184,232,0.5); }
 
 .tourist-stage {
-  position: relative;
-  z-index: 10;
-  flex: 1;
-  min-height: 0;
+  position: relative; z-index: 10;
+  flex: 1; min-height: 0;
   display: grid;
-  grid-template-columns: minmax(270px, 320px) minmax(0, 1fr) minmax(240px, 280px);
-  align-items: center;
-  gap: 18px;
-}
-
-.chat-float {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  align-self: center;
-  max-height: min(62vh, 700px);
-  padding: 18px 16px;
-  border: 1px solid rgba(233, 240, 235, 0.16);
-  border-radius: 20px;
-  background: rgba(247, 244, 237, 0.16);
-  box-shadow: 0 22px 60px rgba(10, 18, 14, 0.2);
-  backdrop-filter: blur(18px);
-}
-
-.float-head {
-  display: grid;
-  gap: 6px;
-}
-
-.float-head span,
-.drawer-head span,
-.vision-heading span,
-.caption-kicker,
-.card-label {
-  color: #f8e7bb;
-  font-family: "STKaiti", "KaiTi", serif;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-}
-
-.float-head small,
-.drawer-head small,
-.vision-heading small {
-  color: rgba(240, 242, 236, 0.78);
-  line-height: 1.55;
-}
-
-.message-list {
-  display: flex;
-  flex-direction: column;
+  grid-template-columns: minmax(160px, 340px) 1fr minmax(160px, 340px);
   gap: 12px;
-  min-height: 200px;
-  overflow-y: auto;
-  padding-right: 4px;
-  scroll-behavior: smooth;
-}
-
-.message-item {
-  position: relative;
-  width: 100%;
-  max-width: 100%;
-  padding: 13px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  box-shadow: 0 8px 20px rgba(11, 17, 13, 0.12);
-}
-
-.message-item.user {
-  align-self: flex-end;
-  background: rgba(255, 248, 232, 0.9);
-  border-right: 3px solid var(--lingshan-gold);
-  color: #4b3a21;
-}
-
-.message-item.assistant {
-  align-self: flex-start;
-  background: rgba(234, 240, 235, 0.94);
-  border-left: 3px solid var(--lingshan-green);
-}
-
-.message-speaker {
-  color: var(--lingshan-green-deep);
-  font-family: "STKaiti", "KaiTi", serif;
-  font-size: 14px;
-}
-
-.message-item p {
-  margin: 8px 0 0;
-  line-height: 1.68;
-}
-
-.typing-cursor {
-  animation: blink 0.8s infinite;
-  color: var(--lingshan-green-deep);
-  font-weight: 700;
-}
-
-@keyframes blink {
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0;
-  }
+  align-items: stretch;
+  padding: 20px 20px 0;
+  margin-top: 0;
 }
 
 .chat-center {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-width: 0;
-  height: 100%;
-  padding: 34px 0 86px;
+  grid-column: 2; grid-row: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative; z-index: 2;
+  width: 100%; height: 100%;
+  min-height: 0;
 }
-
-.avatar-halo {
+.top-caption {
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  pointer-events: none;
+  top: 16px; left: 50%; transform: translateX(-50%);
+  z-index: 20;
+  display: flex; align-items: baseline; justify-content: center; gap: 12px;
+  white-space: nowrap;
 }
-
-.halo-outer {
-  bottom: 20%;
-  width: 360px;
-  height: 360px;
-  background: radial-gradient(circle, rgba(196, 155, 76, 0.18) 0%, transparent 70%);
-  filter: blur(4px);
+.top-caption .caption-kicker { font-size: 30px; }
+.top-caption .caption-weather { color: rgba(232,228,219,0.25); }
+.caption-kicker {
+  color: #f8e7bb;
+  font-family: "STKaiti","KaiTi",serif;
+  font-size: 17px; font-weight: 700; letter-spacing: 0.1em;
+  text-shadow: 0 0 20px rgba(217,164,65,0.15);
 }
-
-.halo-inner {
-  bottom: 25%;
-  width: 220px;
-  height: 220px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, transparent 72%);
+.caption-weather {
+  color: rgba(232,228,219,0.28);
+  font-family: system-ui, sans-serif;
+  font-size: 11px; font-weight: 400;
+  letter-spacing: 0.04em;
 }
+.crowd-indicator {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,250,242,0.11);
+  background: rgba(23,18,14,0.6);
+  font-size: 17px; font-weight: 400;
+  color: rgba(232,228,219,0.7);
+  letter-spacing: 0.04em;
+  font-family: system-ui, sans-serif;
+  white-space: nowrap;
+  cursor: default;
+}
+.crowd-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%; flex-shrink: 0;
+  border: 1px solid rgba(255,250,242,0.16);
+}
+.crowd-indicator[data-level="green"] .crowd-dot { background: #5ec9a4; }
 
 .avatar-stage {
-  position: relative;
-  z-index: 2;
-  width: min(360px, 36vw);
-  height: min(580px, 66vh);
-  min-height: 340px;
+  position: relative; z-index: 2;
+  width: min(640px, 44vw);
+  height: min(600px, 82vh);
+  margin: 0 auto;
+  flex: 1;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
 }
-
+.avatar-stage::after {
+  content: "";
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 140px;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent 0%, #1a1612 100%);
+}
 .avatar-stage :deep(.three-wrapper),
 .avatar-stage :deep(.avatar-display) {
-  width: 100%;
-  height: 100%;
+  width: 100%; height: 100%;
+  transform: translateY(20%);
 }
 
-.center-caption {
-  position: relative;
-  z-index: 2;
-  display: grid;
-  gap: 8px;
-  margin-top: 10px;
-  text-align: center;
-}
-
-.center-caption p {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.82);
-  font-family: "STKaiti", "KaiTi", serif;
-  font-size: 16px;
-  letter-spacing: 0.06em;
-}
-
-.quick-section,
-.action-group,
-.explanation-card {
-  display: grid;
-  gap: 10px;
-}
-
-.quick-section button,
-.action-chip {
-  width: 100%;
-  padding: 11px 12px;
-  border: 1px solid rgba(248, 231, 187, 0.2);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.9);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
-}
-
-.quick-section button:hover:not(:disabled),
-.action-chip:hover {
-  transform: translateY(-1px);
-  border-color: rgba(248, 231, 187, 0.4);
-  background: rgba(255, 255, 255, 0.14);
-}
-
-.quick-section button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.explanation-card {
-  padding: 14px 12px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(248, 231, 187, 0.16);
-}
-
-.explanation-card :deep(.el-radio-group) {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.explanation-card :deep(.el-radio-button__inner) {
-  min-width: 88px;
-  padding: 8px 12px;
-  border-radius: 999px;
-}
-
-.action-chip {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.action-chip em {
-  min-width: 22px;
-  height: 22px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: rgba(248, 231, 187, 0.18);
-  color: #f8e7bb;
-  font-style: normal;
-  font-size: 12px;
-  line-height: 22px;
-  text-align: center;
-}
-
-.action-chip.active {
-  border-color: rgba(248, 231, 187, 0.5);
-  background: rgba(255, 255, 255, 0.16);
-}
-
-.overlay-panel {
+.side-card {
   position: absolute;
-  z-index: 30;
-  padding: 16px;
-  border: 1px solid rgba(233, 240, 235, 0.18);
-  border-radius: 20px;
-  background: rgba(17, 28, 22, 0.78);
-  box-shadow: 0 22px 60px rgba(4, 8, 6, 0.35);
-  backdrop-filter: blur(18px);
+  left: 40px; bottom: 100px;
+  z-index: 15;
+  width: 340px; height: 420px;
+  background: rgba(23,18,14,0.88);
+  border: 1px solid rgba(255,250,242,0.11);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex; flex-direction: column;
 }
-
-.vision-drawer {
-  right: 20px;
-  bottom: 126px;
-  width: min(440px, calc(100vw - 40px));
-  max-height: min(62vh, 640px);
-  overflow-y: auto;
+.side-card.speaking {
+  animation: card-breathe 3s ease-in-out infinite;
 }
-
-.source-drawer {
-  left: 20px;
-  bottom: 126px;
-  width: min(360px, calc(100vw - 40px));
-  max-height: min(62vh, 620px);
-  overflow-y: auto;
+@keyframes card-breathe {
+  0%, 100% { box-shadow: 0 0 0 rgba(217,164,65,0); }
+  50% { box-shadow: 0 0 40px rgba(217,164,65,0.08); }
 }
-
-.drawer-head,
-.vision-heading {
+.side-card-head {
+  flex-shrink: 0;
+  position: relative;
+}
+.side-card-tabs {
   display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: flex-start;
 }
-
-.drawer-head div,
-.vision-heading div {
-  display: grid;
-  gap: 4px;
+.side-card-tab {
+  flex: 1;
+  padding: 7px 0;
+  border: none;
+  background: transparent;
+  color: rgba(232,228,219,0.35);
+  font-family: inherit; font-size: 16px;
+  font-weight: 600; letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: color 0.25s ease;
+  position: relative;
 }
-
-.vision-file-input {
-  display: none;
+.side-card-tab:hover { color: rgba(232,228,219,0.7); }
+.side-card-tab.active { color: rgba(232,228,219,0.75); }
+.side-card-tab.active::after {
+  content: "";
+  position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 24px; height: 2px;
+  border-radius: 1px;
+  background: #d9a441;
 }
-
-.vision-actions {
-  display: flex;
-  flex-wrap: wrap;
+.side-card-body {
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  padding: 10px 12px;
+  display: flex; flex-direction: column;
   gap: 10px;
-  margin-top: 14px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(232,228,219,0.15) transparent;
 }
+.side-card-body.hidden { display: none; }
+.side-card-body::-webkit-scrollbar { width: 4px; }
+.side-card-body::-webkit-scrollbar-track { background: transparent; }
+.side-card-body::-webkit-scrollbar-thumb { background: rgba(232,228,219,0.15); border-radius: 2px; }
+.side-card-body::-webkit-scrollbar-thumb:hover { background: rgba(217,164,65,0.25); }
 
-.vision-file-card {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  margin-top: 14px;
-  padding: 10px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.08);
+.msg-item { display: flex; flex-direction: column; }
+.msg-item.assistant { align-items: flex-start; }
+.msg-item.user { align-items: flex-end; }
+.msg-item.user.collapsed { gap: 4px; }
+.msg-item.user.collapsed .msg-bubble {
+  max-height: 24px; overflow: hidden;
+  white-space: nowrap; text-overflow: ellipsis;
+  opacity: 0.45; font-size: 16px;
+  padding: 4px 10px; border-radius: 6px;
+  border-bottom-right-radius: 2px;
 }
-
-.vision-file-card img {
-  width: 88px;
-  height: 64px;
-  object-fit: cover;
-  border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+.msg-bubble {
+  max-width: 90%;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 15px; line-height: 1.5;
+  letter-spacing: 0.03em;
+  word-break: break-word;
 }
-
-.vision-file-card div {
-  display: grid;
-  gap: 4px;
+.msg-item.user .msg-bubble {
+  background: rgba(217,164,65,0.12);
+  border: none;
+  color: rgba(232,228,219,0.9);
+  border-bottom-right-radius: 4px;
 }
-
-.vision-file-card strong,
-.vision-summary,
-.vision-greeting,
-.source-list h4,
-.source-list p {
-  color: rgba(255, 255, 255, 0.92);
+.msg-item.assistant .msg-bubble {
+  background: rgba(232,228,219,0.05);
+  border: none;
+  color: rgba(232,228,219,0.85);
+  border-bottom-left-radius: 4px;
 }
-
-.vision-file-card span,
-.vision-meta,
-.vision-query-note,
-.source-meta {
-  color: rgba(240, 242, 236, 0.72);
-  font-size: 13px;
+.typing-cursor {
+  animation: blink 0.8s infinite;
+  color: #d9a441;
+  font-weight: 700; font-size: 16px; margin-left: 4px;
 }
-
-.vision-alert,
-.speech-alert {
-  margin: 0;
-}
-
-.vision-result-card {
-  display: grid;
-  gap: 12px;
-  margin-top: 14px;
-  padding: 14px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 0 0 1px rgba(248, 231, 187, 0.08);
-}
-
-.vision-summary,
-.vision-query-note {
-  margin: 0;
-  line-height: 1.65;
-}
-
-.vision-greeting {
-  margin: 0;
-  font-weight: 500;
-}
-
-.vision-tags {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.vision-tags > span,
-.vision-query > span {
-  color: #f8e7bb;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.vision-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.vision-query {
-  display: grid;
-  gap: 6px;
-  padding: 10px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.vision-query-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
 
 .followup-panel {
-  display: grid;
-  gap: 10px;
-  padding: 14px;
-  border: 1px solid rgba(248, 231, 187, 0.18);
-  border-radius: 16px;
-  background: rgba(255, 248, 232, 0.08);
+  display: flex; flex-wrap: wrap; gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(248,231,187,0.16);
+  border-radius: 14px;
+  background: rgba(255,248,232,0.06);
 }
-
-.followup-heading {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  color: #f8e7bb;
-}
-
-.followup-heading span {
-  font-family: "STKaiti", "KaiTi", serif;
-  font-weight: 700;
-}
-
-.followup-heading small {
-  color: rgba(240, 242, 236, 0.7);
-}
-
-.followup-list {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-}
-
-.followup-list button {
-  display: grid;
-  gap: 4px;
-  padding: 11px 12px;
-  border: 1px solid rgba(248, 231, 187, 0.18);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.88);
-  font: inherit;
-  text-align: left;
+.followup-panel button {
+  padding: 8px 14px;
+  border: 1px solid rgba(248,231,187,0.2);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  color: #f8e7bb; font-size: 14px;
   cursor: pointer;
-  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
 }
-
-.followup-list button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  border-color: rgba(248, 231, 187, 0.38);
-  background: rgba(255, 255, 255, 0.14);
-}
-
-.followup-list button:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-.followup-list strong {
-  color: #f8e7bb;
-  font-size: 13px;
-}
-
-.followup-list span {
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.source-list {
-  list-style: none;
-  padding: 0;
-  margin: 18px 0 0;
-  display: grid;
-  gap: 12px;
-}
-
-.source-list li {
-  padding: 14px;
-  border: 1px solid rgba(248, 231, 187, 0.08);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.06);
-  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
-}
-
-.source-list li:hover {
-  border-color: rgba(248, 231, 187, 0.24);
-  background: rgba(255, 255, 255, 0.1);
+.followup-panel button:hover:not(:disabled) {
+  background: rgba(255,255,255,0.16);
+  border-color: rgba(248,231,187,0.42);
   transform: translateY(-1px);
 }
+.followup-panel button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.source-list h4 {
-  display: flex;
-  align-items: center;
-  margin: 0 0 8px;
+.source-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.source-item {
+  padding: 10px;
+  border: 1px solid rgba(232,228,219,0.08);
+  border-radius: 8px;
+  background: rgba(232,228,219,0.04);
+  transition: border-color 0.3s ease, background 0.3s ease;
 }
-
-.source-list p {
-  margin: 0 0 8px;
-  line-height: 1.6;
+.source-item:hover { border-color: rgba(232,228,219,0.20); background: rgba(232,228,219,0.08); }
+.source-item.highlight {
+  border-color: rgba(217,164,65,0.5);
+  background: rgba(217,164,65,0.08);
 }
-
-.source-number {
-  display: inline-flex;
-  flex: 0 0 22px;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  margin-right: 8px;
-  border-radius: 50%;
-  background: rgba(248, 231, 187, 0.18);
-  color: #f8e7bb;
-  font-family: Georgia, serif;
-  font-size: 12px;
-  font-weight: 700;
+.source-item h4 {
+  display: flex; align-items: center; gap: 6px;
+  margin: 0 0 5px;
+  color: rgba(232,228,219,0.85); font-size: 18px; font-weight: 600;
 }
-
-.tourist-input-wrap {
-  position: relative;
-  z-index: 20;
-  display: grid;
-  gap: 10px;
+.source-num {
+  display: inline-flex; flex-shrink: 0;
+  align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(217,164,65,0.2);
+  color: #d9a441; font-size: 13px; font-weight: 700;
 }
-
-.tourist-input-bar {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  padding: 14px 16px;
-  border: 1px solid rgba(233, 240, 235, 0.16);
-  border-radius: 24px;
-  background: rgba(247, 244, 237, 0.16);
-  box-shadow: 0 18px 40px rgba(10, 18, 14, 0.2);
-  backdrop-filter: blur(18px);
+.source-item p {
+  margin: 0 0 3px;
+  color: rgba(232,228,219,0.55); font-size: 14px; line-height: 1.5;
 }
+.source-meta { color: rgba(232,228,219,0.3); font-size: 13px; }
+.source-empty { color: rgba(240,242,236,0.52); text-align: center; padding: 60px 0; font-size: 15px; }
 
-.input-chip,
-.send-btn {
+.stop-notice { text-align: center; padding: 8px; color: rgba(248,231,187,0.6); font-size: 14px; }
+.error-notice { text-align: center; padding: 8px; color: #f87171; font-size: 14px; }
+
+.right-card {
+  position: absolute;
+  right: 36px; top: 186px; bottom: 108px;
+  z-index: 15;
+  width: 450px;
+  background: rgba(23,18,14,0.88);
+  border: 1px solid rgba(255,250,242,0.11);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.right-card-head {
   flex-shrink: 0;
-  height: 46px;
-  padding: 0 18px;
-  border: 1px solid rgba(248, 231, 187, 0.2);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.92);
-  font: inherit;
-  cursor: pointer;
-  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, opacity 0.18s ease;
+  position: relative;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(232,228,219,0.06);
+  color: rgba(232,228,219,0.5);
+  font-family: "STKaiti","KaiTi",serif;
+  font-size: 13px; font-weight: 600;
+  letter-spacing: 0.06em;
 }
-
-.input-chip:hover,
-.send-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  border-color: rgba(248, 231, 187, 0.4);
-  background: rgba(255, 255, 255, 0.14);
+.right-card-body {
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  padding: 10px 12px;
+  display: flex; flex-direction: column;
+  gap: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(232,228,219,0.15) transparent;
 }
+.right-card-body::-webkit-scrollbar { width: 4px; }
+.right-card-body::-webkit-scrollbar-track { background: transparent; }
+.right-card-body::-webkit-scrollbar-thumb { background: rgba(232,228,219,0.15); border-radius: 2px; }
+.right-card-body::-webkit-scrollbar-thumb:hover { background: rgba(217,164,65,0.25); }
 
-.send-btn:disabled,
-.voice-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.input-main {
-  flex: 1;
-  min-width: 0;
+.service-grid {
   display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
   gap: 8px;
 }
-
-.input-topline {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  color: rgba(240, 242, 236, 0.76);
-  font-size: 12px;
+.explore-card {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 8px;
+  padding: 14px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(232,228,219,0.10);
+  background: rgba(232,228,219,0.03);
+  cursor: pointer;
+  text-align: center; min-height: 0;
+  transition: border-color 0.3s ease, background 0.3s ease;
+  outline: none; position: relative; overflow: hidden;
+  font-family: inherit; color: inherit;
+}
+.explore-card:hover {
+  border-color: rgba(217,164,65,0.35);
+  background: rgba(217,164,65,0.06);
+}
+.explore-card:active { transform: scale(0.96); }
+.explore-card:focus-visible { outline: 2px solid #d9a441; outline-offset: 2px; }
+.explore-card-icon {
+  width: 50px; height: 50px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+.explore-card:hover .explore-card-icon { transform: scale(1.1); }
+.explore-card--scenic .explore-card-icon { background: rgba(217,164,65,0.15); color: #d9a441; }
+.explore-card--area   .explore-card-icon { background: rgba(94,201,164,0.15); color: #5ec9a4; }
+.explore-card--type   .explore-card-icon { background: rgba(107,184,232,0.15); color: #6bb8e8; }
+.explore-card--photo  .explore-card-icon { background: rgba(232,168,64,0.15); color: #e8a840; }
+.explore-card-title {
+  font-family: "STKaiti","KaiTi","STSong",serif;
+  font-size: 20px; font-weight: 600;
+  color: rgba(232,228,219,0.82);
+  letter-spacing: 0.05em; line-height: 1.3;
+}
+.explore-card-desc {
+  font-size: 14px; font-weight: 400;
+  color: rgba(232,228,219,0.3);
+  letter-spacing: 0.04em; line-height: 1.2;
+  font-family: system-ui, sans-serif;
 }
 
-.input-main :deep(.el-textarea__inner) {
-  min-height: 56px !important;
-  padding: 14px 16px;
-  border-radius: 18px;
-  border: 1px solid rgba(248, 231, 187, 0.16);
-  background: rgba(255, 255, 255, 0.84);
-  color: var(--lingshan-ink);
-  box-shadow: none;
+.style-selector {
+  display: flex; gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(248,231,187,0.16);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.05);
+}
+.style-selector button {
+  flex: 1;
+  padding: 10px 0;
+  border: 1px solid rgba(248,231,187,0.18);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  color: rgba(240,242,236,0.74);
+  font-size: 16px; font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+  font-family: inherit;
+}
+.style-selector button:hover {
+  border-color: rgba(248,231,187,0.38);
+  background: rgba(255,255,255,0.12);
+  color: #f8e7bb;
+}
+.style-selector button.active {
+  border-color: #f8e7bb;
+  background: rgba(248,231,187,0.2);
+  color: #f8e7bb;
+  box-shadow: 0 0 14px rgba(248,231,187,0.16);
 }
 
-.input-main :deep(.el-textarea__inner:focus) {
-  border-color: var(--lingshan-accent);
+.input-row {
+  position: absolute;
+  bottom: 36px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  width: min(700px, 88vw);
+  display: flex; align-items: center; justify-content: center; gap: 12px;
 }
+.input-field {
+  flex: 1;
+  height: 64px;
+  padding: 0 24px;
+  border: 1px solid rgba(232,228,219,0.12);
+  border-radius: 10px;
+  background: rgba(23,18,14,0.78);
+  color: rgba(232,228,219,0.82);
+  font-family: inherit; font-size: 22px;
+  letter-spacing: 0.03em;
+  outline: none;
+  transition: border-color 0.25s ease;
+}
+.input-field::placeholder { color: rgba(232,228,219,0.25); font-size: 20px; }
+.input-field:focus { border-color: rgba(217,164,65,0.35); }
+.input-field:disabled { opacity: 0.5; }
 
 .voice-btn {
-  flex-shrink: 0;
-  height: 50px;
-  padding: 0 20px;
-  border: 2px solid rgba(248, 231, 187, 0.74);
+  flex-shrink: 0; width: auto; height: 64px;
+  padding: 0 32px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(217,164,65,0.3);
   border-radius: 999px;
-  background: var(--lingshan-primary);
-  color: #fff;
-  font: inherit;
-  font-weight: 600;
+  background: rgba(217,164,65,0.14);
+  color: #d9a441;
+  font-family: inherit; font-size: 22px; font-weight: 600;
+  letter-spacing: 0.08em;
   cursor: pointer;
-  box-shadow: 0 0 22px rgba(196, 155, 76, 0.26);
-  animation: voice-pulse 2.5s ease-in-out infinite;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+  transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+  outline: none; white-space: nowrap;
 }
-
 .voice-btn:hover:not(:disabled) {
-  transform: scale(1.03);
-  box-shadow: 0 0 30px rgba(196, 155, 76, 0.42);
-  filter: brightness(1.05);
+  border-color: rgba(217,164,65,0.45);
+  background: rgba(217,164,65,0.2);
+  box-shadow: 0 0 20px rgba(217,164,65,0.15);
 }
-
+.voice-btn:active { transform: scale(0.95); }
+.voice-btn:focus-visible { outline: 2px solid #d9a441; outline-offset: 3px; }
+.voice-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .voice-btn.recording {
-  background: #a3412f;
-  border-color: #f0b49b;
-  animation: recording-pulse 1s ease-in-out infinite;
+  border-color: #b84c3b;
+  background: rgba(184,76,59,0.22);
+  color: #f0c0c0;
+  animation: voice-active 1.2s ease-in-out infinite;
+}
+@keyframes voice-active {
+  0%,100% { box-shadow: 0 0 0 0 rgba(184,76,59,0.3); }
+  50% { box-shadow: 0 0 0 8px rgba(184,76,59,0); }
 }
 
-@keyframes voice-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 20px rgba(196, 155, 76, 0.24);
-  }
-
-  50% {
-    box-shadow: 0 0 36px rgba(196, 155, 76, 0.44);
-  }
-}
-
-@keyframes recording-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 18px rgba(163, 65, 47, 0.28);
-  }
-
-  50% {
-    box-shadow: 0 0 34px rgba(163, 65, 47, 0.5);
-  }
-}
-
-.speech-listening {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border: 1px solid rgba(240, 180, 155, 0.22);
-  border-radius: 14px;
-  background: rgba(255, 244, 236, 0.9);
-  color: #7f1d1d;
-  font-size: 13px;
-}
-
-.speech-listening > span:last-child {
-  color: #475569;
-}
-
-.speech-pulse {
-  width: 9px;
-  height: 9px;
+.image-btn {
+  flex-shrink: 0; width: auto; height: 64px;
+  padding: 0 24px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(94,201,164,0.25);
   border-radius: 999px;
-  background: #dc2626;
-  box-shadow: 0 0 0 rgba(220, 38, 38, 0.36);
+  background: rgba(94,201,164,0.1);
+  color: #5ec9a4;
+  font-family: inherit; font-size: 20px; font-weight: 600;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+  outline: none; white-space: nowrap;
+}
+.image-btn:hover {
+  border-color: rgba(94,201,164,0.45);
+  background: rgba(94,201,164,0.2);
+  box-shadow: 0 0 20px rgba(94,201,164,0.15);
+}
+.image-btn:active { transform: scale(0.95); }
+.image-btn:focus-visible { outline: 2px solid #5ec9a4; outline-offset: 3px; }
+
+.speech-bar {
+  position: absolute;
+  bottom: 106px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  padding: 12px 20px;
+  border: 1px solid rgba(240,180,155,0.24);
+  border-radius: 16px;
+  background: rgba(30,20,14,0.92);
+  backdrop-filter: blur(14px);
+  color: #f0b49b; font-size: 16px;
+}
+.speech-bar > span:last-child { color: rgba(240,242,236,0.68); }
+.speech-pulse {
+  width: 10px; height: 10px; border-radius: 999px;
+  background: #f87171;
+  box-shadow: 0 0 0 rgba(248,113,113,0.36);
   animation: speech-pulse 1.35s ease-out infinite;
 }
-
 @keyframes speech-pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.34);
-  }
-
-  70% {
-    box-shadow: 0 0 0 9px rgba(220, 38, 38, 0);
-  }
-
-  100% {
-    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
-  }
+  0% { box-shadow: 0 0 0 0 rgba(248,113,113,0.34); }
+  70% { box-shadow: 0 0 0 10px rgba(248,113,113,0); }
+  100% { box-shadow: 0 0 0 0 rgba(248,113,113,0); }
 }
 
-@media (max-width: 1180px) {
-  .tourist-page {
-    overflow-y: auto;
-  }
+.vision-modal {
+  position: fixed; inset: 0;
+  z-index: 50;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(4,6,5,0.72);
+  backdrop-filter: blur(10px);
+}
+.vision-modal-content {
+  position: relative;
+  width: min(500px, 90vw);
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 28px 24px;
+  border: 1px solid rgba(233,240,235,0.16);
+  border-radius: 24px;
+  background: rgba(20,26,22,0.94);
+  box-shadow: 0 28px 72px rgba(4,8,6,0.55);
+  backdrop-filter: blur(18px);
+  display: grid; gap: 14px;
+  color: rgba(255,255,255,0.88);
+}
+.vision-modal-content h3 { margin: 0; color: #f8e7bb; font-family: "STKaiti","KaiTi",serif; font-size: 24px; }
+.vision-modal-content button {
+  padding: 12px 22px;
+  border: 1px solid rgba(248,231,187,0.22);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.9);
+  font-size: 16px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+}
+.vision-modal-content button:hover:not(:disabled) {
+  background: rgba(255,255,255,0.16);
+  border-color: rgba(248,231,187,0.44);
+  transform: translateY(-1px);
+}
+.vision-modal-content button:disabled { opacity: 0.5; cursor: not-allowed; }
+.modal-close {
+  position: absolute;
+  top: 14px; right: 16px;
+  padding: 6px 12px;
+  border: none; background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.7); font-size: 18px;
+  cursor: pointer;
+}
+.vision-error { color: #f87171; font-size: 14px; }
+.voice-error-bar {
+  position: absolute;
+  bottom: 106px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  padding: 10px 18px;
+  border: 1px solid rgba(248,113,113,0.3);
+  border-radius: 12px;
+  background: rgba(40,16,16,0.92);
+  color: rgba(255,180,160,0.92);
+  font-size: 14px;
+}
 
-  .tourist-stage {
-    grid-template-columns: 1fr;
-    gap: 16px;
-    padding: 8px 0 16px;
-  }
+@media (max-width: 1300px) {
+  .side-card { width: 380px; height: 450px; left: 20px; bottom: 108px; }
+  .right-card { width: 350px; right: 20px; top: 166px; bottom: 108px; }
+  .tourist-stage { grid-template-columns: minmax(140px, 280px) 1fr minmax(140px, 280px); padding: 0 12px; gap: 8px; }
+  .avatar-stage { width: min(380px, 34vw); height: min(420px, 60vh); }
+  .input-row { width: min(440px, 80vw); }
+}
 
-  .chat-center {
-    order: 1;
-    min-height: 48vh;
-    padding: 18px 0 16px;
-  }
-
-  .left-float {
-    order: 2;
-  }
-
-  .right-float {
-    order: 3;
-  }
-
-  .chat-float {
-    max-height: none;
-  }
-
-  .avatar-stage {
-    width: min(320px, 64vw);
-    height: min(500px, 56vh);
-  }
-
-  .vision-drawer,
-  .source-drawer {
-    left: 20px;
-    right: 20px;
-    width: auto;
-  }
+@media (max-width: 1080px) {
+  .side-card { width: 300px; height: 400px; left: 12px; bottom: 108px; }
+  .right-card { width: 300px; right: 12px; top: 156px; bottom: 108px; }
+  .tourist-stage { grid-template-columns: 1fr 2fr 1fr; padding: 0 8px; }
+  .input-row { width: min(380px, 78vw); }
 }
 
 @media (max-width: 720px) {
-  .tourist-page {
-    padding: 14px;
-  }
-
-  .tourist-top,
-  .tourist-top-right,
-  .tourist-input-bar {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .tourist-top-right {
-    justify-content: flex-start;
-  }
-
-  .tourist-brand {
-    font-size: 16px;
-  }
-
-  .chat-float,
-  .overlay-panel {
-    padding: 14px;
-  }
-
-  .avatar-stage {
-    width: min(280px, 72vw);
-    height: min(430px, 48vh);
-    min-height: 280px;
-  }
-
-  .center-caption p {
-    font-size: 15px;
-  }
-
-  .vision-drawer,
-  .source-drawer {
-    left: 14px;
-    right: 14px;
-    bottom: 96px;
-  }
-
-  .input-chip,
-  .send-btn,
-  .voice-btn {
-    width: 100%;
-  }
-
-  .input-topline {
-    flex-direction: column;
-  }
+  .tourist-page { overflow-y: auto; padding: 14px 10px; }
+  .tourist-stage { display: flex; flex-direction: column; padding: 0; margin-top: 50px; gap: 12px; flex: none; }
+  .side-card { position: relative; left: auto; bottom: auto; width: 100%; height: auto; min-height: 200px; order: 3; }
+  .right-card { position: relative; right: auto; top: auto; bottom: auto; width: 100%; height: auto; min-height: 200px; order: 4; }
+  .chat-center { order: 1; padding: 0; }
+  .avatar-stage { width: min(52vh, 78vw); height: min(360px, 52vh); min-height: auto; }
+  .input-row { position: relative; bottom: auto; left: auto; transform: none; width: calc(100% - 16px); gap: 8px; order: 2; }
+  .back-btn { top: 14px; left: 14px; padding: 7px 16px; font-size: 16px; }
+  .top-right { top: 14px; right: 14px; }
+  .top-brand { font-size: 16px; }
+  .service-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .voice-btn, .image-btn { padding: 0 14px; height: 44px; font-size: 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .voice-btn {
-    animation: none;
-  }
+  .side-card.speaking { animation: none; }
+  .voice-btn.recording { animation: none; }
+  .speech-pulse { animation: none; }
 }
 </style>

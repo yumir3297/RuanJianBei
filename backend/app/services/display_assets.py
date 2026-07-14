@@ -14,6 +14,9 @@ from app.core.config import Settings
 ALLOWED_IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp"}
 ALLOWED_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 TOURIST_BACKGROUND_KEY = "tourist_background"
+WELCOME_TEXT_KEY = "welcome_text"
+
+DEFAULT_WELCOME_TEXT = "欢迎来到灵山胜境，愿您在此感受千年佛韵，尽享山水之美。"
 
 
 class DisplayAssetService:
@@ -31,7 +34,15 @@ class DisplayAssetService:
         asset = manifest.get(TOURIST_BACKGROUND_KEY)
         return {
             TOURIST_BACKGROUND_KEY: self._normalize_asset(asset),
+            WELCOME_TEXT_KEY: manifest.get(WELCOME_TEXT_KEY, DEFAULT_WELCOME_TEXT),
         }
+
+    def update_welcome_text(self, text: str) -> str:
+        self.ensure_storage()
+        manifest = self._load_manifest()
+        manifest[WELCOME_TEXT_KEY] = text.strip()
+        self._save_manifest(manifest)
+        return manifest[WELCOME_TEXT_KEY]
 
     async def save_tourist_background(self, upload: UploadFile) -> dict[str, Any]:
         self.ensure_storage()
