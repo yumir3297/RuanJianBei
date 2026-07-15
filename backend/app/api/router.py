@@ -1,9 +1,10 @@
 from fastapi import APIRouter
 
-from app.api import admin, chat, insights, knowledge, quick_select, recommend, vision, voice
+from app.api import admin, auth, chat, insights, knowledge, quick_select, recommend, vision, voice
 
 
 api_router = APIRouter(prefix="/api")
+api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 api_router.include_router(knowledge.router, prefix="/knowledge", tags=["knowledge"])
 api_router.include_router(recommend.router, prefix="/recommend", tags=["recommend"])

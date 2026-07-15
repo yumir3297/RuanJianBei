@@ -5,12 +5,7 @@
       <div class="scenic-bg-overlay"></div>
     </div>
     <button type="button" class="back-btn" @click="handleBack">← 返回</button>
-    <div class="top-right"><span class="top-brand">{{ GUIDE_PERSONA.name }}</span>
-      <div class="top-status-row">
-        <span class="status-item"><span class="status-dot status-dot--ready"></span>人物模型</span>
-        <span class="status-item"><span class="status-dot status-dot--live"></span>文化问答</span>
-        <span class="status-item"><span class="status-dot status-dot--weather"></span>{{ chatStore.statusText }}</span>
-      </div>
+    <div class="top-right"><span class="top-brand">灵山智能导览系统</span>
     </div>
     <div class="tourist-stage">
       <div class="chat-center">
@@ -51,7 +46,14 @@
         </div>
       </aside>
       <aside class="right-card">
-        <div class="right-card-head">{{ rightCardTitle }}</div>
+        <div class="right-card-head">
+          <span>{{ rightCardTitle }}</span>
+          <span class="right-card-head-status">
+            <span :class="['status-inline-dot', avatarReady ? 'status-inline-dot--ready' : 'status-inline-dot--loading']">数字人</span>
+            <span :class="['status-inline-dot', voiceReady ? 'status-inline-dot--ready' : 'status-inline-dot--loading']">语音</span>
+            <span :class="['status-inline-dot', replyStatusClass.replace('status-pill--','status-inline-dot--')]">回答</span>
+          </span>
+        </div>
         <div class="right-card-body">
           <div :class="['level1-view', { hidden: navLevel !== 1 }]">
             <div class="service-grid">
@@ -146,6 +148,19 @@ const audioPlayer = useAudioPlayer();
 const { scenicBgUrl } = useScenicBackground();
 
 const avatarConfig = ref({ modelKey: DEFAULT_AVATAR_PRESET, voiceType: "gentle-female" });
+
+const avatarReady = computed(() => !avatarError.value);
+const voiceReady = computed(() => true);
+const replyStatusClass = computed(() => {
+  if (chatStore.streaming) return 'status-pill--live';
+  if (avatarState.value === 'thinking') return 'status-pill--loading';
+  return 'status-pill--ready';
+});
+const replyStatusText = computed(() => {
+  if (chatStore.streaming) return '正在回答';
+  if (avatarState.value === 'thinking') return '思考中';
+  return '等待提问';
+});
 
 async function loadAvatarConfig() {
   try {

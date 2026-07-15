@@ -7,6 +7,8 @@ function getSpeechRecognitionConstructor() {
   return window.SpeechRecognition || window.webkitSpeechRecognition || null;
 }
 
+const IS_CHROME = typeof navigator !== "undefined" && /Chrome/.test(navigator.userAgent) && !/Edge|Edg/.test(navigator.userAgent);
+
 export function useSpeechRecognition() {
   const SpeechRecognition = getSpeechRecognitionConstructor();
   const isListening = ref(false);
@@ -14,6 +16,7 @@ export function useSpeechRecognition() {
   const finalText = ref("");
   const isSupported = ref(Boolean(SpeechRecognition));
   const error = ref("");
+  const showBrowserHint = ref(!IS_CHROME);
 
   let recognition = null;
   let finalSegments = [];
@@ -138,14 +141,20 @@ export function useSpeechRecognition() {
     isListening.value = false;
   }
 
+  function dismissHint() {
+    showBrowserHint.value = false;
+  }
+
   return {
     isListening,
     interimText,
     finalText,
     isSupported,
     error,
+    showBrowserHint,
     start,
     stop,
     abort,
+    dismissHint,
   };
 }

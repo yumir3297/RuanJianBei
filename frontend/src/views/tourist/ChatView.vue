@@ -8,12 +8,7 @@
     <!-- ① 顶栏 -->
     <button type="button" class="back-btn" @click="handleChangeMode">← 返回</button>
     <div class="top-right">
-      <span class="top-brand">{{ avatarDisplayName }}</span>
-      <div class="top-status-row">
-        <span class="status-item"><span class="status-dot status-dot--ready"></span>人物模型</span>
-        <span class="status-item"><span class="status-dot status-dot--live"></span>{{ explanationLevelLabel }}</span>
-        <span class="status-item"><span class="status-dot status-dot--weather"></span>{{ chatStore.statusText }}</span>
-      </div>
+      <span class="top-brand">灵山智能导览系统</span>
     </div>
 
     <div class="tourist-stage">
@@ -23,7 +18,8 @@
             <span class="crowd-dot"></span>当前景区人数：舒适
           </span>
           <span class="caption-kicker">{{ avatarDisplaySubtitle }}</span>
-          <span class="caption-weather">灵山 · 智慧导览</span>
+          <span class="caption-weather" v-if="!weatherCaption">灵山 · 智慧导览</span>
+          <span class="caption-weather caption-weather-live" v-else>{{ weatherCaption }}</span>
         </div>
         <div class="avatar-stage">
           <ThreeAvatar
@@ -36,6 +32,7 @@
             :speech-duration-ms="speechDurationMs"
             :speech-sync-active="activeAudioSegments > 0"
             :viseme-timeline="visemeTimeline"
+            :avatar-state="avatarState"
             @loaded="handleAvatarLoaded"
             @error="handleAvatarLoadError"
           />
@@ -77,7 +74,14 @@
 
       <!-- ④ 右卡片：快捷服务 -->
       <aside class="right-card">
-        <div class="right-card-head">{{ explanationLevelLabel }}</div>
+        <div class="right-card-head">
+          <span>{{ explanationLevelLabel }}</span>
+          <span class="right-card-head-status">
+            <span :class="['status-inline-dot', avatarReady ? 'status-inline-dot--ready' : 'status-inline-dot--loading']">数字人</span>
+            <span :class="['status-inline-dot', voiceReady ? 'status-inline-dot--ready' : 'status-inline-dot--loading']">语音</span>
+            <span :class="['status-inline-dot', replyStatusClass.replace('status-pill--','status-inline-dot--')]">回答</span>
+          </span>
+        </div>
         <div class="right-card-body">
           <div class="service-grid">
             <button class="explore-card explore-card--scenic" @click="handleQuickAction('recommend')">
@@ -111,9 +115,89 @@
     <!-- ⑤ 底部输入栏 -->
     <div class="input-row">
       <button class="image-btn" @click="toggleVisionPanel">拍照识景</button>
-      <input class="input-field" v-model="query" :placeholder="`想去哪里？${avatarDisplayName}帮你规划…`" @keyup.enter="handleSubmit" :disabled="chatStore.streaming" />
+      <input class="input-field" v-model="query" :placeholder="`想去哪里？小灵帮你规划…`" @keyup.enter="handleSubmit" :disabled="chatStore.streaming" autocomplete="off" name="tourist-query" />
       <button class="voice-btn" :class="{ recording: speechListening || isRecording }" @click="toggleRecording" :disabled="chatStore.streaming || transcribing">{{ speechListening ? '结束语音' : isRecording ? `录音中 ${durationSeconds}s` : '语音提问' }}</button>
     </div>
+
+    <!-- ⑥ 移动端底部 Tab 栏 + 抽屉 -->
+    <nav class="mobile-tab-bar">
+      <button :class="{ active: mobileTab === 'chat' }" @click="toggleMobileDrawer('chat')">💬 对话</button>
+      <button :class="{ active: mobileTab === 'quick' }" @click="toggleMobileDrawer('quick')">⚡ 快捷</button>
+    </nav>
+
+    <transition name="drawer-fade">
+      <div v-if="showMobileDrawer" class="mobile-drawer-overlay" @click="closeMobileDrawer"></div>
+    </transition>
+    <transition name="drawer-slide">
+      <aside v-if="showMobileDrawer" class="mobile-drawer-panel">
+        <div class="mobile-drawer-handle"></div>
+        <template v-if="mobileTab === 'chat'">
+          <div class="side-card-tabs" style="margin-bottom: 0;">
+            <button :class="['side-card-tab', { active: activeTab === 'chat' }]" @click="activeTab = 'chat'">对话</button>
+            <button :class="['side-card-tab', { active: activeTab === 'source' }]" @click="activeTab = 'source'">来源</button>
+          </div>
+          <div :class="['side-card-body', { hidden: activeTab !== 'chat' }]">
+            <article v-for="(message, index) in chatStore.messages" :key="`m-${message.role}-${index}`" :class="['msg-item', message.role, { collapsed: message.role === 'user' && index < chatStore.messages.length - 1 && chatStore.messages[index + 1]?.role === 'assistant' }]">
+              <div v-if="message.role === 'assistant'" class="msg-bubble" v-html="renderAnswer(message.content, index === chatStore.messages.length - 1)" @click="handleCitationClick"></div>
+              <div v-else class="msg-bubble">{{ message.content }}</div>
+              <span v-if="message.role === 'assistant' && chatStore.streaming && index === chatStore.messages.length - 1 && message.content.length > 0" class="typing-cursor">|</span>
+            </article>
+            <div v-if="chatStore.followups.length" class="followup-panel">
+              <button v-for="item in chatStore.followups" :key="item.query" type="button" :disabled="chatStore.streaming" @click="handleFollowup(item.query)">{{ item.label }}</button>
+            </div>
+            <div v-if="chatStore.userStopped && !chatStore.streaming" class="stop-notice" role="status">已停止输出</div>
+            <div v-if="chatStore.errorMessage && !chatStore.streaming" class="error-notice" role="alert">{{ chatStore.errorMessage }}</div>
+          </div>
+          <div :class="['side-card-body', { hidden: activeTab !== 'source' }]">
+            <ul class="source-list" v-if="chatStore.sources.length">
+              <li v-for="(item, index) in chatStore.sources" :key="`${item.title}-${index}`" :class="['source-item', { highlight: sourceHighlightIndex === index }]" :data-source-index="index">
+                <h4><span class="source-num">{{ index + 1 }}</span>{{ item.title }}</h4>
+                <p>{{ item.snippet }}</p>
+                <span class="source-meta">{{ item.source }}</span>
+              </li>
+            </ul>
+            <p v-else class="source-empty">提问后这里会显示参考资料</p>
+          </div>
+        </template>
+        <template v-if="mobileTab === 'quick'">
+          <div class="right-card-head">
+            <span>{{ explanationLevelLabel }}</span>
+            <span class="right-card-head-status">
+              <span :class="['status-inline-dot', avatarReady ? 'status-inline-dot--ready' : 'status-inline-dot--loading']">数字人</span>
+              <span :class="['status-inline-dot', voiceReady ? 'status-inline-dot--ready' : 'status-inline-dot--loading']">语音</span>
+              <span :class="['status-inline-dot', replyStatusClass.replace('status-pill--','status-inline-dot--')]">回答</span>
+            </span>
+          </div>
+          <div class="right-card-body">
+            <div class="service-grid">
+              <button class="explore-card explore-card--scenic" @click="handleQuickAction('recommend'); closeMobileDrawer()">
+                <span class="explore-card-icon">🏯</span>
+                <span class="explore-card-title">景点推荐</span>
+                <span class="explore-card-desc">热门景点导览</span>
+              </button>
+              <button class="explore-card explore-card--area" @click="handleQuickAction('photo'); closeMobileDrawer()">
+                <span class="explore-card-icon">📸</span>
+                <span class="explore-card-title">拍照识景</span>
+                <span class="explore-card-desc">实时景区识别</span>
+              </button>
+              <button class="explore-card explore-card--type" @click="handleQuickAction('route'); closeMobileDrawer()">
+                <span class="explore-card-icon">🗺️</span>
+                <span class="explore-card-title">路线推荐</span>
+                <span class="explore-card-desc">智能路线规划</span>
+              </button>
+              <button class="explore-card explore-card--photo" @click="handleQuickAction('style'); closeMobileDrawer()">
+                <span class="explore-card-icon">⚙️</span>
+                <span class="explore-card-title">讲解方式</span>
+                <span class="explore-card-desc">{{ explanationLevelLabel }}</span>
+              </button>
+            </div>
+            <div class="style-selector" v-if="showStyleSelector">
+              <button v-for="s in styleOptions" :key="s.key" :class="{ active: explanationLevel === s.key }" @click="explanationLevel = s.key; showStyleSelector = false">{{ s.label }}</button>
+            </div>
+          </div>
+        </template>
+      </aside>
+    </transition>
 
     <div v-if="chatStore.errorMessage && !chatStore.streaming" class="voice-error-bar" role="alert">{{ chatStore.errorMessage }}</div>
 
@@ -122,11 +206,30 @@
       <span class="speech-pulse" aria-hidden="true"></span>
       <strong>正在聆听</strong>
       <span>{{ speechPreviewText || '请开始说话…' }}</span>
+      <span v-if="transcriptionConfidence >= 0" class="confidence-dot" :class="confidenceLevelClass" :title="`置信度 ${Math.round(transcriptionConfidence * 100)}%`"></span>
+    </div>
+
+    <!-- 录音转写确认条 -->
+    <div v-if="showConfirmBar" class="confirm-bar">
+      <span class="confirm-text">你刚说的是 "<strong>{{ confirmedTranscript }}</strong>" 吗？</span>
+      <button class="confirm-btn confirm-btn--yes" @click="confirmAndSubmit">确认</button>
+      <button class="confirm-btn confirm-btn--retry" @click="retryRecording">重新说</button>
+      <button class="confirm-btn confirm-btn--dismiss" @click="dismissConfirmBar">手动输入</button>
+      <div v-if="transcriptionCandidates.length > 1" class="confirm-candidates">
+        <span class="confirm-candidates-label">也可能是：</span>
+        <button v-for="c in transcriptionCandidates" :key="c.text" class="confirm-candidate-chip" @click="selectCandidate(c.text)">{{ c.text }}</button>
+      </div>
     </div>
 
     <!-- 语音错误提示 -->
     <div v-if="voiceErrorMessage" class="voice-error-bar">
       <span>{{ voiceErrorMessage }}</span>
+    </div>
+
+    <!-- 浏览器兼容提示 -->
+    <div v-if="showBrowserHint && voiceSupported" class="browser-hint-bar">
+      <span>推荐使用 Chrome 浏览器以获得最佳语音识别体验</span>
+      <button class="browser-hint-close" @click="dismissBrowserHint">知道了</button>
     </div>
 
     <!-- Vision panel (hidden file input) -->
@@ -181,6 +284,7 @@ import { useScenicBackground } from "../../composables/useScenicBackground";
 import { fetchAvatarConfig } from "../../api/admin";
 import { normalizeAvatarPresetFromModelPath, DEFAULT_AVATAR_PRESET } from "../../utils/avatarConfig";
 import { GUIDE_PERSONA, useAvatar } from "../../composables/useAvatar";
+import { useWeather } from "../../composables/useWeather";
 import { useChatStore } from "../../stores/chat";
 import { useInteractionStore } from "../../stores/interaction";
 
@@ -201,11 +305,14 @@ const {
   finalText: speechFinalText,
   isSupported: speechSupported,
   error: speechError,
+  showBrowserHint,
   start: startSpeechRecognition,
   stop: stopSpeechRecognition,
   abort: abortSpeechRecognition,
+  dismissHint: dismissBrowserHint,
 } = useSpeechRecognition();
 const avatar = useAvatar();
+const { displayText: weatherCaption, startPolling: startWeather, stopPolling: stopWeather } = useWeather();
 const audioPlayer = useAudioPlayer();
 const avatarState = avatar.currentState;
 const avatarError = ref(false);
@@ -235,6 +342,10 @@ async function loadAvatarConfig() {
 const query = ref("");
 const explanationLevel = ref("adult");
 const transcribing = ref(false);
+const transcriptionConfidence = ref(-1);
+const showConfirmBar = ref(false);
+const transcriptionCandidates = ref([]);
+const confirmedTranscript = ref("");
 const speechBaseQuery = ref("");
 const speechSessionActive = ref(false);
 const recorderError = ref("");
@@ -254,6 +365,21 @@ const activeAudioSegments = ref(0);
 const sourceHighlightIndex = ref(-1);
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const activeTab = ref('chat')
+const mobileTab = ref('chat')
+const showMobileDrawer = ref(false)
+
+function toggleMobileDrawer(tab) {
+  if (mobileTab.value === tab && showMobileDrawer.value) {
+    showMobileDrawer.value = false
+  } else {
+    mobileTab.value = tab
+    showMobileDrawer.value = true
+  }
+}
+
+function closeMobileDrawer() {
+  showMobileDrawer.value = false
+}
 const showStyleSelector = ref(false)
 const styleOptions = [
   { key: 'child', label: '儿童' },
@@ -286,9 +412,29 @@ function clearVisionPanel() {
 
 const voiceSupported = computed(() => speechSupported.value || recorderSupported.value);
 const speechPreviewText = computed(() => speechInterimText.value || speechFinalText.value);
+const confidenceLevelClass = computed(() => {
+  if (transcriptionConfidence.value >= 0.7) return "conf-high";
+  if (transcriptionConfidence.value >= 0.4) return "conf-mid";
+  if (transcriptionConfidence.value >= 0) return "conf-low";
+  return "";
+});
 const voiceErrorMessage = computed(
   () => getSpeechErrorMessage(speechError.value) || recorderError.value,
 );
+
+const avatarReady = computed(() => !avatarError.value);
+const voiceReady = computed(() => voiceSupported.value);
+const replyStatusClass = computed(() => {
+  if (chatStore.streaming) return 'status-pill--live';
+  if (avatarState.value === 'thinking') return 'status-pill--loading';
+  return 'status-pill--ready';
+});
+const replyStatusText = computed(() => {
+  if (chatStore.streaming) return '正在回答';
+  if (avatarState.value === 'thinking') return '思考中';
+  return '等待提问';
+});
+
 const explanationLevelLabel = computed(() => ({
   child: "亲子游",
   adult: "休闲游",
@@ -409,6 +555,8 @@ onMounted(() => {
   interactionStore.initialize();
   loadAvatarConfig();
 
+  startWeather();
+
   try {
     const pendingStyle = window.sessionStorage.getItem(GUIDE_STYLE_STORAGE_KEY);
     if (pendingStyle && ["child", "adult", "expert"].includes(pendingStyle)) {
@@ -439,6 +587,7 @@ onBeforeUnmount(() => {
   abortSpeechRecognition();
   revokeVisionPreview();
   avatar.setState("idle");
+  stopWeather();
 });
 
 function handleSubmit() {
@@ -540,11 +689,42 @@ async function toggleRecording() {
     transcribing.value = true;
     try {
       const result = await transcribeAudio(audioBlob);
-      if (result && result.text) {
+      if (!result || !result.text) {
+        recorderError.value = "没听清楚，请靠近麦克风重新说一遍，或直接打字输入。";
+        if (result && Array.isArray(result.candidates) && result.candidates.length > 0) {
+          transcriptionCandidates.value = result.candidates.slice(0, 3);
+        }
+        showConfirmBar.value = false;
+        transcriptionConfidence.value = -1;
+        avatar.setState("idle");
+        return;
+      }
+
+      transcriptionConfidence.value = typeof result.confidence === "number" ? result.confidence : -1;
+      transcriptionCandidates.value = Array.isArray(result.candidates) ? result.candidates : [];
+
+      if (result.confidence >= 0.7 && !result.needs_confirmation) {
         query.value = result.text;
+        showConfirmBar.value = false;
+        confirmedTranscript.value = result.text;
+      } else if (result.confidence >= 0.4 || result.needs_confirmation) {
+        query.value = result.text;
+        confirmedTranscript.value = result.text;
+        showConfirmBar.value = true;
+      } else {
+        query.value = "";
+        confirmedTranscript.value = "";
+        showConfirmBar.value = false;
+        if (transcriptionCandidates.value.length > 0) {
+          recorderError.value = "没听清楚，请靠近麦克风重新说一遍，选择候选项或直接打字输入。";
+        } else {
+          recorderError.value = "没听清楚，请靠近麦克风重新说一遍，或直接打字输入。";
+        }
       }
     } catch {
       recorderError.value = "录音转写失败，请改用文字输入。";
+      showConfirmBar.value = false;
+      transcriptionConfidence.value = -1;
     } finally {
       transcribing.value = false;
     }
@@ -570,6 +750,38 @@ async function toggleRecording() {
     recorderError.value = "当前浏览器无法使用麦克风，请改用文字输入。";
     avatar.setState("idle");
   }
+}
+
+function dismissConfirmBar() {
+  showConfirmBar.value = false;
+  recorderError.value = "";
+  transcriptionCandidates.value = [];
+}
+
+function confirmAndSubmit() {
+  showConfirmBar.value = false;
+  recorderError.value = "";
+  transcriptionCandidates.value = [];
+  if (query.value.trim()) {
+    handleSubmit();
+  }
+}
+
+function retryRecording() {
+  showConfirmBar.value = false;
+  recorderError.value = "";
+  transcriptionCandidates.value = [];
+  query.value = confirmedTranscript.value;
+  avatar.setState("listening");
+  startRecording();
+}
+
+function selectCandidate(candidateText) {
+  showConfirmBar.value = false;
+  recorderError.value = "";
+  transcriptionCandidates.value = [];
+  query.value = candidateText;
+  handleSubmit();
 }
 
 function mergeSpeechInput(baseText, finalText, interimText) {
@@ -674,7 +886,7 @@ function revokeVisionPreview() {
 
 function limitChatQuery(value) {
   const maxLength = 950;
-  return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
+  return value.length > maxLength ? `${value.slice(0, maxLength)}…` : value;
 }
 
 function normalizeVisionHints(values) {
@@ -734,6 +946,7 @@ function formatConfidence(value) {
   overflow: hidden;
   background: #1a1612;
   color: #f0ece5;
+  color-scheme: dark;
 }
 
 .scenic-bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
@@ -810,7 +1023,7 @@ function formatConfidence(value) {
   position: relative; z-index: 10;
   flex: 1; min-height: 0;
   display: grid;
-  grid-template-columns: minmax(160px, 340px) 1fr minmax(160px, 340px);
+  grid-template-columns: minmax(140px, 310px) 1fr minmax(140px, 310px);
   gap: 12px;
   align-items: stretch;
   padding: 20px 20px 0;
@@ -823,6 +1036,7 @@ function formatConfidence(value) {
   position: relative; z-index: 2;
   width: 100%; height: 100%;
   min-height: 0;
+  padding: 0 8px;
 }
 .top-caption {
   position: absolute;
@@ -831,28 +1045,34 @@ function formatConfidence(value) {
   display: flex; align-items: baseline; justify-content: center; gap: 12px;
   white-space: nowrap;
 }
-.top-caption .caption-kicker { font-size: 30px; }
-.top-caption .caption-weather { color: rgba(232,228,219,0.25); }
 .caption-kicker {
   color: #f8e7bb;
   font-family: "STKaiti","KaiTi",serif;
-  font-size: 17px; font-weight: 700; letter-spacing: 0.1em;
+  font-size: 24px; font-weight: 700; letter-spacing: 0.1em;
   text-shadow: 0 0 20px rgba(217,164,65,0.15);
 }
 .caption-weather {
-  color: rgba(232,228,219,0.28);
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: rgba(23,18,14,0.6);
+  color: rgba(232,228,219,0.38);
   font-family: system-ui, sans-serif;
-  font-size: 11px; font-weight: 400;
+  font-size: 13px; font-weight: 400;
   letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.caption-weather-live {
+  color: rgba(232,228,219,0.55);
 }
 .crowd-indicator {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 5px 14px;
   border-radius: 999px;
-  border: 1px solid rgba(255,250,242,0.11);
   background: rgba(23,18,14,0.6);
-  font-size: 17px; font-weight: 400;
-  color: rgba(232,228,219,0.7);
+  font-size: 13px; font-weight: 400;
+  color: rgba(232,228,219,0.55);
   letter-spacing: 0.04em;
   font-family: system-ui, sans-serif;
   white-space: nowrap;
@@ -867,12 +1087,14 @@ function formatConfidence(value) {
 
 .avatar-stage {
   position: relative; z-index: 2;
-  width: min(640px, 44vw);
-  height: min(600px, 82vh);
-  margin: 0 auto;
+  width: min(480px, 100vw);
+  height: calc(min(460px, 66vh) + 140px);
+  padding-top: 140px;
+  margin: -140px auto 0;
   flex: 1;
   display: flex; align-items: center; justify-content: center;
   background: transparent;
+  box-sizing: border-box;
 }
 .avatar-stage::after {
   content: "";
@@ -886,14 +1108,14 @@ function formatConfidence(value) {
 .avatar-stage :deep(.three-wrapper),
 .avatar-stage :deep(.avatar-display) {
   width: 100%; height: 100%;
-  transform: translateY(20%);
+  transform: translateY(8%);
 }
 
 .side-card {
   position: absolute;
-  left: 40px; bottom: 100px;
+  left: 24px; bottom: 100px;
   z-index: 15;
-  width: 340px; height: 420px;
+  width: 310px; height: 440px;
   background: rgba(23,18,14,0.88);
   border: 1px solid rgba(255,250,242,0.11);
   border-radius: 10px;
@@ -938,6 +1160,7 @@ function formatConfidence(value) {
 .side-card-body {
   flex: 1; min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 10px 12px;
   display: flex; flex-direction: column;
   gap: 10px;
@@ -1048,9 +1271,9 @@ function formatConfidence(value) {
 
 .right-card {
   position: absolute;
-  right: 36px; top: 186px; bottom: 108px;
+  right: 24px; top: 110px; bottom: 100px;
   z-index: 15;
-  width: 450px;
+  width: 330px;
   background: rgba(23,18,14,0.88);
   border: 1px solid rgba(255,250,242,0.11);
   border-radius: 10px;
@@ -1070,6 +1293,7 @@ function formatConfidence(value) {
 .right-card-body {
   flex: 1; min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 10px 12px;
   display: flex; flex-direction: column;
   gap: 6px;
@@ -1268,6 +1492,76 @@ function formatConfidence(value) {
   100% { box-shadow: 0 0 0 0 rgba(248,113,113,0); }
 }
 
+.confidence-dot {
+  width: 12px; height: 12px; border-radius: 50%;
+  flex-shrink: 0; margin-left: 2px;
+  border: 1px solid rgba(255,250,242,0.18);
+}
+.confidence-dot.conf-high { background: #5ec9a4; box-shadow: 0 0 6px rgba(94,201,164,0.5); }
+.confidence-dot.conf-mid  { background: #e8a840; box-shadow: 0 0 6px rgba(232,168,64,0.5); }
+.confidence-dot.conf-low  { background: #f87171; box-shadow: 0 0 6px rgba(248,113,113,0.5); }
+
+.confirm-bar {
+  position: absolute;
+  bottom: 106px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 26;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  padding: 14px 20px;
+  border: 1px solid rgba(248,231,187,0.28);
+  border-radius: 16px;
+  background: rgba(28,24,18,0.94);
+  backdrop-filter: blur(14px);
+  max-width: 600px;
+}
+.confirm-text { color: rgba(232,228,219,0.82); font-size: 16px; white-space: nowrap; }
+.confirm-text strong { color: #f8e7bb; font-weight: 700; }
+.confirm-btn {
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-family: inherit; font-size: 15px; font-weight: 600;
+  cursor: pointer; border: 1px solid transparent;
+  transition: background 0.18s ease, border-color 0.18s ease;
+  white-space: nowrap;
+}
+.confirm-btn--yes {
+  background: rgba(94,201,164,0.18); border-color: rgba(94,201,164,0.35);
+  color: #5ec9a4;
+}
+.confirm-btn--yes:hover { background: rgba(94,201,164,0.3); }
+.confirm-btn--retry {
+  background: rgba(217,164,65,0.14); border-color: rgba(217,164,65,0.3);
+  color: #d9a441;
+}
+.confirm-btn--retry:hover { background: rgba(217,164,65,0.25); }
+.confirm-btn--dismiss {
+  background: rgba(232,228,219,0.06); border-color: rgba(232,228,219,0.15);
+  color: rgba(232,228,219,0.55);
+}
+.confirm-btn--dismiss:hover { background: rgba(232,228,219,0.12); }
+
+.confirm-candidates {
+  width: 100%;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(232,228,219,0.08);
+}
+.confirm-candidates-label { color: rgba(232,228,219,0.35); font-size: 13px; }
+.confirm-candidate-chip {
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(248,231,187,0.2);
+  background: rgba(255,255,255,0.05);
+  color: rgba(232,228,219,0.7);
+  font-family: inherit; font-size: 14px;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.confirm-candidate-chip:hover {
+  background: rgba(248,231,187,0.12);
+  border-color: rgba(248,231,187,0.4);
+}
+
 .vision-modal {
   position: fixed; inset: 0;
   z-index: 50;
@@ -1280,6 +1574,7 @@ function formatConfidence(value) {
   width: min(500px, 90vw);
   max-height: 80vh;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 28px 24px;
   border: 1px solid rgba(233,240,235,0.16);
   border-radius: 24px;
@@ -1328,34 +1623,174 @@ function formatConfidence(value) {
   font-size: 14px;
 }
 
+.browser-hint-bar {
+  position: absolute;
+  bottom: 106px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 26;
+  display: flex; align-items: center; gap: 14px;
+  padding: 10px 18px;
+  border: 1px solid rgba(107,184,232,0.3);
+  border-radius: 12px;
+  background: rgba(14,22,36,0.94);
+  color: rgba(160,200,240,0.9);
+  font-size: 14px;
+  white-space: nowrap;
+}
+.browser-hint-close {
+  padding: 4px 12px;
+  border: 1px solid rgba(107,184,232,0.25);
+  border-radius: 6px;
+  background: rgba(107,184,232,0.1);
+  color: rgba(160,200,240,0.9);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.browser-hint-close:hover { background: rgba(107,184,232,0.2); }
+
+.mobile-tab-bar { display: none; }
+
+.mobile-drawer-overlay {
+  display: none;
+}
+.mobile-drawer-panel {
+  display: none;
+}
+.mobile-drawer-handle {
+  display: none;
+}
+
 @media (max-width: 1300px) {
-  .side-card { width: 380px; height: 450px; left: 20px; bottom: 108px; }
-  .right-card { width: 350px; right: 20px; top: 166px; bottom: 108px; }
-  .tourist-stage { grid-template-columns: minmax(140px, 280px) 1fr minmax(140px, 280px); padding: 0 12px; gap: 8px; }
-  .avatar-stage { width: min(380px, 34vw); height: min(420px, 60vh); }
+  .side-card { width: 280px; height: 400px; left: 16px; bottom: 108px; }
+  .right-card { width: 290px; right: 16px; top: 110px; bottom: 108px; }
+  .tourist-stage { grid-template-columns: minmax(120px, 260px) 1fr minmax(120px, 260px); padding: 0 12px; gap: 8px; }
+  .avatar-stage { width: min(380px, 30vw); height: min(380px, 56vh); }
   .input-row { width: min(440px, 80vw); }
 }
 
 @media (max-width: 1080px) {
-  .side-card { width: 300px; height: 400px; left: 12px; bottom: 108px; }
-  .right-card { width: 300px; right: 12px; top: 156px; bottom: 108px; }
+  .side-card { width: 250px; height: 360px; left: 8px; bottom: 108px; }
+  .right-card { width: 260px; right: 8px; top: 100px; bottom: 108px; }
   .tourist-stage { grid-template-columns: 1fr 2fr 1fr; padding: 0 8px; }
   .input-row { width: min(380px, 78vw); }
 }
 
 @media (max-width: 720px) {
-  .tourist-page { overflow-y: auto; padding: 14px 10px; }
-  .tourist-stage { display: flex; flex-direction: column; padding: 0; margin-top: 50px; gap: 12px; flex: none; }
-  .side-card { position: relative; left: auto; bottom: auto; width: 100%; height: auto; min-height: 200px; order: 3; }
-  .right-card { position: relative; right: auto; top: auto; bottom: auto; width: 100%; height: auto; min-height: 200px; order: 4; }
-  .chat-center { order: 1; padding: 0; }
-  .avatar-stage { width: min(52vh, 78vw); height: min(360px, 52vh); min-height: auto; }
-  .input-row { position: relative; bottom: auto; left: auto; transform: none; width: calc(100% - 16px); gap: 8px; order: 2; }
-  .back-btn { top: 14px; left: 14px; padding: 7px 16px; font-size: 16px; }
-  .top-right { top: 14px; right: 14px; }
-  .top-brand { font-size: 16px; }
+  .tourist-page { overflow: hidden; padding: 0; }
+  .tourist-stage { display: flex; flex-direction: column; padding: 0; margin-top: 40px; gap: 0; flex: 1; min-height: 0; padding-bottom: 48px; }
+  .side-card { display: none; }
+  .right-card { display: none; }
+  .chat-center { flex: 1; padding: 0; min-height: 0; }
+  .avatar-stage { width: min(52vh, 78vw); height: 100%; min-height: 0; flex: 1; }
+  .avatar-stage :deep(.three-wrapper),
+  .avatar-stage :deep(.avatar-display) { transform: translateY(10%); }
+  .avatar-stage::after { height: 80px; }
+  .input-row { position: absolute; bottom: 56px; left: 0; right: 0; transform: none; width: auto; gap: 6px; padding: 0 10px; margin: 0; }
+  .input-field { height: 48px; font-size: 16px; padding: 0 14px; }
+  .input-field::placeholder { font-size: 14px; }
+  .back-btn { top: 6px; left: 6px; padding: 5px 12px; font-size: 14px; }
+  .top-right { top: 6px; right: 6px; }
+  .top-brand { font-size: 15px; }
+  .top-caption { flex-wrap: wrap; gap: 4px; }
+  .caption-kicker { font-size: 15px; }
+  .caption-weather { font-size: 10px; padding: 3px 8px; }
+  .crowd-indicator { font-size: 10px; padding: 3px 8px; }
   .service-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
-  .voice-btn, .image-btn { padding: 0 14px; height: 44px; font-size: 16px; }
+  .voice-btn { padding: 0 12px; height: 44px; font-size: 15px; }
+  .image-btn { padding: 0 12px; height: 44px; font-size: 14px; }
+  .explore-card { padding: 10px 6px; }
+  .explore-card-icon { width: 40px; height: 40px; font-size: 22px; }
+  .explore-card-title { font-size: 16px; }
+  .explore-card-desc { font-size: 12px; }
+  .speech-bar { bottom: 118px; font-size: 13px; padding: 8px 14px; }
+  .confirm-bar { bottom: 118px; max-width: calc(100vw - 20px); font-size: 14px; padding: 10px 14px; }
+  .voice-error-bar { bottom: 118px; font-size: 12px; }
+  .browser-hint-bar { bottom: 118px; font-size: 11px; }
+  .vision-modal-content { padding: 18px 14px; }
+  .vision-modal-content h3 { font-size: 20px; }
+
+  .mobile-tab-bar {
+    display: flex;
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    z-index: 30;
+    height: 48px;
+    background: rgba(18,14,8,0.94);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 16px 16px 0 0;
+    border-top: 1px solid rgba(255,250,242,0.08);
+  }
+  .mobile-tab-bar button {
+    flex: 1;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: rgba(232,228,219,0.38);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: 0.04em;
+    transition: color 0.2s ease;
+    position: relative;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+  }
+  .mobile-tab-bar button.active {
+    color: #d9a441;
+  }
+  .mobile-tab-bar button.active::after {
+    content: "";
+    position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 28px; height: 3px;
+    border-radius: 2px;
+    background: #d9a441;
+  }
+
+  .mobile-drawer-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    background: rgba(4,6,5,0.55);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+  }
+
+  .mobile-drawer-panel {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 36;
+    height: 45vh;
+    background: rgba(20,16,10,0.97);
+    border-radius: 20px 20px 0 0;
+    border-top: 1px solid rgba(255,250,242,0.10);
+    overflow: hidden;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.4);
+  }
+  .mobile-drawer-handle {
+    display: block;
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(232,228,219,0.2);
+    margin: 10px auto 6px;
+    flex-shrink: 0;
+  }
+
+  .drawer-fade-enter-active,
+  .drawer-fade-leave-active { transition: opacity 0.25s ease; }
+  .drawer-fade-enter-from,
+  .drawer-fade-leave-to { opacity: 0; }
+
+  .drawer-slide-enter-active,
+  .drawer-slide-leave-active { transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1); }
+  .drawer-slide-enter-from { transform: translateY(100%); }
+  .drawer-slide-leave-to { transform: translateY(100%); }
 }
 
 @media (prefers-reduced-motion: reduce) {

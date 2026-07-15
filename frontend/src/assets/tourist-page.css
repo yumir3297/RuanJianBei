@@ -10,6 +10,7 @@
   overflow: hidden;
   background: #1a1612;
   color: #f0ece5;
+  color-scheme: dark;
   font-family: "Noto Serif SC","STKaiti","KaiTi","STSong",ui-serif,serif;
 }
 
@@ -62,33 +63,49 @@
   top: 32px; right: 32px;
   z-index: 20;
   display: flex; flex-direction: column;
-  align-items: flex-end; gap: 8px;
+  align-items: flex-end; gap: 12px;
 }
 .top-brand {
-  color: rgba(232,228,219,0.88);
+  color: #f8e7bb;
   font-family: "STKaiti","KaiTi","STSong",serif;
-  font-size: clamp(24px, 2.8vw, 40px);
-  font-weight: 400;
+  font-size: clamp(26px, 3vw, 44px);
+  font-weight: 600;
   letter-spacing: 0.12em;
-  text-shadow: 0 0 30px rgba(217,164,65,0.1);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
   line-height: 1.2;
 }
 .top-status-row {
-  display: flex; flex-direction: column; gap: 5px;
+  display: flex; gap: 10px;
 }
-.status-item {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 16px; font-weight: 400;
-  letter-spacing: 0.06em;
-  color: rgba(232,228,219,0.55);
-  font-family: system-ui, sans-serif;
+.status-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,250,242,0.12);
+  background: rgba(23,18,14,0.7);
+  font-size: 14px; font-weight: 500;
+  letter-spacing: 0.03em;
+  font-family: system-ui, "Noto Sans SC", sans-serif;
+  white-space: nowrap;
+  transition: border-color 0.3s ease, background 0.3s ease;
 }
-.status-dot {
-  width: 12px; height: 12px;
+.status-pill-dot {
+  width: 8px; height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
-  border: 1px solid rgba(255,250,242,0.16);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
 }
+.status-pill--ready .status-pill-dot { background: #5ec9a4; box-shadow: 0 0 6px rgba(94,201,164,0.4); }
+.status-pill--loading .status-pill-dot { background: #e8a840; box-shadow: 0 0 6px rgba(232,168,64,0.4); animation: dot-pulse 1.6s ease-in-out infinite; }
+.status-pill--live .status-pill-dot { background: #d9a441; box-shadow: 0 0 6px rgba(217,164,65,0.4); }
+.status-pill--warn .status-pill-dot { background: #f87171; box-shadow: 0 0 6px rgba(248,113,113,0.4); }
+.status-pill-label { color: rgba(232,228,219,0.55); font-size: 13px; }
+.status-pill-value { color: rgba(232,228,219,0.78); font-size: 13px; }
+.status-pill-divider { color: rgba(232,228,219,0.18); margin: 0 2px; }
+
+/* legacy status classes keep for backward compat */
+.status-item { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 400; letter-spacing: 0.06em; color: rgba(232,228,219,0.55); font-family: system-ui, sans-serif; }
+.status-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(255,250,242,0.16); }
 .status-dot--ready  { background: #d9a441; box-shadow: 0 0 4px rgba(217,164,65,0.5); }
 .status-dot--warm   { background: #e8a840; box-shadow: 0 0 4px rgba(232,168,64,0.5); animation: dot-pulse 1.6s ease-in-out infinite; }
 .status-dot--live   { background: #5ec9a4; box-shadow: 0 0 4px rgba(94,201,164,0.5); }
@@ -100,7 +117,7 @@
   position: relative; z-index: 10;
   flex: 1; min-height: 0;
   display: grid;
-  grid-template-columns: minmax(160px, 340px) 1fr minmax(160px, 340px);
+  grid-template-columns: minmax(140px, 310px) 1fr minmax(140px, 310px);
   gap: 12px;
   align-items: stretch;
   padding: 20px 20px 0;
@@ -128,19 +145,25 @@
   display: flex; align-items: baseline; justify-content: center; gap: 12px;
   white-space: nowrap;
 }
-.top-caption .caption-kicker { font-size: 30px; }
-.top-caption .caption-weather { color: rgba(232,228,219,0.25); }
 .caption-kicker {
   color: #f8e7bb;
   font-family: "STKaiti","KaiTi",serif;
-  font-size: 17px; font-weight: 700; letter-spacing: 0.1em;
+  font-size: 24px; font-weight: 700; letter-spacing: 0.1em;
   text-shadow: 0 0 20px rgba(217,164,65,0.15);
 }
 .caption-weather {
-  color: rgba(232,228,219,0.28);
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: rgba(23,18,14,0.6);
+  color: rgba(232,228,219,0.38);
   font-family: system-ui, sans-serif;
-  font-size: 11px; font-weight: 400;
+  font-size: 13px; font-weight: 400;
   letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.caption-weather-live {
+  color: rgba(232,228,219,0.55);
 }
 
 /* ---------- crowd indicator ---------- */
@@ -148,10 +171,9 @@
   display: inline-flex; align-items: center; gap: 5px;
   padding: 5px 14px;
   border-radius: 999px;
-  border: 1px solid rgba(255,250,242,0.11);
   background: rgba(23,18,14,0.6);
-  font-size: 17px; font-weight: 400;
-  color: rgba(232,228,219,0.7);
+  font-size: 13px; font-weight: 400;
+  color: rgba(232,228,219,0.55);
   letter-spacing: 0.04em;
   font-family: system-ui, sans-serif;
   white-space: nowrap;
@@ -170,8 +192,8 @@
 /* ---------- avatar stage ---------- */
 .avatar-stage {
   position: relative; z-index: 2;
-  width: min(640px, 44vw);
-  height: min(600px, 82vh);
+  width: min(480px, 34vw);
+  height: min(460px, 66vh);
   margin: 0 auto;
   flex: 1;
   display: flex; align-items: center; justify-content: center;
@@ -190,9 +212,9 @@
 /* ---------- side card (left) ---------- */
 .side-card {
   position: absolute;
-  left: 40px; bottom: 100px;
+  left: 24px; bottom: 100px;
   z-index: 15;
-  width: 340px; height: 420px;
+  width: 310px; height: 440px;
   background: rgba(23,18,14,0.88);
   border: 1px solid rgba(255,250,242,0.11);
   border-radius: 10px;
@@ -237,6 +259,7 @@
 .side-card-body {
   flex: 1; min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 10px 12px;
   display: flex; flex-direction: column;
   gap: 10px;
@@ -373,9 +396,9 @@
 /* ---------- right card ---------- */
 .right-card {
   position: absolute;
-  right: 36px; top: 186px; bottom: 108px;
+  right: 24px; top: 110px; bottom: 100px;
   z-index: 15;
-  width: 450px;
+  width: 330px;
   background: rgba(23,18,14,0.88);
   border: 1px solid rgba(255,250,242,0.11);
   border-radius: 10px;
@@ -391,7 +414,31 @@
   font-family: "STKaiti","KaiTi",serif;
   font-size: 13px; font-weight: 600;
   letter-spacing: 0.06em;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
 }
+.right-card-head-status {
+  display: inline-flex; align-items: center; gap: 10px;
+  flex-shrink: 0;
+}
+.status-inline-dot {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 400;
+  letter-spacing: 0.03em;
+  color: rgba(232,228,219,0.45);
+  font-family: system-ui, "Noto Sans SC", sans-serif;
+  white-space: nowrap;
+}
+.status-inline-dot::before {
+  content: "";
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid rgba(255,250,242,0.16);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+.status-inline-dot--ready::before { background: #5ec9a4; box-shadow: 0 0 5px rgba(94,201,164,0.35); }
+.status-inline-dot--loading::before { background: #e8a840; box-shadow: 0 0 5px rgba(232,168,64,0.35); animation: dot-pulse 1.6s ease-in-out infinite; }
+.status-inline-dot--live::before { background: #d9a441; box-shadow: 0 0 5px rgba(217,164,65,0.35); }
 .right-card-body {
   flex: 1; min-height: 0;
   overflow-y: auto;
@@ -1087,26 +1134,28 @@
 
 /* ---------- responsive ---------- */
 @media (max-width: 1300px) {
-  .side-card { width: 300px; height: 380px; left: 20px; bottom: 100px; }
-  .right-card { width: 360px; height: auto; right: 20px; top: 166px; bottom: 108px; }
+  .side-card { width: 280px; height: 400px; left: 16px; bottom: 100px; }
+  .right-card { width: 290px; height: auto; right: 16px; top: 110px; bottom: 100px; }
   .tourist-stage {
-    grid-template-columns: minmax(160px, 280px) 1fr minmax(160px, 280px);
+    grid-template-columns: minmax(120px, 260px) 1fr minmax(120px, 260px);
     padding: 0 12px;
   }
-  .avatar-stage { width: min(420px, 36vw); height: min(440px, 62vh); }
+  .avatar-stage { width: min(380px, 30vw); height: min(380px, 56vh); }
   .input-row { width: min(480px, 86vw); }
-  .caption-kicker { font-size: 24px; }
+  .caption-kicker { font-size: 22px; }
 }
 
 @media (max-width: 1080px) {
-  .side-card { width: 260px; height: 350px; left: 12px; bottom: 100px; }
-  .right-card { width: 300px; height: auto; right: 12px; top: 156px; bottom: 108px; }
+  .side-card { width: 250px; height: 360px; left: 8px; bottom: 100px; }
+  .right-card { width: 260px; height: auto; right: 8px; top: 100px; bottom: 100px; }
   .back-btn { top: 20px; left: 20px; padding: 10px 22px; font-size: 17px; }
   .top-right { top: 20px; right: 20px; }
   .top-brand { font-size: clamp(18px, 2.2vw, 28px); }
-  .status-item { font-size: 14px; }
-  .caption-kicker { font-size: 22px; }
-  .crowd-indicator { font-size: 15px; }
+  .top-status-row { gap: 6px; }
+  .status-pill { padding: 4px 10px; font-size: 12px; }
+  .status-pill-label { font-size: 11px; }
+  .status-pill-value { font-size: 11px; }
+  .caption-kicker { font-size: 20px; }
   .input-row { width: min(440px, 80vw); }
   .input-field { height: 56px; font-size: 18px; }
   .voice-btn, .image-btn { height: 56px; font-size: 18px; padding: 0 20px; }

@@ -9,9 +9,12 @@
         <ThreeAvatar
           v-if="!avatarError"
           :preset="activePreset"
-          emotion="neutral"
+          :emotion="greetEmotion"
           :is-speaking="false"
+          :waving="isWaving"
+          :camera-offset-y="0.45"
           @error="avatarError = true"
+          @loaded="avatarError = false"
         />
         <div v-else class="avatar-fallback" aria-label="数字人导游形象">
           <svg viewBox="0 0 280 400" class="avatar-svg">
@@ -69,6 +72,8 @@ const avatarError = ref(false);
 const { scenicBgUrl, welcomeText, refresh } = useScenicBackground();
 
 const activePreset = ref(DEFAULT_AVATAR_PRESET);
+const greetEmotion = ref("happy");
+const isWaving = ref(true);
 
 async function loadAvatarPreset() {
   try {
@@ -90,6 +95,12 @@ function enterTourist() {
 onMounted(() => {
   loadAvatarPreset();
   refresh();
+  setTimeout(() => {
+    isWaving.value = false;
+  }, 3000);
+  setTimeout(() => {
+    greetEmotion.value = "neutral";
+  }, 3500);
 });
 </script>
 
@@ -101,6 +112,7 @@ onMounted(() => {
   height: 100dvh;
   color: #f0ece5;
   background: #1a1612;
+  color-scheme: dark;
   overflow: hidden;
 }
 
@@ -127,7 +139,7 @@ onMounted(() => {
   top: 0;
   left: 0;
   right: 0;
-  bottom: 16vh;
+  bottom: 20vh;
   z-index: 1;
   display: flex;
   align-items: center;
@@ -145,12 +157,20 @@ onMounted(() => {
 
 .avatar-frame {
   position: relative;
-  width: min(60vh, 72vw);
+  width: min(60vh, 76vw);
   aspect-ratio: 3 / 4;
-  max-height: min(70vh, calc(100vh - 20vh));
+  max-height: min(68vh, calc(100vh - 20vh));
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+}
+
+.avatar-frame :deep(.three-wrapper),
+.avatar-frame :deep(.avatar-display) {
+  width: 100%;
+  height: 100%;
+  transform: translateY(10%);
 }
 
 .avatar-fallback,
@@ -212,7 +232,7 @@ onMounted(() => {
 
 .hero-text {
   position: absolute;
-  top: 8vh;
+  top: 4vh;
   left: 0;
   right: 0;
   text-align: center;
@@ -310,16 +330,16 @@ onMounted(() => {
 
 @media (max-width: 860px) {
   .avatar-layer {
-    bottom: 20vh;
+    bottom: 24vh;
   }
 
   .avatar-frame {
-    width: min(45vh, 75vw);
-    max-height: 55vh;
+    width: min(48vh, 78vw);
+    max-height: 52vh;
   }
 
   .hero-text {
-    top: 5vh;
+    top: 3vh;
   }
 
   .content {

@@ -2,7 +2,6 @@ import { buildMonk } from "./monk.js";
 import { buildHanfu } from "./hanfu.js";
 import { buildModern } from "./modern.js";
 
-/** 三套预设配置表，供模型管理器与页面读取 */
 export const AVATAR_PRESETS = {
   monk: {
     key: "monk",

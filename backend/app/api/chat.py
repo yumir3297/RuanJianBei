@@ -21,11 +21,14 @@ from app.repositories.visitor import VisitorRepository
 from app.schemas.chat import ChatRequest
 from app.services.llm.prompt_builder import SYSTEM_PROMPT_VERSION
 from app.services.avatar.stub import StubAvatarService
+from app.services.coze.client import CozeRoutePlanner
 from app.services.llm.openai_compatible import OpenAICompatibleLLMService
+from app.services.live_data.service import LiveDataService
 from app.services.qa.cache import QACache
 from app.services.qa.blind_spot_tracker import BlindSpotTracker
 from app.services.qa.followup_suggestions import FollowUpSuggestionService
 from app.services.qa.guided_selector import GuidedSelectionResolver
+from app.services.qa.intent_router import IntentRouter
 from app.services.qa.pipeline import QAPipeline
 from app.services.qa.runtime import get_runtime_faq_matcher
 from app.services.rag.bm25_reranker import BM25Reranker
@@ -152,6 +155,7 @@ def build_pipeline(
     knowledge_repository = KnowledgeRepository(session)
     cache_repository = QACacheRepository(session)
     chat_log_repository = ChatLogRepository(session)
+    route_repository = RouteRepository(session)
 
     query_rewriter = QueryRewriter()
     faq_matcher = get_runtime_faq_matcher(session)
@@ -227,11 +231,20 @@ def build_pipeline(
         guided_selector=GuidedSelectionResolver(
             knowledge_repository,
             QuickTopicRepository(session),
-            RouteRepository(session),
+            route_repository,
         ),
         followup_suggestions=FollowUpSuggestionService(),
         blind_spot_tracker=BlindSpotTracker(KnowledgeBlindSpotRepository(session)),
         answer_cache_namespace=build_answer_cache_namespace(settings),
+        intent_router=IntentRouter(),
+        live_data_service=LiveDataService(settings),
+        coze_route_planner=CozeRoutePlanner(
+            run_url=settings.coze_run_url,
+            token=settings.coze_token,
+            timeout_seconds=settings.coze_timeout_seconds,
+        ) if settings.coze_enabled else None,
+        knowledge_repository=knowledge_repository,
+        route_repository=route_repository,
     )
 
 

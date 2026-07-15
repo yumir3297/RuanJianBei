@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import http from "../api/http";
 
 const AUTH_KEY = "a5-admin-auth";
 
@@ -10,15 +11,19 @@ export const useAuthStore = defineStore("auth", {
     isAuthenticated: (state) => !!state.token,
   },
   actions: {
-    login(password) {
-      // 简单密码验证，可替换为后端接口
-      if (password === import.meta.env.VITE_ADMIN_PASSWORD || password === "admin123") {
-        const token = btoa(`admin:${Date.now()}`);
-        this.token = token;
-        localStorage.setItem(AUTH_KEY, token);
+    async login(password) {
+      try {
+        const { data } = await http.post("/auth/login", { password });
+        this.token = data.token;
+        localStorage.setItem(AUTH_KEY, data.token);
         return true;
+      } catch (error) {
+        const detail = error?.response?.data?.detail;
+        if (detail) {
+          throw new Error(detail);
+        }
+        throw new Error("登录失败，请检查网络连接");
       }
-      return false;
     },
     logout() {
       this.token = null;

@@ -6,6 +6,7 @@ from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, Upload
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.api.auth import require_admin_token
 from app.core.config import Settings
 from app.core.deps import get_app_settings, get_db_session
 from app.models.avatar_config import AvatarConfig
@@ -47,7 +48,7 @@ from app.services.rag.vector_store import ChromaVectorStore
 from app.services.display_assets import DisplayAssetService
 
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_admin_token)])
 
 VALID_VOICE_TYPES = {"gentle-female", "calm-female", "deep-male", "lively-female"}
 
@@ -83,7 +84,7 @@ def _to_blind_spot_read(entry) -> BlindSpotRead:
 @router.get("/overview", response_model=AdminOverview)
 async def admin_overview(session: Session = Depends(get_db_session)) -> AdminOverview:
     avg_latency = session.execute(
-        select(func.avg(ChatLog.latency_ms))
+        select(func.avg(ChatLog.latency_ms)).where(ChatLog.latency_ms > 0)
     ).scalar()
 
     return AdminOverview(

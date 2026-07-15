@@ -159,7 +159,8 @@ export const useChatStore = defineStore("chat", {
               if (!isCurrentRequest()) {
                 return;
               }
-              if (provider === "bailian_unavailable" || provider === "stub") {
+              const isFallback = provider === "bailian_unavailable" || provider === "stub";
+              if (isFallback) {
                 this.statusText = FALLBACK_STATUS_TEXT;
               }
               options.onAudioStart?.();
@@ -168,11 +169,11 @@ export const useChatStore = defineStore("chat", {
                 duration_ms,
                 () => options.onAudioEnded?.(),
                 text || "",
-                (progress, elapsedMs, actualDurationMs) =>
+                (progress, elapsedMs, actualDurationMs, browserVisemeTimeline) =>
                   options.onSpeechProgress?.(
                     progress,
                     elapsedMs,
-                    viseme_timeline || null,
+                    isFallback ? (browserVisemeTimeline || null) : (viseme_timeline || null),
                     actualDurationMs,
                   ),
                 {

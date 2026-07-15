@@ -19,6 +19,10 @@ def get_asr_service(settings: Settings = Depends(get_settings)) -> BaseASRServic
         from app.services.asr.bailian import BailianASRService
 
         return BailianASRService(settings=settings)
+    if settings.asr_provider == "qwen":
+        from app.services.asr.qwen import QwenASRService
+
+        return QwenASRService(settings=settings)
     return StubASRService()
 
 

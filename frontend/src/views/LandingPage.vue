@@ -56,12 +56,6 @@
 
       <div class="panel-divider"></div>
 
-      <div class="tags">
-        <span class="tag">RAG 知识增强</span>
-        <span class="tag">多模态交互</span>
-        <span class="tag">知识盲区闭环</span>
-      </div>
-
       <footer class="panel-footer">灵山胜境景区 &copy; 2026 | 软件杯参赛作品</footer>
     </section>
   </div>
@@ -299,24 +293,6 @@ function enterAdmin() {
   height: 1px;
   background: rgba(255, 250, 242, 0.07);
   margin-bottom: 24px;
-}
-
-.tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 40px;
-}
-
-.tag {
-  padding: 6px 14px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  background: rgba(36, 133, 80, 0.12);
-  border: 1px solid rgba(36, 133, 80, 0.18);
-  color: rgba(59, 130, 246, 0.8);
 }
 
 .panel-footer {

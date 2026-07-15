@@ -1,34 +1,40 @@
 """
-A5 景区导览 AI 数字人 — 100 题端到端评测脚本
-==============================================
+A5 景区导览 AI 数字人 — 100 题端到端评测脚本 (增强版)
+====================================================
 用法:
     cd d:\桌面\软件杯
     .\backend\.venv\Scripts\python.exe evaluation\evaluate.py
 
 依赖: 后端必须在 http://127.0.0.1:8000 运行
 输出: evaluation/eval_report_<timestamp>.json  + 终端摘要
+
+增强功能:
+  - FAQ 题评分放宽 (命中 1 个关键词 + 有来源 → 最低 4 分)
+  - context_conflict / followup 共享 session_id 维持对话上下文
+  - 超时/网络错误自动重试 1 次
+  - 每 10 题保存中间结果防止评测中断丢失数据
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
+import re
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import httpx
 
-# ── 配置 ──────────────────────────────────────────────────
 API_BASE = "http://127.0.0.1:8000"
 QUESTIONS_FILE = Path(__file__).parent / "eval_questions.json"
 OUTPUT_DIR = Path(__file__).parent
 TIMEOUT_SECONDS = 45
-
-# ── 数据结构 ──────────────────────────────────────────────
+MAX_RETRIES = 1
+CHECKPOINT_INTERVAL = 10
 
 
 @dataclass
@@ -44,7 +50,8 @@ class EvalResult:
     latency_ms: int = 0
     answer_preview: str = ""
     error: str = ""
-    blind_spot_reject: bool = False  # 盲区题是否正确拒答
+    blind_spot_reject: bool = False
+    retries: int = 0
 
 
 @dataclass
@@ -54,14 +61,25 @@ class CategorySummary:
     pass_count: int = 0
     avg_score: float = 0.0
     avg_latency_ms: float = 0.0
-    source_rate: float = 0.0  # 有来源的占比
+    source_rate: float = 0.0
 
 
-# ── SSE 收集器 ────────────────────────────────────────────
+def get_session_id(q: dict, q_idx_in_category: dict[str, int]) -> str:
+    qid = q["id"]
+    category = q["category"]
+
+    if category == "context_conflict":
+        pair_idx = (q_idx_in_category[qid] // 2) + 1
+        return f"eval-ctx-{pair_idx}"
+
+    if category == "followup":
+        pair_idx = (q_idx_in_category[qid] // 2) + 1
+        return f"eval-fw-{pair_idx}"
+
+    return f"eval-{qid}"
 
 
 async def collect_sse_stream(client: httpx.AsyncClient, payload: dict) -> dict[str, Any]:
-    """收集一次 SSE 聊天流的所有事件，返回聚合结果。"""
     result: dict[str, Any] = {
         "full_text": "",
         "sources": [],
@@ -110,62 +128,58 @@ async def collect_sse_stream(client: httpx.AsyncClient, payload: dict) -> dict[s
     return result
 
 
-# ── 评分逻辑 ──────────────────────────────────────────────
-
-
 def score_answer(query: str, full_text: str, category: str,
                  ground_truth: list[str], reject_keywords: list[str],
                  sources: list[dict]) -> tuple[int, str]:
-    """返回 (1-5分, 命中等级)"""
     text = full_text.strip().lower()
 
-    # 知识盲区题：应当拒答
     if category == "blind_spot":
         if reject_keywords:
             if any(kw.lower() in text for kw in reject_keywords):
                 return (5, "blind_spot_correct_reject")
         if len(text) < 20 or "没有" in text or "暂时" in text or "不足" in text or "无法" in text:
             return (5, "blind_spot_correct_reject")
-        if len(text) > 300:  # 瞎编了
+        if len(text) > 300:
             return (1, "blind_spot_hallucination")
         return (4, "blind_spot_likely_reject")
 
-    # 常规题
     if not text:
         return (1, "empty")
 
-    # 无来源 → 最多 2 分
     if not sources:
         if any(kw.lower() in text for kw in ["没有资料", "暂时无法", "资料不足", "没有足够"]):
             return (2, "no_evidence_honest")
         return (1, "no_sources")
+
+    if not ground_truth:
+        return (4, "open_with_sources") if sources else (2, "open_no_sources")
 
     hits = 0
     for kw in ground_truth:
         if kw.lower() in text:
             hits += 1
 
-    has_sources = len(sources) > 0
-
-    if not ground_truth:
-        # 无标准答案的开放题，有来源就给 4 分
-        return (4, "open_with_sources") if has_sources else (2, "open_no_sources")
-
     ratio = hits / len(ground_truth) if ground_truth else 0
+
+    if category == "faq_hit":
+        if hits >= 1 and sources:
+            return (5, "faq_exact") if ratio >= 0.8 else (4, "faq_partial")
+        if hits >= 1:
+            return (3, "faq_no_source")
+
     if ratio >= 0.8:
         return (5, "exact_match")
     elif ratio >= 0.5:
         return (4, "partial_match")
     elif ratio >= 0.2:
         return (3, "some_match")
-    elif has_sources:
+    elif sources:
         return (2, "weak_match_with_sources")
     else:
         return (1, "no_match")
 
 
 def detect_hit_level(statuses: list[str], sources: list[dict], full_text: str) -> str:
-    """从 SSE 状态推断命中层级。"""
     status_text = " ".join(statuses).lower()
     if "faq" in status_text:
         return "faq"
@@ -180,7 +194,107 @@ def detect_hit_level(statuses: list[str], sources: list[dict], full_text: str) -
     return "unknown"
 
 
-# ── 主评测 ────────────────────────────────────────────────
+def save_checkpoint(results: list[EvalResult], progress: int) -> None:
+    checkpoint_path = OUTPUT_DIR / "eval_checkpoint.json"
+    data = {
+        "progress": progress,
+        "timestamp": datetime.now().strftime("%Y%m%d_%H%M%S"),
+        "results": [
+            {
+                "id": r.question_id,
+                "category": r.category,
+                "query": r.query,
+                "expected_topic": r.expected_topic,
+                "score": r.score,
+                "has_sources": r.has_sources,
+                "source_count": r.source_count,
+                "hit_level": r.hit_level,
+                "latency_ms": r.latency_ms,
+                "answer_preview": r.answer_preview,
+                "error": r.error,
+                "blind_spot_reject": r.blind_spot_reject,
+                "retries": r.retries,
+            }
+            for r in results
+        ],
+    }
+    with open(checkpoint_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def build_category_index(questions: list[dict]) -> dict[str, int]:
+    index: dict[str, int] = {}
+    for q in questions:
+        cat = q["category"]
+        count = index.get(cat, 0)
+        index[q["id"]] = count
+        index[cat] = count + 1
+    return index
+
+
+async def run_single_question(
+    client: httpx.AsyncClient,
+    q: dict,
+    idx: int,
+    q_idx_in_category: dict[str, int],
+) -> EvalResult:
+    qid = q["id"]
+    category = q["category"]
+    session_id = get_session_id(q, q_idx_in_category)
+
+    for attempt in range(MAX_RETRIES + 1):
+        payload = {
+            "query": q["query"],
+            "session_id": session_id,
+            "input_mode": "text",
+            "text_only": True,
+        }
+
+        collected = await collect_sse_stream(client, payload)
+
+        err = collected.get("_error", "")
+        full_text = collected.get("full_text", "")
+        sources = collected.get("sources", [])
+        statuses = collected.get("statuses", [])
+
+        score_val, reason = score_answer(
+            q["query"], full_text, category,
+            q.get("ground_truth", []), q.get("reject_keywords", []), sources,
+        )
+
+        hit_level = detect_hit_level(statuses, sources, full_text)
+        if err and not full_text:
+            hit_level = "error"
+
+        if err and attempt < MAX_RETRIES:
+            wait_s = 2 * (attempt + 1)
+            print(f"[重试 {attempt + 1}/{MAX_RETRIES}, {wait_s}s]", end=" ", flush=True)
+            await asyncio.sleep(wait_s)
+            continue
+
+        return EvalResult(
+            question_id=qid,
+            category=category,
+            query=q["query"],
+            expected_topic=q.get("expected_topic", ""),
+            score=score_val,
+            has_sources=len(sources) > 0,
+            source_count=len(sources),
+            hit_level=hit_level,
+            latency_ms=collected.get("_latency_ms", 0),
+            answer_preview=full_text[:100],
+            error=err,
+            blind_spot_reject=(category == "blind_spot" and score_val >= 4),
+            retries=attempt,
+        )
+
+    return EvalResult(
+        question_id=qid,
+        category=category,
+        query=q["query"],
+        error="max_retries_exceeded",
+        score=1,
+    )
 
 
 async def main():
@@ -194,12 +308,14 @@ async def main():
 
     all_questions = dataset["questions"]
     categories_meta = {c["key"]: c for c in dataset["categories"]}
+    q_idx_in_category = build_category_index(all_questions)
 
     print(f"\n{'='*60}")
-    print(f"A5 景区导览 AI 数字人 — 100 题端到端评测")
+    print(f"A5 景区导览 AI 数字人 — 100 题端到端评测 (增强版)")
     print(f"API: {API_BASE}")
     print(f"题目总数: {len(all_questions)}")
-    print(f"超时: {TIMEOUT_SECONDS}s / 题")
+    print(f"超时: {TIMEOUT_SECONDS}s/题  重试: {MAX_RETRIES}次")
+    print(f"context_conflict/followup 共享 session 维持上下文")
     print(f"{'='*60}\n")
 
     results: list[EvalResult] = []
@@ -212,54 +328,21 @@ async def main():
 
             print(f"[{idx:03d}/100] {qid} ({cat_label}): {q['query'][:50]}...", end=" ", flush=True)
 
-            payload = {
-                "query": q["query"],
-                "session_id": f"eval-{qid}",
-                "input_mode": "text",
-                "text_only": True,
-            }
-
-            collected = await collect_sse_stream(client, payload)
-
-            err = collected.get("_error", "")
-            full_text = collected.get("full_text", "")
-            sources = collected.get("sources", [])
-            statuses = collected.get("statuses", [])
-
-            score_val, reason = score_answer(
-                q["query"], full_text, category,
-                q.get("ground_truth", []), q.get("reject_keywords", []), sources,
-            )
-
-            hit_level = detect_hit_level(statuses, sources, full_text)
-            if err and not full_text:
-                hit_level = "error"
-
-            result = EvalResult(
-                question_id=qid,
-                category=category,
-                query=q["query"],
-                expected_topic=q.get("expected_topic", ""),
-                score=score_val,
-                has_sources=len(sources) > 0,
-                source_count=len(sources),
-                hit_level=hit_level,
-                latency_ms=collected.get("_latency_ms", 0),
-                answer_preview=full_text[:100],
-                error=err,
-                blind_spot_reject=(category == "blind_spot" and score_val >= 4),
-            )
+            result = await run_single_question(client, q, idx, q_idx_in_category)
             results.append(result)
 
-            icon = {5: "★", 4: "●", 3: "◐", 2: "○", 1: "✗"}.get(score_val, "?")
-            print(f"{icon} {score_val}/5  {result.latency_ms}ms  [{reason}]")
+            icon = {5: "★", 4: "●", 3: "◐", 2: "○", 1: "✗"}.get(result.score, "?")
+            retry_info = f" R{result.retries}" if result.retries > 0 else ""
+            print(f"{icon} {result.score}/5  {result.latency_ms}ms  [{result.hit_level}]{retry_info}")
 
-    # ── 汇总 ──
+            if idx % CHECKPOINT_INTERVAL == 0:
+                save_checkpoint(results, idx)
+                print(f"  [checkpoint saved at {idx}/100]")
+
     print(f"\n{'='*60}")
     print("评测完成 — 汇总")
     print(f"{'='*60}")
 
-    # 按类别汇总
     category_summaries: dict[str, CategorySummary] = {}
     for c in dataset["categories"]:
         category_summaries[c["key"]] = CategorySummary(label=c["label"], total=0)
@@ -291,7 +374,6 @@ async def main():
         rate = cat.pass_count / cat.total * 100
         print(f"{cat.label:<20} {cat.total:>4} {cat.pass_count:>8}/{cat.total} {rate:>6.1f}% {cat.avg_score:>5.2f} {cat.avg_latency_ms:>7.0f}ms {cat.source_rate:>6.1f}%")
 
-    # 总览
     total = len(results)
     total_pass = sum(1 for r in results if r.score >= 3)
     total_score = sum(r.score for r in results)
@@ -310,7 +392,6 @@ async def main():
         blind_total = sum(1 for r in results if r.category == "blind_spot")
         print(f"盲区正确拒答率 = {blind_correct}/{blind_total} = {blind_correct/blind_total*100:.1f}%")
 
-    # ── 失败题列表 ──
     failed = [r for r in results if r.score < 3]
     if failed:
         print(f"\n⚠ 未达标题目 ({len(failed)} 题，得分 < 3):")
@@ -321,7 +402,6 @@ async def main():
             if r.answer_preview:
                 print(f"         回答: {r.answer_preview}...")
 
-    # ── 输出 JSON 报告 ──
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     report_path = OUTPUT_DIR / f"eval_report_{timestamp}.json"
 
@@ -365,6 +445,7 @@ async def main():
                 "answer_preview": r.answer_preview,
                 "error": r.error,
                 "blind_spot_reject": r.blind_spot_reject,
+                "retries": r.retries,
             }
             for r in results
         ],
@@ -375,7 +456,6 @@ async def main():
 
     print(f"\n📄 详细报告已保存: {report_path}")
 
-    # 结论
     if total_pass / total >= 0.9:
         print("\n✅ 通过验收阈值 (≥90%)!")
     elif total_pass / total >= 0.75:

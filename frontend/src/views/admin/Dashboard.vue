@@ -54,7 +54,8 @@
       </article>
       <article class="chart-card">
         <div class="section-heading"><h2>问答趋势</h2><p>近 7 日游客 AI 问答交互量趋势</p></div>
-        <div ref="barChartRef" class="chart-box" aria-label="近七天问答量趋势柱状图" />
+        <el-empty v-if="trendEmpty" class="chart-empty" description="暂无趋势数据，请先积累问答日志" />
+        <div v-else ref="barChartRef" class="chart-box" aria-label="近七天问答量趋势柱状图" />
       </article>
     </section>
 
@@ -93,6 +94,10 @@ const errorMessage = ref("");
 const lastUpdatedAt = ref("");
 const trendDays = ref([]);
 const trendValues = ref([]);
+const trendEmpty = computed(() => {
+  if (!trendDays.value.length) return true;
+  return trendValues.value.every((v) => v === 0);
+});
 const numberFormatter = new Intl.NumberFormat("zh-CN");
 let pieChart = null;
 let barChart = null;
@@ -133,7 +138,7 @@ function renderPieChart() {
   }, true);
 }
 function renderBarChart() {
-  if (!barChartRef.value) return;
+  if (!barChartRef.value || trendEmpty.value) { barChart?.dispose(); barChart = null; return; }
   barChart ||= init(barChartRef.value);
   barChart.setOption({
     animationDuration: 700,
@@ -202,5 +207,5 @@ onBeforeUnmount(() => { resizeObserver?.disconnect(); window.removeEventListener
 .operation-table-wrap { margin-top: 14px; overflow-x: auto; }.operation-table { width: 100%; border-collapse: collapse; }.operation-table th { padding: 0 0 12px; color: #675a4e; font-family: monospace; font-size: 11px; letter-spacing: .1em; text-align: right; }.operation-table th:first-child { text-align: left; }.operation-table td { padding: 12px; border-top: 1px solid #e3d9cc; color: #241d16; font-size: 13px; text-align: right; white-space: nowrap; }.operation-table td:first-child { min-width: 180px; padding-left: 0; text-align: left; white-space: normal; }.operation-table td:first-child strong, .operation-table td:first-child span { display: block; }.operation-table td:first-child span { margin-top: 4px; color: #675a4e; font-size: 11px; }.operation-table td:nth-child(2) { font-weight: 700; }.operation-table td:nth-child(3) { color: #675a4e; }.operation-table td:last-child { padding-right: 0; }.operation-table b { display: inline-flex; align-items: center; min-height: 28px; padding: 0 9px; border-radius: 2px; background: rgba(47,163,99,.12); color: #248550; font-size: 12px; font-weight: 500; }.operation-table b i { width: 6px; height: 6px; margin-right: 5px; box-shadow: none; }
 @keyframes status-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(47,163,99,.35); } 50% { box-shadow: 0 0 0 6px rgba(47,163,99,0); } }
 @media (max-width: 900px) { .dashboard-hero, .rag-health { align-items: flex-start; flex-direction: column; }.rag-actions { margin-left: 0; }.chart-row { grid-template-columns: 1fr; } }
-@media (max-width: 640px) { .dashboard-layout { gap: 10px; }.stat-grid, .rag-metrics { grid-template-columns: 1fr; }.dashboard-hero, .rag-card, .chart-card, .operation-card { padding: 16px; }.hero-status { padding-top: 0; }.operation-table th:nth-child(3), .operation-table td:nth-child(3) { display: none; } }
+@media (max-width: 640px) { .dashboard-layout { gap: 10px; }.stat-grid, .rag-metrics { grid-template-columns: 1fr; }.dashboard-hero, .rag-card, .chart-card, .operation-card { padding: 16px; }.hero-status { padding-top: 0; flex-wrap: wrap; }.hero-status .refresh-button { white-space: normal; }.operation-table th:nth-child(3), .operation-table td:nth-child(3) { display: none; } }
 </style>

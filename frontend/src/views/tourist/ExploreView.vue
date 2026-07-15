@@ -5,12 +5,7 @@
       <div class="scenic-bg-overlay"></div>
     </div>
     <button type="button" class="back-btn" @click="handleBack">← 返回</button>
-    <div class="top-right"><span class="top-brand">{{ GUIDE_PERSONA.name }}</span>
-      <div class="top-status-row">
-        <span class="status-item"><span class="status-dot status-dot--ready"></span>人物模型</span>
-        <span class="status-item"><span class="status-dot status-dot--live"></span>景点探索</span>
-        <span class="status-item"><span class="status-dot status-dot--weather"></span>{{ chatStore.statusText }}</span>
-      </div>
+    <div class="top-right"><span class="top-brand">灵山智能导览系统</span>
     </div>
     <div class="tourist-stage">
       <div class="chat-center">
@@ -55,6 +50,11 @@
           <span v-if="navLevel==='level1'">探索工具</span>
           <span v-else-if="navLevel==='level2'">{{ navTitle }}</span>
           <span v-else>{{ navTitle }}</span>
+          <span class="right-card-head-status">
+            <span :class="['status-inline-dot', avatarReady ? 'status-inline-dot--ready' : 'status-inline-dot--loading']">数字人</span>
+            <span :class="['status-inline-dot', voiceReady ? 'status-inline-dot--ready' : 'status-inline-dot--loading']">语音</span>
+            <span :class="['status-inline-dot', replyStatusClass.replace('status-pill--','status-inline-dot--')]">回答</span>
+          </span>
         </div>
         <div class="right-card-body">
           <div :class="['level1-view',{hidden:navLevel!=='level1'}]">
@@ -259,6 +259,19 @@ const photoFile = ref(null);
 const analyzingPhoto = ref(false);
 const photoError = ref("");
 const visionResult = ref(null);
+
+const avatarReady = computed(() => !avatarError.value);
+const voiceReady = computed(() => true);
+const replyStatusClass = computed(() => {
+  if (chatStore.streaming) return 'status-pill--live';
+  if (avatarState.value === 'thinking') return 'status-pill--loading';
+  return 'status-pill--ready';
+});
+const replyStatusText = computed(() => {
+  if (chatStore.streaming) return '正在回答';
+  if (avatarState.value === 'thinking') return '思考中';
+  return '等待提问';
+});
 
 function handleAvatarLoaded() { avatarError.value = false; }
 function handleAvatarLoadError() { avatarError.value = true; }

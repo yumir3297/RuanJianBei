@@ -138,6 +138,28 @@ export function useAudioPlayer() {
     });
   }
 
+  function generateFrontendVisemeTimeline(text, totalDurationMs) {
+    const chars = [...text];
+    if (!chars.length || !totalDurationMs) return [];
+    const charDuration = totalDurationMs / chars.length;
+    const timeline = [];
+    for (let i = 0; i < chars.length; i++) {
+      const start = i * charDuration;
+      const end = (i + 1) * charDuration;
+      const ch = chars[i];
+      const isPunct = /[，。！？、；：""''（）《》【】\s,\.!\?;:'"()\[\]{}]/.test(ch);
+      const isOpen = /[啊哦呃衣乌鱼阿喔鹅依呜吁āáǎàōóǒòēéěèīíǐìūúǔùǖǘǚǜ]/.test(ch);
+      if (isPunct) {
+        timeline.push({ start, end, value: 0.02, form: 0.05 });
+      } else if (isOpen) {
+        timeline.push({ start, end, value: 0.75, form: 0.4 });
+      } else {
+        timeline.push({ start, end, value: 0.25, form: 0.12 });
+      }
+    }
+    return timeline;
+  }
+
   async function playSpeechSynthesis(text, durationMs, onProgress, playbackOptions = {}) {
     if (!speechSynthSupported) return 0;
     return new Promise((resolve) => {
@@ -150,11 +172,13 @@ export function useAudioPlayer() {
       const startTime = Date.now();
       const playbackRate = Math.min(Math.max(playbackOptions.rate || 1, 0.8), 1.5);
       const estimatedDuration = Math.max((durationMs || text.length * 180) / playbackRate, 800);
+      const visemeTimeline = generateFrontendVisemeTimeline(text, estimatedDuration);
       let progressTimer = null;
       const reportProgress = (p) => onProgress?.(
         Math.min(Math.max(p, 0), 1),
         Date.now() - startTime,
         estimatedDuration,
+        visemeTimeline,
       );
       const finish = (d) => { if (progressTimer) { clearInterval(progressTimer); progressTimer = null; } stopMouthLoop(); reportProgress(1); currentUtterance = null; resolve(d); };
       utterance.onstart = () => { reportProgress(0); progressTimer = setInterval(() => reportProgress((Date.now() - startTime) / estimatedDuration), 50); };

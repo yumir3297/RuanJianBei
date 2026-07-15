@@ -46,6 +46,7 @@
           :tabindex="i === activeIndex ? 0 : -1"
           @click="handleCardClick(svc)"
         >
+          <div class="card-accent-line" :style="{ background: svc.themeColor }"></div>
           <div class="card-heading">
             <span class="card-index">{{ padIndex(i) }}</span>
           </div>
@@ -132,24 +133,24 @@ function padIndex(i) {
 }
 
 function getCardWidth() {
-  if (typeof document === "undefined") return 360;
+  if (typeof document === "undefined") return 340;
   const cards = document.querySelectorAll(".feature-card");
-  if (!cards.length) return 360;
+  if (!cards.length) return 340;
   const { width } = getComputedStyle(cards[0]);
-  return parseFloat(width) || 360;
+  return parseFloat(width) || 340;
 }
 
 function cardTransform(i) {
   const cardW = getCardWidth();
-  const gap = cardW * 0.22;
+  const gap = cardW * 0.38;
   const dist = i - activeIndex.value;
   let tx = dist * (cardW + gap);
   if (isDragging.value) tx += dragDelta.value;
   const absD = Math.abs(dist);
   let scale;
   if (absD === 0) scale = 1;
-  else if (absD === 1) scale = 0.87;
-  else scale = 0.76;
+  else if (absD === 1) scale = 0.84;
+  else scale = 0.7;
   return `translate(-50%, -50%) translateX(${tx}px) scale(${scale})`;
 }
 
@@ -459,9 +460,9 @@ onBeforeUnmount(() => {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 480px;
-  min-height: 300px;
-  padding: 34px 36px 24px;
+  width: 340px;
+  min-height: 240px;
+  padding: 28px 30px 20px;
   border-radius: 12px;
   border: 1px solid rgba(232, 228, 219, 0.14);
   background: rgba(22, 20, 15, 0.94);
@@ -481,30 +482,41 @@ onBeforeUnmount(() => {
   text-align: left;
 }
 
+.card-accent-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--card-theme);
+  opacity: 0.55;
+  transition: opacity 0.48s ease, height 0.48s ease;
+}
+
 .card-heading {
   display: flex;
   align-items: center;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 .card-index {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 26px;
-  padding: 0 12px;
+  height: 22px;
+  padding: 0 10px;
   border-radius: 4px;
   background: color-mix(in srgb, var(--card-theme) 18%, transparent);
   color: var(--card-theme);
   font-family: "STKaiti", "KaiTi", "STSong", system-ui, sans-serif;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.06em;
   line-height: 1;
 }
 
 .card-title {
-  font-size: clamp(24px, 2vw, 32px);
+  font-size: clamp(20px, 1.8vw, 26px);
   font-weight: 700;
   letter-spacing: 0.06em;
   line-height: 1.2;
@@ -514,9 +526,9 @@ onBeforeUnmount(() => {
 
 .card-desc {
   min-height: 36px;
-  margin-top: 14px;
-  font-size: 16px;
-  line-height: 1.65;
+  margin-top: 12px;
+  font-size: 14px;
+  line-height: 1.6;
   color: rgba(232, 228, 219, 0.58);
   letter-spacing: 0.04em;
   transition: opacity 0.48s ease, color 0.48s ease;
@@ -527,22 +539,22 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: flex-end;
   margin-top: auto;
-  padding-top: 16px;
+  padding-top: 14px;
   border-top: 1px solid rgba(232, 228, 219, 0.1);
   transition: opacity 0.48s ease;
 }
 
 .card-arrow-hint {
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  min-height: 44px;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
   border-radius: 50%;
   border: 1px solid rgba(232, 228, 219, 0.18);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 17px;
+  font-size: 16px;
   color: rgba(232, 228, 219, 0.6);
   background: rgba(255, 250, 242, 0.05);
   transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), background 0.35s ease, border-color 0.35s ease;
@@ -596,7 +608,9 @@ onBeforeUnmount(() => {
   border-color: rgba(232, 228, 219, 0.34);
   box-shadow: 0 32px 64px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(232, 228, 219, 0.08);
 }
-
+.feature-card[data-level="0"]:hover .card-accent-line {
+  opacity: 0.85;
+}
 .feature-card[data-level="0"]:hover .card-arrow-hint {
   transform: translateX(4px);
   border-color: rgba(232, 228, 219, 0.44);
@@ -669,32 +683,33 @@ onBeforeUnmount(() => {
 
 @media (max-width: 1199px) and (min-width: 769px) {
   .feature-card {
-    width: 400px;
-    min-height: 240px;
-    padding: 28px 28px 20px;
+    width: 300px;
+    min-height: 210px;
+    padding: 24px 24px 18px;
   }
 
   .card-heading {
-    margin-bottom: 14px;
+    margin-bottom: 12px;
   }
 
   .card-title {
-    font-size: 22px;
+    font-size: 18px;
   }
 
   .card-desc {
-    font-size: 15px;
+    font-size: 13px;
   }
 
   .carousel-arrow {
-    width: 44px;
-    height: 44px;
-    font-size: 16px;
+    width: 40px;
+    height: 40px;
+    font-size: 15px;
   }
 
   .select-header {
     padding-top: 30px;
   }
+
 }
 
 @media (max-width: 768px) {
@@ -707,26 +722,26 @@ onBeforeUnmount(() => {
   }
 
   .feature-card {
-    width: min(88vw, 360px);
-    min-height: 220px;
-    padding: 24px 24px 18px;
+    width: min(80vw, 300px);
+    min-height: 200px;
+    padding: 20px 20px 16px;
     border-radius: 12px;
   }
 
   .card-heading {
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
 
   .card-title {
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .card-desc {
-    font-size: 15px;
+    font-size: 13px;
   }
 
   .card-footer {
-    padding-top: 12px;
+    padding-top: 10px;
   }
 
   .carousel-arrow {

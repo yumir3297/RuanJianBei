@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>数字人动作测试台</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, sans-serif;
+    background: #1a1612;
+    color: #f0ece5;
+    height: 100vh;
+    display: flex;
+  }
+  .canvas-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse 60% 50% at 50% 40%, rgba(26,22,18,0.3) 0%, #0d0b08 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  .canvas-wrapper {
+    width: min(380px, 38vw);
+    height: min(440px, 62vh);
+    position: relative;
+  }
+  .canvas-area canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; display: block; }
+  .status {
+    position: absolute;
+    top: 20px; left: 50%; transform: translateX(-50%);
+    padding: 6px 16px;
+    border-radius: 999px;
+    background: rgba(23,18,14,0.8);
+    border: 1px solid rgba(255,250,242,0.12);
+    font-size: 14px;
+    color: rgba(232,228,219,0.6);
+    letter-spacing: 0.04em;
+  }
+  .status.active { color: #d9a441; border-color: rgba(217,164,65,0.3); }
+  .panel {
+    width: 300px;
+    background: rgba(23,18,14,0.92);
+    border-left: 1px solid rgba(255,250,242,0.08);
+    padding: 16px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+  }
+  .panel h1 {
+    font-family: "STKaiti","KaiTi",serif;
+    font-size: 26px;
+    color: #f8e7bb;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+  }
+  .panel h2 {
+    font-size: 13px;
+    font-weight: 400;
+    color: rgba(232,228,219,0.4);
+    letter-spacing: 0.06em;
+  }
+  .model-select {
+    display: flex;
+    gap: 8px;
+  }
+  .model-select button {
+    flex: 1;
+    padding: 8px 0;
+    border: 1px solid rgba(232,228,219,0.12);
+    border-radius: 8px;
+    background: rgba(232,228,219,0.03);
+    color: rgba(232,228,219,0.55);
+    font-family: inherit;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .model-select button:hover { border-color: rgba(217,164,65,0.3); color: rgba(232,228,219,0.8); }
+  .model-select button.active { border-color: #d9a441; background: rgba(217,164,65,0.1); color: #d9a441; }
+  .motion-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .motion-btn {
+    padding: 14px 10px;
+    border: 1px solid rgba(232,228,219,0.1);
+    border-radius: 10px;
+    background: rgba(232,228,219,0.03);
+    color: rgba(232,228,219,0.75);
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .motion-btn:hover { background: rgba(217,164,65,0.06); border-color: rgba(217,164,65,0.25); }
+  .motion-btn.playing { border-color: #d9a441; background: rgba(217,164,65,0.12); color: #f8e7bb; }
+  .motion-btn .label { font-size: 16px; letter-spacing: 0.04em; }
+  .motion-btn .duration { font-size: 12px; color: rgba(232,228,219,0.3); }
+  .scale-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .scale-row label {
+    font-size: 13px;
+    color: rgba(232,228,219,0.45);
+    white-space: nowrap;
+  }
+  .scale-row input[type=range] { flex: 1; accent-color: #d9a441; }
+  .scale-row .val {
+    font-size: 13px;
+    color: #d9a441;
+    min-width: 32px;
+    text-align: right;
+  }
+  .info-row {
+    font-size: 12px;
+    color: rgba(232,228,219,0.3);
+    line-height: 1.6;
+  }
+  .divider {
+    height: 1px;
+    background: rgba(255,250,242,0.06);
+    margin: 4px 0;
+  }
+  .loading {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    color: rgba(232,228,219,0.5);
+    font-size: 16px;
+  }
+</style>
+</head>
+<body>
+
+<div class="canvas-area" id="canvasArea">
+  <div class="canvas-wrapper"></div>
+  <div class="loading" id="loadingMsg">加载模型中...</div>
+  <div class="status" id="statusBar">就绪</div>
+</div>
+
+<div class="panel">
+  <div>
+    <h1>动作测试台</h1>
+    <h2>Motion Preview — 支线测试</h2>
+  </div>
+  <div class="model-select">
+    <button data-model="hanfu" class="active" onclick="switchModel('hanfu')">清岚</button>
+    <button data-model="modern" onclick="switchModel('modern')">景行</button>
+    <button data-model="procedural" onclick="switchModel('procedural')">程序化</button>
+  </div>
+  <div class="info-row">程序化 = 几何体降级模型，无四肢骨骼</div>
+
+  <div class="divider"></div>
+
+  <div class="scale-row">
+    <label>动作幅度</label>
+    <input type="range" min="0.1" max="1.5" step="0.05" value="1" id="scaleSlider" oninput="updateScale()" />
+    <span class="val" id="scaleVal">1.00</span>
+  </div>
+  <div class="scale-row">
+    <label>动作速度</label>
+    <input type="range" min="0.2" max="2.0" step="0.05" value="1" id="speedSlider" oninput="updateSpeed()" />
+    <span class="val" id="speedVal">1.00</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="motion-grid" id="motionGrid">
+    <button class="motion-btn" data-motion="lean_in" onclick="playMotion('lean_in')">
+      <span class="label">侧耳倾听</span><span class="duration">3.0s</span>
+    </button>
+    <button class="motion-btn" data-motion="guide_narrate" onclick="playMotion('guide_narrate')">
+      <span class="label">导览讲解</span><span class="duration">3.0s</span>
+    </button>
+    <button class="motion-btn" data-motion="welcome_invite" onclick="playMotion('welcome_invite')">
+      <span class="label">侧身请进</span><span class="duration">3.2s</span>
+    </button>
+    <button class="motion-btn" data-motion="departure_pose" onclick="playMotion('departure_pose')">
+      <span class="label">出发</span><span class="duration">3.0s</span>
+    </button>
+    <button class="motion-btn" data-motion="clap" onclick="playMotion('clap')">
+      <span class="label">鼓掌</span><span class="duration">2.2s</span>
+    </button>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="info-row">
+    点击按钮即可预览动作。<br />
+    拖动滑块调整幅度/速度。<br />
+    切换角色看差异效果。
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.184.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.184.0/examples/jsm/",
+    "@pixiv/three-vrm": "https://unpkg.com/@pixiv/three-vrm@3.5.4/lib/three-vrm.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
+
+const MODEL_URLS = {
+  hanfu: "/models/hanfu.vrm",
+  modern: "/models/male-guide.vrm",
+  procedural: null,
+};
+
+const RUNNER_SPEED = 0.5; // fixed base speed
+
+const MOTION_TEMPLATES = {
+  lean_in: {
+    duration: 3000, blendIn: 350, blendOut: 400,
+    keyframes: [
+      { t: 0.0, head_x: 0, head_z: 0 },
+      { t: 0.25, head_x: -0.04, head_z: 0.1 },
+      { t: 0.35, head_x: -0.05, head_z: 0.12 },
+      { t: 0.45, head_x: -0.03, head_z: 0.08 },
+      { t: 0.55, head_x: -0.05, head_z: 0.11 },
+      { t: 0.65, head_x: -0.03, head_z: 0.09 },
+      { t: 1.0, head_x: 0, head_z: 0 },
+    ],
+  },
+  guide_narrate: {
+    duration: 3000, blendIn: 250, blendOut: 450,
+    keyframes: [
+      { t: 0.0, rua_y: 0, rua_z: 0.35, rla_y: 0, rla_z: 0, rh_z: 0, head_y: 0 },
+      { t: 0.35, rua_y: 0.4, rua_z: -0.2, rla_y: 0.2, rla_z: 0.05, rh_z: -0.1, head_y: 0.04 },
+      { t: 0.55, rua_y: 0.3, rua_z: -0.15, rla_y: 0.22, rla_z: -0.08, rh_z: -0.08, head_y: 0.02 },
+      { t: 0.7, rua_y: 0.32, rua_z: -0.18, rla_y: 0.2, rla_z: -0.12, rh_z: -0.1, head_y: -0.01 },
+      { t: 1.0, rua_y: 0, rua_z: 0.35, rla_y: 0, rla_z: 0, rh_z: 0, head_y: 0 },
+    ],
+  },
+  welcome_invite: {
+    duration: 3200, blendIn: 250, blendOut: 450,
+    keyframes: [
+      { t: 0.0, head_y: 0, rua_y: 0, rua_z: 0.35, rla_y: 0, rla_z: 0, rh_z: 0, lua_z: -0.35, group_y: 0 },
+      { t: 0.2, head_y: -0.05, rua_y: -0.13, rua_z: -0.1, rla_y: -0.08, rla_z: 0, rh_z: 0, lua_z: -0.42, group_y: -0.035 },
+      { t: 0.55, head_y: -0.05, rua_y: -0.21, rua_z: -0.07, rla_y: -0.18, rla_z: 0, rh_z: -0.07, lua_z: -0.46, group_y: -0.035 },
+      { t: 0.75, head_y: -0.05, rua_y: -0.21, rua_z: -0.07, rla_y: -0.18, rla_z: 0, rh_z: -0.07, lua_z: -0.46, group_y: -0.035 },
+      { t: 1.0, head_y: 0, rua_y: 0, rua_z: 0.35, rla_y: 0, rla_z: 0, rh_z: 0, lua_z: -0.35, group_y: 0 },
+    ],
+  },
+  departure_pose: {
+    duration: 3000, blendIn: 300, blendOut: 500,
+    keyframes: [
+      { t: 0.0, rua_y: 0, rua_z: 0.35, rla_x: 0, lua_y: 0, lua_z: -0.35, lla_x: 0, head_x: 0, head_y: 0 },
+      { t: 0.25, rua_y: 0.6, rua_z: -0.3, rla_x: -0.5, lua_y: 0, lua_z: -0.55, lla_x: -0.5, head_x: -0.04, head_y: 0.03 },
+      { t: 0.5, rua_y: 1.0, rua_z: -0.55, rla_x: -1.4, lua_y: 0, lua_z: -0.7, lla_x: -1.0, head_x: -0.06, head_y: 0.05 },
+      { t: 0.65, rua_y: 1.0, rua_z: -0.55, rla_x: -1.4, lua_y: 0, lua_z: -0.7, lla_x: -1.0, head_x: -0.06, head_y: 0.05 },
+      { t: 1.0, rua_y: 0, rua_z: 0.35, rla_x: 0, lua_y: 0, lua_z: -0.35, lla_x: 0, head_x: 0, head_y: 0 },
+    ],
+    expressions: [
+      { at: 0.55, name: "happy", value: 0.4 },
+      { at: 0.7, name: "happy", value: 0 },
+    ],
+  },
+  clap: {
+    duration: 2200, blendIn: 200, blendOut: 350,
+    keyframes: [
+      { t: 0.0, lua_z: -0.35, lua_y: 0, rua_z: 0.35, rua_y: 0, lla_x: 0, lla_z: 0, rla_x: 0, rla_z: 0, head_z: 0, head_x: 0 },
+      { t: 0.25, lua_z: -0.25, lua_y: -0.3, rua_z: 0.25, rua_y: -0.3, lla_x: -1.5, lla_z: 0.1, rla_x: 1.5, rla_z: -0.1, head_z: 0, head_x: -0.02 },
+      { t: 0.45, lua_z: -0.15, lua_y: -0.35, rua_z: 0.15, rua_y: -0.35, lla_x: -1.55, lla_z: -0.25, rla_x: 1.55, rla_z: 0.25, head_z: 0, head_x: -0.02 },
+      { t: 0.55, lua_z: -0.22, lua_y: -0.32, rua_z: 0.22, rua_y: -0.32, lla_x: -1.5, lla_z: 0.2, rla_x: 1.5, rla_z: -0.2, head_z: 0, head_x: -0.02 },
+      { t: 0.7, lua_z: -0.15, lua_y: -0.35, rua_z: 0.15, rua_y: -0.35, lla_x: -1.55, lla_z: -0.25, rla_x: 1.55, rla_z: 0.25, head_z: 0, head_x: -0.02 },
+      { t: 0.8, lua_z: -0.22, lua_y: -0.32, rua_z: 0.22, rua_y: -0.32, lla_x: -1.5, lla_z: 0.2, rla_x: 1.5, rla_z: -0.2, head_z: 0, head_x: -0.02 },
+      { t: 1.0, lua_z: -0.35, lua_y: 0, rua_z: 0.35, rua_y: 0, lla_x: 0, lla_z: 0, rla_x: 0, rla_z: 0, head_z: 0, head_x: 0 },
+    ],
+    expressions: [
+      { at: 0.3, name: "happy", value: 0.25 },
+      { at: 0.85, name: "happy", value: 0 },
+    ],
+  },
+};
+
+function lerpKeys(keys, t) {
+  if (keys.length === 0) return {};
+  if (t <= keys[0].t) return { ...keys[0] };
+  for (let i = keys.length - 1; i >= 0; i--) {
+    if (t >= keys[i].t) {
+      if (i === keys.length - 1) return { ...keys[i] };
+      const next = keys[i + 1];
+      const prev = keys[i];
+      const seg = next.t - prev.t;
+      const lt = seg > 0 ? (t - prev.t) / seg : 0;
+      const eased = lt < 0.5 ? 2 * lt * lt : 1 - Math.pow(-2 * lt + 2, 2) / 2;
+      const r = {};
+      for (const k of Object.keys(prev)) {
+        if (k === "t") continue;
+        r[k] = (prev[k] || 0) + ((next[k] || 0) - (prev[k] || 0)) * eased;
+      }
+      return r;
+    }
+  }
+  return { ...keys[0] };
+}
+
+const BONE_MAP = {
+  rua_x: "rightUpperArm", rua_y: "rightUpperArm", rua_z: "rightUpperArm",
+  lua_x: "leftUpperArm", lua_y: "leftUpperArm", lua_z: "leftUpperArm",
+  rla_x: "rightLowerArm", rla_y: "rightLowerArm", rla_z: "rightLowerArm",
+  lla_x: "leftLowerArm", lla_y: "leftLowerArm", lla_z: "leftLowerArm",
+  rh_x: "rightHand", rh_y: "rightHand", rh_z: "rightHand",
+  lh_x: "leftHand", lh_y: "leftHand", lh_z: "leftHand",
+  head_x: "head", head_y: "head", head_z: "head",
+  spine_x: "spine", spine_y: "spine", spine_z: "spine",
+  group_y: "__group_y",
+};
+
+// ---------------- Engine ----------------
+let renderer, scene, camera, vrm, avatarGroup, timer;
+let animId;
+let motion = null;
+let savedRest = null;
+let userScale = 1.0;
+let userSpeed = 1.0;
+let currentModel = "hanfu";
+const canvasArea = document.getElementById("canvasArea");
+
+function initRenderer() {
+  const wrapper = document.querySelector(".canvas-wrapper");
+  renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
+  wrapper.appendChild(renderer.domElement);
+
+  scene = new THREE.Scene();
+  scene.background = null;
+  camera = new THREE.PerspectiveCamera(28, 380 / 440, 0.5, 20);
+  camera.position.set(0, 0.72, 4.8);
+  camera.lookAt(0, 0.72, 0);
+
+  scene.add(new THREE.AmbientLight(0x404060, 0.6));
+  const key = new THREE.DirectionalLight(0xffeedd, 2.0);
+  key.position.set(3, 2, 5);
+  scene.add(key);
+  const fill = new THREE.DirectionalLight(0x8899cc, 0.7);
+  fill.position.set(-2, 0.5, 2);
+  scene.add(fill);
+  const rim = new THREE.PointLight(0xff9966, 1.5, 8);
+  rim.position.set(0, 2.5, -2);
+  scene.add(rim);
+
+  timer = new THREE.Timer();
+}
+
+function resize() {
+  if (!renderer || !camera) return;
+  const wrapper = document.querySelector(".canvas-wrapper");
+  if (!wrapper) return;
+  const w = wrapper.clientWidth;
+  const h = wrapper.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener("resize", resize);
+
+function saveRestPose() {
+  if (!vrm || !vrm.humanoid) return;
+  savedRest = {};
+  const bones = ["head","spine","rightUpperArm","leftUpperArm","rightLowerArm","leftLowerArm","rightHand","leftHand"];
+  for (const name of bones) {
+    const bone = vrm.humanoid.getNormalizedBoneNode(name);
+    if (bone) savedRest[name] = { x: bone.rotation.x, y: bone.rotation.y, z: bone.rotation.z };
+  }
+}
+
+function restoreRestPose() {
+  if (!vrm || !savedRest) return;
+  for (const [name, rot] of Object.entries(savedRest)) {
+    const bone = vrm.humanoid?.getNormalizedBoneNode(name);
+    if (bone) { bone.rotation.x = rot.x; bone.rotation.y = rot.y; bone.rotation.z = rot.z; }
+  }
+}
+
+function applyExpressions(template, progress) {
+  if (!vrm?.expressionManager || !template.expressions) return;
+  for (const exp of template.expressions) {
+    if (Math.abs(progress - exp.at) < 0.02) {
+      vrm.expressionManager.setValue(exp.name, THREE.MathUtils.clamp(exp.value, 0, 1));
+    }
+  }
+}
+
+function resetAllExpressions() {
+  if (!vrm?.expressionManager) return;
+  ["happy","angry","sad","relaxed","surprised","neutral","blink"].forEach(n => vrm.expressionManager.setValue(n, 0));
+}
+
+function applyMotionBones(keyframes, t, blend, scale) {
+  if (!savedRest) return;
+  const values = lerpKeys(keyframes, t);
+  const accum = {};
+  for (const [key, val] of Object.entries(values)) {
+    if (key === "t") continue;
+    const boneName = BONE_MAP[key];
+    if (!boneName) continue;
+    const parts = key.split("_");
+    if (parts.length !== 2) continue;
+    const axis = parts[1];
+    if (!accum[boneName]) accum[boneName] = { x: null, y: null, z: null };
+    accum[boneName][axis] = val * scale;
+  }
+  for (const [boneName, rot] of Object.entries(accum)) {
+    if (boneName === "__group_y") {
+      if (avatarGroup && rot.y !== null) {
+        const base = 0;
+        avatarGroup.rotation.y = base + (rot.y - base) * blend;
+      }
+      continue;
+    }
+    const bone = vrm?.humanoid?.getNormalizedBoneNode(boneName);
+    if (!bone) continue;
+    const rest = savedRest[boneName];
+    if (!rest) continue;
+    if (rot.x !== null) bone.rotation.x = rest.x + (rot.x - rest.x) * blend;
+    if (rot.y !== null) bone.rotation.y = rest.y + (rot.y - rest.y) * blend;
+    if (rot.z !== null) bone.rotation.z = rest.z + (rot.z - rest.z) * blend;
+  }
+}
+
+function startMotion(name) {
+  const template = MOTION_TEMPLATES[name];
+  if (!template) return;
+  if (currentModel === "procedural" && name !== "lean_in") {
+    setStatus("程序化模型无四肢骨骼，仅支持侧耳倾听");
+    return;
+  }
+  resetAllExpressions();
+  saveRestPose();
+  motion = {
+    name,
+    startTime: performance.now(),
+    duration: template.duration / userSpeed,
+    blendIn: template.blendIn / userSpeed,
+    blendOut: template.blendOut / userSpeed,
+    keyframes: template.keyframes,
+    expressions: template.expressions,
+  };
+  updateMotionButtons(name);
+}
+
+function playbackMotion() {
+  if (!motion) return;
+  const elapsed = performance.now() - motion.startTime;
+  const total = motion.duration;
+  const progress = Math.min(elapsed / total, 1);
+
+  let blend = 1;
+  const bi = motion.blendIn / total;
+  const bo = 1 - motion.blendOut / total;
+  if (progress < bi) blend = progress / bi;
+  else if (progress > bo) blend = (1 - progress) / (1 - bo);
+
+  if (progress >= 1) {
+    restoreRestPose();
+    if (avatarGroup) avatarGroup.rotation.y = 0;
+    resetAllExpressions();
+    setStatus("就绪");
+    motion = null;
+    updateMotionButtons(null);
+    return;
+  }
+
+  applyMotionBones(motion.keyframes, progress, blend, userScale);
+  applyExpressions(motion, progress);
+  setStatus(`播放中: ${motion.name} — ${Math.round(progress * 100)}%`, true);
+}
+
+function animate() {
+  animId = requestAnimationFrame(animate);
+  timer.update();
+  const dt = Math.min(timer.getDelta(), 0.1);
+  playbackMotion();
+  vrm?.update(dt);
+  renderer.render(scene, camera);
+}
+
+function setStatus(msg, active = false) {
+  const bar = document.getElementById("statusBar");
+  bar.textContent = msg;
+  bar.className = active ? "status active" : "status";
+}
+
+function updateMotionButtons(activeName) {
+  document.querySelectorAll(".motion-btn").forEach(btn => {
+    btn.classList.toggle("playing", btn.dataset.motion === activeName);
+  });
+}
+
+let isLoading = false;
+
+// ---------------- Model Loading ----------------
+async function loadVRM(url) {
+  if (isLoading) return;
+  isLoading = true;
+
+  resetAllExpressions();
+  motion = null;
+  savedRest = null;
+  updateMotionButtons(null);
+  setStatus("加载中...", false);
+  const loadingMsg = document.getElementById("loadingMsg");
+  if (loadingMsg) loadingMsg.style.display = "block";
+
+  if (avatarGroup) {
+    scene.remove(avatarGroup);
+    avatarGroup.traverse(node => {
+      if (node.isMesh) {
+        node.geometry?.dispose();
+        const mats = Array.isArray(node.material) ? node.material : [node.material];
+        mats.forEach(m => { Object.values(m).forEach(v => { if (v?.isTexture) v.dispose(); }); m.dispose?.(); });
+      }
+    });
+    avatarGroup = null;
+  }
+  vrm = null;
+  savedRest = null;
+
+  if (!url) {
+    avatarGroup = new THREE.Group();
+    scene.add(avatarGroup);
+    if (loadingMsg) loadingMsg.style.display = "none";
+    setStatus("程序化模式 — 无动作骨骼");
+    isLoading = false;
+    return;
+  }
+
+  const loader = new GLTFLoader();
+  loader.register(parser => new VRMLoaderPlugin(parser));
+  const gltf = await loader.loadAsync(url);
+  const model = gltf.userData.vrm;
+  if (!model) throw new Error("无VRM数据");
+
+  VRMUtils.rotateVRM0(model);
+  VRMUtils.removeUnnecessaryVertices(model.scene);
+
+  const box = new THREE.Box3().setFromObject(model.scene);
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  const scaleVal = 3.9 / Math.max(size.y, 0.001);
+  model.scene.scale.setScalar(scaleVal);
+  const center = new THREE.Vector3();
+  box.setFromObject(model.scene).getCenter(center);
+  model.scene.position.x -= center.x;
+  model.scene.position.y += -box.min.y - 1.9;
+
+  avatarGroup = new THREE.Group();
+  avatarGroup.add(model.scene);
+  scene.add(avatarGroup);
+
+  vrm = model;
+  if (loadingMsg) loadingMsg.style.display = "none";
+  setStatus("就绪");
+
+  const humanoid = model.humanoid;
+  if (humanoid) {
+    const lua = humanoid.getNormalizedBoneNode("leftUpperArm");
+    const rua = humanoid.getNormalizedBoneNode("rightUpperArm");
+    const lla = humanoid.getNormalizedBoneNode("leftLowerArm");
+    const rla = humanoid.getNormalizedBoneNode("rightLowerArm");
+    if (lua) { lua.rotation.x = 0; lua.rotation.y = 0; lua.rotation.z = -0.35; }
+    if (rua) { rua.rotation.x = 0; rua.rotation.y = 0; rua.rotation.z = 0.35; }
+    if (lla) { lla.rotation.x = 0; lla.rotation.y = 0; lla.rotation.z = 0; }
+    if (rla) { rla.rotation.x = 0; rla.rotation.y = 0; rla.rotation.z = 0; }
+  }
+
+  model.springBoneManager?.reset();
+  model.update(0);
+  saveRestPose();
+  isLoading = false;
+}
+
+async function switchModel(key) {
+  if (isLoading || currentModel === key) return;
+  currentModel = key;
+  document.querySelectorAll(".model-select button").forEach(b => b.classList.toggle("active", b.dataset.model === key));
+  await loadVRM(MODEL_URLS[key]);
+}
+
+// ---------------- UI Bindings ----------------
+window.switchModel = switchModel;
+
+window.playMotion = (name) => {
+  if (motion && motion.name === name) return;
+  if (motion) { restoreRestPose(); if (avatarGroup) avatarGroup.rotation.y = 0; resetAllExpressions(); }
+  startMotion(name);
+};
+
+window.updateScale = () => {
+  userScale = parseFloat(document.getElementById("scaleSlider").value);
+  document.getElementById("scaleVal").textContent = userScale.toFixed(2);
+};
+
+window.updateSpeed = () => {
+  userSpeed = parseFloat(document.getElementById("speedSlider").value);
+  document.getElementById("speedVal").textContent = userSpeed.toFixed(2);
+};
+
+// ---------------- Init ----------------
+initRenderer();
+resize();
+animate();
+await loadVRM("/models/hanfu.vrm");
+</script>
+</body>
+</html>

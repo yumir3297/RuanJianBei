@@ -10,7 +10,7 @@ export const GUIDE_PERSONA = {
   },
 };
 
-const STATES = ["idle", "listening", "thinking", "speaking", "happy", "apology"];
+const STATES = ["idle", "listening", "thinking", "speaking", "happy", "apology", "guide"];
 
 export function useAvatar() {
   const currentState = ref("idle");
@@ -38,10 +38,18 @@ export function useAvatar() {
         setState("apology");
         return;
       }
+      if (payload.emotion === "speaking") {
+        setState("speaking");
+        return;
+      }
+      if (payload.emotion === "guide") {
+        setState("guide");
+        return;
+      }
     }
     if (payload.viseme_text !== undefined) {
       currentViseme.value = payload.viseme_text || "";
-      if (currentState.value !== "happy" && currentState.value !== "apology") {
+      if (currentState.value !== "happy" && currentState.value !== "apology" && currentState.value !== "guide") {
         setState("speaking");
       }
     }

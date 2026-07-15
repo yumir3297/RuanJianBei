@@ -28,6 +28,9 @@ const props = defineProps({
   speechElapsedMs: { type: Number, default: 0 },
   speechDurationMs: { type: Number, default: 0 },
   speechSyncActive: { type: Boolean, default: false },
+  waving: { type: Boolean, default: false },
+  cameraOffsetY: { type: Number, default: 0 },
+  avatarState: { type: String, default: "idle" },
 });
 const emit = defineEmits(["loaded", "error"]);
 
@@ -58,6 +61,7 @@ const VRM_EMOTION_EXPRESSIONS = [
   "surprised",
   "neutral",
 ];
+
 
 function normalizeLoadedAvatar(modelRoot) {
   const initialBox = new THREE.Box3().setFromObject(modelRoot);
@@ -434,6 +438,32 @@ function animate() {
     avatarParts.mouth.scale.z = 1 + mouthForm * 0.05;
   }
 
+  // Waving animation
+  if (props.waving && avatarParts.__avatarKind === "vrm") {
+    const humanoid = avatarParts.__vrm?.humanoid;
+    const rightUpperArm = humanoid?.getNormalizedBoneNode("rightUpperArm");
+    const rightLowerArm = humanoid?.getNormalizedBoneNode("rightLowerArm");
+    const rightHand = humanoid?.getNormalizedBoneNode("rightHand");
+
+    const waveSpeed = 6.0;
+    const waveAngle = Math.sin(t * waveSpeed) * 0.55;
+
+    if (rightUpperArm) {
+      rightUpperArm.rotation.x = -1.55;
+      rightUpperArm.rotation.y = 0.0;
+      rightUpperArm.rotation.z = 0.0;
+    }
+    if (rightLowerArm) {
+      rightLowerArm.rotation.x = 1.55;
+      rightLowerArm.rotation.y = 0.0;
+      rightLowerArm.rotation.z = waveAngle;
+    }
+    if (rightHand) {
+      rightHand.rotation.z = waveAngle * 0.7;
+      rightHand.rotation.y = 0.0;
+    }
+  }
+
   // Head idle sway
   const swayX = Math.sin(t * 0.7) * 0.03;
   const swayY = Math.sin(t * 0.5) * 0.02;
@@ -442,6 +472,10 @@ function animate() {
   if (lookAtTarget) {
     lookAtTarget.position.x = Math.sin(t * 0.28) * 0.18;
     lookAtTarget.position.y = 0.92 + Math.sin(t * 0.19) * 0.08;
+  }
+
+  if (props.avatarState === "thinking") {
+    avatarParts.group.rotation.z = Math.sin(t * 0.45) * 0.05;
   }
 
   // Blink
@@ -464,9 +498,15 @@ function animate() {
           blinkingAvatar.rightEye.scale.y = 1;
         }
       }
-    }, 100);
+    }, 150);
     blinkTimer = 0;
-    nextBlink = 2 + Math.random() * 3;
+    if (props.avatarState === "listening") {
+      nextBlink = 1 + Math.random() * 2;
+    } else if (props.avatarState === "thinking") {
+      nextBlink = 3 + Math.random() * 3;
+    } else {
+      nextBlink = 2 + Math.random() * 3;
+    }
   }
 
   // Pupil look
@@ -519,9 +559,9 @@ onMounted(() => {
     renderer.toneMappingExposure = 1.05;
     renderer.shadowMap.enabled = true;
 
-    camera = new THREE.PerspectiveCamera(28, width / height, 0.5, 20);
-    camera.position.set(0, 0.72, 4.8);
-    camera.lookAt(0, 0.72, 0);
+    camera = new THREE.PerspectiveCamera(28, width / height, 0.8, 20);
+    camera.position.set(0, 1.0 + props.cameraOffsetY, 4.8);
+    camera.lookAt(0, 1.0 + props.cameraOffsetY, 0);
 
     buildScene();
     animate();

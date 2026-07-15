@@ -67,6 +67,7 @@ class Settings(BaseSettings):
     asr_timeout_seconds: float = Field(default=30.0, gt=0.0, le=180.0)
     asr_poll_interval_seconds: float = Field(default=0.8, gt=0.0, le=10.0)
     asr_max_audio_bytes: int = Field(default=10 * 1024 * 1024, ge=1024, le=50 * 1024 * 1024)
+    asr_hotwords: str = Field(default="灵山大佛,九龙灌浴,灵山梵宫,五印坛城,祥符禅寺,拈花堂,百子戏弥勒,阿育王柱,降魔浮雕,菩提大道,佛足坛,五智门,五明桥,五灯湖,曼飞龙塔,梵天花海,无尽意斋,香月花街,鹿鸣谷,大照壁")
     ui_asset_upload_dir: str = Field(default="../.uploads/ui-assets")
     ui_asset_manifest_path: str = Field(default="../.config/display_assets.json")
     ui_asset_max_image_bytes: int = Field(default=8 * 1024 * 1024, ge=1024, le=20 * 1024 * 1024)
@@ -78,7 +79,17 @@ class Settings(BaseSettings):
     tts_model: str = Field(default="cosyvoice-v3-flash")
     tts_voice: str = Field(default="longwan_v3")
     tts_timeout_seconds: float = Field(default=30.0, gt=0.0, le=120.0)
+    live_data_provider: str = Field(default="mock")
+    live_data_mock_weather: str = Field(default="晴")
+    live_data_mock_temperature: str = Field(default="22-28°C")
+    live_data_mock_crowd_level: str = Field(default="中等")
+    coze_enabled: bool = Field(default=False)
+    coze_run_url: str = Field(default="")
+    coze_token: str = Field(default="")
+    coze_timeout_seconds: float = Field(default=12.0, gt=0.0, le=60.0)
     cors_origins: str = Field(default="http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://localhost:5175")
+    admin_password: str = Field(default="admin123")
+    admin_token_secret: str = Field(default="a5-scenic-admin-secret-key")
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -5,12 +5,7 @@
       <div class="scenic-bg-overlay"></div>
     </div>
     <button type="button" class="back-btn" @click="handleBack">← 返回</button>
-    <div class="top-right"><span class="top-brand">{{ GUIDE_PERSONA.name }}</span>
-      <div class="top-status-row">
-        <span class="status-item"><span class="status-dot status-dot--ready"></span>人物模型</span>
-        <span class="status-item"><span class="status-dot status-dot--live"></span>路线规划</span>
-        <span class="status-item"><span class="status-dot status-dot--weather"></span>{{ chatStore.statusText }}</span>
-      </div>
+    <div class="top-right"><span class="top-brand">灵山智能导览系统</span>
     </div>
     <div class="tourist-stage">
       <div class="chat-center">
@@ -51,7 +46,14 @@
         </div>
       </aside>
       <aside class="right-card">
-        <div class="right-card-head">路线规划</div>
+        <div class="right-card-head">
+          <span>路线规划</span>
+          <span class="right-card-head-status">
+            <span :class="['status-inline-dot', avatarReady ? 'status-inline-dot--ready' : 'status-inline-dot--loading']">数字人</span>
+            <span :class="['status-inline-dot', voiceReady ? 'status-inline-dot--ready' : 'status-inline-dot--loading']">语音</span>
+            <span :class="['status-inline-dot', replyStatusClass.replace('status-pill--','status-inline-dot--')]">回答</span>
+          </span>
+        </div>
         <div class="right-card-body">
           <div :class="['level1-view', { hidden: currentLevel !== 1 }]">
             <div class="service-grid">
@@ -152,7 +154,7 @@ const PRESET_ROUTES = [
     duration_label: "6小时深度游",
     tags: ["历史文化", "深度体验", "佛教艺术"],
     spots: ["南门入园", "灵山大照壁（华夏第一壁）", "胜境广场", "佛手广场（天下第一掌）", "祥符禅寺（千年古刹历史讲解）", "杏坛广场", "佛前广场", "灵山大佛（佛教造像艺术解析）", "灵山梵宫（佛教艺术殿堂深度游）", "五印坛城（藏传佛教文化体验）", "三圣殿（佛教历史文化展示）", "出口"],
-    guide: "灵山大照壁全长39.8米，最高处7米，由深浮雕花岗石拼块贴面而成，中间是一幅以"灵山胜境"为主题的大型浮雕。祥符禅寺重点讲解玄奘法师与"小灵山"的渊源，古井与银杏的历史故事，江南第一钟的文化意义。灵山大佛解析佛像手印的佛教含义，216级台阶的文化寓意（108烦恼与108愿望），青铜铸造工艺的历史与现代科技的结合。",
+    guide: "灵山大照壁全长39.8米，最高处7米，由深浮雕花岗石拼块贴面而成，中间是一幅以\u201C灵山胜境\u201D为主题的大型浮雕。祥符禅寺重点讲解玄奘法师与\u201C小灵山\u201D的渊源，古井与银杏的历史故事，江南第一钟的文化意义。灵山大佛解析佛像手印的佛教含义，216级台阶的文化寓意（108烦恼与108愿望），青铜铸造工艺的历史与现代科技的结合。",
     features: "在祥符禅寺参与撞钟祈福，聆听12.8吨重的江南第一钟敲响，感受佛教文化的庄严与神圣。在梵宫欣赏《吉祥颂》演出，体验全息投影、水雾等现代科技与佛教文化的完美融合。"
   },
   {
@@ -171,9 +173,9 @@ const PRESET_ROUTES = [
     category: "官方推荐",
     duration_label: "4小时轻松游",
     tags: ["亲子互动", "轻松体验", "寓教于乐"],
-    spots: ["南门入园", "九龙灌浴（观赏动态表演）", "佛手广场（摸"天下第一掌"）", "百子戏弥勒（亲子互动）", "梵宫（欣赏艺术作品）", "五印坛城（体验藏式文化）", "出口"],
-    guide: "九龙灌浴用生动语言讲述释迦牟尼诞生的故事，让孩子理解佛教文化中的慈悲精神，解释"九龙吐水"的传说与"花开见佛"的仪式感。百子戏弥勒介绍雕塑中孩童的不同形态，引导孩子感受"皆大欢喜"的生活态度。梵宫简化艺术术语，重点介绍色彩、造型等直观元素，激发孩子的艺术兴趣。",
-    features: "参与"抱佛脚"亲子活动，让孩子在家长的陪伴下登顶大佛，感受大佛的宏伟气势，培养勇气与探索精神。在梵宫圣坛观看互动表演《吉祥颂》，通过全息投影、水雾等现代科技，让孩子直观感受佛陀修行成佛的故事。"
+    spots: ["南门入园", "九龙灌浴（观赏动态表演）", "佛手广场（摸\u201C天下第一掌\u201D）", "百子戏弥勒（亲子互动）", "梵宫（欣赏艺术作品）", "五印坛城（体验藏式文化）", "出口"],
+    guide: "九龙灌浴用生动语言讲述释迦牟尼诞生的故事，让孩子理解佛教文化中的慈悲精神，解释\u201C九龙吐水\u201D的传说与\u201C花开见佛\u201D的仪式感。百子戏弥勒介绍雕塑中孩童的不同形态，引导孩子感受\u201C皆大欢喜\u201D的生活态度。梵宫简化艺术术语，重点介绍色彩、造型等直观元素，激发孩子的艺术兴趣。",
+    features: "参与\u201C抱佛脚\u201D亲子活动，让孩子在家长的陪伴下登顶大佛，感受大佛的宏伟气势，培养勇气与探索精神。在梵宫圣坛观看互动表演《吉祥颂》，通过全息投影、水雾等现代科技，让孩子直观感受佛陀修行成佛的故事。"
   },
   {
     id: "quick-tour",
@@ -261,6 +263,19 @@ const activeAudioSegments = ref(0);
 const visemeTimeline = ref(null);
 
 const currentLevel = ref(1);
+
+const avatarReady = computed(() => !avatarError.value);
+const voiceReady = computed(() => true);
+const replyStatusClass = computed(() => {
+  if (chatStore.streaming) return 'status-pill--live';
+  if (avatarState.value === 'thinking') return 'status-pill--loading';
+  return 'status-pill--ready';
+});
+const replyStatusText = computed(() => {
+  if (chatStore.streaming) return '正在回答';
+  if (avatarState.value === 'thinking') return '思考中';
+  return '等待提问';
+});
 const currentCategory = ref("官方推荐");
 const selectedRoute = ref(null);
 
