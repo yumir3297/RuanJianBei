@@ -1,0 +1,121 @@
+## 📥 工作流输入 JSON 示例
+
+```json
+{
+  "question": "我想带家人一起游览，大概2个小时，想轻松一点，不要太累",
+  
+  "visitor_profile_json": "{\"companions\": \"家人（2大1小，孩子5岁）\", \"duration\": \"2小时\", \"pace\": \"轻松\", \"preferences\": [\"文化体验\", \"亲子互动\", \"拍照打卡\"], \"mobility\": \"正常\", \"budget\": \"中等\"}",
+  
+  "route_candidates_json": "{\"routes\": [{\"id\": \"route_001\", \"name\": \"经典游览线\", \"duration\": \"2-3小时\", \"difficulty\": \"中等\", \"stops\": [{\"attraction_id\": \"attraction_001\", \"name\": \"灵山大佛\", \"duration\": \"60分钟\", \"type\": \"文化景点\", \"suitable_for\": [\"全年龄段\"]}, {\"attraction_id\": \"attraction_002\", \"name\": \"梵宫\", \"duration\": \"40分钟\", \"type\": \"文化体验\", \"suitable_for\": [\"全年龄段\"]}, {\"attraction_id\": \"attraction_003\", \"name\": \"五印坛城\", \"duration\": \"30分钟\", \"type\": \"文化景点\", \"suitable_for\": [\"全年龄段\"]}]}, {\"id\": \"route_002\", \"name\": \"精华游览线\", \"duration\": \"1.5-2小时\", \"difficulty\": \"轻松\", \"stops\": [{\"attraction_id\": \"attraction_001\", \"name\": \"灵山大佛\", \"duration\": \"50分钟\", \"type\": \"文化景点\", \"suitable_for\": [\"全年龄段\"]}, {\"attraction_id\": \"attraction_002\", \"name\": \"梵宫\", \"duration\": \"40分钟\", \"type\": \"文化体验\", \"suitable_for\": [\"全年龄段\"]}]}]}",
+  
+  "live_context_json": "{\"is_mock\": false, \"weather\": {\"condition\": \"晴\", \"temperature\": \"22-28°C\", \"humidity\": \"65%\", \"wind\": \"微风\", \"suggestion\": \"适合户外游览，注意防晒\"}, \"visitor_flow\": {\"level\": \"中等\", \"peak_hours\": [\"10:00-11:30\", \"14:00-15:30\"], \"suggestion\": \"建议错峰游览梵宫，避开人流高峰\"}, \"attractions_status\": [{\"attraction_id\": \"attraction_001\", \"name\": \"灵山大佛\", \"status\": \"开放\", \"opening_hours\": \"08:00-17:30\", \"note\": \"正常开放\"}, {\"attraction_id\": \"attraction_002\", \"name\": \"梵宫\", \"status\": \"开放\", \"opening_hours\": \"09:00-17:00\", \"note\": \"建议错峰游览\"}, {\"attraction_id\": \"attraction_003\", \"name\": \"五印坛城\", \"status\": \"维护中\", \"opening_hours\": \"暂停开放\", \"note\": \"预计16:00恢复开放\"}], \"special_events\": [{\"event_id\": \"event_001\", \"name\": \"吉祥颂表演\", \"time\": \"10:00, 14:00, 16:00\", \"location\": \"梵宫\", \"duration\": \"20分钟\"}], \"timestamp\": \"2025-06-17T14:30:00+08:00\"}",
+  
+  "allowed_attraction_ids_json": "[\"attraction_001\", \"attraction_002\", \"attraction_003\"]"
+}
+```
+
+---
+
+## 📤 工作流输出 JSON 示例
+
+```json
+{
+  "result_json": "{\"answer\": \"为您和2大1小的家人推荐这条轻松亲子文化游览路线：\\n\\n📍 第1站：灵山大佛（attraction_001）\\n   建议停留50分钟，可以带孩子近距离感受大佛文化，轻松游览，拍照打卡。\\n\\n📍 第2站：梵宫（attraction_002）\\n   建议停留40分钟，体验特色佛教文化艺术，还可以观看14:00的吉祥颂表演（20分钟）。\\n\\n全程总时长约1.5-2小时，节奏轻松，符合您的需求。\\n\\n温馨提示：\\n• 当前天气晴，温度22-28°C，适合户外游览，注意防晒\\n• 景区客流中等，建议错峰游览梵宫\\n• 五印坛城目前暂停开放，所以不安排前往\\n• 记得观看14:00的吉祥颂表演哦！\", \"route_stops\": [{\"attraction_id\": \"attraction_001\", \"name\": \"灵山大佛\", \"reason\": \"文化地标，适合全年龄段，游览时间适中，符合轻松节奏需求\", \"suggested_duration\": \"50分钟\", \"highlights\": [\"大佛文化体验\", \"亲子互动\", \"拍照打卡\"]}, {\"attraction_id\": \"attraction_002\", \"name\": \"梵宫\", \"reason\": \"文化体验丰富，有吉祥颂表演，适合亲子游览，游览时间40分钟符合轻松节奏\", \"suggested_duration\": \"40分钟\", \"highlights\": [\"佛教文化艺术\", \"吉祥颂表演\", \"室内游览\"]}], \"adjustments\": [\"因五印坛城暂停开放，从经典游览线调整为精华游览线\", \"考虑游客偏好轻松节奏，减少景点数量\", \"根据客流情况，建议错峰游览梵宫\", \"结合天气情况，提醒防晒和补水\"], \"sources\": [\"官方路线候选：route_002（精华游览线）\", \"实时上下文：天气、客流、景点开放状态\"], \"warning\": \"\", \"live_data_timestamp\": \"2025-06-17T14:30:00+08:00\"}"
+}
+```
+
+---
+
+## 🔍 关键字段说明
+
+### 输入字段
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `question` | string | 用户原始问题 |
+| `visitor_profile_json` | string | 游客偏好 JSON 字符串 |
+| `route_candidates_json` | string | 官方路线候选 JSON 字符串 |
+| `live_context_json` | string | 实时上下文 JSON 字符串 |
+| `allowed_attraction_ids_json` | string | 允许推荐的景点 ID 数组 JSON 字符串 |
+
+### 输出字段（在 result_json 中）
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `answer` | string | 给游客看的路线建议（亲切、清晰） |
+| `route_stops` | array | 推荐的路线站点列表 |
+| `route_stops[].attraction_id` | string | **景点 ID**（必须来自 allowed_attraction_ids_json） |
+| `route_stops[].reason` | string | **选择此景点的理由** |
+| `route_stops[].suggested_duration` | string | 建议停留时间 |
+| `route_stops[].highlights` | array | 景点亮点 |
+| `adjustments` | array | 基于实时数据做出的调整说明 |
+| `sources` | array | 数据来源说明 |
+| `warning` | string | 警告信息（如有） |
+| `live_data_timestamp` | string | **实时数据时间戳** |
+
+---
+
+## 🎯 重点字段示例
+
+### 路线站点（route_stops）
+```json
+{
+  "attraction_id": "attraction_001",
+  "name": "灵山大佛",
+  "reason": "文化地标，适合全年龄段，游览时间适中，符合轻松节奏需求",
+  "suggested_duration": "50分钟",
+  "highlights": ["大佛文化体验", "亲子互动", "拍照打卡"]
+}
+```
+
+### 实时数据字段（live_context_json 中）
+```json
+{
+  "is_mock": false,
+  "weather": {
+    "condition": "晴",
+    "temperature": "22-28°C",
+    "suggestion": "适合户外游览，注意防晒"
+  },
+  "visitor_flow": {
+    "level": "中等",
+    "suggestion": "建议错峰游览梵宫"
+  },
+  "attractions_status": [
+    {
+      "attraction_id": "attraction_001",
+      "status": "开放",
+      "note": "正常开放"
+    }
+  ],
+  "timestamp": "2025-06-17T14:30:00+08:00"
+}
+```
+
+---
+
+## ⚠️ 重要约束
+
+1. **景点 ID 约束**：`route_stops[].attraction_id` 必须来自 `allowed_attraction_ids_json`
+2. **演示数据标记**：当 `live_context_json.is_mock` 为 `true` 时，输出会标注"演示模拟数据"
+3. **JSON 格式**：所有输入参数都是**字符串格式**的 JSON
+4. **输出格式**：`result_json` 是字符串格式的 JSON，需要解析后使用
+用户要求我提供 Coze 工作流的输入输出 JSON 示例，特别关注：
+1. 路线站点 ID
+2. 理由
+3. 实时数据字段
+
+我需要基于之前创建的工作流，提供清晰的输入输出示例。
+
+**输入参数（5个字符串）：**
+1. question - 用户原始问题
+2. visitor_profile_json - 游客偏好 JSON
+3. route_candidates_json - 官方路线候选 JSON
+4. live_context_json - 天气、客流、开放状态 JSON
+5. allowed_attraction_ids_json - 允许推荐的景点 ID 数组 JSON
+
+**输出：**
+- result_json - 包含路线建议的 JSON 字符串
+
+让我提供详细的、符合实际使用场景的示例。
+请只给我Coze 工作流的输入输出 JSON 示例，尤其是路线站点 ID、理由、实时数据字段。

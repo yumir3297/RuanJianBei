@@ -63,7 +63,7 @@
 <script setup>
 import { computed } from "vue";
 import { RouterLink, RouterView, useRoute, useRouter } from "vue-router";
-import { DataLine, Document, Warning, Monitor, UserFilled, PictureFilled, ArrowLeft } from "@element-plus/icons-vue";
+import { DataLine, Document, Warning, Monitor, UserFilled, PictureFilled, ArrowLeft, TrendCharts } from "@element-plus/icons-vue";
 import { useAuthStore } from "./stores/auth";
 
 const route = useRoute();
@@ -79,6 +79,7 @@ const adminLinks = [
   { path: "/admin/knowledge", label: "知识管理", icon: Document },
   { path: "/admin/blind-spots", label: "知识盲区", icon: Warning },
   { path: "/admin/analytics", label: "数据大屏", icon: Monitor },
+  { path: "/admin/experience-report", label: "感受度报告", icon: TrendCharts },
   { path: "/admin/avatar", label: "数字人配置", icon: UserFilled },
   { path: "/admin/assets", label: "资源替换", icon: PictureFilled },
 ];

@@ -4,10 +4,28 @@ import json
 from dataclasses import dataclass
 
 import httpx
+from pydantic import BaseModel, Field, ValidationError
 
 
 class CozeRoutePlannerError(RuntimeError):
     pass
+
+
+class CozeRouteStop(BaseModel):
+    attraction_id: str = Field(min_length=1)
+    reason: str = Field(min_length=1)
+    name: str = ""
+    suggested_duration: str = ""
+    highlights: list[str] = Field(default_factory=list)
+
+
+class CozeRoutePlanResponse(BaseModel):
+    answer: str = Field(min_length=1)
+    route_stops: list[CozeRouteStop] = Field(min_length=1)
+    adjustments: list[str] = Field(default_factory=list)
+    sources: list[str] = Field(default_factory=list)
+    warning: str = ""
+    live_data_timestamp: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,24 +93,27 @@ class CozeRoutePlanner:
         if not isinstance(result_payload, dict):
             raise CozeRoutePlannerError("Coze result payload must be a JSON object.")
 
-        answer = str(result_payload.get("answer", "")).strip()
-        if not answer:
-            raise CozeRoutePlannerError("Coze result is missing answer.")
-
-        route_stops = result_payload.get("route_stops") or []
-        adjustments = result_payload.get("adjustments") or []
-        sources = result_payload.get("sources") or []
-        warning = str(result_payload.get("warning", "") or "")
-        live_data_timestamp = str(result_payload.get("live_data_timestamp", "") or "")
-        if not isinstance(route_stops, list) or not isinstance(adjustments, list) or not isinstance(sources, list):
-            raise CozeRoutePlannerError("Coze result fields use an unexpected format.")
+        route_stops = result_payload.get("route_stops") or (result_payload.get("route") or {}).get("route_stops") or []
+        try:
+            validated = CozeRoutePlanResponse.model_validate(
+                {
+                    "answer": str(result_payload.get("answer", "")).strip(),
+                    "route_stops": route_stops,
+                    "adjustments": result_payload.get("adjustments") or [],
+                    "sources": result_payload.get("sources") or [],
+                    "warning": str(result_payload.get("warning", "") or ""),
+                    "live_data_timestamp": str(result_payload.get("live_data_timestamp", "") or ""),
+                }
+            )
+        except ValidationError as exc:
+            raise CozeRoutePlannerError(f"Coze result violates route contract: {exc}") from exc
 
         return CozeRoutePlan(
-            answer=answer,
-            route_stops=route_stops,
-            adjustments=[str(item) for item in adjustments],
-            sources=[str(item) for item in sources],
-            warning=warning,
-            live_data_timestamp=live_data_timestamp,
+            answer=validated.answer,
+            route_stops=[stop.model_dump() for stop in validated.route_stops],
+            adjustments=validated.adjustments,
+            sources=validated.sources,
+            warning=validated.warning,
+            live_data_timestamp=validated.live_data_timestamp,
             raw_payload=result_payload,
         )

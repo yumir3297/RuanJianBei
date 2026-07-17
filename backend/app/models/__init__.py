@@ -9,6 +9,7 @@ from app.models.qa_cache import QACacheEntry
 from app.models.quick_topic import QuickTopic
 from app.models.route import RouteTemplate
 from app.models.visitor import VisitorProfile
+from app.models.visitor_feedback import VisitorFeedback
 
 __all__ = [
     "AvatarConfig",
@@ -22,4 +23,5 @@ __all__ = [
     "QuickTopic",
     "RouteTemplate",
     "VisitorProfile",
+    "VisitorFeedback",
 ]

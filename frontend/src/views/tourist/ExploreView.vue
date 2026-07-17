@@ -11,7 +11,7 @@
       <div class="chat-center">
         <div class="top-caption">
           <span class="crowd-indicator" data-level="green"><span class="crowd-dot"></span>当前景区人数：舒适</span>
-          <span class="caption-kicker">{{ GUIDE_PERSONA.name }} · 景点探索</span>
+          <span class="caption-kicker">{{ avatarDisplaySubtitle }} · 景点探索</span>
           <span class="caption-weather">拍照识景 · 发现灵山</span>
         </div>
         <div class="avatar-stage">
@@ -259,6 +259,13 @@ const photoFile = ref(null);
 const analyzingPhoto = ref(false);
 const photoError = ref("");
 const visionResult = ref(null);
+
+const AVATAR_MODEL_MAP = {
+  monk: { name: "明彻法师", subtitle: "明彻法师 · 佛学文化导游" },
+  hanfu: { name: "清岚", subtitle: "清岚 · 文化叙事导游" },
+  modern: { name: "景行", subtitle: "景行 · 智能导览导游" },
+};
+const avatarDisplaySubtitle = computed(() => AVATAR_MODEL_MAP[avatarConfig.value.modelKey]?.subtitle || "清岚 · 数字人导游");
 
 const avatarReady = computed(() => !avatarError.value);
 const voiceReady = computed(() => true);

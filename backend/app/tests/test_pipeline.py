@@ -1,4 +1,5 @@
 import asyncio
+from types import SimpleNamespace
 from pathlib import Path
 
 from app.schemas.chat import ChatRequest
@@ -35,7 +36,7 @@ class DummyCacheRepo:
 
 class DummyChatLogRepo:
     def create(self, **kwargs):
-        return kwargs
+        return SimpleNamespace(id=1, **kwargs)
 
 
 class DummyRAGService:

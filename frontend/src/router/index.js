@@ -15,6 +15,7 @@ const KnowledgeManage = () => import("../views/admin/KnowledgeManage.vue");
 const AvatarConfig = () => import("../views/admin/AvatarConfig.vue");
 const DisplayAssets = () => import("../views/admin/DisplayAssets.vue");
 const AnalyticsReport = () => import("../views/admin/AnalyticsReport.vue");
+const ExperienceReport = () => import("../views/admin/ExperienceReport.vue");
 const BlindSpotManage = () => import("../views/admin/BlindSpotManage.vue");
 
 const router = createRouter({
@@ -88,6 +89,11 @@ const router = createRouter({
       path: "/admin/analytics",
       name: "analytics",
       component: AnalyticsReport,
+    },
+    {
+      path: "/admin/experience-report",
+      name: "experience-report",
+      component: ExperienceReport,
     },
     {
       path: "/admin/blind-spots",

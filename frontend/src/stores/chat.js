@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 
 import { streamChat } from "../api/chat";
+import { submitVisitorFeedback } from "../api/insights";
 import { useAudioPlayer } from "../composables/useAudioPlayer";
 
 const audioPlayer = useAudioPlayer();
@@ -19,7 +20,7 @@ let activeStreamToken = 0;
 let lastFailedRequest = null;
 const SESSION_STORAGE_KEY = "a5-chat-session-id";
 
-function getSessionId() {
+export function getSessionId() {
   const fallbackId = `visitor-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   if (typeof sessionStorage === "undefined") return fallbackId;
   const existing = sessionStorage.getItem(SESSION_STORAGE_KEY);
@@ -202,10 +203,11 @@ export const useChatStore = defineStore("chat", {
                 (item) => typeof item?.label === "string" && typeof item?.query === "string",
               );
             },
-            done: () => {
+            done: ({ chat_log_id: chatLogId } = {}) => {
               if (!isCurrentRequest()) {
                 return;
               }
+              assistantMessage.chatLogId = Number(chatLogId) || null;
               this.streaming = false;
               if (!this.userStopped) {
                 this.statusText = this.voiceFallback
@@ -237,6 +239,29 @@ export const useChatStore = defineStore("chat", {
         if (activeStreamController === streamController) {
           activeStreamController = null;
         }
+      }
+    },
+    async submitFeedback(message, rating, reasonCode = null) {
+      if (!message || message.feedbackSubmitting) return;
+      if (!message.chatLogId) {
+        message.feedbackError = "回答记录尚未完成，请稍后再评价";
+        return;
+      }
+      message.feedbackSubmitting = true;
+      message.feedbackError = "";
+      try {
+        await submitVisitorFeedback({
+          chat_log_id: message.chatLogId,
+          session_id: getSessionId(),
+          rating,
+          reason_code: reasonCode,
+        });
+        message.feedbackRating = rating;
+        message.feedbackPendingRating = null;
+      } catch (error) {
+        message.feedbackError = error?.response?.data?.detail || "评价提交失败，请稍后重试";
+      } finally {
+        message.feedbackSubmitting = false;
       }
     },
     async retryLastMessage() {

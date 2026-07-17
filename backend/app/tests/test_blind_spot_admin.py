@@ -6,6 +6,8 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
 from app.api import admin
+from app.api.auth import create_admin_token
+from app.core.config import get_settings
 from app.core.deps import get_db_session
 from app.core.exceptions import register_exception_handlers
 from app.db.base import Base
@@ -42,7 +44,9 @@ def build_client(tmp_path, monkeypatch):
         "get_runtime_faq_stats",
         lambda: {"entry_count": 89, "semantic_alias_count": 205},
     )
-    return TestClient(app), session_local
+    client = TestClient(app)
+    client.headers.update({"Authorization": f"Bearer {create_admin_token(get_settings().admin_token_secret)}"})
+    return client, session_local
 
 
 def test_admin_lists_and_resolves_blind_spot_with_faq(tmp_path, monkeypatch) -> None:

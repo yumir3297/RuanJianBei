@@ -307,7 +307,7 @@ class QAPipeline:
             sentence_buffer += token
             yield StreamEvent(type="text_chunk", data={"token": token})
 
-            if token in "。！？!?":
+            if self._should_trigger_tts(token, sentence_buffer):
                 sentence = sentence_buffer.strip()
                 sentence_buffer = ""
                 if sentence and not request.text_only:
@@ -350,7 +350,7 @@ class QAPipeline:
         if not degraded_llm:
             self.qa_cache.set(cache_key, full_answer, sources)
         latency_ms = int((perf_counter() - start) * 1000)
-        self.chat_log_repository.create(
+        chat_log_id = self._persist_interaction(
             session_id=request.session_id,
             raw_query=request.query,
             normalized_query=normalized_query,
@@ -358,16 +358,8 @@ class QAPipeline:
             sources=sources,
             hit_level="rag_llm_fallback" if degraded_llm else "rag",
             latency_ms=latency_ms,
+            request=request,
         )
-        if self.visitor_repository is not None:
-            try:
-                self.visitor_repository.upsert(
-                    session_id=request.session_id,
-                    interests=_extract_interests(request),
-                    audience_type=_infer_audience_type(request),
-                )
-            except Exception:
-                logger.exception("Visitor profile update failed.")
         logger.info(
             "LLM completed: finish_reason=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s cached_tokens=%s",
             llm_finish_reason,
@@ -378,7 +370,13 @@ class QAPipeline:
         )
         yield StreamEvent(type="text", data={"text": full_answer, "is_complete": True})
         yield self._followup_event(resolved)
-        yield StreamEvent(type="done", data={})
+        yield self._done_event(
+            chat_log_id=chat_log_id,
+            hit_level="rag_llm_fallback" if degraded_llm else "rag",
+            total_ms=latency_ms,
+            degraded=degraded_llm,
+            provider="deepseek" if not degraded_llm else "evidence_fallback",
+        )
 
     def _should_use_dynamic_route(self, intent_decision, request: ChatRequest) -> bool:
         if not intent_decision.is_dynamic_route:
@@ -462,16 +460,72 @@ class QAPipeline:
             }
             for index, source in enumerate(plan.sources or ["官方路线候选", "实时上下文"], start=1)
         ]
-        async for event in self._emit_final_answer(
-            request=request,
+        answer = self._ensure_inline_citations(answer, sources)
+        if sources:
+            yield StreamEvent(type="sources", data={"docs": sources})
+
+        if request.text_only:
+            yield StreamEvent(type="text", data={"text": answer, "is_complete": True})
+        else:
+            audio_queue: asyncio.Queue[StreamEvent] = asyncio.Queue()
+            audio_tasks: list[asyncio.Task[None]] = []
+            sentence_buffer = ""
+
+            for char in answer:
+                sentence_buffer += char
+                yield StreamEvent(type="text_chunk", data={"token": char})
+
+                if self._should_trigger_tts(char, sentence_buffer):
+                    sentence = sentence_buffer.strip()
+                    sentence_buffer = ""
+                    if sentence:
+                        audio_tasks.append(asyncio.create_task(self._queue_audio(sentence, audio_queue)))
+
+                while True:
+                    try:
+                        yield audio_queue.get_nowait()
+                    except QueueEmpty:
+                        break
+
+            if sentence_buffer.strip():
+                audio_tasks.append(asyncio.create_task(self._queue_audio(sentence_buffer.strip(), audio_queue)))
+
+            for task in audio_tasks:
+                await task
+                while True:
+                    try:
+                        yield audio_queue.get_nowait()
+                    except QueueEmpty:
+                        break
+
+            yield StreamEvent(type="text", data={"text": answer, "is_complete": True})
+
+        latency_ms = int((perf_counter() - start) * 1000)
+        chat_log_id = self._persist_interaction(
+            session_id=request.session_id,
+            raw_query=request.query,
             normalized_query=normalized_query,
             answer=answer,
             sources=sources,
             hit_level="dynamic_route_coze",
-            start=start,
-            resolved=resolved,
-        ):
-            yield event
+            latency_ms=latency_ms,
+            request=request,
+        )
+        yield self._followup_event(resolved)
+        yield self._done_event(
+            chat_log_id=chat_log_id,
+            hit_level="dynamic_route_coze",
+            total_ms=latency_ms,
+            provider="coze",
+        )
+
+    @staticmethod
+    def _should_trigger_tts(token: str, buffer: str) -> bool:
+        if token in "。！？!?":
+            return True
+        if token in "，、" and len(buffer) >= 8:
+            return True
+        return False
 
     @staticmethod
     def _build_visitor_profile(request: ChatRequest, resolved: ResolvedInteraction) -> dict:
@@ -545,9 +599,41 @@ class QAPipeline:
             )
 
         latency_ms = int((perf_counter() - start) * 1000)
-        self.chat_log_repository.create(
+        chat_log_id = self._persist_interaction(
             session_id=request.session_id,
             raw_query=request.query,
+            normalized_query=normalized_query,
+            answer=answer,
+            sources=sources,
+            hit_level=hit_level,
+            latency_ms=latency_ms,
+            request=request,
+        )
+        yield self._followup_event(resolved)
+        yield self._done_event(
+            chat_log_id=chat_log_id,
+            hit_level=hit_level,
+            total_ms=latency_ms,
+            degraded=hit_level in {"rag_insufficient", "rag_llm_fallback"},
+            provider="local" if hit_level.startswith("faq_") or hit_level == "cache" else "rag",
+        )
+
+    def _persist_interaction(
+        self,
+        *,
+        session_id: str,
+        raw_query: str,
+        normalized_query: str,
+        answer: str,
+        sources: list[dict],
+        hit_level: str,
+        latency_ms: int,
+        request: ChatRequest,
+    ) -> int:
+        """Persist every completed branch before exposing its completion event."""
+        log = self.chat_log_repository.create(
+            session_id=session_id,
+            raw_query=raw_query,
             normalized_query=normalized_query,
             answer=answer,
             sources=sources,
@@ -557,14 +643,33 @@ class QAPipeline:
         if self.visitor_repository is not None:
             try:
                 self.visitor_repository.upsert(
-                    session_id=request.session_id,
+                    session_id=session_id,
                     interests=_extract_interests(request),
                     audience_type=_infer_audience_type(request),
                 )
             except Exception:
                 logger.exception("Visitor profile update failed.")
-        yield self._followup_event(resolved)
-        yield StreamEvent(type="done", data={})
+        return log.id
+
+    @staticmethod
+    def _done_event(
+        *,
+        chat_log_id: int,
+        hit_level: str,
+        total_ms: int,
+        degraded: bool = False,
+        provider: str = "local",
+    ) -> StreamEvent:
+        return StreamEvent(
+            type="done",
+            data={
+                "chat_log_id": chat_log_id,
+                "hit_level": hit_level,
+                "total_ms": total_ms,
+                "degraded": degraded,
+                "provider": provider,
+            },
+        )
 
     async def _queue_audio(self, sentence: str, queue: asyncio.Queue[StreamEvent]) -> None:
         audio = await self.tts_service.synthesize(sentence)

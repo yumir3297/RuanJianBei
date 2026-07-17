@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta
+
 from sqlalchemy import inspect, text
 
 from app.core.config import get_settings
 from app.db.session import engine
 from app.db.session import SessionLocal
 from app.models.avatar_config import AvatarConfig
+from app.models.visitor_feedback import VisitorFeedback
 from app.repositories.knowledge import KnowledgeRepository
 from app.repositories.quick_topic import QuickTopicRepository
 from app.schemas.knowledge import KnowledgeCreate
@@ -178,5 +181,25 @@ def bootstrap_sample_data() -> None:
         ]
         for item in samples:
             repository.create(item)
+    finally:
+        session.close()
+
+
+def bootstrap_experience_demo_feedback() -> None:
+    """Seed database records for the first judge-facing report, never frontend constants."""
+    session = SessionLocal()
+    try:
+        if session.query(VisitorFeedback).filter(VisitorFeedback.is_demo.is_(True)).count():
+            return
+        now = datetime.now()
+        samples = [
+            ("positive", None, -6), ("positive", None, -5), ("negative", "detail", -5),
+            ("positive", None, -4), ("positive", None, -4), ("negative", "recommendation", -3),
+            ("positive", None, -3), ("positive", None, -2), ("negative", "accuracy", -2),
+            ("positive", None, -1), ("positive", None, -1), ("positive", None, 0),
+        ]
+        for index, (rating, reason, offset) in enumerate(samples, start=1):
+            session.add(VisitorFeedback(session_id=f"demo-judge-{index:02d}", rating=rating, reason_code=reason, is_demo=True, created_at=now + timedelta(days=offset)))
+        session.commit()
     finally:
         session.close()

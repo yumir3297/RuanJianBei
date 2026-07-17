@@ -4,7 +4,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import func, select
 
 from app.api.router import api_router
 from app.api.chat import close_cached_llm_service
@@ -13,8 +15,8 @@ from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging
 from app.db.base import Base
-from app.db.bootstrap import bootstrap_avatar_configs, bootstrap_quick_topics, bootstrap_sample_data, ensure_schema_compatibility
-from app.db.session import engine
+from app.db.bootstrap import bootstrap_avatar_configs, bootstrap_experience_demo_feedback, bootstrap_quick_topics, bootstrap_sample_data, ensure_schema_compatibility
+from app.db.session import SessionLocal, engine
 from app.models import (  # noqa: F401
     AvatarConfig,
     BehaviorSummary,
@@ -27,6 +29,7 @@ from app.models import (  # noqa: F401
     QuickTopic,
     RouteTemplate,
     VisitorProfile,
+    VisitorFeedback,
 )
 from app.schemas.common import HealthResponse
 
@@ -41,6 +44,7 @@ async def lifespan(_: FastAPI):
     bootstrap_quick_topics()
     bootstrap_avatar_configs()
     bootstrap_sample_data()
+    bootstrap_experience_demo_feedback()
 
     # 预加载模型，避免首次请求冷启动
     from app.api.chat import get_cached_embedder, get_cached_reranker
@@ -87,6 +91,30 @@ def create_app() -> FastAPI:
     @app.get("/health", response_model=HealthResponse)
     async def health() -> HealthResponse:
         return HealthResponse(status="ok", service=settings.app_name)
+
+    @app.get("/ready")
+    async def ready() -> JSONResponse:
+        failures: list[str] = []
+        session = SessionLocal()
+        try:
+            knowledge_count = session.scalar(select(func.count(KnowledgeChunk.id))) or 0
+            if knowledge_count == 0:
+                failures.append("knowledge_chunks_empty")
+        except Exception:
+            failures.append("database_unavailable")
+        finally:
+            session.close()
+
+        for provider, key in ((settings.llm_provider, settings.llm_api_key), (settings.asr_provider, settings.asr_api_key), (settings.tts_provider, settings.tts_api_key)):
+            if provider != "stub" and not key:
+                failures.append(f"{provider}_api_key_missing")
+        if settings.coze_enabled and (not settings.coze_run_url or not settings.coze_token):
+            failures.append("coze_configuration_missing")
+        if settings.competition_mode and settings.admin_password == "admin123":
+            failures.append("default_admin_password")
+
+        status_code = 200 if not failures else 503
+        return JSONResponse(status_code=status_code, content={"status": "ready" if not failures else "not_ready", "failures": failures})
 
     return app
 

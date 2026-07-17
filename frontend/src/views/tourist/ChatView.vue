@@ -52,6 +52,16 @@
           <article v-for="(message, index) in chatStore.messages" :key="`${message.role}-${index}`" :class="['msg-item', message.role, { collapsed: message.role === 'user' && index < chatStore.messages.length - 1 && chatStore.messages[index + 1]?.role === 'assistant' }]">
             <div v-if="message.role === 'assistant'" class="msg-bubble" v-html="renderAnswer(message.content, index === chatStore.messages.length - 1)" @click="handleCitationClick"></div>
             <div v-else class="msg-bubble">{{ message.content }}</div>
+            <div v-if="message.role === 'assistant' && message.content && !chatStore.streaming" class="answer-feedback" aria-label="回答评价">
+              <span>这条讲解有帮助吗？</span>
+              <button type="button" :class="{ active: message.feedbackRating === 'positive' }" :disabled="message.feedbackSubmitting" @click="chatStore.submitFeedback(message, 'positive')">👍 有帮助</button>
+              <button type="button" :class="{ active: message.feedbackPendingRating === 'negative' || message.feedbackRating === 'negative' }" :disabled="message.feedbackSubmitting" @click="message.feedbackPendingRating = message.feedbackPendingRating === 'negative' ? null : 'negative'">👎 需改进</button>
+              <div v-if="message.feedbackPendingRating === 'negative'" class="feedback-reasons">
+                <span>请选择原因：</span>
+                <button v-for="reason in feedbackReasons" :key="reason.value" type="button" :disabled="message.feedbackSubmitting" @click="chatStore.submitFeedback(message, 'negative', reason.value)">{{ reason.label }}</button>
+              </div>
+              <span v-if="message.feedbackError" class="feedback-error">{{ message.feedbackError }}</span>
+            </div>
             <span v-if="message.role === 'assistant' && chatStore.streaming && index === chatStore.messages.length - 1 && message.content.length > 0" class="typing-cursor">|</span>
           </article>
           <div v-if="chatStore.followups.length" class="followup-panel">
@@ -115,7 +125,7 @@
     <!-- ⑤ 底部输入栏 -->
     <div class="input-row">
       <button class="image-btn" @click="toggleVisionPanel">拍照识景</button>
-      <input class="input-field" v-model="query" :placeholder="`想去哪里？小灵帮你规划…`" @keyup.enter="handleSubmit" :disabled="chatStore.streaming" autocomplete="off" name="tourist-query" />
+      <input class="input-field" v-model="query" :placeholder="`想去哪里？我帮你规划…`" @keyup.enter="handleSubmit" :disabled="chatStore.streaming" autocomplete="off" name="tourist-query" />
       <button class="voice-btn" :class="{ recording: speechListening || isRecording }" @click="toggleRecording" :disabled="chatStore.streaming || transcribing">{{ speechListening ? '结束语音' : isRecording ? `录音中 ${durationSeconds}s` : '语音提问' }}</button>
     </div>
 
@@ -140,6 +150,16 @@
             <article v-for="(message, index) in chatStore.messages" :key="`m-${message.role}-${index}`" :class="['msg-item', message.role, { collapsed: message.role === 'user' && index < chatStore.messages.length - 1 && chatStore.messages[index + 1]?.role === 'assistant' }]">
               <div v-if="message.role === 'assistant'" class="msg-bubble" v-html="renderAnswer(message.content, index === chatStore.messages.length - 1)" @click="handleCitationClick"></div>
               <div v-else class="msg-bubble">{{ message.content }}</div>
+              <div v-if="message.role === 'assistant' && message.content && !chatStore.streaming" class="answer-feedback">
+                <span>这条讲解有帮助吗？</span>
+                <button type="button" :class="{ active: message.feedbackRating === 'positive' }" :disabled="message.feedbackSubmitting" @click="chatStore.submitFeedback(message, 'positive')">👍 有帮助</button>
+                <button type="button" :class="{ active: message.feedbackPendingRating === 'negative' || message.feedbackRating === 'negative' }" :disabled="message.feedbackSubmitting" @click="message.feedbackPendingRating = message.feedbackPendingRating === 'negative' ? null : 'negative'">👎 需改进</button>
+                <div v-if="message.feedbackPendingRating === 'negative'" class="feedback-reasons">
+                  <span>请选择原因：</span>
+                  <button v-for="reason in feedbackReasons" :key="reason.value" type="button" :disabled="message.feedbackSubmitting" @click="chatStore.submitFeedback(message, 'negative', reason.value)">{{ reason.label }}</button>
+                </div>
+                <span v-if="message.feedbackError" class="feedback-error">{{ message.feedbackError }}</span>
+              </div>
               <span v-if="message.role === 'assistant' && chatStore.streaming && index === chatStore.messages.length - 1 && message.content.length > 0" class="typing-cursor">|</span>
             </article>
             <div v-if="chatStore.followups.length" class="followup-panel">
@@ -289,6 +309,13 @@ import { useChatStore } from "../../stores/chat";
 import { useInteractionStore } from "../../stores/interaction";
 
 const router = useRouter();
+const feedbackReasons = [
+  { value: "accuracy", label: "内容不准确" },
+  { value: "detail", label: "信息不够" },
+  { value: "recommendation", label: "建议不合适" },
+  { value: "latency", label: "响应太慢" },
+  { value: "other", label: "其他" },
+];
 const chatStore = useChatStore();
 const interactionStore = useInteractionStore();
 const { scenicBgUrl } = useScenicBackground();
@@ -732,6 +759,8 @@ async function toggleRecording() {
     return;
   }
 
+  audioPlayer.stop();
+
   if (speechSupported.value) {
     speechBaseQuery.value = query.value.trim();
     speechSessionActive.value = true;
@@ -964,16 +993,16 @@ function formatConfidence(value) {
 }
 
 .back-btn {
-  position: absolute; top: 32px; left: 32px; z-index: 25;
+  position: absolute; top: clamp(10px, 2vw, 32px); left: clamp(10px, 2vw, 32px); z-index: 25;
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 14px 28px;
+  padding: clamp(8px, 0.9vw, 14px) clamp(16px, 1.8vw, 28px);
   border: 1px solid rgba(255,250,242,0.11);
   border-radius: 999px;
   background: rgba(255,250,242,0.05);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   color: rgba(232,228,219,0.55);
-  font-family: inherit; font-size: 20px;
+  font-family: inherit; font-size: clamp(14px, 1.2vw, 20px);
   letter-spacing: 0.06em;
   cursor: pointer;
   transition: border-color 0.3s ease, background 0.3s ease, color 0.3s ease;
@@ -987,7 +1016,7 @@ function formatConfidence(value) {
 .back-btn:focus-visible { outline: 2px solid #d9a441; outline-offset: 3px; }
 
 .top-right {
-  position: absolute; top: 32px; right: 32px; z-index: 20;
+  position: absolute; top: clamp(10px, 2vw, 32px); right: clamp(10px, 2vw, 32px); z-index: 20;
   display: flex; flex-direction: column;
   align-items: flex-end; gap: 8px;
 }
@@ -1005,7 +1034,7 @@ function formatConfidence(value) {
 }
 .status-item {
   display: flex; align-items: center; gap: 8px;
-  font-size: 16px; font-weight: 400;
+  font-size: clamp(13px, 0.9vw, 17px); font-weight: 400;
   letter-spacing: 0.06em;
   color: rgba(232,228,219,0.55);
   font-family: system-ui, sans-serif;
@@ -1023,10 +1052,10 @@ function formatConfidence(value) {
   position: relative; z-index: 10;
   flex: 1; min-height: 0;
   display: grid;
-  grid-template-columns: minmax(140px, 310px) 1fr minmax(140px, 310px);
-  gap: 12px;
+  grid-template-columns: minmax(clamp(160px, 12vw, 260px), clamp(240px, 17vw, 350px)) 1fr minmax(clamp(160px, 12vw, 260px), clamp(240px, 17vw, 350px));
+  gap: clamp(8px, 1vw, 16px);
   align-items: stretch;
-  padding: 20px 20px 0;
+  padding: 20px clamp(10px, 1.5vw, 24px) 0;
   margin-top: 0;
 }
 
@@ -1048,7 +1077,7 @@ function formatConfidence(value) {
 .caption-kicker {
   color: #f8e7bb;
   font-family: "STKaiti","KaiTi",serif;
-  font-size: 24px; font-weight: 700; letter-spacing: 0.1em;
+  font-size: clamp(18px, 2vw, 28px); font-weight: 700; letter-spacing: 0.1em;
   text-shadow: 0 0 20px rgba(217,164,65,0.15);
 }
 .caption-weather {
@@ -1058,7 +1087,7 @@ function formatConfidence(value) {
   background: rgba(23,18,14,0.6);
   color: rgba(232,228,219,0.38);
   font-family: system-ui, sans-serif;
-  font-size: 13px; font-weight: 400;
+  font-size: clamp(12px, 0.8vw, 14px); font-weight: 400;
   letter-spacing: 0.04em;
   white-space: nowrap;
 }
@@ -1087,8 +1116,8 @@ function formatConfidence(value) {
 
 .avatar-stage {
   position: relative; z-index: 2;
-  width: min(480px, 100vw);
-  height: calc(min(460px, 66vh) + 140px);
+  width: min(clamp(360px, 34vw, 650px), 100vw);
+  height: calc(min(clamp(360px, 42vh, 560px), 66vh) + 140px);
   padding-top: 140px;
   margin: -140px auto 0;
   flex: 1;
@@ -1113,9 +1142,9 @@ function formatConfidence(value) {
 
 .side-card {
   position: absolute;
-  left: 24px; bottom: 100px;
+  left: clamp(12px, 1.5vw, 28px); bottom: clamp(60px, 7vh, 120px);
   z-index: 15;
-  width: 310px; height: 440px;
+  width: clamp(260px, 17vw, 420px); height: clamp(340px, 52vh, 500px);
   background: rgba(23,18,14,0.88);
   border: 1px solid rgba(255,250,242,0.11);
   border-radius: 10px;
@@ -1142,7 +1171,7 @@ function formatConfidence(value) {
   border: none;
   background: transparent;
   color: rgba(232,228,219,0.35);
-  font-family: inherit; font-size: 16px;
+  font-family: inherit; font-size: clamp(14px, 0.9vw, 17px);
   font-weight: 600; letter-spacing: 0.06em;
   cursor: pointer;
   transition: color 0.25s ease;
@@ -1223,7 +1252,7 @@ function formatConfidence(value) {
   border: 1px solid rgba(248,231,187,0.2);
   border-radius: 999px;
   background: rgba(255,255,255,0.08);
-  color: #f8e7bb; font-size: 14px;
+  color: #f8e7bb; font-size: clamp(13px, 0.8vw, 15px);
   cursor: pointer;
   transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
 }
@@ -1271,9 +1300,9 @@ function formatConfidence(value) {
 
 .right-card {
   position: absolute;
-  right: 24px; top: 110px; bottom: 100px;
+  right: clamp(12px, 1.5vw, 28px); top: clamp(80px, 8vh, 130px); bottom: clamp(60px, 7vh, 120px);
   z-index: 15;
-  width: 330px;
+  width: clamp(270px, 18vw, 450px);
   background: rgba(23,18,14,0.88);
   border: 1px solid rgba(255,250,242,0.11);
   border-radius: 10px;
@@ -1287,8 +1316,9 @@ function formatConfidence(value) {
   border-bottom: 1px solid rgba(232,228,219,0.06);
   color: rgba(232,228,219,0.5);
   font-family: "STKaiti","KaiTi",serif;
-  font-size: 13px; font-weight: 600;
+  font-size: clamp(12px, 0.8vw, 14px); font-weight: 600;
   letter-spacing: 0.06em;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
 }
 .right-card-body {
   flex: 1; min-height: 0;
@@ -1314,8 +1344,8 @@ function formatConfidence(value) {
 .explore-card {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  gap: 8px;
-  padding: 14px 10px;
+  gap: clamp(6px, 0.5vw, 10px);
+  padding: clamp(10px, 1.2vw, 18px) clamp(6px, 0.8vw, 14px);
   border-radius: 8px;
   border: 1px solid rgba(232,228,219,0.10);
   background: rgba(232,228,219,0.03);
@@ -1332,9 +1362,9 @@ function formatConfidence(value) {
 .explore-card:active { transform: scale(0.96); }
 .explore-card:focus-visible { outline: 2px solid #d9a441; outline-offset: 2px; }
 .explore-card-icon {
-  width: 50px; height: 50px; border-radius: 50%;
+  width: clamp(44px, 3vw, 64px); height: clamp(44px, 3vw, 64px); border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 26px; flex-shrink: 0;
+  font-size: clamp(22px, 1.6vw, 32px); flex-shrink: 0;
   transition: transform 0.3s ease;
 }
 .explore-card:hover .explore-card-icon { transform: scale(1.1); }
@@ -1344,12 +1374,12 @@ function formatConfidence(value) {
 .explore-card--photo  .explore-card-icon { background: rgba(232,168,64,0.15); color: #e8a840; }
 .explore-card-title {
   font-family: "STKaiti","KaiTi","STSong",serif;
-  font-size: 20px; font-weight: 600;
+  font-size: clamp(16px, 1.3vw, 24px); font-weight: 600;
   color: rgba(232,228,219,0.82);
   letter-spacing: 0.05em; line-height: 1.3;
 }
 .explore-card-desc {
-  font-size: 14px; font-weight: 400;
+  font-size: clamp(12px, 0.8vw, 15px); font-weight: 400;
   color: rgba(232,228,219,0.3);
   letter-spacing: 0.04em; line-height: 1.2;
   font-family: system-ui, sans-serif;
@@ -1388,38 +1418,38 @@ function formatConfidence(value) {
 
 .input-row {
   position: absolute;
-  bottom: 36px; left: 50%;
+  bottom: clamp(24px, 2.5vh, 40px); left: 50%;
   transform: translateX(-50%);
   z-index: 10;
-  width: min(700px, 88vw);
+  width: min(clamp(420px, 42vw, 800px), 88vw);
   display: flex; align-items: center; justify-content: center; gap: 12px;
 }
 .input-field {
   flex: 1;
-  height: 64px;
-  padding: 0 24px;
+  height: clamp(52px, 3.6vw, 72px);
+  padding: 0 clamp(16px, 1.5vw, 28px);
   border: 1px solid rgba(232,228,219,0.12);
   border-radius: 10px;
   background: rgba(23,18,14,0.78);
   color: rgba(232,228,219,0.82);
-  font-family: inherit; font-size: 22px;
+  font-family: inherit; font-size: clamp(16px, 1.2vw, 24px);
   letter-spacing: 0.03em;
   outline: none;
   transition: border-color 0.25s ease;
 }
-.input-field::placeholder { color: rgba(232,228,219,0.25); font-size: 20px; }
+.input-field::placeholder { color: rgba(232,228,219,0.25); font-size: clamp(15px, 1.1vw, 22px); }
 .input-field:focus { border-color: rgba(217,164,65,0.35); }
 .input-field:disabled { opacity: 0.5; }
 
 .voice-btn {
-  flex-shrink: 0; width: auto; height: 64px;
-  padding: 0 32px;
+  flex-shrink: 0; width: auto; height: clamp(52px, 3.6vw, 72px);
+  padding: 0 clamp(14px, 1.8vw, 32px);
   display: flex; align-items: center; justify-content: center;
   border: 1px solid rgba(217,164,65,0.3);
   border-radius: 999px;
   background: rgba(217,164,65,0.14);
   color: #d9a441;
-  font-family: inherit; font-size: 22px; font-weight: 600;
+  font-family: inherit; font-size: clamp(16px, 1.2vw, 24px); font-weight: 600;
   letter-spacing: 0.08em;
   cursor: pointer;
   transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
@@ -1445,14 +1475,14 @@ function formatConfidence(value) {
 }
 
 .image-btn {
-  flex-shrink: 0; width: auto; height: 64px;
-  padding: 0 24px;
+  flex-shrink: 0; width: auto; height: clamp(52px, 3.6vw, 72px);
+  padding: 0 clamp(14px, 1.4vw, 28px);
   display: flex; align-items: center; justify-content: center;
   border: 1px solid rgba(94,201,164,0.25);
   border-radius: 999px;
   background: rgba(94,201,164,0.1);
   color: #5ec9a4;
-  font-family: inherit; font-size: 20px; font-weight: 600;
+  font-family: inherit; font-size: clamp(15px, 1.1vw, 22px); font-weight: 600;
   letter-spacing: 0.08em;
   cursor: pointer;
   transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
@@ -1662,21 +1692,6 @@ function formatConfidence(value) {
   display: none;
 }
 
-@media (max-width: 1300px) {
-  .side-card { width: 280px; height: 400px; left: 16px; bottom: 108px; }
-  .right-card { width: 290px; right: 16px; top: 110px; bottom: 108px; }
-  .tourist-stage { grid-template-columns: minmax(120px, 260px) 1fr minmax(120px, 260px); padding: 0 12px; gap: 8px; }
-  .avatar-stage { width: min(380px, 30vw); height: min(380px, 56vh); }
-  .input-row { width: min(440px, 80vw); }
-}
-
-@media (max-width: 1080px) {
-  .side-card { width: 250px; height: 360px; left: 8px; bottom: 108px; }
-  .right-card { width: 260px; right: 8px; top: 100px; bottom: 108px; }
-  .tourist-stage { grid-template-columns: 1fr 2fr 1fr; padding: 0 8px; }
-  .input-row { width: min(380px, 78vw); }
-}
-
 @media (max-width: 720px) {
   .tourist-page { overflow: hidden; padding: 0; }
   .tourist-stage { display: flex; flex-direction: column; padding: 0; margin-top: 40px; gap: 0; flex: 1; min-height: 0; padding-bottom: 48px; }
@@ -1798,4 +1813,36 @@ function formatConfidence(value) {
   .voice-btn.recording { animation: none; }
   .speech-pulse { animation: none; }
 }
+
+/* ---- status inline dots (scoped override) ---- */
+.status-inline-dot {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 400;
+  letter-spacing: 0.03em;
+  color: rgba(232,228,219,0.45);
+  font-family: system-ui, "Noto Sans SC", sans-serif;
+  white-space: nowrap;
+}
+.status-inline-dot::before {
+  content: "";
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid rgba(255,250,242,0.16);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+.status-inline-dot--ready::before { background: #5ec9a4; box-shadow: 0 0 5px rgba(94,201,164,0.35); }
+.status-inline-dot--loading::before { background: #e8a840; box-shadow: 0 0 5px rgba(232,168,64,0.35); animation: dot-pulse 1.6s ease-in-out infinite; }
+.status-inline-dot--live::before { background: #d9a441; box-shadow: 0 0 5px rgba(217,164,65,0.35); }
+.right-card-head-status {
+  display: inline-flex; align-items: center; gap: 10px;
+  flex-shrink: 0;
+}
+.answer-feedback { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; color: rgba(232,228,219,.62); font-size: 11px; }
+.answer-feedback button { border: 1px solid rgba(232,228,219,.2); border-radius: 999px; background: rgba(255,255,255,.04); color: rgba(255,250,242,.82); padding: 4px 7px; font-size: 11px; cursor: pointer; }
+.answer-feedback button:hover, .answer-feedback button.active { border-color: rgba(94,201,164,.75); background: rgba(94,201,164,.14); color: #b8f1dd; }
+.answer-feedback button:disabled { cursor: wait; opacity: .55; }
+.feedback-reasons { display: flex; flex-basis: 100%; flex-wrap: wrap; align-items: center; gap: 6px; padding-top: 2px; }
+.feedback-error { flex-basis: 100%; color: #ffb4a8; }
+@keyframes dot-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
 </style>

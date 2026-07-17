@@ -36,13 +36,17 @@ def create_admin_token(secret: str) -> str:
     return base64.urlsafe_b64encode(payload.encode("utf-8")).decode("ascii")
 
 
-def verify_admin_token(token: str, secret: str) -> bool:
+def verify_admin_token(token: str, secret: str, ttl_seconds: int) -> bool:
     try:
         payload = base64.urlsafe_b64decode(token.encode("ascii")).decode("utf-8")
         parts = payload.split(":")
         if len(parts) != 3 or parts[0] != "admin":
             return False
         _prefix, timestamp, signature = parts
+        issued_at = int(timestamp)
+        now = int(time.time())
+        if issued_at > now + 60 or now - issued_at > ttl_seconds:
+            return False
         expected = hmac.new(
             secret.encode("utf-8"),
             timestamp.encode("utf-8"),
@@ -70,7 +74,7 @@ def require_admin_token(
             detail="认证格式错误，请使用 Bearer token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    if not verify_admin_token(token, settings.admin_token_secret):
+    if not verify_admin_token(token, settings.admin_token_secret, settings.admin_token_ttl_seconds):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="认证令牌无效或已过期",

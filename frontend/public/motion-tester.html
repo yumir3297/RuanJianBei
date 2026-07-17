@@ -197,6 +197,26 @@
 
   <div class="divider"></div>
 
+  <div class="motion-grid" id="mixamoGrid">
+    <button class="motion-btn" data-file="挥手.glb" onclick="playMixamoFile(this)"><span class="label">挥手</span></button>
+    <button class="motion-btn" data-file="挥手123.glb" onclick="playMixamoFile(this)"><span class="label">挥手123</span></button>
+    <button class="motion-btn" data-file="双手挥手.glb" onclick="playMixamoFile(this)"><span class="label">双手挥手</span></button>
+    <button class="motion-btn" data-file="同意.glb" onclick="playMixamoFile(this)"><span class="label">同意</span></button>
+    <button class="motion-btn" data-file="向前方指.glb" onclick="playMixamoFile(this)"><span class="label">向前方指</span></button>
+    <button class="motion-btn" data-file="指向手势.glb" onclick="playMixamoFile(this)"><span class="label">指向手势</span></button>
+    <button class="motion-btn" data-file="指向身后.glb" onclick="playMixamoFile(this)"><span class="label">指向身后</span></button>
+    <button class="motion-btn" data-file="思考.glb" onclick="playMixamoFile(this)"><span class="label">思考</span></button>
+    <button class="motion-btn" data-file="握拳加油.glb" onclick="playMixamoFile(this)"><span class="label">握拳加油</span></button>
+    <button class="motion-btn" data-file="站在大拇指你真棒.glb" onclick="playMixamoFile(this)"><span class="label">你真棒</span></button>
+    <button class="motion-btn" data-file="站着鼓掌.glb" onclick="playMixamoFile(this)"><span class="label">站着鼓掌</span></button>
+    <button class="motion-btn" data-file="站起来热烈鼓掌.glb" onclick="playMixamoFile(this)"><span class="label">热烈鼓掌</span></button>
+    <button class="motion-btn" data-file="我也没有办法.glb" onclick="playMixamoFile(this)"><span class="label">我也没有办法</span></button>
+    <button class="motion-btn" data-file="抬手挡光看.glb" onclick="playMixamoFile(this)"><span class="label">抬手挡光看</span></button>
+    <button class="motion-btn" data-file="站着看346.glb" onclick="playMixamoFile(this)"><span class="label">站着看</span></button>
+  </div>
+
+  <div class="divider"></div>
+
   <div class="info-row">
     点击按钮即可预览动作。<br />
     拖动滑块调整幅度/速度。<br />
@@ -224,8 +244,6 @@ const MODEL_URLS = {
   modern: "/models/male-guide.vrm",
   procedural: null,
 };
-
-const RUNNER_SPEED = 0.5; // fixed base speed
 
 const MOTION_TEMPLATES = {
   lean_in: {
@@ -326,7 +344,15 @@ const BONE_MAP = {
   group_y: "__group_y",
 };
 
-// ---------------- Engine ----------------
+const MIXAMO_TO_VRM_BONES = {
+  Hips: null, LeftUpLeg: null, RightUpLeg: null, LeftLeg: null, RightLeg: null, LeftFoot: null, RightFoot: null, LeftToeBase: null, RightToeBase: null,
+  Spine: "spine", Spine1: "chest", Spine2: "upperChest",
+  LeftArm: "leftUpperArm", LeftForeArm: "leftLowerArm", LeftHand: "leftHand",
+  RightArm: "rightUpperArm", RightForeArm: "rightLowerArm", RightHand: "rightHand",
+  Head: "head", Neck: "neck",
+  LeftShoulder: "leftShoulder", RightShoulder: "rightShoulder",
+};
+
 let renderer, scene, camera, vrm, avatarGroup, timer;
 let animId;
 let motion = null;
@@ -334,7 +360,11 @@ let savedRest = null;
 let userScale = 1.0;
 let userSpeed = 1.0;
 let currentModel = "hanfu";
-const canvasArea = document.getElementById("canvasArea");
+
+let mixamoPlaying = false;
+let mixamoStartTime = 0;
+let mixamoDuration = 0;
+let currentMixamoSamples = null;
 
 function initRenderer() {
   const wrapper = document.querySelector(".canvas-wrapper");
@@ -378,7 +408,7 @@ function resize() {
 window.addEventListener("resize", resize);
 
 function saveRestPose() {
-  if (!vrm || !vrm.humanoid) return;
+  if (!vrm || !vrm.humanoid) { savedRest = null; return; }
   savedRest = {};
   const bones = ["head","spine","rightUpperArm","leftUpperArm","rightLowerArm","leftLowerArm","rightHand","leftHand"];
   for (const name of bones) {
@@ -395,10 +425,15 @@ function restoreRestPose() {
   }
 }
 
+function setVrmExpression(parts, name, value) {
+  if (parts.__avatarKind !== "vrm" || !parts.__vrm?.expressionManager) return;
+  parts.__vrm.expressionManager.setValue(name, THREE.MathUtils.clamp(value, 0, 1));
+}
+
 function applyExpressions(template, progress) {
   if (!vrm?.expressionManager || !template.expressions) return;
   for (const exp of template.expressions) {
-    if (Math.abs(progress - exp.at) < 0.02) {
+    if (Math.abs(progress - exp.at) < 0.025) {
       vrm.expressionManager.setValue(exp.name, THREE.MathUtils.clamp(exp.value, 0, 1));
     }
   }
@@ -426,8 +461,7 @@ function applyMotionBones(keyframes, t, blend, scale) {
   for (const [boneName, rot] of Object.entries(accum)) {
     if (boneName === "__group_y") {
       if (avatarGroup && rot.y !== null) {
-        const base = 0;
-        avatarGroup.rotation.y = base + (rot.y - base) * blend;
+        avatarGroup.rotation.y = 0 + (rot.y - 0) * blend;
       }
       continue;
     }
@@ -493,7 +527,45 @@ function animate() {
   animId = requestAnimationFrame(animate);
   timer.update();
   const dt = Math.min(timer.getDelta(), 0.1);
-  playbackMotion();
+
+  if (mixamoPlaying && currentMixamoSamples) {
+    const elapsed = (performance.now() - mixamoStartTime) / 1000;
+    if (elapsed >= mixamoDuration + 0.1) {
+      stopMixamo();
+      setStatus("就绪");
+    } else {
+      const t = elapsed / mixamoDuration;
+      const tmpQ = new THREE.Quaternion();
+      for (const sample of currentMixamoSamples) {
+        const times = sample.times;
+        const vals = sample.values;
+        const nk = times.length;
+        if (nk === 0) continue;
+        let idx = 0;
+        for (let i = nk - 1; i >= 0; i--) {
+          if (t * mixamoDuration >= times[i]) { idx = i; break; }
+        }
+        if (idx >= nk - 1) {
+          tmpQ.set(vals[(nk - 1) * 4], vals[(nk - 1) * 4 + 1], vals[(nk - 1) * 4 + 2], vals[(nk - 1) * 4 + 3]);
+        } else {
+          const lt = (t * mixamoDuration - times[idx]) / (times[idx + 1] - times[idx] || 0.001);
+          const a = idx * 4;
+          const b = (idx + 1) * 4;
+          tmpQ.set(
+            vals[a] + (vals[b] - vals[a]) * lt,
+            vals[a + 1] + (vals[b + 1] - vals[a + 1]) * lt,
+            vals[a + 2] + (vals[b + 2] - vals[a + 2]) * lt,
+            vals[a + 3] + (vals[b + 3] - vals[a + 3]) * lt,
+          ).normalize();
+        }
+        sample.bone.quaternion.copy(tmpQ);
+      }
+      setStatus("播放 Mixamo — " + elapsed.toFixed(1) + "s", true);
+    }
+  } else {
+    playbackMotion();
+  }
+
   vrm?.update(dt);
   renderer.render(scene, camera);
 }
@@ -505,14 +577,14 @@ function setStatus(msg, active = false) {
 }
 
 function updateMotionButtons(activeName) {
-  document.querySelectorAll(".motion-btn").forEach(btn => {
+  document.querySelectorAll("#motionGrid .motion-btn").forEach(btn => {
     btn.classList.toggle("playing", btn.dataset.motion === activeName);
   });
 }
 
+// ---------------- Model Loading ----------------
 let isLoading = false;
 
-// ---------------- Model Loading ----------------
 async function loadVRM(url) {
   if (isLoading) return;
   isLoading = true;
@@ -600,11 +672,81 @@ async function switchModel(key) {
   await loadVRM(MODEL_URLS[key]);
 }
 
-// ---------------- UI Bindings ----------------
+function setMixamoBtnActive(activeBtn) {
+  document.querySelectorAll("#mixamoGrid .motion-btn").forEach(b => b.classList.remove("playing"));
+  if (activeBtn) activeBtn.classList.add("playing");
+}
+
+function stopMixamo() {
+  if (!currentMixamoSamples) return;
+  for (const s of currentMixamoSamples) { if (s.restRot) s.bone.quaternion.copy(s.restRot); }
+  mixamoPlaying = false;
+  setMixamoBtnActive(null);
+  saveRestPose();
+}
+
+window.playMixamoFile = async function(btnEl) {
+  const file = btnEl.dataset.file;
+  if (!file) return;
+  if (mixamoPlaying) return;
+  if (!vrm?.humanoid) { setStatus("请先加载 VRM 模型"); return; }
+
+  if (motion) {
+    restoreRestPose(); if (avatarGroup) avatarGroup.rotation.y = 0;
+    resetAllExpressions(); motion = null; updateMotionButtons(null);
+  }
+
+  const glbUrl = "/motions/" + encodeURI(file) + "?nocache=" + Date.now();
+  setStatus(`加载 ${file} ...`);
+  const resp = await fetch(glbUrl);
+  if (!resp.ok) { setStatus(`HTTP ${resp.status}: ${file}`); return; }
+  const buffer = await resp.arrayBuffer();
+  console.log(`[${file}] 文件大小: ${buffer.byteLength} 字节`);
+
+  const loader = new GLTFLoader();
+  const gltf = await new Promise((ok, fail) => loader.parse(buffer.slice(0), "", ok, fail));
+  if (!gltf.animations?.length) { setStatus("无动画: " + file); return; }
+
+  const clip = gltf.animations[0];
+  const samples = [];
+  for (const track of clip.tracks) {
+    const parts = track.name.split(".");
+    const vrmName = MIXAMO_TO_VRM_BONES[parts[0]];
+    if (!vrmName || parts[1] !== "quaternion") continue;
+    const bone = vrm.humanoid.getNormalizedBoneNode(vrmName);
+    if (!bone) continue;
+    samples.push({ bone, times: new Float32Array(track.times), values: new Float32Array(track.values) });
+  }
+
+  if (samples.length === 0) { setStatus("无匹配骨骼: " + file); return; }
+
+  const boneNames = samples.map(s => s.bone.name || "(unknown)").join(", ");
+  const raSample = samples.find(s => {
+    const n = (s.bone.name || "").toLowerCase();
+    return n.includes("r") && n.includes("upper") && n.includes("arm");
+  });
+  const midIdx = raSample ? Math.floor(raSample.times.length * 0.5) : -1;
+  const midVals = raSample && midIdx >= 0 ? `[${raSample.values[midIdx*4].toFixed(3)},${raSample.values[midIdx*4+1].toFixed(3)},${raSample.values[midIdx*4+2].toFixed(3)},${raSample.values[midIdx*4+3].toFixed(3)}]` : "N/A";
+  console.log(`[${file}] 大小=${buffer.byteLength}B | 时长=${clip.duration.toFixed(1)}s | 骨骼=${samples.length}根 | RightArm@50%=${midVals}`);
+  console.log(`  骨骼名: ${boneNames}`);
+
+  saveRestPose();
+  for (const s of samples) s.restRot = s.bone.quaternion.clone();
+
+  currentMixamoSamples = samples;
+  mixamoDuration = clip.duration;
+  mixamoPlaying = true;
+  mixamoStartTime = performance.now();
+
+  setMixamoBtnActive(btnEl);
+  setStatus(`播放: ${file} (${clip.duration.toFixed(1)}s)`, true);
+};
+
 window.switchModel = switchModel;
 
 window.playMotion = (name) => {
   if (motion && motion.name === name) return;
+  if (mixamoPlaying) { stopMixamo(); }
   if (motion) { restoreRestPose(); if (avatarGroup) avatarGroup.rotation.y = 0; resetAllExpressions(); }
   startMotion(name);
 };

@@ -5,15 +5,19 @@ from collections import Counter
 from datetime import datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_db_session
+from app.api.auth import require_admin_token
 from app.models.chat_log import ChatLog
 from app.models.knowledge_blind_spot import KnowledgeBlindSpot
 from app.models.visitor import VisitorProfile
+from app.models.visitor_feedback import VisitorFeedback
+from app.schemas.experience import FeedbackCreate, FeedbackResponse, ExperienceReport
 from app.schemas.insights import BlindSpotTopItem, QATrend, SpotAttentionItem, VisitorGroups
+from app.services.experience_report import ExperienceReportService
 
 
 router = APIRouter()
@@ -73,7 +77,7 @@ def _hit_level_label(level: str | None) -> str:
 
 
 @router.get("/spot-attention", response_model=list[SpotAttentionItem])
-def get_spot_attention(db: Session = Depends(get_db_session)) -> list[SpotAttentionItem]:
+def get_spot_attention(_: None = Depends(require_admin_token), db: Session = Depends(get_db_session)) -> list[SpotAttentionItem]:
     logs = db.execute(select(ChatLog.sources)).scalars().all()
 
     spot_counts: Counter[str] = Counter()
@@ -89,7 +93,7 @@ def get_spot_attention(db: Session = Depends(get_db_session)) -> list[SpotAttent
 
 
 @router.get("/visitor-groups", response_model=VisitorGroups)
-def get_visitor_groups(db: Session = Depends(get_db_session)) -> VisitorGroups:
+def get_visitor_groups(_: None = Depends(require_admin_token), db: Session = Depends(get_db_session)) -> VisitorGroups:
     profiles = db.execute(
         select(VisitorProfile.audience_type, VisitorProfile.preference_tags)
     ).all()
@@ -122,7 +126,7 @@ def get_visitor_groups(db: Session = Depends(get_db_session)) -> VisitorGroups:
 
 
 @router.get("/qa-trend", response_model=QATrend)
-def get_qa_trend(db: Session = Depends(get_db_session)) -> QATrend:
+def get_qa_trend(_: None = Depends(require_admin_token), db: Session = Depends(get_db_session)) -> QATrend:
     thirty_days_ago = datetime.now() - timedelta(days=30)
 
     daily = db.execute(
@@ -160,7 +164,7 @@ def get_qa_trend(db: Session = Depends(get_db_session)) -> QATrend:
 
 
 @router.get("/blind-spot-top", response_model=list[BlindSpotTopItem])
-def get_blind_spot_top(db: Session = Depends(get_db_session)) -> list[BlindSpotTopItem]:
+def get_blind_spot_top(_: None = Depends(require_admin_token), db: Session = Depends(get_db_session)) -> list[BlindSpotTopItem]:
     spots = db.execute(
         select(KnowledgeBlindSpot.normalized_query, KnowledgeBlindSpot.hit_count)
         .where(KnowledgeBlindSpot.status == "open")
@@ -172,3 +176,32 @@ def get_blind_spot_top(db: Session = Depends(get_db_session)) -> list[BlindSpotT
         BlindSpotTopItem(rank=index + 1, query=query, hit_count=hit_count)
         for index, (query, hit_count) in enumerate(spots)
     ]
+
+
+@router.post("/feedback", response_model=FeedbackResponse)
+def submit_feedback(payload: FeedbackCreate, db: Session = Depends(get_db_session)) -> FeedbackResponse:
+    if payload.chat_log_id is not None:
+        log = db.get(ChatLog, payload.chat_log_id)
+        if log is None or log.session_id != payload.session_id:
+            raise HTTPException(status_code=404, detail="未找到可评价的问答记录")
+        existing = db.execute(select(VisitorFeedback).where(VisitorFeedback.chat_log_id == payload.chat_log_id, VisitorFeedback.is_demo.is_(False))).scalar_one_or_none()
+        if existing is not None:
+            existing.rating = payload.rating
+            existing.reason_code = payload.reason_code
+            existing.comment = payload.comment
+            db.commit()
+            return FeedbackResponse(id=existing.id, rating=existing.rating, message="评价已更新")
+    feedback = VisitorFeedback(**payload.model_dump(), is_demo=False)
+    db.add(feedback)
+    db.commit()
+    db.refresh(feedback)
+    return FeedbackResponse(id=feedback.id, rating=feedback.rating, message="感谢您的反馈")
+
+
+@router.get("/experience-report", response_model=ExperienceReport)
+def get_experience_report(
+    range: str = Query(default="week", pattern="^(today|week|month)$"),
+    _: None = Depends(require_admin_token),
+    db: Session = Depends(get_db_session),
+) -> ExperienceReport:
+    return ExperienceReportService(db).build(range)

@@ -11,7 +11,7 @@
       <div class="chat-center">
         <div class="top-caption">
           <span class="crowd-indicator" data-level="green"><span class="crowd-dot"></span>当前景区人数：舒适</span>
-          <span class="caption-kicker">{{ GUIDE_PERSONA.name }} · 路线规划</span>
+          <span class="caption-kicker">{{ avatarDisplaySubtitle }} · 路线规划</span>
           <span class="caption-weather">智能路线 · 灵山导览</span>
         </div>
         <div class="avatar-stage">
@@ -145,6 +145,8 @@ import { normalizeAvatarPresetFromModelPath, DEFAULT_AVATAR_PRESET } from "../..
 import { useScenicBackground } from "../../composables/useScenicBackground";
 import ThreeAvatar from "../../components/ThreeAvatar.vue";
 import AvatarDisplay from "../../components/AvatarDisplay.vue";
+import { fetchRecommendations } from "../../api/recommend";
+import { getSessionId } from "../../stores/chat";
 
 const PRESET_ROUTES = [
   {
@@ -264,6 +266,13 @@ const visemeTimeline = ref(null);
 
 const currentLevel = ref(1);
 
+const AVATAR_MODEL_MAP = {
+  monk: { name: "明彻法师", subtitle: "明彻法师 · 佛学文化导游" },
+  hanfu: { name: "清岚", subtitle: "清岚 · 文化叙事导游" },
+  modern: { name: "景行", subtitle: "景行 · 智能导览导游" },
+};
+const avatarDisplaySubtitle = computed(() => AVATAR_MODEL_MAP[avatarConfig.value.modelKey]?.subtitle || "清岚 · 数字人导游");
+
 const avatarReady = computed(() => !avatarError.value);
 const voiceReady = computed(() => true);
 const replyStatusClass = computed(() => {
@@ -280,13 +289,61 @@ const currentCategory = ref("官方推荐");
 const selectedRoute = ref(null);
 
 const filteredRoutes = computed(() => {
-  return PRESET_ROUTES.filter(r => r.category === currentCategory.value);
+  if (recommendedRoutes.value.length > 0) return recommendedRoutes.value;
+  return PRESET_ROUTES
+    .filter((route) => route.category === currentCategory.value)
+    .map((route) => ({ ...route, title: `[离线备选] ${route.title}` }));
 });
+
+const recommendedRoutes = ref([]);
+let recommendationRequestId = 0;
+
+function categoryPreferences(category) {
+  if (category.includes("半日")) return { interests: ["轻松", "半日"], hours: 3 };
+  if (category.includes("主题")) return { interests: ["摄影", "文化"], hours: 4 };
+  if (category.includes("特色")) return { interests: ["自然", "文化"], hours: 4 };
+  return { interests: ["历史", "文化"], hours: 6 };
+}
+
+function mapRecommendedRoute(item) {
+  const spots = String(item.route_plan || "")
+    .split(/\s*(?:→|->|—|－)\s*/)
+    .map((spot) => spot.trim())
+    .filter(Boolean);
+  return {
+    id: `recommended-${item.route_id}`,
+    routeId: item.route_id,
+    title: `[智能推荐] ${item.title}`,
+    duration_label: item.duration_label || `${item.duration_hours || 2}小时`,
+    tags: ["智能推荐", item.source || "官方资料"],
+    spots,
+    guide: [item.reason, ...(item.guide_points || [])].filter(Boolean).join("\n"),
+    features: (item.experiences || []).join("；") || "可在导览过程中查看景点讲解与服务提示。",
+  };
+}
+
+async function loadRecommendations(category) {
+  const requestId = ++recommendationRequestId;
+  const preference = categoryPreferences(category);
+  recommendedRoutes.value = [];
+  try {
+    const data = await fetchRecommendations({
+      session_id: getSessionId(), interests: preference.interests, available_hours: preference.hours,
+      audience_type: "general", avoid_crowded: category.includes("特色"),
+    });
+    if (requestId !== recommendationRequestId) return;
+    recommendedRoutes.value = Array.isArray(data?.routes)
+      ? data.routes.map(mapRecommendedRoute).filter((route) => route.spots.length > 0) : [];
+  } catch {
+    if (requestId === recommendationRequestId) recommendedRoutes.value = [];
+  }
+}
 
 function navigateToLevel2(category) {
   currentCategory.value = category;
   currentLevel.value = 2;
   selectedRoute.value = null;
+  loadRecommendations(category);
 }
 
 function navigateToLevel3(route) {
@@ -301,6 +358,7 @@ function navigateToLevel1() {
 
 function startTour(route) {
   if (chatStore.streaming) return;
+  if (route.routeId) interactionStore.selectRoute(route.routeId);
   chatStore.sendMessage(`请介绍${route.title}`, interactionStore.selectionPayload, sendOptions.base);
 }
 

@@ -400,8 +400,8 @@ onBeforeUnmount(() => {
   position: absolute;
   top: 50%;
   z-index: 15;
-  width: 48px;
-  height: 48px;
+  width: 72px;
+  height: 72px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -410,7 +410,7 @@ onBeforeUnmount(() => {
   background: rgba(10, 8, 5, 0.55);
   backdrop-filter: blur(12px);
   color: rgba(232, 228, 219, 0.55);
-  font-size: 18px;
+  font-size: 28px;
   cursor: pointer;
   transition: all 0.3s ease;
   transform: translateY(-50%);
@@ -460,10 +460,10 @@ onBeforeUnmount(() => {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 340px;
-  min-height: 240px;
-  padding: 28px 30px 20px;
-  border-radius: 12px;
+  width: 416px;
+  height: 416px;
+  padding: 30px 32px 22px;
+  border-radius: 16px;
   border: 1px solid rgba(232, 228, 219, 0.14);
   background: rgba(22, 20, 15, 0.94);
   cursor: pointer;
@@ -487,7 +487,7 @@ onBeforeUnmount(() => {
   top: 0;
   left: 0;
   right: 0;
-  height: 3px;
+  height: 4px;
   background: var(--card-theme);
   opacity: 0.55;
   transition: opacity 0.48s ease, height 0.48s ease;
@@ -496,27 +496,27 @@ onBeforeUnmount(() => {
 .card-heading {
   display: flex;
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .card-index {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 22px;
-  padding: 0 10px;
-  border-radius: 4px;
+  height: 26px;
+  padding: 0 13px;
+  border-radius: 5px;
   background: color-mix(in srgb, var(--card-theme) 18%, transparent);
   color: var(--card-theme);
   font-family: "STKaiti", "KaiTi", "STSong", system-ui, sans-serif;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.06em;
   line-height: 1;
 }
 
 .card-title {
-  font-size: clamp(20px, 1.8vw, 26px);
+  font-size: 29px;
   font-weight: 700;
   letter-spacing: 0.06em;
   line-height: 1.2;
@@ -525,8 +525,8 @@ onBeforeUnmount(() => {
 }
 
 .card-desc {
-  min-height: 36px;
-  margin-top: 12px;
+  min-height: 43px;
+  margin-top: 14px;
   font-size: 14px;
   line-height: 1.6;
   color: rgba(232, 228, 219, 0.58);
@@ -545,16 +545,16 @@ onBeforeUnmount(() => {
 }
 
 .card-arrow-hint {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  min-height: 40px;
+  width: 45px;
+  height: 45px;
+  min-width: 45px;
+  min-height: 45px;
   border-radius: 50%;
   border: 1px solid rgba(232, 228, 219, 0.18);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 18px;
   color: rgba(232, 228, 219, 0.6);
   background: rgba(255, 250, 242, 0.05);
   transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), background 0.35s ease, border-color 0.35s ease;
@@ -683,27 +683,41 @@ onBeforeUnmount(() => {
 
 @media (max-width: 1199px) and (min-width: 769px) {
   .feature-card {
-    width: 300px;
-    min-height: 210px;
-    padding: 24px 24px 18px;
+    width: 420px;
+    height: 420px;
+    padding: 30px 32px 22px;
   }
 
   .card-heading {
-    margin-bottom: 12px;
+    margin-bottom: 16px;
   }
 
   .card-title {
-    font-size: 18px;
+    font-size: 28px;
   }
 
   .card-desc {
-    font-size: 13px;
+    font-size: 15px;
+  }
+
+  .card-index {
+    font-size: 15px;
+    height: 26px;
+    padding: 0 12px;
+  }
+
+  .card-arrow-hint {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+    font-size: 14px;
   }
 
   .carousel-arrow {
-    width: 40px;
-    height: 40px;
-    font-size: 15px;
+    width: 56px;
+    height: 56px;
+    font-size: 22px;
   }
 
   .select-header {
@@ -722,26 +736,41 @@ onBeforeUnmount(() => {
   }
 
   .feature-card {
-    width: min(80vw, 300px);
-    min-height: 200px;
-    padding: 20px 20px 16px;
+    width: min(85vw, 340px);
+    height: min(85vw, 340px);
+    padding: 24px 24px 18px;
     border-radius: 12px;
   }
 
+  .card-index {
+    font-size: 14px;
+    height: 24px;
+    padding: 0 10px;
+  }
+
   .card-heading {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
   }
 
   .card-title {
-    font-size: 18px;
+    font-size: 22px;
   }
 
   .card-desc {
     font-size: 13px;
+    min-height: 40px;
   }
 
   .card-footer {
     padding-top: 10px;
+  }
+
+  .card-arrow-hint {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    font-size: 14px;
   }
 
   .carousel-arrow {

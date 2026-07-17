@@ -87,9 +87,11 @@ class Settings(BaseSettings):
     coze_run_url: str = Field(default="")
     coze_token: str = Field(default="")
     coze_timeout_seconds: float = Field(default=12.0, gt=0.0, le=60.0)
+    competition_mode: bool = Field(default=False)
     cors_origins: str = Field(default="http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://localhost:5175")
     admin_password: str = Field(default="admin123")
     admin_token_secret: str = Field(default="a5-scenic-admin-secret-key")
+    admin_token_ttl_seconds: int = Field(default=8 * 60 * 60, ge=60, le=24 * 60 * 60)
 
     model_config = SettingsConfigDict(
         env_file=".env",
