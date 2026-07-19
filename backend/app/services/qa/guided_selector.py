@@ -75,18 +75,18 @@ class GuidedSelectionResolver:
         self.quick_topic_repository = quick_topic_repository
         self.route_repository = route_repository
 
-    def resolve(
+    async def resolve(
         self,
         query: str,
         selection: SelectionContext | None,
         context: ConversationContext | None = None,
     ) -> ResolvedInteraction:
         requested = selection or SelectionContext()
-        attractions = self.knowledge_repository.list_by_category("景点信息")
+        attractions = await self.knowledge_repository.list_by_category("景点信息")
         explicit_attraction = self._find_attraction(query, attractions)
-        selected_attraction = self._validate_attraction(requested.attraction_id)
-        selected_topic = self._validate_topic(requested.topic_key)
-        selected_route = self._validate_route(requested.route_id)
+        selected_attraction = await self._validate_attraction(requested.attraction_id)
+        selected_topic = await self._validate_topic(requested.topic_key)
+        selected_route = await self._validate_route(requested.route_id)
         warnings = self._validation_warnings(
             requested,
             selected_attraction=selected_attraction,
@@ -112,7 +112,7 @@ class GuidedSelectionResolver:
                 warnings=tuple(warnings),
             )
 
-        selected_result = self._resolve_valid_selection(
+        selected_result = await self._resolve_valid_selection(
             requested,
             selected_attraction=selected_attraction,
             selected_topic=selected_topic,
@@ -153,7 +153,7 @@ class GuidedSelectionResolver:
             warnings=tuple(warnings),
         )
 
-    def _resolve_valid_selection(
+    async def _resolve_valid_selection(
         self,
         requested: SelectionContext,
         *,
@@ -204,7 +204,7 @@ class GuidedSelectionResolver:
                 topic_key=None,
                 route_id=selected_route.id,
             )
-            route_entry = self.knowledge_repository.find_route_overview(selected_route.title)
+            route_entry = await self.knowledge_repository.find_route_overview(selected_route.title)
             scope = RetrievalScope(source_entry_id=route_entry.id) if route_entry is not None else RetrievalScope(category="游览路线")
             return ResolvedInteraction(
                 selection=resolved,
@@ -216,20 +216,20 @@ class GuidedSelectionResolver:
 
         return None
 
-    def _validate_attraction(self, attraction_id: int | None) -> KnowledgeEntry | None:
+    async def _validate_attraction(self, attraction_id: int | None) -> KnowledgeEntry | None:
         if attraction_id is None:
             return None
-        return self.knowledge_repository.get_attraction(attraction_id)
+        return await self.knowledge_repository.get_attraction(attraction_id)
 
-    def _validate_topic(self, topic_key: str | None):
+    async def _validate_topic(self, topic_key: str | None):
         if topic_key is None:
             return None
-        return self.quick_topic_repository.get_enabled(topic_key)
+        return await self.quick_topic_repository.get_enabled(topic_key)
 
-    def _validate_route(self, route_id: str | None):
+    async def _validate_route(self, route_id: str | None):
         if route_id is None:
             return None
-        return self.route_repository.get(route_id)
+        return await self.route_repository.get(route_id)
 
     @staticmethod
     def _validation_warnings(
@@ -293,11 +293,11 @@ class GuidedSelectionResolver:
         matches.sort(key=lambda item: (item[0], item[1], item[2]))
         return matches[0][3]
 
-    def find_attraction_by_candidates(self, candidate_titles: list[str]) -> KnowledgeEntry | None:
+    async def find_attraction_by_candidates(self, candidate_titles: list[str]) -> KnowledgeEntry | None:
         """用视觉识别的候选景点名匹配知识库中的真实景点。"""
         if not candidate_titles:
             return None
-        attractions = self.knowledge_repository.list_by_category("景点信息")
+        attractions = await self.knowledge_repository.list_by_category("景点信息")
         for title in candidate_titles:
             if not isinstance(title, str) or not title.strip():
                 continue

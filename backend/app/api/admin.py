@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Literal
 
 from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, UploadFile, status
-from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy import func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import require_admin_token
 from app.core.config import Settings
@@ -25,6 +26,8 @@ from app.schemas.admin import (
     AnalyticsItem,
     AvatarConfigActivateResponse,
     AvatarConfigResponse,
+    AvatarVoicePreviewRequest,
+    AvatarVoicePreviewResponse,
     DataSyncReport,
     DataSyncResponse,
     DisplayAssetsResponse,
@@ -46,6 +49,9 @@ from app.services.rag.embedder import SentenceTransformerEmbedder
 from app.services.rag.index_builder import RAGIndexBuilder
 from app.services.rag.vector_store import ChromaVectorStore
 from app.services.display_assets import DisplayAssetService
+from app.services.tts.bailian import BailianTTSService
+from app.services.tts.voices import resolve_tts_voice
+from app.services.tts.welcome_cache import _derive_model_key, generate_and_cache
 
 
 router = APIRouter(dependencies=[Depends(require_admin_token)])
@@ -82,34 +88,34 @@ def _to_blind_spot_read(entry) -> BlindSpotRead:
 
 
 @router.get("/overview", response_model=AdminOverview)
-async def admin_overview(session: Session = Depends(get_db_session)) -> AdminOverview:
-    avg_latency = session.execute(
+async def admin_overview(session: AsyncSession = Depends(get_db_session)) -> AdminOverview:
+    avg_latency = (await session.execute(
         select(func.avg(ChatLog.latency_ms)).where(ChatLog.latency_ms > 0)
-    ).scalar()
+    )).scalar()
 
     return AdminOverview(
-        knowledge_count=KnowledgeRepository(session).count(),
-        chunk_count=KnowledgeChunkRepository(session).count(),
-        chat_log_count=ChatLogRepository(session).count(),
-        visitor_count=VisitorRepository(session).count(),
-        cache_count=QACacheRepository(session).count(),
-        faq_count=FAQRepository(session).count(),
-        route_count=RouteRepository(session).count(),
-        behavior_summary_count=BehaviorSummaryRepository(session).count(),
+        knowledge_count=await KnowledgeRepository(session).count(),
+        chunk_count=await KnowledgeChunkRepository(session).count(),
+        chat_log_count=await ChatLogRepository(session).count(),
+        visitor_count=await VisitorRepository(session).count(),
+        cache_count=await QACacheRepository(session).count(),
+        faq_count=await FAQRepository(session).count(),
+        route_count=await RouteRepository(session).count(),
+        behavior_summary_count=await BehaviorSummaryRepository(session).count(),
         avg_latency_ms=round(float(avg_latency or 0), 1),
     )
 
 
 @router.get("/analytics", response_model=list[AnalyticsItem])
-async def admin_analytics(session: Session = Depends(get_db_session)) -> list[AnalyticsItem]:
-    behavior_summary = BehaviorSummaryRepository(session).get_latest()
+async def admin_analytics(session: AsyncSession = Depends(get_db_session)) -> list[AnalyticsItem]:
+    behavior_summary = await BehaviorSummaryRepository(session).get_latest()
     return [
-        AnalyticsItem(label="知识条目数", value=KnowledgeRepository(session).count()),
-        AnalyticsItem(label="知识切块数", value=KnowledgeChunkRepository(session).count()),
-        AnalyticsItem(label="FAQ条目数", value=FAQRepository(session).count()),
-        AnalyticsItem(label="路线模板数", value=RouteRepository(session).count()),
-        AnalyticsItem(label="问答日志数", value=ChatLogRepository(session).count()),
-        AnalyticsItem(label="游客画像数", value=VisitorRepository(session).count()),
+        AnalyticsItem(label="知识条目数", value=await KnowledgeRepository(session).count()),
+        AnalyticsItem(label="知识切块数", value=await KnowledgeChunkRepository(session).count()),
+        AnalyticsItem(label="FAQ条目数", value=await FAQRepository(session).count()),
+        AnalyticsItem(label="路线模板数", value=await RouteRepository(session).count()),
+        AnalyticsItem(label="问答日志数", value=await ChatLogRepository(session).count()),
+        AnalyticsItem(label="游客画像数", value=await VisitorRepository(session).count()),
         AnalyticsItem(label="行为样本行数", value=behavior_summary.row_count if behavior_summary else 0),
     ]
 
@@ -118,9 +124,9 @@ async def admin_analytics(session: Session = Depends(get_db_session)) -> list[An
 async def list_blind_spots(
     status: Literal["open", "resolved"] | None = "open",
     limit: int = Query(default=50, ge=1, le=200),
-    session: Session = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db_session),
 ) -> list[BlindSpotRead]:
-    entries = KnowledgeBlindSpotRepository(session).list(status=status, limit=limit)
+    entries = await KnowledgeBlindSpotRepository(session).list(status=status, limit=limit)
     return [_to_blind_spot_read(entry) for entry in entries]
 
 
@@ -128,13 +134,13 @@ async def list_blind_spots(
 async def resolve_blind_spot_with_faq(
     blind_spot_id: int,
     payload: ResolveBlindSpotWithFAQRequest,
-    session: Session = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db_session),
 ) -> BlindSpotResolutionResponse:
-    blind_spot = BlindSpotResolutionService(
+    blind_spot = await BlindSpotResolutionService(
         KnowledgeBlindSpotRepository(session),
         FAQRepository(session),
     ).resolve_with_faq(blind_spot_id, payload)
-    faq_reload_ms = reload_runtime_faq_matcher(session)
+    faq_reload_ms = await reload_runtime_faq_matcher(session)
     faq_stats = get_runtime_faq_stats()
     return BlindSpotResolutionResponse(
         message="Knowledge blind spot resolved with FAQ.",
@@ -148,11 +154,11 @@ async def resolve_blind_spot_with_faq(
 
 @router.post("/sync-processed-data", response_model=DataSyncResponse)
 async def sync_processed_data(
-    session: Session = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db_session),
     settings: Settings = Depends(get_app_settings),
 ) -> DataSyncResponse:
-    report = ProcessedDataImporter(session, settings).sync()
-    faq_reload_ms = reload_runtime_faq_matcher(session)
+    report = await ProcessedDataImporter(session, settings).sync()
+    faq_reload_ms = await reload_runtime_faq_matcher(session)
     faq_stats = get_runtime_faq_stats()
 
     return DataSyncResponse(
@@ -172,10 +178,10 @@ async def sync_processed_data(
 
 @router.post("/build-rag-index", response_model=RAGIndexBuildResponse)
 async def build_rag_index(
-    session: Session = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db_session),
     settings: Settings = Depends(get_app_settings),
 ) -> RAGIndexBuildResponse:
-    report = RAGIndexBuilder(
+    report = await RAGIndexBuilder(
         KnowledgeChunkRepository(session),
         SentenceTransformerEmbedder(settings.embedding_model_name, cache_dir=settings.model_cache_root),
         ChromaVectorStore(settings.chroma_persist_root, settings.rag_collection_name),
@@ -218,16 +224,19 @@ def _to_display_assets_response(service: DisplayAssetService) -> DisplayAssetsRe
 
 
 @router.get("/avatar-configs", response_model=list[AvatarConfigResponse])
-async def list_avatar_configs(session: Session = Depends(get_db_session)) -> list[AvatarConfigResponse]:
-    configs = session.query(AvatarConfig).order_by(AvatarConfig.id).all()
+async def list_avatar_configs(session: AsyncSession = Depends(get_db_session)) -> list[AvatarConfigResponse]:
+    result = await session.execute(select(AvatarConfig).order_by(AvatarConfig.id))
+    configs = result.scalars().all()
     return [_to_avatar_config_response(c) for c in configs]
 
 
 @router.get("/avatar-configs/active", response_model=AvatarConfigResponse)
-async def get_active_avatar_config(session: Session = Depends(get_db_session)) -> AvatarConfigResponse:
-    config = session.query(AvatarConfig).filter(AvatarConfig.is_active.is_(True)).first()
+async def get_active_avatar_config(session: AsyncSession = Depends(get_db_session)) -> AvatarConfigResponse:
+    result = await session.execute(select(AvatarConfig).where(AvatarConfig.is_active.is_(True)))
+    config = result.scalar_one_or_none()
     if config is None:
-        config = session.query(AvatarConfig).order_by(AvatarConfig.id).first()
+        result = await session.execute(select(AvatarConfig).order_by(AvatarConfig.id))
+        config = result.scalar_one_or_none()
     if config is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No avatar config found.")
     return _to_avatar_config_response(config)
@@ -273,37 +282,151 @@ async def update_welcome_text(
 async def update_avatar_config(
     config_id: int,
     voice_type: str = Body(..., embed=True),
-    session: Session = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_app_settings),
 ) -> AvatarConfigResponse:
     if voice_type not in VALID_VOICE_TYPES:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"不支持的音色类型: {voice_type}。仅允许: {', '.join(sorted(VALID_VOICE_TYPES))}",
         )
-    config = session.query(AvatarConfig).filter(AvatarConfig.id == config_id).first()
+    result = await session.execute(select(AvatarConfig).where(AvatarConfig.id == config_id))
+    config = result.scalar_one_or_none()
     if config is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Avatar config not found.")
     config.voice_type = voice_type
-    session.commit()
-    session.refresh(config)
+    await session.commit()
+    await session.refresh(config)
+
+    # 如果修改的是当前激活的角色，后台预生成欢迎语音频
+    if config.is_active and settings.tts_provider == "bailian" and settings.tts_api_key:
+        _schedule_welcome_audio_regeneration(config, settings)
+
     return _to_avatar_config_response(config)
+
+
+@router.post("/avatar-voice-preview", response_model=AvatarVoicePreviewResponse)
+async def preview_avatar_voice(
+    payload: AvatarVoicePreviewRequest,
+    settings: Settings = Depends(get_app_settings),
+) -> AvatarVoicePreviewResponse:
+    if payload.voice_type not in VALID_VOICE_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"不支持的音色类型: {payload.voice_type}",
+        )
+    if settings.tts_provider != "bailian" or not settings.tts_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="百炼 TTS 尚未配置，当前无法进行真实音色试听。",
+        )
+
+    text = payload.text.strip()[:100]
+    if not text:
+        raise HTTPException(status_code=422, detail="试听文本不能为空。")
+    provider_voice = resolve_tts_voice(payload.voice_type, settings.tts_voice)
+    audio = await BailianTTSService(
+        api_key=settings.tts_api_key,
+        base_url=settings.tts_base_url,
+        model=settings.tts_model,
+        voice=provider_voice,
+        timeout_seconds=settings.tts_timeout_seconds,
+        use_compatible_api=False,
+    ).synthesize(text)
+    if not audio.base64_audio:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"音色 {provider_voice} 合成失败，请检查百炼音色权限或服务状态。",
+        )
+    return AvatarVoicePreviewResponse(
+        voice_type=payload.voice_type,
+        provider_voice=provider_voice,
+        provider=audio.provider,
+        base64_audio=audio.base64_audio,
+        duration_ms=audio.duration_ms,
+    )
 
 
 @router.put("/avatar-configs/{config_id}/activate", response_model=AvatarConfigActivateResponse)
 async def activate_avatar_config(
     config_id: int,
-    session: Session = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_app_settings),
 ) -> AvatarConfigActivateResponse:
-    config = session.query(AvatarConfig).filter(AvatarConfig.id == config_id).first()
+    result = await session.execute(select(AvatarConfig).where(AvatarConfig.id == config_id))
+    config = result.scalar_one_or_none()
     if config is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Avatar config not found.")
 
-    session.query(AvatarConfig).filter(AvatarConfig.is_active.is_(True)).update({"is_active": False})
+    await session.execute(update(AvatarConfig).where(AvatarConfig.is_active.is_(True)).values(is_active=False))
     config.is_active = True
-    session.commit()
-    session.refresh(config)
+    await session.commit()
+    await session.refresh(config)
+
+    # 后台预生成欢迎语音频
+    if settings.tts_provider == "bailian" and settings.tts_api_key:
+        _schedule_welcome_audio_regeneration(config, settings)
 
     return AvatarConfigActivateResponse(
         message=f"Avatar config '{config.name}' activated.",
         config=_to_avatar_config_response(config),
     )
+
+
+def _schedule_welcome_audio_regeneration(config, settings: Settings):
+    """Fire-and-forget background task to pre-generate welcome TTS audio."""
+    model_key = _derive_model_key(config.model_path)
+    asyncio.create_task(
+        generate_and_cache(
+            model_key=model_key,
+            voice_type=config.voice_type,
+            api_key=settings.tts_api_key,
+            base_url=settings.tts_base_url,
+            model=settings.tts_model,
+            fallback_voice=settings.tts_voice,
+            timeout_seconds=settings.tts_timeout_seconds,
+        )
+    )
+
+
+@router.post("/avatar-configs/welcome-audio/regenerate")
+async def regenerate_welcome_audio(
+    session: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_app_settings),
+):
+    """Pre-generate welcome TTS audio for the currently active avatar config."""
+    result = await session.execute(
+        select(AvatarConfig).where(AvatarConfig.is_active.is_(True))
+    )
+    config = result.scalar_one_or_none()
+    if config is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active avatar config found.")
+
+    if settings.tts_provider != "bailian" or not settings.tts_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="百炼 TTS 尚未配置，无法预生成欢迎语音频。",
+        )
+
+    model_key = _derive_model_key(config.model_path)
+    audio = await generate_and_cache(
+        model_key=model_key,
+        voice_type=config.voice_type,
+        api_key=settings.tts_api_key,
+        base_url=settings.tts_base_url,
+        model=settings.tts_model,
+        fallback_voice=settings.tts_voice,
+        timeout_seconds=settings.tts_timeout_seconds,
+    )
+
+    if not audio.base64_audio:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="欢迎语音频合成失败，请检查百炼服务状态。",
+        )
+
+    return {
+        "message": "Welcome audio regenerated successfully.",
+        "duration_ms": audio.duration_ms,
+        "provider": audio.provider,
+    }

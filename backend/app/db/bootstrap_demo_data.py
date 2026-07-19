@@ -4,10 +4,13 @@ import json
 import random
 from datetime import datetime, timedelta, timezone
 
-from app.db.session import SessionLocal
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db.session import AsyncSessionLocal
 from app.models.chat_log import ChatLog
-from app.models.visitor import VisitorProfile
 from app.models.knowledge_blind_spot import KnowledgeBlindSpot
+from app.models.visitor import VisitorProfile
 
 
 FAQ_QUESTIONS = [
@@ -113,8 +116,11 @@ def _random_date_within_days(days_back: int) -> datetime:
     return datetime.now(timezone.utc) - timedelta(seconds=seconds_back)
 
 
-def seed_chat_logs(session) -> int:
-    existing = session.query(ChatLog).filter(ChatLog.session_id.like("demo-visitor-%")).count()
+async def seed_chat_logs(session: AsyncSession) -> int:
+    result = await session.execute(
+        select(func.count()).select_from(ChatLog).where(ChatLog.session_id.like("demo-visitor-%"))
+    )
+    existing = result.scalar_one()
     if existing > 0:
         return 0
 
@@ -174,14 +180,17 @@ def seed_chat_logs(session) -> int:
             session.add(log)
             count += 1
 
-    session.commit()
+    await session.commit()
     return count
 
 
-def seed_visitor_profiles(session) -> int:
-    existing = session.query(VisitorProfile).filter(
-        VisitorProfile.session_id.like("demo-visitor-%")
-    ).count()
+async def seed_visitor_profiles(session: AsyncSession) -> int:
+    result = await session.execute(
+        select(func.count()).select_from(VisitorProfile).where(
+            VisitorProfile.session_id.like("demo-visitor-%")
+        )
+    )
+    existing = result.scalar_one()
     if existing > 0:
         return 0
 
@@ -195,12 +204,13 @@ def seed_visitor_profiles(session) -> int:
         session.add(vp)
         count += 1
 
-    session.commit()
+    await session.commit()
     return count
 
 
-def seed_blind_spots(session) -> int:
-    existing = session.query(KnowledgeBlindSpot).first()
+async def seed_blind_spots(session: AsyncSession) -> int:
+    result = await session.execute(select(KnowledgeBlindSpot).limit(1))
+    existing = result.scalars().first()
     if existing is not None:
         return 0
 
@@ -221,23 +231,22 @@ def seed_blind_spots(session) -> int:
         session.add(spot)
         count += 1
 
-    session.commit()
+    await session.commit()
     return count
 
 
-def bootstrap_demo_data() -> dict:
-    session = SessionLocal()
-    try:
-        logs = seed_chat_logs(session)
-        visitors = seed_visitor_profiles(session)
-        blind_spots = seed_blind_spots(session)
+async def bootstrap_demo_data() -> dict:
+    async with AsyncSessionLocal() as session:
+        logs = await seed_chat_logs(session)
+        visitors = await seed_visitor_profiles(session)
+        blind_spots = await seed_blind_spots(session)
         return {"chat_logs": logs, "visitor_profiles": visitors, "blind_spots": blind_spots}
-    finally:
-        session.close()
 
 
 if __name__ == "__main__":
-    result = bootstrap_demo_data()
+    import asyncio
+
+    result = asyncio.run(bootstrap_demo_data())
     print(f"演示数据已注入完成:")
     print(f"  问答日志: {result['chat_logs']} 条")
     print(f"  游客画像: {result['visitor_profiles']} 条")

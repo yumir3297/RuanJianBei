@@ -50,8 +50,8 @@
       </div>
 
       <p class="panel-desc">
-        指尖轻触，开启灵山胜境智慧之旅。<br>
-        AI 数字人导游伴您遍览胜境风华。
+        指尖轻触，走进灵山。<br>
+        数字人导游带您领略胜境风华。
       </p>
 
       <div class="panel-divider"></div>

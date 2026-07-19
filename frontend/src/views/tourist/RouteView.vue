@@ -12,10 +12,11 @@
         <div class="top-caption">
           <span class="crowd-indicator" data-level="green"><span class="crowd-dot"></span>当前景区人数：舒适</span>
           <span class="caption-kicker">{{ avatarDisplaySubtitle }} · 路线规划</span>
-          <span class="caption-weather">智能路线 · 灵山导览</span>
+          <span class="caption-weather" v-if="!weatherCaption">智能路线 · 灵山导览</span>
+          <span class="caption-weather caption-weather-live" v-else>{{ weatherCaption }}</span>
         </div>
         <div class="avatar-stage">
-          <ThreeAvatar v-if="!avatarError" :preset="avatarConfig.modelKey" :emotion="avatar.currentEmotion.value" :is-speaking="avatarState==='speaking'||avatarState==='happy'" :speech-progress="speechProgress" :speech-elapsed-ms="speechElapsedMs" :speech-duration-ms="speechDurationMs" :speech-sync-active="activeAudioSegments>0" :viseme-timeline="visemeTimeline" @loaded="handleAvatarLoaded" @error="handleAvatarLoadError" />
+          <ThreeAvatar v-if="!avatarError" :preset="avatarConfig.modelKey" :emotion="avatar.currentEmotion.value" :is-speaking="avatarState==='speaking'||avatarState==='happy'" :speech-progress="speechProgress" :speech-elapsed-ms="speechElapsedMs" :speech-duration-ms="speechDurationMs" :speech-sync-active="activeAudioSegments>0" :viseme-timeline="visemeTimeline" :avatar-state="avatarState" :action="avatar.currentAction.value" :action-key="avatar.actionKey.value" @loaded="handleAvatarLoaded" @error="handleAvatarLoadError" />
           <AvatarDisplay v-else :state="avatarState" :emotion="avatar.currentEmotion.value" />
         </div>
       </div>
@@ -28,6 +29,16 @@
           <article v-for="(m,i) in chatStore.messages" :key="`${m.role}-${i}`" :class="['msg-item',m.role,{collapsed:m.role==='user'&&i<chatStore.messages.length-1&&chatStore.messages[i+1]?.role==='assistant'}]">
             <div v-if="m.role==='assistant'" class="msg-bubble" v-html="renderAnswer(m.content,i===chatStore.messages.length-1)" @click="handleCitationClick"></div>
             <div v-else class="msg-bubble">{{ m.content }}</div>
+            <div v-if="m.role==='assistant' && m.content && !chatStore.streaming" class="answer-feedback" aria-label="回答评价">
+              <span>这条讲解有帮助吗？</span>
+              <button type="button" :class="{ active: m.feedbackRating === 'positive' }" :disabled="m.feedbackSubmitting" @click="chatStore.submitFeedback(m, 'positive')">👍 有帮助</button>
+              <button type="button" :class="{ active: m.feedbackPendingRating === 'negative' || m.feedbackRating === 'negative' }" :disabled="m.feedbackSubmitting" @click="m.feedbackPendingRating = m.feedbackPendingRating === 'negative' ? null : 'negative'">👎 需改进</button>
+              <div v-if="m.feedbackPendingRating === 'negative'" class="feedback-reasons">
+                <span>请选择原因：</span>
+                <button v-for="reason in feedbackReasons" :key="reason.value" type="button" :disabled="m.feedbackSubmitting" @click="chatStore.submitFeedback(m, 'negative', reason.value)">{{ reason.label }}</button>
+              </div>
+              <span v-if="m.feedbackError" class="feedback-error">{{ m.feedbackError }}</span>
+            </div>
             <span v-if="m.role==='assistant'&&chatStore.streaming&&i===chatStore.messages.length-1&&m.content.length>0" class="typing-cursor">|</span>
           </article>
           <div v-if="chatStore.followups.length" class="followup-panel">
@@ -85,6 +96,22 @@
                 <span class="l2-back-arrow">←</span> 返回路线分类
               </button>
             </div>
+            <div class="route-preference-panel">
+              <div class="route-preference-title">
+                <strong>智能偏好</strong>
+                <span>结合天气进行轻量调整</span>
+              </div>
+              <div class="route-preference-chips">
+                <button
+                  v-for="option in comfortPreferenceOptions"
+                  :key="option.value"
+                  type="button"
+                  :class="['route-preference-chip', { active: comfortPreferences.includes(option.value) }]"
+                  :aria-pressed="comfortPreferences.includes(option.value)"
+                  @click="toggleComfortPreference(option.value)"
+                >{{ option.label }}</button>
+              </div>
+            </div>
             <div class="l2-scroll">
               <div v-for="route in filteredRoutes" :key="route.id" class="route-card" @click="navigateToLevel3(route)">
                 <h4>{{ route.title }}</h4>
@@ -119,16 +146,28 @@
               <button v-if="selectedRoute" class="route-start-btn" @click="startTour(selectedRoute)">开始导览</button>
             </div>
           </div>
+          <div class="hotline-section">
+            <div class="hotline-section-title">景区服务</div>
+            <div class="hotline-grid">
+              <button
+                v-for="(h, key) in hotlineConfig"
+                :key="key"
+                class="hotline-card"
+                @click="handleHotline(key)"
+              >
+                <span class="hotline-card-icon">{{ h.icon }}</span>
+                <span class="hotline-card-label">{{ h.label }}</span>
+              </button>
+            </div>
+          </div>
         </div>
       </aside>
     </div>
-    <div class="input-row"><div class="input-container">
+    <div class="input-row">
+      <button class="image-btn" @click="goToChatView">拍照识景</button>
       <input v-model="inputText" type="text" class="input-field" placeholder="请问关于游览路线…" :disabled="chatStore.streaming" @keydown.enter="handleSend" />
-      <button class="input-send-btn" :disabled="!inputText.trim()||chatStore.streaming" @click="handleSend">→</button>
-      <button v-if="chatStore.streaming" class="input-stop-btn" @click="chatStore.stopOutput()">■</button>
-      <button v-if="chatStore.errorMessage&&!chatStore.streaming" class="input-retry-btn" @click="handleRetry">重试</button>
-    </div></div>
-    <div class="voice-hint">当前页暂仅支持文字提问；语音提问请使用数字人导游页。</div>
+      <button class="voice-btn" @click="goToChatView">语音提问</button>
+    </div>
   </section>
 </template>
 
@@ -143,6 +182,7 @@ import { useAudioPlayer } from "../../composables/useAudioPlayer";
 import { fetchAvatarConfig } from "../../api/admin";
 import { normalizeAvatarPresetFromModelPath, DEFAULT_AVATAR_PRESET } from "../../utils/avatarConfig";
 import { useScenicBackground } from "../../composables/useScenicBackground";
+import { useWeather } from "../../composables/useWeather";
 import ThreeAvatar from "../../components/ThreeAvatar.vue";
 import AvatarDisplay from "../../components/AvatarDisplay.vue";
 import { fetchRecommendations } from "../../api/recommend";
@@ -227,6 +267,28 @@ const interactionStore = useInteractionStore();
 const avatar = useAvatar();
 const audioPlayer = useAudioPlayer();
 const { scenicBgUrl } = useScenicBackground();
+const { weather, displayText: weatherCaption, startPolling: startWeather, stopPolling: stopWeather } = useWeather();
+
+const feedbackReasons = [
+  { value: "accurate", label: "回答准确" },
+  { value: "insufficient", label: "信息不足" },
+  { value: "slow", label: "回复太慢" },
+  { value: "irrelevant", label: "答非所问" },
+  { value: "other", label: "其他原因" },
+];
+
+const hotlineConfig = {
+  broadcast: { label: '广播找人', icon: '📢', desc: '寻人广播·游客中心', number: '0510-85688631' },
+  complaint: { label: '景区投诉', icon: '📋', desc: '服务投诉建议', number: '400-168-0303转5' },
+  emergency: { label: '医疗急救', icon: '🩺', desc: '紧急医疗救助', number: '0510-85688120' },
+};
+
+function handleHotline(type) {
+  if (chatStore.streaming) return;
+  const h = hotlineConfig[type];
+  if (!h) return;
+  chatStore.messages.push({ role: 'assistant', content: `【${h.label}】请拨打景区服务热线：${h.number}` });
+}
 
 const avatarConfig = ref({ modelKey: DEFAULT_AVATAR_PRESET, voiceType: "gentle-female" });
 
@@ -244,6 +306,7 @@ const sendOptions = {
     return {
       ttsConfig: ttsConfig(),
       onContext: (sel) => interactionStore.applyResolvedSelection(sel),
+      onThinking: () => avatar.setState("thinking"),
       onAvatar: (p) => { try { avatar.handleAvatarEvent(p) } catch { avatarError.value = true } },
       onAudioStart: () => { activeAudioSegments.value++; avatar.setState("speaking") },
       onAudioEnded: () => { activeAudioSegments.value = Math.max(activeAudioSegments.value - 1, 0); if (activeAudioSegments.value === 0) { avatar.setState("idle"); speechProgress.value = 0; speechElapsedMs.value = 0; speechDurationMs.value = 0; visemeTimeline.value = null } },
@@ -267,7 +330,7 @@ const visemeTimeline = ref(null);
 const currentLevel = ref(1);
 
 const AVATAR_MODEL_MAP = {
-  monk: { name: "明彻法师", subtitle: "明彻法师 · 佛学文化导游" },
+  monk: { name: "宁灵", subtitle: "宁灵 · 佛学文化导游" },
   hanfu: { name: "清岚", subtitle: "清岚 · 文化叙事导游" },
   modern: { name: "景行", subtitle: "景行 · 智能导览导游" },
 };
@@ -296,7 +359,21 @@ const filteredRoutes = computed(() => {
 });
 
 const recommendedRoutes = ref([]);
+const comfortPreferences = ref([]);
+const comfortPreferenceOptions = [
+  { value: "avoid_heat", label: "☀️ 避暑" },
+  { value: "less_walking", label: "🚶 少走路" },
+  { value: "family", label: "👨‍👩‍👧 亲子/老人" },
+  { value: "rain", label: "🌧️ 雨天" },
+];
 let recommendationRequestId = 0;
+
+function toggleComfortPreference(value) {
+  comfortPreferences.value = comfortPreferences.value.includes(value)
+    ? comfortPreferences.value.filter((item) => item !== value)
+    : [...comfortPreferences.value, value];
+  loadRecommendations(currentCategory.value);
+}
 
 function categoryPreferences(category) {
   if (category.includes("半日")) return { interests: ["轻松", "半日"], hours: 3 };
@@ -315,7 +392,7 @@ function mapRecommendedRoute(item) {
     routeId: item.route_id,
     title: `[智能推荐] ${item.title}`,
     duration_label: item.duration_label || `${item.duration_hours || 2}小时`,
-    tags: ["智能推荐", item.source || "官方资料"],
+    tags: ["智能推荐", ...(item.comfort_tags || []), item.source || "官方资料"],
     spots,
     guide: [item.reason, ...(item.guide_points || [])].filter(Boolean).join("\n"),
     features: (item.experiences || []).join("；") || "可在导览过程中查看景点讲解与服务提示。",
@@ -330,6 +407,9 @@ async function loadRecommendations(category) {
     const data = await fetchRecommendations({
       session_id: getSessionId(), interests: preference.interests, available_hours: preference.hours,
       audience_type: "general", avoid_crowded: category.includes("特色"),
+      comfort_preferences: comfortPreferences.value,
+      weather_condition: weather.value?.description || null,
+      temperature_c: Number.isFinite(weather.value?.temp) ? weather.value.temp : null,
     });
     if (requestId !== recommendationRequestId) return;
     recommendedRoutes.value = Array.isArray(data?.routes)
@@ -359,6 +439,7 @@ function navigateToLevel1() {
 function startTour(route) {
   if (chatStore.streaming) return;
   if (route.routeId) interactionStore.selectRoute(route.routeId);
+  avatar.triggerAction("departure_pose");
   chatStore.sendMessage(`请介绍${route.title}`, interactionStore.selectionPayload, sendOptions.base);
 }
 
@@ -389,14 +470,772 @@ function scrollToBottom() { nextTick(() => { if (messageListRef.value) messageLi
 watch(() => chatStore.messages.length, () => scrollToBottom());
 watch(() => { const msgs = chatStore.messages; return msgs.length > 0 ? msgs[msgs.length - 1].content : ""; }, () => scrollToBottom());
 
-function handleBack() { chatStore.stopOutput(); audioPlayer.stop(); router.push("/tourist/select"); }
+function handleBack() { chatStore.stopOutput(); audioPlayer.stop(); router.push("/tourist/select?index=2").catch(() => {}); }
 
-onMounted(() => { interactionStore.initialize(); loadAvatarConfig(); });
-onBeforeUnmount(() => { chatStore.stopOutput(); audioPlayer.stop(); avatar.setState("idle"); });
+function goToChatView() {
+  router.push("/tourist").catch(() => {});
+}
+
+onMounted(() => { interactionStore.initialize(); loadAvatarConfig(); startWeather(); });
+onBeforeUnmount(() => { chatStore.stopOutput(); audioPlayer.stop(); avatar.setState("idle"); stopWeather(); });
 </script>
 
 <style scoped>
-@import '../../assets/tourist-page.css';
+/* ============================================================
+   DARK THEME TOURIST PAGE - aligned to design-redesign spec
+   ============================================================ */
+.tourist-page {
+  position: relative;
+  width: 100%; height: 100vh; height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #1a1612;
+  color: #f0ece5;
+  color-scheme: dark;
+}
+
+.scenic-bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.scenic-bg-img {
+  position: absolute; inset: 0;
+  background-position: center; background-repeat: no-repeat; background-size: cover;
+  filter: blur(10px) saturate(0.3) brightness(0.4);
+  transform: scale(1.06);
+}
+.scenic-bg-overlay {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 35%, transparent 0%, rgba(20,16,10,0.55) 80%),
+    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(22,18,10,0.5) 0%, transparent 70%);
+}
+
+.back-btn {
+  position: absolute; top: clamp(10px, 2vw, 32px); left: clamp(10px, 2vw, 32px); z-index: 25;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: clamp(8px, 0.9vw, 14px) clamp(16px, 1.8vw, 28px);
+  border: 1px solid rgba(255,250,242,0.11);
+  border-radius: 999px;
+  background: rgba(255,250,242,0.05);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: rgba(232,228,219,0.55);
+  font-family: inherit; font-size: clamp(14px, 1.2vw, 20px);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: border-color 0.3s ease, background 0.3s ease, color 0.3s ease;
+  outline: none;
+}
+.back-btn:hover {
+  border-color: rgba(255,250,242,0.19);
+  background: rgba(255,255,255,0.09);
+  color: rgba(232,228,219,0.85);
+}
+.back-btn:focus-visible { outline: 2px solid #d9a441; outline-offset: 3px; }
+
+.top-right {
+  position: absolute; top: clamp(10px, 2vw, 32px); right: clamp(10px, 2vw, 32px); z-index: 20;
+  display: flex; flex-direction: column;
+  align-items: flex-end; gap: 8px;
+}
+.top-brand {
+  color: rgba(232,228,219,0.88);
+  font-family: "STKaiti","KaiTi","STSong",serif;
+  font-size: clamp(24px, 2.8vw, 40px);
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 30px rgba(217,164,65,0.1);
+  line-height: 1.2;
+}
+.top-status-row {
+  display: flex; flex-direction: column; gap: 5px;
+}
+.status-item {
+  display: flex; align-items: center; gap: 8px;
+  font-size: clamp(13px, 0.9vw, 17px); font-weight: 400;
+  letter-spacing: 0.06em;
+  color: rgba(232,228,219,0.55);
+  font-family: system-ui, sans-serif;
+}
+.status-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%; flex-shrink: 0;
+  border: 1px solid rgba(255,250,242,0.16);
+}
+.status-dot--ready  { background: #d9a441; box-shadow: 0 0 4px rgba(217,164,65,0.5); }
+.status-dot--live   { background: #5ec9a4; box-shadow: 0 0 4px rgba(94,201,164,0.5); }
+.status-dot--weather { background: #6bb8e8; box-shadow: 0 0 4px rgba(107,184,232,0.5); }
+
+.tourist-stage {
+  position: relative; z-index: 10;
+  flex: 1; min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(clamp(160px, 12vw, 260px), clamp(240px, 17vw, 350px)) 1fr minmax(clamp(160px, 12vw, 260px), clamp(240px, 17vw, 350px));
+  gap: clamp(8px, 1vw, 16px);
+  align-items: stretch;
+  padding: 20px clamp(10px, 1.5vw, 24px) 0;
+  margin-top: 0;
+}
+
+.chat-center {
+  grid-column: 2; grid-row: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative; z-index: 2;
+  width: 100%; height: 100%;
+  min-height: 0;
+  padding: 0 8px;
+}
+.top-caption {
+  position: absolute;
+  top: 16px; left: 50%; transform: translateX(-50%);
+  z-index: 20;
+  display: flex; align-items: baseline; justify-content: center; gap: 12px;
+  white-space: nowrap;
+}
+.caption-kicker {
+  color: #f8e7bb;
+  font-family: "STKaiti","KaiTi",serif;
+  font-size: clamp(18px, 2vw, 28px); font-weight: 700; letter-spacing: 0.1em;
+  text-shadow: 0 0 20px rgba(217,164,65,0.15);
+}
+.caption-weather {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: rgba(23,18,14,0.6);
+  color: rgba(232,228,219,0.38);
+  font-family: system-ui, sans-serif;
+  font-size: clamp(12px, 0.8vw, 14px); font-weight: 400;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.caption-weather-live {
+  color: rgba(232,228,219,0.55);
+}
+.crowd-indicator {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: rgba(23,18,14,0.6);
+  font-size: 13px; font-weight: 400;
+  color: rgba(232,228,219,0.55);
+  letter-spacing: 0.04em;
+  font-family: system-ui, sans-serif;
+  white-space: nowrap;
+  cursor: default;
+}
+.crowd-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%; flex-shrink: 0;
+  border: 1px solid rgba(255,250,242,0.16);
+}
+.crowd-indicator[data-level="green"] .crowd-dot { background: #5ec9a4; }
+
+.avatar-stage {
+  position: relative; z-index: 2;
+  width: min(clamp(360px, 34vw, 650px), 100vw);
+  height: calc(min(clamp(360px, 42vh, 560px), 66vh) + 140px);
+  padding-top: 140px;
+  margin: -140px auto 0;
+  flex: 1;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  box-sizing: border-box;
+}
+.avatar-stage::after {
+  content: "";
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 140px;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent 0%, #1a1612 100%);
+}
+.avatar-stage :deep(.three-wrapper),
+.avatar-stage :deep(.avatar-display) {
+  width: 100%; height: 100%;
+  transform: translateY(8%);
+}
+
+.side-card {
+  position: absolute;
+  left: clamp(12px, 1.5vw, 28px); bottom: clamp(60px, 7vh, 120px);
+  z-index: 15;
+  width: clamp(260px, 17vw, 420px); height: clamp(340px, 52vh, 500px);
+  background: rgba(23,18,14,0.88);
+  border: 1px solid rgba(255,250,242,0.11);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.side-card.speaking {
+  animation: card-breathe 3s ease-in-out infinite;
+}
+@keyframes card-breathe {
+  0%, 100% { box-shadow: 0 0 0 rgba(217,164,65,0); }
+  50% { box-shadow: 0 0 40px rgba(217,164,65,0.08); }
+}
+.side-card-head {
+  flex-shrink: 0;
+  position: relative;
+}
+.side-card-tabs {
+  display: flex;
+}
+.side-card-tab {
+  flex: 1;
+  padding: 7px 0;
+  border: none;
+  background: transparent;
+  color: rgba(232,228,219,0.35);
+  font-family: inherit; font-size: clamp(14px, 0.9vw, 17px);
+  font-weight: 600; letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: color 0.25s ease;
+  position: relative;
+}
+.side-card-tab:hover { color: rgba(232,228,219,0.7); }
+.side-card-tab.active { color: rgba(232,228,219,0.75); }
+.side-card-tab.active::after {
+  content: "";
+  position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 24px; height: 2px;
+  border-radius: 1px;
+  background: #d9a441;
+}
+.side-card-body {
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 10px 12px;
+  display: flex; flex-direction: column;
+  gap: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(232,228,219,0.15) transparent;
+}
+.side-card-body.hidden { display: none; }
+.side-card-body::-webkit-scrollbar { width: 4px; }
+.side-card-body::-webkit-scrollbar-track { background: transparent; }
+.side-card-body::-webkit-scrollbar-thumb { background: rgba(232,228,219,0.15); border-radius: 2px; }
+.side-card-body::-webkit-scrollbar-thumb:hover { background: rgba(217,164,65,0.25); }
+
+.msg-item { display: flex; flex-direction: column; }
+.msg-item.assistant { align-items: flex-start; }
+.msg-item.user { align-items: flex-end; }
+.msg-item.user.collapsed { gap: 4px; }
+.msg-item.user.collapsed .msg-bubble {
+  max-height: 24px; overflow: hidden;
+  white-space: nowrap; text-overflow: ellipsis;
+  opacity: 0.45; font-size: 16px;
+  padding: 4px 10px; border-radius: 6px;
+  border-bottom-right-radius: 2px;
+}
+.msg-bubble {
+  max-width: 90%;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 15px; line-height: 1.5;
+  letter-spacing: 0.03em;
+  word-break: break-word;
+}
+.msg-item.user .msg-bubble {
+  background: rgba(217,164,65,0.12);
+  border: none;
+  color: rgba(232,228,219,0.9);
+  border-bottom-right-radius: 4px;
+}
+.msg-item.assistant .msg-bubble {
+  background: rgba(232,228,219,0.05);
+  border: none;
+  color: rgba(232,228,219,0.85);
+  border-bottom-left-radius: 4px;
+}
+.typing-cursor {
+  animation: blink 0.8s infinite;
+  color: #d9a441;
+  font-weight: 700; font-size: 16px; margin-left: 4px;
+}
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+
+.followup-panel {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(248,231,187,0.16);
+  border-radius: 14px;
+  background: rgba(255,248,232,0.06);
+}
+.followup-panel button {
+  padding: 8px 14px;
+  border: 1px solid rgba(248,231,187,0.2);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  color: #f8e7bb; font-size: clamp(13px, 0.8vw, 15px);
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+.followup-panel button:hover:not(:disabled) {
+  background: rgba(255,255,255,0.16);
+  border-color: rgba(248,231,187,0.42);
+  transform: translateY(-1px);
+}
+.followup-panel button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.source-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.source-item {
+  padding: 10px;
+  border: 1px solid rgba(232,228,219,0.08);
+  border-radius: 8px;
+  background: rgba(232,228,219,0.04);
+  transition: border-color 0.3s ease, background 0.3s ease;
+}
+.source-item:hover { border-color: rgba(232,228,219,0.20); background: rgba(232,228,219,0.08); }
+.source-item.highlight {
+  border-color: rgba(217,164,65,0.5);
+  background: rgba(217,164,65,0.08);
+}
+.source-item h4 {
+  display: flex; align-items: center; gap: 6px;
+  margin: 0 0 5px;
+  color: rgba(232,228,219,0.85); font-size: 18px; font-weight: 600;
+}
+.source-num {
+  display: inline-flex; flex-shrink: 0;
+  align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(217,164,65,0.2);
+  color: #d9a441; font-size: 13px; font-weight: 700;
+}
+.source-item p {
+  margin: 0 0 3px;
+  color: rgba(232,228,219,0.55); font-size: 14px; line-height: 1.5;
+}
+.source-meta { color: rgba(232,228,219,0.3); font-size: 13px; }
+.source-empty { color: rgba(240,242,236,0.52); text-align: center; padding: 60px 0; font-size: 15px; }
+
+.stop-notice { text-align: center; padding: 8px; color: rgba(248,231,187,0.6); font-size: 14px; }
+.error-notice { text-align: center; padding: 8px; color: #f87171; font-size: 14px; }
+
+.right-card {
+  position: absolute;
+  right: clamp(12px, 1.5vw, 28px); top: clamp(80px, 8vh, 130px); bottom: clamp(60px, 7vh, 120px);
+  z-index: 15;
+  width: clamp(270px, 18vw, 450px);
+  background: rgba(23,18,14,0.88);
+  border: 1px solid rgba(255,250,242,0.11);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.right-card-head {
+  flex-shrink: 0;
+  position: relative;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(232,228,219,0.06);
+  color: rgba(232,228,219,0.5);
+  font-family: "STKaiti","KaiTi",serif;
+  font-size: clamp(12px, 0.8vw, 14px); font-weight: 600;
+  letter-spacing: 0.06em;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.right-card-body {
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 10px 12px;
+  display: flex; flex-direction: column;
+  gap: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(232,228,219,0.15) transparent;
+}
+.right-card-body::-webkit-scrollbar { width: 4px; }
+.right-card-body::-webkit-scrollbar-track { background: transparent; }
+.right-card-body::-webkit-scrollbar-thumb { background: rgba(232,228,219,0.15); border-radius: 2px; }
+.right-card-body::-webkit-scrollbar-thumb:hover { background: rgba(217,164,65,0.25); }
+
+.service-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 8px;
+}
+.explore-card {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: clamp(6px, 0.5vw, 10px);
+  padding: clamp(10px, 1.2vw, 18px) clamp(6px, 0.8vw, 14px);
+  border-radius: 8px;
+  border: 1px solid rgba(232,228,219,0.10);
+  background: rgba(232,228,219,0.03);
+  cursor: pointer;
+  text-align: center; min-height: 0;
+  transition: border-color 0.3s ease, background 0.3s ease;
+  outline: none; position: relative; overflow: hidden;
+  font-family: inherit; color: inherit;
+}
+.explore-card:hover {
+  border-color: rgba(217,164,65,0.35);
+  background: rgba(217,164,65,0.06);
+}
+.explore-card:active { transform: scale(0.96); }
+.explore-card:focus-visible { outline: 2px solid #d9a441; outline-offset: 2px; }
+.explore-card-icon {
+  width: clamp(44px, 3vw, 64px); height: clamp(44px, 3vw, 64px); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: clamp(22px, 1.6vw, 32px); flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+.explore-card:hover .explore-card-icon { transform: scale(1.1); }
+.explore-card--scenic .explore-card-icon { background: rgba(217,164,65,0.15); color: #d9a441; }
+.explore-card--area   .explore-card-icon { background: rgba(94,201,164,0.15); color: #5ec9a4; }
+.explore-card--type   .explore-card-icon { background: rgba(107,184,232,0.15); color: #6bb8e8; }
+.explore-card--photo  .explore-card-icon { background: rgba(232,168,64,0.15); color: #e8a840; }
+.explore-card-title {
+  font-family: "STKaiti","KaiTi","STSong",serif;
+  font-size: clamp(16px, 1.3vw, 24px); font-weight: 600;
+  color: rgba(232,228,219,0.82);
+  letter-spacing: 0.05em; line-height: 1.3;
+}
+.explore-card-desc {
+  font-size: clamp(12px, 0.8vw, 15px); font-weight: 400;
+  color: rgba(232,228,219,0.3);
+  letter-spacing: 0.04em; line-height: 1.2;
+  font-family: system-ui, sans-serif;
+}
+
+/* ---------- hotline section ---------- */
+.hotline-section {
+  margin-top: clamp(1px, 0.15vw, 4px);
+  padding-top: clamp(8px, 0.8vw, 14px);
+  border-top: 1px solid rgba(232,228,219,0.08);
+}
+.hotline-section-title {
+  font-family: "STKaiti","KaiTi",serif;
+  font-size: clamp(10px, 0.7vw, 13px); font-weight: 600;
+  color: rgba(232,228,219,0.35);
+  letter-spacing: 0.06em;
+  margin-bottom: clamp(5px, 0.5vw, 10px);
+  padding: 0 2px;
+}
+.hotline-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(4px, 0.4vw, 8px);
+}
+.hotline-card {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: clamp(2px, 0.2vw, 5px);
+  padding: clamp(4px, 0.5vw, 10px) clamp(2px, 0.3vw, 6px);
+  border-radius: clamp(6px, 0.5vw, 10px);
+  border: 1px solid rgba(232,228,219,0.10);
+  background: rgba(232,228,219,0.03);
+  cursor: pointer;
+  transition: border-color 0.25s ease, background 0.25s ease;
+  outline: none; min-width: 0;
+  font-family: inherit; color: inherit;
+}
+.hotline-card:hover {
+  border-color: rgba(248,113,113,0.35);
+  background: rgba(248,113,113,0.06);
+}
+.hotline-card:active { transform: scale(0.96); }
+.hotline-card:focus-visible { outline: 2px solid #f87171; outline-offset: 2px; }
+.hotline-card-icon {
+  font-size: clamp(14px, 1.2vw, 22px); flex-shrink: 0;
+  transition: transform 0.25s ease;
+}
+.hotline-card:hover .hotline-card-icon { transform: scale(1.12); }
+.hotline-card-label {
+  font-size: clamp(9px, 0.6vw, 12px); font-weight: 500;
+  color: rgba(232,228,219,0.6);
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+}
+
+.input-row {
+  position: absolute;
+  bottom: clamp(24px, 2.5vh, 40px); left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  width: min(clamp(420px, 42vw, 800px), 88vw);
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+}
+.input-field {
+  flex: 1;
+  height: clamp(52px, 3.6vw, 72px);
+  padding: 0 clamp(16px, 1.5vw, 28px);
+  border: 1px solid rgba(232,228,219,0.12);
+  border-radius: 10px;
+  background: rgba(23,18,14,0.78);
+  color: rgba(232,228,219,0.82);
+  font-family: inherit; font-size: clamp(16px, 1.2vw, 24px);
+  letter-spacing: 0.03em;
+  outline: none;
+  transition: border-color 0.25s ease;
+}
+.input-field::placeholder { color: rgba(232,228,219,0.25); font-size: clamp(15px, 1.1vw, 22px); }
+.input-field:focus { border-color: rgba(217,164,65,0.35); }
+.input-field:disabled { opacity: 0.5; }
+
+.image-btn {
+  flex-shrink: 0; width: auto; height: clamp(52px, 3.6vw, 72px);
+  padding: 0 clamp(14px, 1.4vw, 28px);
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(94,201,164,0.25);
+  border-radius: 999px;
+  background: rgba(94,201,164,0.1);
+  color: #5ec9a4;
+  font-family: inherit; font-size: clamp(15px, 1.1vw, 22px); font-weight: 600;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+  outline: none; white-space: nowrap;
+}
+.image-btn:hover {
+  border-color: rgba(94,201,164,0.45);
+  background: rgba(94,201,164,0.2);
+  box-shadow: 0 0 20px rgba(94,201,164,0.15);
+}
+.image-btn:active { transform: scale(0.95); }
+.image-btn:focus-visible { outline: 2px solid #5ec9a4; outline-offset: 3px; }
+
+.voice-btn {
+  flex-shrink: 0; width: auto; height: clamp(52px, 3.6vw, 72px);
+  padding: 0 clamp(14px, 1.8vw, 32px);
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(217,164,65,0.3);
+  border-radius: 999px;
+  background: rgba(217,164,65,0.14);
+  color: #d9a441;
+  font-family: inherit; font-size: clamp(16px, 1.2vw, 24px); font-weight: 600;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+  outline: none; white-space: nowrap;
+}
+.voice-btn:hover {
+  border-color: rgba(217,164,65,0.45);
+  background: rgba(217,164,65,0.2);
+  box-shadow: 0 0 20px rgba(217,164,65,0.15);
+}
+.voice-btn:active { transform: scale(0.95); }
+.voice-btn:focus-visible { outline: 2px solid #d9a441; outline-offset: 3px; }
+
+@media (max-width: 720px) {
+  .tourist-page { overflow: hidden; padding: 0; }
+  .tourist-stage { display: flex; flex-direction: column; padding: 0; margin-top: 40px; gap: 0; flex: 1; min-height: 0; padding-bottom: 48px; }
+  .side-card { position: relative; left: auto; bottom: auto; width: 100%; min-height: 200px; order: 3; }
+  .right-card { position: relative; right: auto; top: auto; bottom: auto; width: 100%; min-height: 200px; order: 4; border-radius: 0; }
+  .chat-center { flex: 1; padding: 0; min-height: 0; }
+  .avatar-stage { width: min(52vh, 78vw); height: 100%; min-height: 0; flex: 1; }
+  .avatar-stage :deep(.three-wrapper),
+  .avatar-stage :deep(.avatar-display) { transform: translateY(10%); }
+  .avatar-stage::after { height: 80px; }
+  .input-row { position: absolute; bottom: 56px; left: 0; right: 0; transform: none; width: auto; gap: 6px; padding: 0 10px; margin: 0; }
+  .input-field { height: 48px; font-size: 16px; padding: 0 14px; }
+  .input-field::placeholder { font-size: 14px; }
+  .back-btn { top: 6px; left: 6px; padding: 5px 12px; font-size: 14px; }
+  .top-right { top: 6px; right: 6px; }
+  .top-brand { font-size: 15px; }
+  .top-caption { flex-wrap: wrap; gap: 4px; }
+  .caption-kicker { font-size: 15px; }
+  .caption-weather { font-size: 10px; padding: 3px 8px; }
+  .crowd-indicator { font-size: 10px; padding: 3px 8px; }
+  .service-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .voice-btn { padding: 0 10px; height: 44px; font-size: 14px; }
+  .image-btn { padding: 0 10px; height: 44px; font-size: 13px; }
+  .explore-card { padding: 10px 6px; }
+  .explore-card-icon { width: 40px; height: 40px; font-size: 22px; }
+  .explore-card-title { font-size: 16px; }
+  .explore-card-desc { font-size: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .side-card.speaking { animation: none; }
+}
+
+/* ---- status inline dots ---- */
+.status-inline-dot {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 400;
+  letter-spacing: 0.03em;
+  color: rgba(232,228,219,0.45);
+  font-family: system-ui, "Noto Sans SC", sans-serif;
+  white-space: nowrap;
+}
+.status-inline-dot::before {
+  content: "";
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid rgba(255,250,242,0.16);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+.status-inline-dot--ready::before { background: #5ec9a4; box-shadow: 0 0 5px rgba(94,201,164,0.35); }
+.status-inline-dot--loading::before { background: #e8a840; box-shadow: 0 0 5px rgba(232,168,64,0.35); animation: dot-pulse 1.6s ease-in-out infinite; }
+.status-inline-dot--live::before { background: #d9a441; box-shadow: 0 0 5px rgba(217,164,65,0.35); }
+.right-card-head-status {
+  display: inline-flex; align-items: center; gap: 10px;
+  flex-shrink: 0;
+}
+.answer-feedback { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; margin-top: 8px; color: rgba(232,228,219,.62); font-size: 11px; }
+.answer-feedback button { border: 1px solid rgba(232,228,219,.2); border-radius: 999px; background: rgba(255,255,255,.04); color: rgba(255,250,242,.82); padding: 4px 7px; font-size: 11px; cursor: pointer; }
+.answer-feedback button:hover, .answer-feedback button.active { border-color: rgba(94,201,164,.75); background: rgba(94,201,164,.14); color: #b8f1dd; }
+.answer-feedback button:disabled { cursor: wait; opacity: .55; }
+.feedback-reasons { display: flex; flex-basis: 100%; flex-wrap: wrap; align-items: center; gap: 6px; padding-top: 2px; }
+.feedback-error { flex-basis: 100%; color: #ffb4a8; }
+@keyframes dot-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* ===== RouteView-specific: level navigation ===== */
+.level1-view {
+  display: flex; flex: 1; min-height: 0; flex-direction: column;
+}
+.level1-view.hidden { display: none; }
+.level2-view {
+  display: none;
+  flex: 1; min-height: 0;
+  flex-direction: column;
+}
+.level2-view.open { display: flex; }
+.level3-view {
+  display: none;
+  flex: 1; min-height: 0;
+  flex-direction: column;
+}
+.level3-view.open { display: flex; }
+.l2-back-row {
+  flex-shrink: 0;
+  padding: 0 12px 8px;
+}
+.l2-back-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 0;
+  border: none; background: transparent;
+  color: rgba(232,228,219,0.4);
+  font-family: inherit; font-size: 16px; cursor: pointer;
+  transition: color 0.25s ease;
+}
+.l2-back-btn:hover { color: #d9a441; }
+.l2-back-arrow { font-size: 18px; transition: transform 0.3s ease; }
+.l2-back-btn:hover .l2-back-arrow { transform: translateX(-2px); }
+.l2-scroll {
+  flex: 1; min-height: 0;
+  overflow-y: auto; padding: 0 12px 8px;
+  display: flex; flex-direction: column; gap: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(232,228,219,0.1) transparent;
+}
+.l2-scroll::-webkit-scrollbar { width: 3px; }
+.l2-scroll::-webkit-scrollbar-thumb { background: rgba(232,228,219,0.1); border-radius: 2px; }
+.l2-scroll::-webkit-scrollbar-track { background: transparent; }
+
+/* ===== RouteView-specific: route cards ===== */
+.route-preference-panel {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(94, 201, 164, 0.2);
+  border-radius: 12px;
+  background: rgba(94, 201, 164, 0.07);
+}
+.route-preference-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: rgba(255,255,255,0.88);
+  font-size: 13px;
+}
+.route-preference-title span {
+  color: rgba(255,255,255,0.45);
+  font-size: 11px;
+}
+.route-preference-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.route-preference-chip {
+  padding: 5px 9px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.68);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.route-preference-chip.active {
+  border-color: rgba(94, 201, 164, 0.58);
+  background: rgba(94, 201, 164, 0.2);
+  color: #8ce2c4;
+}
+.route-card {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(232,228,219,0.10);
+  border-radius: 8px;
+  background: rgba(232,228,219,0.03);
+  cursor: pointer;
+  transition: border-color 0.3s ease, background 0.3s ease;
+}
+.route-card:hover {
+  border-color: rgba(217,164,65,0.35);
+  background: rgba(217,164,65,0.05);
+}
+.route-card:active { transform: scale(0.97); }
+.route-card:focus-visible { outline: 2px solid #d9a441; outline-offset: 2px; }
+.route-card h4 {
+  margin: 0;
+  color: rgba(232,228,219,0.82); font-size: 18px; font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.route-card .route-meta {
+  color: rgba(232,228,219,0.33); font-size: 14px;
+  letter-spacing: 0.03em;
+}
+.route-card .route-tags {
+  display: flex; flex-wrap: wrap; gap: 4px;
+}
+.route-card .route-tags span {
+  padding: 2px 8px;
+  border: 1px solid rgba(217,164,65,0.2);
+  border-radius: 999px;
+  font-size: 12px; color: rgba(217,164,65,0.65);
+  font-family: system-ui, sans-serif;
+}
+.route-detail-section {
+  margin-top: 6px;
+  padding: 8px 12px;
+  border: 1px solid rgba(232,228,219,0.08);
+  border-radius: 8px;
+  background: rgba(232,228,219,0.02);
+}
+.route-detail-section h5 {
+  margin: 0 0 6px;
+  color: rgba(232,228,219,0.5); font-size: 14px; font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.route-detail-section ul {
+  list-style: none; padding: 0; margin: 0;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.route-detail-section ul li {
+  display: flex; align-items: center; gap: 6px;
+  color: rgba(232,228,219,0.45); font-size: 14px;
+  letter-spacing: 0.03em;
+}
+.route-detail-section ul li::before {
+  content: "";
+  width: 6px; height: 6px; border-radius: 2px;
+  background: rgba(217,164,65,0.5);
+  flex-shrink: 0;
+}
+.route-detail-section p {
+  margin: 0; color: rgba(232,228,219,0.45); font-size: 14px;
+  line-height: 1.5; letter-spacing: 0.03em;
+}
+
 .route-start-btn {
   padding: 12px 24px;
   margin-top: 8px;
@@ -419,4 +1258,5 @@ onBeforeUnmount(() => { chatStore.stopOutput(); audioPlayer.stop(); avatar.setSt
 }
 .route-start-btn:active { transform: scale(0.96); }
 .route-start-btn:focus-visible { outline: 2px solid #d9a441; outline-offset: 2px; }
+
 </style>

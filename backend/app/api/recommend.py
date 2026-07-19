@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db_session
 from app.repositories.route import RouteRepository
@@ -16,7 +16,7 @@ router = APIRouter()
 @router.post("/", response_model=RecommendResponse)
 async def recommend_route(
     payload: RecommendRequest,
-    session: Session = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db_session),
 ) -> RecommendResponse:
-    VisitorRepository(session).upsert(payload.session_id, payload.interests, payload.audience_type)
-    return RecommendEngine(RouteRepository(session)).generate(payload)
+    await VisitorRepository(session).upsert(payload.session_id, payload.interests, payload.audience_type)
+    return await RecommendEngine(RouteRepository(session)).generate(payload)

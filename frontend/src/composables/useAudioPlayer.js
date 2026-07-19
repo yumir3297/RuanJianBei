@@ -8,12 +8,15 @@ export function useAudioPlayer() {
   const isPlaying = ref(false);
   const queue = ref([]);
   const mouthEnergy = ref(0);
+  const mouthAnalysisActive = ref(false);
+  const isPCMStreaming = ref(false);
 
   let audioContext = null;
   let currentSource = null;
   let currentUtterance = null;
   let stopGeneration = 0;
   let analyserNode = null;
+  let analysisSinkNode = null;
   let analyserData = null;
   let mouthRaf = null;
   let lastMouth = 0;
@@ -35,8 +38,11 @@ export function useAudioPlayer() {
     if (!analyserNode) {
       analyserNode = ctx.createAnalyser();
       analyserNode.fftSize = 512;
-      analyserNode.smoothingTimeConstant = 0.4;
-      analyserNode.connect(ctx.destination);
+      analyserNode.smoothingTimeConstant = 0.2;
+      analysisSinkNode = ctx.createGain();
+      analysisSinkNode.gain.value = 0;
+      analyserNode.connect(analysisSinkNode);
+      analysisSinkNode.connect(ctx.destination);
       analyserData = new Uint8Array(analyserNode.fftSize);
     }
     return analyserNode;
@@ -44,6 +50,7 @@ export function useAudioPlayer() {
 
   function startMouthLoop() {
     stopMouthLoop();
+    mouthAnalysisActive.value = true;
     const tick = () => {
       if (!analyserNode || !analyserData) { mouthRaf = requestAnimationFrame(tick); return; }
       analyserNode.getByteTimeDomainData(analyserData);
@@ -53,10 +60,12 @@ export function useAudioPlayer() {
         sum += v * v;
       }
       const rms = Math.sqrt(sum / analyserData.length);
-      const raw = Math.min(rms * 3.5, 1);
-      const attack = 0.25, decay = 0.06;
+      const normalized = Math.min(Math.max((rms - 0.012) / (0.22 - 0.012), 0), 1);
+      const raw = normalized > 0 ? Math.pow(normalized, 0.72) : 0;
+      const attack = 0.48, decay = 0.14;
       if (raw > lastMouth) lastMouth += (raw - lastMouth) * attack;
       else lastMouth += (raw - lastMouth) * decay;
+      if (raw === 0 && lastMouth < 0.018) lastMouth = 0;
       mouthEnergy.value = lastMouth;
       mouthRaf = requestAnimationFrame(tick);
     };
@@ -67,6 +76,7 @@ export function useAudioPlayer() {
     if (mouthRaf) { cancelAnimationFrame(mouthRaf); mouthRaf = null; }
     lastMouth = 0;
     mouthEnergy.value = 0;
+    mouthAnalysisActive.value = false;
   }
 
   async function base64ToAudioBuffer(base64String) {
@@ -96,9 +106,10 @@ export function useAudioPlayer() {
       source.playbackRate.value = playbackRate;
       gainNode.gain.value = volume;
       source.connect(gainNode);
+      gainNode.connect(ctx.destination);
 
       const analyser = ensureAnalyser();
-      if (analyser) { gainNode.connect(analyser); } else { gainNode.connect(ctx.destination); }
+      if (analyser) source.connect(analyser);
 
       startMouthLoop();
 
@@ -113,6 +124,8 @@ export function useAudioPlayer() {
       }
       source.onended = () => {
         currentSource = null;
+        source.disconnect();
+        gainNode.disconnect();
         stopMouthLoop();
         if (progressTimer) { clearInterval(progressTimer); onProgress?.(1, duration * 1000, duration * 1000); }
         resolve(duration * 1000);
@@ -205,13 +218,17 @@ export function useAudioPlayer() {
       if (audioBuffer) {
         current.playbackOptions?.onMode?.("audio");
         await playAudioBuffer(audioBuffer, current.onProgress, current.playbackOptions);
-      } else if (current.text && speechSynthSupported) {
+      } else if (
+        current.text
+        && speechSynthSupported
+        && current.playbackOptions?.allowBrowserSpeech === true
+      ) {
         current.playbackOptions?.onMode?.("browser");
         await playSpeechSynthesis(current.text, current.durationMs, current.onProgress, current.playbackOptions);
       } else {
         current.playbackOptions?.onMode?.("silent");
         current.onProgress?.(0, 0, current.durationMs);
-        await new Promise((r) => setTimeout(r, Math.min(current.durationMs, 3000)));
+        // Invalid or missing audio must not imitate playback or delay the answer.
         current.onProgress?.(1, current.durationMs, current.durationMs);
       }
       if (generation === stopGeneration && current.onEnded) current.onEnded();
@@ -226,9 +243,186 @@ export function useAudioPlayer() {
     if (currentSource) { try { currentSource.stop(); } catch {} currentSource = null; }
     if (currentUtterance) { window.speechSynthesis.cancel(); currentUtterance = null; }
     queue.value = [];
+    // 同时停止 PCM 流
+    resetPCMStream(true);
     isPlaying.value = false;
   }
 
-  sharedAudioPlayer = { queue, isPlaying, isSupported, mouthEnergy, enqueue, flush, stop };
+  // ── PCM 流式播放 ──
+  let pcmStream = null;
+  let pcmAccumulatedMs = 0;
+  let pcmOnProgress = null;
+  let pcmOnAudioEnded = null;
+  let pcmProgressTimer = null;
+  let pcmEndTimer = null;
+  let pcmTimeline = [];
+
+  function resetPCMStream(stopSources = false) {
+    if (stopSources && pcmStream?.sources) {
+      pcmStream.sources.forEach((source) => { try { source.stop(); } catch {} });
+    }
+    pcmStream = null;
+    pcmAccumulatedMs = 0;
+    pcmOnProgress = null;
+    pcmOnAudioEnded = null;
+    pcmTimeline = [];
+    isPCMStreaming.value = false;
+    if (pcmProgressTimer) { clearInterval(pcmProgressTimer); pcmProgressTimer = null; }
+    if (pcmEndTimer) { clearTimeout(pcmEndTimer); pcmEndTimer = null; }
+  }
+
+  function base64PCMToAudioBuffer(base64String, sampleRate = 24000, channels = 1, bits = 16) {
+    const ctx = ensureContext();
+    if (!ctx || !base64String) return null;
+    try {
+      const normalized = base64String.includes(",") ? base64String.slice(base64String.indexOf(",") + 1) : base64String;
+      const binary = atob(normalized);
+      if (!binary.length) return null;
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const dataView = new DataView(bytes.buffer);
+
+      // 16-bit PCM samples
+      const totalSamples = Math.floor(bytes.length / (bits / 8));
+      const audioBuffer = ctx.createBuffer(channels, totalSamples, sampleRate);
+      const channelData = audioBuffer.getChannelData(0);
+
+      if (bits === 16) {
+        for (let i = 0; i < totalSamples; i++) {
+          channelData[i] = dataView.getInt16(i * 2, true) / 32768.0;
+        }
+      } else if (bits === 8) {
+        for (let i = 0; i < totalSamples; i++) {
+          channelData[i] = (bytes[i] - 128) / 128.0;
+        }
+      }
+
+      return audioBuffer;
+    } catch { return null; }
+  }
+
+  function startPCMStream(onProgress, onAudioEnded) {
+    resetPCMStream(true);
+    pcmOnProgress = onProgress;
+    pcmOnAudioEnded = onAudioEnded;
+    pcmAccumulatedMs = 0;
+    isPCMStreaming.value = true;
+    isPlaying.value = true;
+    startMouthLoop();
+  }
+
+  function feedPCMChunk(base64String, sampleRate = 24000, channels = 1, bits = 16) {
+    const ctx = ensureContext();
+    if (!ctx || !base64String) return;
+    if (ctx.state === "suspended") ctx.resume();
+
+    const audioBuffer = base64PCMToAudioBuffer(base64String, sampleRate, channels, bits);
+    if (!audioBuffer) return;
+
+    if (pcmEndTimer) { clearTimeout(pcmEndTimer); pcmEndTimer = null; }
+
+    const chunkDurationMs = (audioBuffer.length / sampleRate) * 1000;
+
+    if (!pcmStream) {
+      // 第一个块：从当前时间开始播放
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      const gainNode = ctx.createGain();
+      gainNode.gain.value = 0.8;
+      source.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      const analyser = ensureAnalyser();
+      if (analyser) source.connect(analyser);
+      source.start(0);
+
+      pcmStream = {
+        startTime: ctx.currentTime,
+        nextTime: ctx.currentTime + audioBuffer.duration,
+        lastSource: source,
+        sources: new Set([source]),
+      };
+
+      // 进度上报
+      if (pcmOnProgress) {
+        pcmProgressTimer = setInterval(() => {
+          const elapsedMs = Math.max((ctx.currentTime - pcmStream.startTime) * 1000, 0);
+          const durationMs = Math.max(pcmAccumulatedMs, pcmTimeline.at(-1)?.end || 0, 1);
+          pcmOnProgress(
+            Math.min(elapsedMs / durationMs, 1),
+            elapsedMs,
+            durationMs,
+            pcmTimeline,
+          );
+        }, 30);
+      }
+
+      source.onended = () => {
+        source.disconnect();
+        gainNode.disconnect();
+        pcmStream?.sources?.delete(source);
+        if (pcmStream?.lastSource === source) pcmStream.lastSource = null;
+      };
+    } else {
+      // 后续块：在前一块结束后播放
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      const gainNode = ctx.createGain();
+      gainNode.gain.value = 0.8;
+      source.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      const analyser = ensureAnalyser();
+      if (analyser) source.connect(analyser);
+      source.start(pcmStream.nextTime);
+
+      pcmStream.nextTime += audioBuffer.duration;
+      pcmStream.lastSource = source;
+      pcmStream.sources.add(source);
+
+      source.onended = () => {
+        source.disconnect();
+        gainNode.disconnect();
+        pcmStream?.sources?.delete(source);
+        if (pcmStream?.lastSource === source) {
+          pcmStream.lastSource = null;
+        }
+      };
+    }
+
+    pcmAccumulatedMs += chunkDurationMs;
+  }
+
+  function updatePCMVisemeTimeline(timeline = []) {
+    if (!Array.isArray(timeline) || timeline.length === 0) return;
+    const byRange = new Map(pcmTimeline.map((item) => [`${item.start}:${item.end}`, item]));
+    timeline.forEach((item) => byRange.set(`${item.start}:${item.end}`, item));
+    pcmTimeline = [...byRange.values()].sort((a, b) => a.start - b.start);
+  }
+
+  function endPCMStream() {
+    if (!isPCMStreaming.value) return;
+    const ctx = ensureContext();
+    const remainingMs = pcmStream && ctx
+      ? Math.max((pcmStream.nextTime - ctx.currentTime) * 1000, 0)
+      : 0;
+    const drainDelayMs = Math.max(remainingMs + 80, 120);
+
+    if (pcmEndTimer) clearTimeout(pcmEndTimer);
+    pcmEndTimer = setTimeout(() => {
+      pcmEndTimer = null;
+      stopMouthLoop();
+      if (pcmProgressTimer) { clearInterval(pcmProgressTimer); pcmProgressTimer = null; }
+      isPlaying.value = false;
+      const onAudioEnded = pcmOnAudioEnded;
+      resetPCMStream();
+      onAudioEnded?.();
+    }, drainDelayMs);
+  }
+
+  sharedAudioPlayer = {
+    queue, isPlaying, isSupported, mouthEnergy, mouthAnalysisActive, isPCMStreaming,
+    enqueue, flush, stop,
+    // PCM 流式播放
+    startPCMStream, feedPCMChunk, updatePCMVisemeTimeline, endPCMStream,
+  };
   return sharedAudioPlayer;
 }

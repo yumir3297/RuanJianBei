@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from difflib import SequenceMatcher
 from pathlib import Path
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.faq import FAQRepository
 from app.services.qa.faq_semantic_index import FAQSemanticIndex, FAQSemanticMatch
@@ -75,8 +75,8 @@ class FAQMatcher:
         ]
         self.add(entries)
 
-    def load_from_db(self, session: Session) -> None:
-        records = FAQRepository(session).list_all()
+    async def load_from_db(self, session: AsyncSession) -> None:
+        records = await FAQRepository(session).list_all()
         entries = [
             FAQEntry(
                 id=record.id,
@@ -89,10 +89,10 @@ class FAQMatcher:
         ]
         self.add(entries)
 
-    def reload(self, session: Session) -> float:
+    async def reload(self, session: AsyncSession) -> float:
         start = perf_counter()
         self.clear()
-        self.load_from_db(session)
+        await self.load_from_db(session)
         if self.semantic_index is not None:
             self.semantic_index.build(self.entries)
         return (perf_counter() - start) * 1000

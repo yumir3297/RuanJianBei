@@ -15,6 +15,10 @@ router = APIRouter()
 
 
 def get_asr_service(settings: Settings = Depends(get_settings)) -> BaseASRService:
+    if settings.asr_provider == "local_sensevoice":
+        from app.services.asr.local_sensevoice import LocalSenseVoiceASRService
+
+        return LocalSenseVoiceASRService(settings=settings)
     if settings.asr_provider == "bailian":
         from app.services.asr.bailian import BailianASRService
 
@@ -59,6 +63,10 @@ async def transcribe_audio(
         "duration_ms": result.duration_ms,
         "provider": result.provider,
         "error_message": result.error_message,
+        "emotion": result.emotion,
+        "emotion_confidence": result.emotion_confidence,
+        "emotion_source": result.emotion_source,
+        "audio_event": result.audio_event,
         "candidates": [
             {"text": c.text, "confidence": c.confidence} for c in result.candidates
         ],

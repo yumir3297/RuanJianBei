@@ -17,6 +17,7 @@ from app.services.qa.pipeline import QAPipeline
 from app.services.rag.base import RetrievalScope, RetrievedDocument
 from app.services.rag.query_rewriter import QueryRewriter
 from app.services.tts.stub import StubTTSService
+from app.services.tts.streaming import StreamingTTSEvent
 
 
 class DummyCacheRepo:
@@ -112,6 +113,43 @@ class DummyLLMService:
     async def stream_generate(self, query, documents, *, persona=None):
         del query, documents, persona
         yield "基于官方证据回答。"
+
+
+class FakeStreamingTTSSession:
+    def __init__(self):
+        self.events = asyncio.Queue()
+        self.sent_text = []
+        self.closed = False
+
+    async def connect(self):
+        return None
+
+    async def send_text(self, text):
+        self.sent_text.append(text)
+        await self.events.put(StreamingTTSEvent(type="audio_chunk", data=b"\x00\x00" * 20))
+        await self.events.put(StreamingTTSEvent(type="word_timestamps", data={
+            "words": [{"text": "答", "begin_time": 0, "end_time": 100}],
+            "characters": sum(len(item) for item in self.sent_text),
+            "sentence_index": 0,
+        }))
+
+    async def finish(self):
+        await self.events.put(StreamingTTSEvent(type="done"))
+
+    async def receive(self, timeout=None):
+        del timeout
+        return await self.events.get()
+
+    async def close(self):
+        self.closed = True
+
+
+class FakeStreamingTTSService:
+    def __init__(self):
+        self.session = FakeStreamingTTSSession()
+
+    def create_session(self):
+        return self.session
 
 
 class FallbackLLMService:
@@ -229,6 +267,40 @@ def test_pipeline_passes_resolved_scope_and_uses_selection_cache_key() -> None:
     assert events[-2].type == "followups"
     assert 2 <= len(events[-2].data["items"]) <= 4
     assert events[-1].type == "done"
+
+
+def test_pipeline_forwards_streaming_tts_events_without_waiting_for_http_audio() -> None:
+    streaming_tts = FakeStreamingTTSService()
+    pipeline = QAPipeline(
+        query_rewriter=QueryRewriter(),
+        faq_matcher=FAQMatcher(),
+        qa_cache=QACache(DummyCacheRepo(), ttl_seconds=60),
+        rag_service=RecordingRAGService(),
+        llm_service=DummyLLMService(),
+        tts_service=StubTTSService(),
+        avatar_service=StubAvatarService(),
+        streaming_tts_service=streaming_tts,
+        chat_log_repository=DummyChatLogRepo(),
+        guided_selector=DummyGuidedSelector(),
+        followup_suggestions=FollowUpSuggestionService(),
+    )
+
+    async def run():
+        return [
+            event
+            async for event in pipeline.stream_chat(
+                ChatRequest(query="介绍灵山大佛", session_id="streaming-tts")
+            )
+        ]
+
+    events = asyncio.run(run())
+    event_types = [event.type for event in events]
+
+    assert event_types.count("audio_chunk") == 2
+    assert "audio" not in event_types
+    assert streaming_tts.session.sent_text == ["基于官方证据回答。"]
+    assert streaming_tts.session.closed is True
+    assert event_types[-1] == "done"
 
 
 def test_pipeline_records_blind_spot_only_when_rag_has_no_evidence() -> None:

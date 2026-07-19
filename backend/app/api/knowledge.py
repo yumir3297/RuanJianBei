@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.auth import require_admin_token
 from app.core.deps import get_db_session
 from app.core.exceptions import NotFoundError
 from app.repositories.knowledge import KnowledgeRepository
@@ -10,7 +11,7 @@ from app.schemas.common import MessageResponse
 from app.schemas.knowledge import KnowledgeCreate, KnowledgeRead, KnowledgeUpdate
 
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_admin_token)])
 
 
 def _to_knowledge_read(entry) -> KnowledgeRead:
@@ -28,16 +29,16 @@ def _to_knowledge_read(entry) -> KnowledgeRead:
 
 
 @router.get("/", response_model=list[KnowledgeRead])
-async def list_knowledge(session: Session = Depends(get_db_session)) -> list[KnowledgeRead]:
+async def list_knowledge(session: AsyncSession = Depends(get_db_session)) -> list[KnowledgeRead]:
     repository = KnowledgeRepository(session)
-    entries = repository.list_all()
+    entries = await repository.list_all()
     return [_to_knowledge_read(entry) for entry in entries]
 
 
 @router.post("/", response_model=KnowledgeRead, status_code=status.HTTP_201_CREATED)
-async def create_knowledge(payload: KnowledgeCreate, session: Session = Depends(get_db_session)) -> KnowledgeRead:
+async def create_knowledge(payload: KnowledgeCreate, session: AsyncSession = Depends(get_db_session)) -> KnowledgeRead:
     repository = KnowledgeRepository(session)
-    entry = repository.create(payload)
+    entry = await repository.create(payload)
     return _to_knowledge_read(entry)
 
 
@@ -45,21 +46,21 @@ async def create_knowledge(payload: KnowledgeCreate, session: Session = Depends(
 async def update_knowledge(
     knowledge_id: int,
     payload: KnowledgeUpdate,
-    session: Session = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db_session),
 ) -> KnowledgeRead:
     repository = KnowledgeRepository(session)
-    entry = repository.get(knowledge_id)
+    entry = await repository.get(knowledge_id)
     if entry is None:
         raise NotFoundError("Knowledge entry not found.")
-    updated = repository.update(entry, payload)
+    updated = await repository.update(entry, payload)
     return _to_knowledge_read(updated)
 
 
 @router.delete("/{knowledge_id}", response_model=MessageResponse)
-async def delete_knowledge(knowledge_id: int, session: Session = Depends(get_db_session)) -> MessageResponse:
+async def delete_knowledge(knowledge_id: int, session: AsyncSession = Depends(get_db_session)) -> MessageResponse:
     repository = KnowledgeRepository(session)
-    entry = repository.get(knowledge_id)
+    entry = await repository.get(knowledge_id)
     if entry is None:
         raise NotFoundError("Knowledge entry not found.")
-    repository.delete(entry)
+    await repository.delete(entry)
     return MessageResponse(message="Knowledge entry deleted.")

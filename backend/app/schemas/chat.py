@@ -20,6 +20,20 @@ class VisionContext(BaseModel):
     confidence: float = 0.0
 
 
+class EmotionContext(BaseModel):
+    audio_emotion: Literal[
+        "positive",
+        "neutral",
+        "confused",
+        "dissatisfied",
+        "anxious",
+        "urgent",
+    ] | None = None
+    audio_confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    audio_source: str | None = Field(default=None, max_length=50)
+    audio_event: str | None = Field(default=None, max_length=100)
+
+
 class ChatRequest(BaseModel):
     query: str = Field(min_length=1, max_length=1000)
     session_id: str = Field(min_length=1, max_length=100)
@@ -37,6 +51,7 @@ class ChatRequest(BaseModel):
     context: ConversationContext | None = None
     selection: SelectionContext | None = None
     vision_context: VisionContext | None = None
+    emotion_context: EmotionContext | None = None
 
 
 class SourceItem(BaseModel):

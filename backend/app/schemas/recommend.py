@@ -9,6 +9,9 @@ class RecommendRequest(BaseModel):
     available_hours: int = Field(default=2, ge=1, le=12)
     audience_type: str = Field(default="general", max_length=100)
     avoid_crowded: bool = False
+    comfort_preferences: list[str] = Field(default_factory=list, max_length=8)
+    weather_condition: str | None = Field(default=None, max_length=100)
+    temperature_c: int | None = Field(default=None, ge=-30, le=60)
 
 
 class RecommendItem(BaseModel):
@@ -20,6 +23,7 @@ class RecommendItem(BaseModel):
     route_plan: str
     guide_points: list[str] = Field(default_factory=list)
     experiences: list[str] = Field(default_factory=list)
+    comfort_tags: list[str] = Field(default_factory=list)
     source: str
 
 

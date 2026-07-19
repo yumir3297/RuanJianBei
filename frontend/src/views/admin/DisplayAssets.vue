@@ -224,7 +224,7 @@ const backgroundAsset = ref({
   updated_at: "",
 });
 
-const DEFAULT_WELCOME = "欢迎来到灵山胜境，愿您在此感受千年佛韵，尽享山水之美。";
+const DEFAULT_WELCOME = "欢迎来到灵山胜境，愿您在此感受禅佛意韵，尽享山水景致。";
 const welcomeTextValue = ref(DEFAULT_WELCOME);
 const welcomeTextEditing = ref(false);
 const welcomeTextSaving = ref(false);
@@ -279,7 +279,17 @@ function loadLandingImages() {
   catch { landingImages.value = []; }
 }
 
-function saveLandingImages() { localStorage.setItem(LANDING_STORAGE_KEY, JSON.stringify(landingImages.value)); }
+function saveLandingImages() {
+  try {
+    const payload = JSON.stringify(landingImages.value);
+    localStorage.setItem(LANDING_STORAGE_KEY, payload);
+    return true;
+  } catch (e) {
+    const sizeMB = (new Blob([JSON.stringify(landingImages.value)]).size / 1024 / 1024).toFixed(1);
+    ElMessage.error(`图片存储失败（约 ${sizeMB}MB），超出浏览器 localStorage 容量限制。请减少图片数量或使用更小的文件。`);
+    return false;
+  }
+}
 
 function openLandingPicker() { landingInputRef.value?.click(); }
 
@@ -298,10 +308,16 @@ function handleLandingFileSelect(event) {
       });
       loaded++;
       if (loaded === total) {
-        saveLandingImages();
+        const saved = saveLandingImages();
         lastUpdatedAt.value = formatNow();
-        ElMessage.success(`已添加 ${total} 张背景图`);
+        if (saved) {
+          ElMessage.success(`已添加 ${total} 张背景图`);
+        }
       }
+    };
+    reader.onerror = () => {
+      loaded++;
+      ElMessage.error(`"${file.name}" 读取失败`);
     };
     reader.readAsDataURL(file);
   }
@@ -310,16 +326,17 @@ function handleLandingFileSelect(event) {
 
 function removeLandingImage(idx) {
   landingImages.value.splice(idx, 1);
-  saveLandingImages();
-  lastUpdatedAt.value = formatNow();
-  ElMessage.success("已移除背景图");
+  const saved = saveLandingImages();
+  if (saved) {
+    lastUpdatedAt.value = formatNow();
+    ElMessage.success("已移除背景图");
+  }
 }
 
 function handleApplyLanding() {
-  saveLandingImages();
+  const saved = saveLandingImages();
   lastUpdatedAt.value = formatNow();
-  invalidateScenicBackground();
-  ElMessage.success("Landing 页轮播背景已应用");
+  if (saved) ElMessage.success("Landing 页轮播背景已应用，刷新 Landing 页面即可查看");
 }
 
 function handleClearLanding() {

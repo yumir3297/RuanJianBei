@@ -34,9 +34,9 @@ class RAGIndexBuilder:
         self.vector_store = vector_store
         self.batch_size = max(batch_size, 1)
 
-    def build(self) -> RAGIndexBuildReport:
+    async def build(self) -> RAGIndexBuildReport:
         started_at = perf_counter()
-        chunks = self.chunk_repository.list_all()
+        chunks = await self.chunk_repository.list_all()
         records: list[VectorStoreRecord] = []
 
         for offset in range(0, len(chunks), self.batch_size):

@@ -3,7 +3,7 @@ import { fetchDisplayAssets } from "../api/admin";
 import { API_BASE_URL } from "../api/http";
 
 const DEFAULT_BG_CSS = "var(--lingshan-scenic-bg)";
-const DEFAULT_WELCOME = "欢迎来到灵山胜境，愿您在此感受千年佛韵，尽享山水之美。";
+const DEFAULT_WELCOME = "欢迎来到灵山胜境，愿您在此感受禅佛意韵，尽享山水景致。";
 
 const cachedAssetUrl = shallowRef(null);
 const cachedWelcomeText = shallowRef(null);
@@ -12,7 +12,8 @@ let fetchPromise = null;
 function resolveAssetUrl(assetUrl) {
   if (!assetUrl) return "";
   if (/^https?:\/\//i.test(assetUrl)) return assetUrl;
-  return new URL(assetUrl, `${API_BASE_URL}/`).href;
+  const normalizedPath = assetUrl.startsWith("/") ? assetUrl : `/${assetUrl}`;
+  return `${API_BASE_URL}${normalizedPath}`;
 }
 
 async function ensureAssets() {

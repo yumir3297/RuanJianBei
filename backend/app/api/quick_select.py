@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db_session
 from app.repositories.knowledge import KnowledgeRepository
@@ -22,11 +22,11 @@ router = APIRouter()
 
 @router.get("/bootstrap", response_model=QuickSelectBootstrapResponse)
 async def get_quick_select_bootstrap(
-    session: Session = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db_session),
 ) -> QuickSelectBootstrapResponse:
-    topics = QuickTopicRepository(session).list_enabled()
-    attractions = KnowledgeRepository(session).list_by_category("景点信息")
-    routes = RouteRepository(session).list_all()
+    topics = await QuickTopicRepository(session).list_enabled()
+    attractions = await KnowledgeRepository(session).list_by_category("景点信息")
+    routes = await RouteRepository(session).list_all()
 
     return QuickSelectBootstrapResponse(
         topics=[

@@ -63,6 +63,20 @@ class AvatarConfigActivateResponse(BaseModel):
     config: AvatarConfigResponse
 
 
+class AvatarVoicePreviewRequest(BaseModel):
+    voice_type: str
+    text: str = "您好，欢迎来到灵山胜境，我将为您提供智慧导览服务。"
+
+
+class AvatarVoicePreviewResponse(BaseModel):
+    voice_type: str
+    provider_voice: str
+    provider: str
+    base64_audio: str
+    audio_mime_type: str = "audio/mpeg"
+    duration_ms: int
+
+
 class TouristBackgroundAssetResponse(BaseModel):
     asset_url: str | None = None
     relative_path: str | None = None

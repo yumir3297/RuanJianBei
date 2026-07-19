@@ -2,15 +2,15 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import inspect, text
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.db.session import engine
-from app.db.session import SessionLocal
+from app.db.session import AsyncSessionLocal
 from app.models.avatar_config import AvatarConfig
+from app.models.knowledge import KnowledgeEntry
+from app.models.quick_topic import QuickTopic
 from app.models.visitor_feedback import VisitorFeedback
-from app.repositories.knowledge import KnowledgeRepository
-from app.repositories.quick_topic import QuickTopicRepository
 from app.schemas.knowledge import KnowledgeCreate
 
 
@@ -107,60 +107,48 @@ DEFAULT_QUICK_TOPICS = (
 )
 
 
-def ensure_schema_compatibility() -> None:
-    inspector = inspect(engine)
-    if not inspector.has_table("knowledge_entries"):
-        return
-
-    column_names = {column["name"] for column in inspector.get_columns("knowledge_entries")}
-    if "metadata_json" in column_names:
-        return
-
-    with engine.begin() as connection:
-        connection.execute(text("ALTER TABLE knowledge_entries ADD COLUMN metadata_json TEXT"))
+async def seed_quick_topics(session: AsyncSession) -> int:
+    result = await session.execute(select(QuickTopic.key))
+    existing_keys = set(result.scalars().all())
+    missing = [QuickTopic(**topic) for topic in DEFAULT_QUICK_TOPICS if topic["key"] not in existing_keys]
+    if not missing:
+        return 0
+    session.add_all(missing)
+    await session.commit()
+    return len(missing)
 
 
-def seed_quick_topics(session) -> int:
-    return QuickTopicRepository(session).seed_missing(DEFAULT_QUICK_TOPICS)
-
-
-def seed_avatar_configs(session) -> int:
-    existing = session.query(AvatarConfig).count()
+async def seed_avatar_configs(session: AsyncSession) -> int:
+    result = await session.execute(select(func.count(AvatarConfig.id)))
+    existing = result.scalar_one() or 0
     if existing > 0:
         return 0
     for item in DEFAULT_AVATAR_CONFIGS:
         session.add(AvatarConfig(**item))
-    session.commit()
+    await session.commit()
     return len(DEFAULT_AVATAR_CONFIGS)
 
 
-def bootstrap_quick_topics() -> None:
-    session = SessionLocal()
-    try:
-        seed_quick_topics(session)
-    finally:
-        session.close()
+async def bootstrap_quick_topics() -> None:
+    async with AsyncSessionLocal() as session:
+        await seed_quick_topics(session)
 
 
-def bootstrap_avatar_configs() -> None:
-    session = SessionLocal()
-    try:
-        seed_avatar_configs(session)
-    finally:
-        session.close()
+async def bootstrap_avatar_configs() -> None:
+    async with AsyncSessionLocal() as session:
+        await seed_avatar_configs(session)
 
 
-def bootstrap_sample_data() -> None:
+async def bootstrap_sample_data() -> None:
     settings = get_settings()
     if not settings.enable_sample_data:
         return
     if settings.processed_data_available:
         return
 
-    session = SessionLocal()
-    try:
-        repository = KnowledgeRepository(session)
-        if repository.list_all():
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(KnowledgeEntry).limit(1))
+        if result.scalars().first():
             return
 
         samples = [
@@ -180,16 +168,25 @@ def bootstrap_sample_data() -> None:
             ),
         ]
         for item in samples:
-            repository.create(item)
-    finally:
-        session.close()
+            entry = KnowledgeEntry(
+                title=item.title,
+                category=item.category,
+                content=item.content,
+                source=item.source,
+                aliases="|".join(item.aliases),
+                metadata_json=item.metadata_json,
+            )
+            session.add(entry)
+        await session.commit()
 
 
-def bootstrap_experience_demo_feedback() -> None:
+async def bootstrap_experience_demo_feedback() -> None:
     """Seed database records for the first judge-facing report, never frontend constants."""
-    session = SessionLocal()
-    try:
-        if session.query(VisitorFeedback).filter(VisitorFeedback.is_demo.is_(True)).count():
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(func.count()).select_from(VisitorFeedback).where(VisitorFeedback.is_demo.is_(True))
+        )
+        if result.scalar_one():
             return
         now = datetime.now()
         samples = [
@@ -199,7 +196,13 @@ def bootstrap_experience_demo_feedback() -> None:
             ("positive", None, -1), ("positive", None, -1), ("positive", None, 0),
         ]
         for index, (rating, reason, offset) in enumerate(samples, start=1):
-            session.add(VisitorFeedback(session_id=f"demo-judge-{index:02d}", rating=rating, reason_code=reason, is_demo=True, created_at=now + timedelta(days=offset)))
-        session.commit()
-    finally:
-        session.close()
+            session.add(
+                VisitorFeedback(
+                    session_id=f"demo-judge-{index:02d}",
+                    rating=rating,
+                    reason_code=reason,
+                    is_demo=True,
+                    created_at=now + timedelta(days=offset),
+                )
+            )
+        await session.commit()

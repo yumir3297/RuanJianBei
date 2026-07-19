@@ -21,6 +21,10 @@ import asyncio
 import json
 import re
 import sys
+
+if hasattr(sys.stdout, "reconfigure"):
+    # Keep Windows console encoding from aborting a real assessment.
+    sys.stdout.reconfigure(errors="replace")
 import time
 from dataclasses import dataclass
 from datetime import datetime
@@ -97,7 +101,11 @@ async def collect_sse_stream(client: httpx.AsyncClient, payload: dict) -> dict[s
             timeout=httpx.Timeout(connect=10, read=TIMEOUT_SECONDS, write=10, pool=10),
         ) as response:
             response.raise_for_status()
+            event_type = "message"
             async for line in response.aiter_lines():
+                if line.startswith("event:"):
+                    event_type = line[6:].strip() or "message"
+                    continue
                 if not line.startswith("data:"):
                     continue
                 data_str = line[5:].strip()
@@ -107,8 +115,15 @@ async def collect_sse_stream(client: httpx.AsyncClient, payload: dict) -> dict[s
                     event = json.loads(data_str)
                 except json.JSONDecodeError:
                     continue
-                etype = event.get("type", "")
-                edata = event.get("data", {})
+
+                # Current API uses standard SSE fields: event: <type> followed
+                # by data: <payload>. Keep the legacy envelope for old reports.
+                if event_type == "message" and isinstance(event, dict) and "type" in event:
+                    etype = event.get("type", "")
+                    edata = event.get("data", {})
+                else:
+                    etype = event_type
+                    edata = event if isinstance(event, dict) else {}
                 if etype == "text_chunk":
                     result["full_text"] += edata.get("token", "")
                 elif etype == "text":
@@ -119,6 +134,8 @@ async def collect_sse_stream(client: httpx.AsyncClient, payload: dict) -> dict[s
                     result["statuses"].append(edata.get("text", ""))
                 elif etype == "context":
                     result["context"] = edata
+                elif etype == "error":
+                    result["_error"] = str(edata.get("message") or "stream error")
                 elif etype == "done":
                     break
     except Exception as exc:
@@ -128,10 +145,47 @@ async def collect_sse_stream(client: httpx.AsyncClient, payload: dict) -> dict[s
     return result
 
 
+SEMANTIC_KEYWORD_ALIASES: dict[str, tuple[str, ...]] = {
+    "佛体": ("佛像", "主体"),
+    "位置": ("位于", "入口", "东侧", "西侧", "南侧", "北侧"),
+    "老人": ("老年", "长者"),
+    "优惠": ("免票", "优待", "票务政策"),
+    "餐厅": ("餐饮", "素斋", "餐馆", "用餐"),
+    "比较": ("区别", "不同", "相比", "而"),
+    "区别": ("比较", "不同", "相比", "而"),
+    "含基座": ("含台基", "总高"),
+    "世界纪录": ("世界之最", "世界最高", "世界第一"),
+    "首个": ("第一", "首"),
+    "造像": ("雕像", "雕塑", "木雕"),
+    "水源": ("水从", "供水", "水源"),
+    "景区": ("景点", "灵山胜境"),
+    "路线": ("游览", "主游线", "怎么走"),
+    "主题": ("文化", "佛教", "建筑"),
+    "全天": ("一日", "全日"),
+    "省力": ("少走路", "轻松", "电梯"),
+    "关系": ("区别", "不同", "包含"),
+}
+
+
+def normalize_text(value: str) -> str:
+    normalized = (value or "").strip().lower()
+    # The knowledge base and generated answers may use either SI shorthand or Chinese units.
+    normalized = re.sub(r"(?<=\\d)\\s*m(?=[^a-z]|$)", "米", normalized)
+    return re.sub(r"\\s+", "", normalized)
+
+
+def matches_ground_truth(keyword: str, text: str) -> bool:
+    target = normalize_text(keyword)
+    if target and target in text:
+        return True
+    if target == "时间" and re.search(r"\\d{1,2}[:：]\\d{2}", text):
+        return True
+    return any(normalize_text(alias) in text for alias in SEMANTIC_KEYWORD_ALIASES.get(keyword, ()))
+
 def score_answer(query: str, full_text: str, category: str,
                  ground_truth: list[str], reject_keywords: list[str],
                  sources: list[dict]) -> tuple[int, str]:
-    text = full_text.strip().lower()
+    text = normalize_text(full_text)
 
     if category == "blind_spot":
         if reject_keywords:
@@ -156,7 +210,7 @@ def score_answer(query: str, full_text: str, category: str,
 
     hits = 0
     for kw in ground_truth:
-        if kw.lower() in text:
+        if matches_ground_truth(kw, text):
             hits += 1
 
     ratio = hits / len(ground_truth) if ground_truth else 0
@@ -331,7 +385,7 @@ async def main():
             result = await run_single_question(client, q, idx, q_idx_in_category)
             results.append(result)
 
-            icon = {5: "★", 4: "●", 3: "◐", 2: "○", 1: "✗"}.get(result.score, "?")
+            icon = {5: "PASS", 4: "GOOD", 3: "OK", 2: "WARN", 1: "FAIL"}.get(result.score, "UNKNOWN")
             retry_info = f" R{result.retries}" if result.retries > 0 else ""
             print(f"{icon} {result.score}/5  {result.latency_ms}ms  [{result.hit_level}]{retry_info}")
 

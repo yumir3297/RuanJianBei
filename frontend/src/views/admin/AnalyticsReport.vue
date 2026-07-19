@@ -43,6 +43,79 @@
       </article>
     </div>
 
+    <section class="panel-card emotion-dashboard">
+      <div class="card-heading emotion-heading">
+        <div>
+          <div class="title-line">
+            <el-tag size="small" type="success" effect="plain">多模态情感分析</el-tag>
+          </div>
+          <h3>游客情绪与服务响应</h3>
+          <p>融合文字语义与语音情绪，帮助景区发现困惑、不满、焦虑及紧急需求。</p>
+        </div>
+        <span class="card-total">{{ formatNumber(emotionInsights.total_analyzed) }} 次分析</span>
+      </div>
+
+      <el-skeleton v-if="loading.emotion" :rows="8" animated />
+      <template v-else>
+        <div class="emotion-kpi-grid">
+          <article v-for="card in emotionCards" :key="card.key" class="emotion-kpi-card">
+            <span>{{ card.label }}</span>
+            <strong>{{ formatNumber(card.value) }}</strong>
+            <small>{{ card.note }}</small>
+          </article>
+        </div>
+
+        <div class="emotion-content-grid">
+          <div class="emotion-distribution-panel">
+            <h4>融合情绪分布</h4>
+            <el-empty v-if="!emotionInsights.total_analyzed" description="暂无情绪分析记录" />
+            <div v-else class="emotion-bars">
+              <div v-for="item in emotionInsights.distribution" :key="item.emotion" class="emotion-bar-row">
+                <span class="emotion-name"><i :class="['emotion-dot', `emotion-dot--${item.emotion}`]"></i>{{ item.label }}</span>
+                <div class="emotion-bar-track">
+                  <span :class="['emotion-bar-fill', `emotion-bar-fill--${item.emotion}`]" :style="{ width: `${Math.max(item.ratio * 100, item.count ? 3 : 0)}%` }"></span>
+                </div>
+                <strong>{{ formatNumber(item.count) }}</strong>
+                <small>{{ formatPercent(item.ratio) }}</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="emotion-recent-panel">
+            <div class="emotion-recent-title">
+              <h4>最近分析记录</h4>
+              <span>最近 {{ emotionInsights.recent.length }} 条</span>
+            </div>
+            <el-empty v-if="!emotionInsights.recent.length" description="暂无最近记录" />
+            <el-table v-else :data="emotionInsights.recent" size="small" stripe max-height="360">
+              <el-table-column prop="query" label="游客问题" min-width="180" show-overflow-tooltip />
+              <el-table-column label="分析模态" width="105">
+                <template #default="{ row }">
+                  <el-tag size="small" effect="plain" :type="row.modalities.includes('audio') ? 'success' : 'info'">
+                    {{ row.modalities.includes('audio') ? '文字+语音' : '文字' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="融合结果" width="92">
+                <template #default="{ row }">
+                  <span :class="['emotion-result', `emotion-result--${row.fused_emotion}`]">{{ emotionLabel(row.fused_emotion) }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="置信度" width="76" align="right">
+                <template #default="{ row }">{{ formatPercent(row.confidence) }}</template>
+              </el-table-column>
+              <el-table-column label="响应策略" min-width="105">
+                <template #default="{ row }">{{ strategyLabel(row.response_strategy) }}</template>
+              </el-table-column>
+              <el-table-column label="时间" width="138">
+                <template #default="{ row }">{{ formatDateTime(row.created_at) }}</template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </div>
+      </template>
+    </section>
+
     <div class="chart-grid">
       <article class="panel-card chart-card">
         <div class="card-heading">
@@ -173,6 +246,7 @@ import * as echarts from "echarts";
 import { fetchAdminAnalytics, fetchAdminOverview } from "../../api/admin";
 import {
   fetchBlindSpotTop,
+  fetchEmotionSummary,
   fetchQATrend,
   fetchSpotAttention,
   fetchVisitorGroups,
@@ -195,6 +269,15 @@ const trendPayload = ref({
   daily_trend: [],
   hit_distribution: [],
 });
+const emotionInsights = ref({
+  total_analyzed: 0,
+  multimodal_count: 0,
+  conflict_count: 0,
+  attention_count: 0,
+  urgent_count: 0,
+  distribution: [],
+  recent: [],
+});
 
 const loading = ref({
   page: false,
@@ -204,6 +287,7 @@ const loading = ref({
   hitChart: true,
   blindTable: true,
   metrics: true,
+  emotion: true,
 });
 
 const errorMessage = ref("");
@@ -261,6 +345,53 @@ const spotAttentionTotal = computed(() =>
   ),
 );
 const hotBlindSpot = computed(() => blindSpots.value[0] || null);
+const emotionCards = computed(() => [
+  {
+    key: "analyzed",
+    label: "情绪分析总量",
+    value: emotionInsights.value.total_analyzed,
+    note: "每次问答均进行文字情绪分析",
+  },
+  {
+    key: "multimodal",
+    label: "文字+语音融合",
+    value: emotionInsights.value.multimodal_count,
+    note: "语音提问参与多模态融合",
+  },
+  {
+    key: "conflict",
+    label: "模态差异",
+    value: emotionInsights.value.conflict_count,
+    note: "文字与声音信号存在差异",
+  },
+  {
+    key: "attention",
+    label: "需关注咨询",
+    value: emotionInsights.value.attention_count,
+    note: `含紧急事件 ${formatNumber(emotionInsights.value.urgent_count)} 次`,
+  },
+]);
+
+const EMOTION_LABELS = {
+  positive: "积极",
+  neutral: "中性",
+  confused: "困惑",
+  dissatisfied: "不满",
+  anxious: "焦虑",
+  urgent: "紧急",
+};
+const STRATEGY_LABELS = {
+  positive: "积极回应",
+  neutral: "自然讲解",
+  confused: "澄清引导",
+  dissatisfied: "安抚与补救",
+  anxious: "安抚说明",
+  urgent: "安全优先",
+  clarify: "澄清引导",
+  service_recovery: "安抚与补救",
+  reassure: "安抚说明",
+  safety_first: "安全优先",
+};
 
 const summaryCards = computed(() => [
   {
@@ -315,6 +446,28 @@ function formatNumber(value) {
   return numberFormatter.format(Number(value) || 0);
 }
 
+function formatPercent(value) {
+  return `${Math.round((Number(value) || 0) * 100)}%`;
+}
+
+function emotionLabel(value) {
+  return EMOTION_LABELS[value] || value || "中性";
+}
+
+function strategyLabel(value) {
+  return STRATEGY_LABELS[value] || value || "自然讲解";
+}
+
+function formatDateTime(value) {
+  if (!value) return "--";
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
 function formatUpdatedAt() {
   return new Intl.DateTimeFormat("zh-CN", {
     hour: "2-digit",
@@ -329,7 +482,7 @@ function setPartialWarning(failures) {
     return;
   }
 
-  if (failures.length >= 6) {
+  if (failures.length >= 7) {
     errorMessage.value = "运营分析数据加载失败，请检查后端服务状态。";
     return;
   }
@@ -631,6 +784,7 @@ async function loadAnalytics() {
     fetchVisitorGroups(),
     fetchQATrend(),
     fetchBlindSpotTop(),
+    fetchEmotionSummary(),
   ]);
 
   const [
@@ -640,6 +794,7 @@ async function loadAnalytics() {
     visitorResult,
     trendResult,
     blindResult,
+    emotionResult,
   ] = results;
 
   if (overviewResult.status === "fulfilled") {
@@ -689,6 +844,13 @@ async function loadAnalytics() {
     failures.push("知识盲区");
   }
   loading.value.blindTable = false;
+
+  if (emotionResult.status === "fulfilled") {
+    emotionInsights.value = emotionResult.value || emotionInsights.value;
+  } else {
+    failures.push("情绪分析");
+  }
+  loading.value.emotion = false;
 
   setPartialWarning(failures);
   lastUpdatedAt.value = formatUpdatedAt();
@@ -829,6 +991,152 @@ onBeforeUnmount(() => {
   -webkit-line-clamp: 2;
   overflow: hidden;
 }
+
+.emotion-dashboard {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #d4c8b8;
+  border-radius: 0;
+}
+
+.emotion-heading {
+  margin-bottom: 14px;
+}
+
+.emotion-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.emotion-kpi-card {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid #e3d9cb;
+  background: #fffaf2;
+}
+
+.emotion-kpi-card span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.emotion-kpi-card strong {
+  color: #2f5f4a;
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+.emotion-kpi-card small {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.emotion-content-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1.5fr);
+  gap: 12px;
+}
+
+.emotion-distribution-panel,
+.emotion-recent-panel {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #e3d9cb;
+  background: #fff;
+}
+
+.emotion-distribution-panel h4,
+.emotion-recent-panel h4 {
+  margin: 0 0 12px;
+  color: #334155;
+  font-size: 15px;
+}
+
+.emotion-bars {
+  display: grid;
+  gap: 14px;
+}
+
+.emotion-bar-row {
+  display: grid;
+  grid-template-columns: 74px minmax(80px, 1fr) 34px 42px;
+  align-items: center;
+  gap: 8px;
+}
+
+.emotion-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #475569;
+  font-size: 12px;
+}
+
+.emotion-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+.emotion-bar-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #eef2f4;
+}
+
+.emotion-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #94a3b8;
+}
+
+.emotion-bar-row > strong {
+  color: #334155;
+  font-size: 12px;
+  text-align: right;
+}
+
+.emotion-bar-row > small {
+  color: #94a3b8;
+  font-size: 11px;
+  text-align: right;
+}
+
+.emotion-dot--positive, .emotion-bar-fill--positive { background: #43a383; }
+.emotion-dot--neutral, .emotion-bar-fill--neutral { background: #8b98a9; }
+.emotion-dot--confused, .emotion-bar-fill--confused { background: #4f91c7; }
+.emotion-dot--dissatisfied, .emotion-bar-fill--dissatisfied { background: #d08a31; }
+.emotion-dot--anxious, .emotion-bar-fill--anxious { background: #cb7056; }
+.emotion-dot--urgent, .emotion-bar-fill--urgent { background: #d84d4d; }
+
+.emotion-recent-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.emotion-recent-title span {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.emotion-result {
+  font-weight: 700;
+  color: #64748b;
+}
+
+.emotion-result--positive { color: #268264; }
+.emotion-result--confused { color: #337eae; }
+.emotion-result--dissatisfied { color: #aa681d; }
+.emotion-result--anxious { color: #b85743; }
+.emotion-result--urgent { color: #c93434; }
 
 .chart-grid,
 .detail-grid {
@@ -981,6 +1289,10 @@ onBeforeUnmount(() => {
   .detail-grid {
     grid-template-columns: 1fr;
   }
+
+  .emotion-content-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {
@@ -997,6 +1309,10 @@ onBeforeUnmount(() => {
 
   .summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .emotion-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .card-heading {

@@ -56,7 +56,6 @@
                 </div>
                 <div class="model-info">
                   <strong>{{ model.label }}</strong>
-                  <small>{{ model.description }}</small>
                 </div>
               </button>
             </div>
@@ -76,6 +75,11 @@
                   <el-option label="沉稳男声 · 龙三叔" value="deep-male" />
                   <el-option label="活泼女声 · 龙安亲" value="lively-female" />
                 </el-select>
+                <el-button class="voice-preview-btn" :loading="voicePreviewLoading" @click="handleVoicePreview">试听真实音色</el-button>
+                <div class="voice-provider-note">
+                  实际百炼音色：<code>{{ selectedVoiceOption.providerVoice }}</code>
+                  <span>{{ selectedVoiceOption.description }}</span>
+                </div>
               </el-form-item>
               <el-divider content-position="left">
                 <span style="font-size:12px;color:#6c757d">以下为本机演示偏好，不影响游客端</span>
@@ -107,14 +111,30 @@
                   :emotion="previewEmotion"
                   :is-speaking="previewSpeaking"
                   :reaction-token="previewReactionToken"
-                  gesture="wave"
-                  :gesture-token="previewGestureToken"
+                  :action="previewAction"
+                  :action-key="previewActionKey"
                   @loaded="handlePreviewLoaded"
                   @error="handlePreviewError"
                 />
               </div>
               <div class="preview-controls">
-                <el-button-group>
+                <div class="preview-control-row">
+                  <span>表情</span>
+                  <el-button-group>
+                    <el-button @click="setPreviewExpression('happy')" :type="previewEmotion === 'happy' ? 'primary' : 'default'">亲切微笑</el-button>
+                    <el-button @click="setPreviewExpression('relaxed')" :type="previewEmotion === 'relaxed' ? 'primary' : 'default'">专注聆听</el-button>
+                    <el-button @click="setPreviewExpression('apology')" :type="previewEmotion === 'apology' ? 'primary' : 'default'">安抚歉意</el-button>
+                  </el-button-group>
+                </div>
+                <div class="preview-control-row">
+                  <span>动作</span>
+                  <el-button-group>
+                    <el-button @click="playPreviewAction('two_hand_wave')">双手欢迎</el-button>
+                    <el-button @click="playPreviewAction('guide_narrate')">导览讲解</el-button>
+                    <el-button @click="playPreviewAction('applaud')">热烈鼓掌</el-button>
+                  </el-button-group>
+                </div>
+                <el-button-group v-if="false">
                   <el-button
                     @click="previewEmotion = 'neutral'; previewSpeaking = false"
                     :type="previewEmotion === 'neutral' && !previewSpeaking ? 'primary' : 'default'"
@@ -134,10 +154,12 @@
                     致歉
                   </el-button>
                 </el-button-group>
-                <el-button @click="previewSpeaking = !previewSpeaking" :type="previewSpeaking ? 'warning' : 'default'">
+                <el-button v-if="false" @click="previewSpeaking = !previewSpeaking" :type="previewSpeaking ? 'warning' : 'default'">
                   {{ previewSpeaking ? "停止说话" : "模拟说话" }}
                 </el-button>
-                <el-button @click="previewGestureToken += 1">Welcome wave</el-button>
+                <el-button @click="previewSpeaking = !previewSpeaking" :type="previewSpeaking ? 'warning' : 'default'">
+                  {{ previewSpeaking ? "停止口型预览" : "预览讲解口型" }}
+                </el-button>
               </div>
             </div>
           </div>
@@ -153,12 +175,13 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { ElMessage } from "element-plus";
 
 import ThreeAvatar from "../../components/ThreeAvatar.vue";
 import {
   fetchAvatarConfigs,
+  previewAvatarVoice,
   saveAvatarConfig,
   updateAvatarConfig,
 } from "../../api/admin";
@@ -173,9 +196,16 @@ import {
 const STORAGE_KEY = "a5-avatar-config-v1";
 
 const modelList = [
-  { key: "monk", label: "明彻法师", description: "庄重安定 · 佛教文化讲解", cssClass: "monk" },
+  { key: "monk", label: "宁灵", description: "庄重安定 · 佛教文化讲解", cssClass: "monk" },
   { key: "hanfu", label: "清岚", description: "雅致温润 · 文化叙事导览", cssClass: "hanfu" },
   { key: "modern", label: "景行", description: "亲切利落 · 现代智能导览", cssClass: "modern" },
+];
+
+const voiceOptions = [
+  { value: "gentle-female", label: "温柔女声 · 龙婉", providerVoice: "longwan_v3", description: "温暖亲切，适合欢迎与陪伴导览" },
+  { value: "calm-female", label: "知性女声 · 龙小夏", providerVoice: "longxiaoxia_v3", description: "清晰沉静，适合文化知识讲解" },
+  { value: "deep-male", label: "沉稳男声 · 龙三叔", providerVoice: "longsanshu_v3", description: "稳重厚实，适合历史与佛学讲解" },
+  { value: "lively-female", label: "活泼女声 · 龙安琴", providerVoice: "longanqin_v3", description: "明快活泼，适合亲子互动场景" },
 ];
 
 function loadLocalPrefs() {
@@ -203,8 +233,11 @@ const presetToConfigId = ref({});
 const previewEmotion = ref("neutral");
 const previewSpeaking = ref(false);
 const previewReactionToken = ref(0);
-const previewGestureToken = ref(0);
+const previewAction = ref("");
+const previewActionKey = ref(0);
 const previewError = ref(false);
+const voicePreviewLoading = ref(false);
+let previewAudio = null;
 
 const selectedPreset = ref(DEFAULT_AVATAR_PRESET);
 const voiceType = ref(DEFAULT_AVATAR_VOICE);
@@ -223,6 +256,10 @@ const voiceLabel = computed(() => {
     "lively-female": "活泼女声",
   }[voiceType.value] || "默认音色";
 });
+
+const selectedVoiceOption = computed(() =>
+  voiceOptions.find((item) => item.value === voiceType.value) || voiceOptions[0],
+);
 
 const summaryCards = computed(() => [
   {
@@ -266,6 +303,37 @@ function handlePreviewError(err) {
 
 function handlePreviewLoaded() {
   previewError.value = false;
+}
+
+function setPreviewExpression(emotion) {
+  previewEmotion.value = emotion;
+  previewSpeaking.value = false;
+  previewReactionToken.value += 1;
+}
+
+function playPreviewAction(action) {
+  previewAction.value = action;
+  previewActionKey.value += 1;
+}
+
+async function handleVoicePreview() {
+  if (voicePreviewLoading.value) return;
+  voicePreviewLoading.value = true;
+  previewAudio?.pause();
+  previewAudio = null;
+  try {
+    const result = await previewAvatarVoice(
+      voiceType.value,
+      "您好，欢迎来到灵山胜境，我将为您提供智慧导览服务。",
+    );
+    previewAudio = new Audio(`data:${result.audio_mime_type || "audio/mpeg"};base64,${result.base64_audio}`);
+    await previewAudio.play();
+    ElMessage.success(`正在播放真实音色：${result.provider_voice}`);
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.detail || error?.message || "音色试听失败，请检查 TTS 服务配置");
+  } finally {
+    voicePreviewLoading.value = false;
+  }
 }
 
 async function loadAvatarConfigs() {
@@ -343,6 +411,11 @@ function handleReset() {
 
 onMounted(() => {
   loadPageData();
+});
+
+onBeforeUnmount(() => {
+  previewAudio?.pause();
+  previewAudio = null;
 });
 </script>
 
@@ -566,6 +639,27 @@ onMounted(() => {
   margin-top: 14px;
 }
 
+.voice-form :deep(.el-form-item:first-child .el-form-item__content) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.voice-provider-note {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.voice-provider-note code {
+  color: #0f766e;
+  font-weight: 700;
+}
+
 .preview-block {
   height: 100%;
 }
@@ -602,6 +696,20 @@ onMounted(() => {
 .preview-controls {
   display: grid;
   gap: 12px;
+}
+
+.preview-control-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.preview-control-row > span {
+  width: 38px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .workbench-actions {

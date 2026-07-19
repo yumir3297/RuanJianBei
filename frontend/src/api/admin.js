@@ -50,6 +50,14 @@ export async function updateAvatarConfig(configId, voiceType) {
   return data;
 }
 
+export async function previewAvatarVoice(voiceType, text) {
+  const { data } = await http.post("/admin/avatar-voice-preview", {
+    voice_type: voiceType,
+    text,
+  }, { timeout: 45000 });
+  return data;
+}
+
 export async function fetchDisplayAssets() {
   const { data } = await http.get("/admin/display-assets");
   return data;

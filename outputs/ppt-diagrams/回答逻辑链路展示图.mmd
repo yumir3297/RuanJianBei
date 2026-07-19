@@ -1,0 +1,73 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'fontFamily': 'Microsoft YaHei, Arial', 'fontSize': '17px', 'lineColor': '#4B5F7A', 'primaryTextColor': '#14213D' }, 'flowchart': {'curve': 'basis', 'htmlLabels': true}}}%%
+flowchart LR
+  classDef input fill:#E8F1FF,stroke:#2F6BFF,stroke-width:2px,color:#14213D;
+  classDef understand fill:#E8FAF2,stroke:#1E9E6A,stroke-width:2px,color:#123B2A;
+  classDef retrieve fill:#FFF4DE,stroke:#E78A00,stroke-width:2px,color:#5D3900;
+  classDef generate fill:#F3ECFF,stroke:#805AD5,stroke-width:2px,color:#322052;
+  classDef experience fill:#FDECEF,stroke:#D9485F,stroke-width:2px,color:#5C1723;
+  classDef loop fill:#EEF2F6,stroke:#6A7C92,stroke-width:2px,color:#2D3B4D;
+
+  subgraph IN["① 多模态输入"]
+    direction TB
+    T["文字 / 快捷选项"]
+    V["语音 → ASR"]
+    I["图片 → Qwen Vision"]
+    T --- V --- I
+  end
+
+  subgraph COG["② 上下文理解"]
+    direction TB
+    N["输入标准化<br/>统一问题与多模态上下文"]
+    U["用户画像 + 会话历史<br/>情绪分析 + 意图识别 + 问题改写"]
+    N --> U
+  end
+
+  subgraph RAG["③ 证据优先路由"]
+    direction TB
+    F["快速路径<br/>FAQ 语义命中 / 缓存"]
+    R["知识路径<br/>Chroma 向量召回 + BM25 + Rerank"]
+    FB["保障机制<br/>Provider 超时 / 故障 → 本地或 Stub 降级"]
+    F --- R --- FB
+  end
+
+  subgraph GEN["④ 基于证据生成"]
+    direction TB
+    D["DeepSeek LLM<br/>结合检索证据组织回答"]
+    Q["回答结构化<br/>答案 · 来源 · 追问 · 表达指令"]
+    D --> Q
+  end
+
+  subgraph OUT["⑤ SSE 流式多通道呈现"]
+    direction TB
+    S["SSE Multiplexer<br/>按会话顺序合并事件"]
+    X["前端增量渲染<br/>文本 Token · 来源 · 追问"]
+    A["沉浸式表达<br/>流式 TTS · 口型 · 表情 · 动作"]
+    S --> X
+    S --> A
+  end
+
+  subgraph OPS["⑥ 运营改进闭环"]
+    direction TB
+    L["PostgreSQL<br/>对话 · 反馈 · 行为摘要 · 情绪趋势"]
+    B["管理端洞察<br/>体验报告 · 知识盲区"]
+    K["更新知识库 / FAQ<br/>重建索引，提升下一次检索"]
+    L --> B --> K
+  end
+
+  IN --> N
+  U -->|"识别意图与个性化条件"| F
+  U -->|"需要权威知识"| R
+  F --> D
+  R -->|"可追溯证据"| D
+  FB -.-> D
+  Q --> S
+  X -->|"评价 / 点赞 / 点踩 / 行为"| L
+  A -->|"互动体验"| L
+  K -.->|"知识入库"| R
+
+  class T,V,I input;
+  class N,U understand;
+  class F,R,FB retrieve;
+  class D,Q generate;
+  class S,X,A experience;
+  class L,B,K loop;

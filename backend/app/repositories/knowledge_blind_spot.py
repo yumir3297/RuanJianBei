@@ -4,25 +4,26 @@ import json
 from datetime import datetime, timezone
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.knowledge_blind_spot import KnowledgeBlindSpot
 
 
 class KnowledgeBlindSpotRepository:
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    def get(self, blind_spot_id: int) -> KnowledgeBlindSpot | None:
-        return self.session.get(KnowledgeBlindSpot, blind_spot_id)
+    async def get(self, blind_spot_id: int) -> KnowledgeBlindSpot | None:
+        return await self.session.get(KnowledgeBlindSpot, blind_spot_id)
 
-    def get_by_normalized_query(self, normalized_query: str) -> KnowledgeBlindSpot | None:
+    async def get_by_normalized_query(self, normalized_query: str) -> KnowledgeBlindSpot | None:
         stmt = select(KnowledgeBlindSpot).where(
             KnowledgeBlindSpot.normalized_query == normalized_query
         )
-        return self.session.scalar(stmt)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
 
-    def list(self, *, status: str | None = None, limit: int = 50) -> list[KnowledgeBlindSpot]:
+    async def list(self, *, status: str | None = None, limit: int = 50) -> list[KnowledgeBlindSpot]:
         stmt = select(KnowledgeBlindSpot)
         if status is not None:
             stmt = stmt.where(KnowledgeBlindSpot.status == status)
@@ -31,17 +32,19 @@ class KnowledgeBlindSpotRepository:
             KnowledgeBlindSpot.last_seen_at.desc(),
             KnowledgeBlindSpot.id.desc(),
         ).limit(limit)
-        return list(self.session.scalars(stmt))
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
 
-    def list_resolved_faq_ids(self) -> set[str]:
+    async def list_resolved_faq_ids(self) -> set[str]:
         stmt = select(KnowledgeBlindSpot.resolved_faq_id).where(
             KnowledgeBlindSpot.status == "resolved",
             KnowledgeBlindSpot.resolution_type == "faq",
             KnowledgeBlindSpot.resolved_faq_id.is_not(None),
         )
-        return {faq_id for faq_id in self.session.scalars(stmt) if faq_id}
+        result = await self.session.execute(stmt)
+        return {faq_id for faq_id in result.scalars() if faq_id}
 
-    def record(
+    async def record(
         self,
         *,
         normalized_query: str,
@@ -49,7 +52,7 @@ class KnowledgeBlindSpotRepository:
         category: str = "unknown",
         sample_limit: int = 5,
     ) -> KnowledgeBlindSpot:
-        entry = self.get_by_normalized_query(normalized_query)
+        entry = await self.get_by_normalized_query(normalized_query)
         now = datetime.now(timezone.utc)
         if entry is None:
             entry = KnowledgeBlindSpot(
@@ -71,10 +74,10 @@ class KnowledgeBlindSpotRepository:
             entry.last_seen_at = now
 
         self.session.add(entry)
-        self.session.flush()
+        await self.session.flush()
         return entry
 
-    def mark_resolved_with_faq(
+    async def mark_resolved_with_faq(
         self,
         entry: KnowledgeBlindSpot,
         *,
@@ -88,7 +91,7 @@ class KnowledgeBlindSpotRepository:
         entry.resolved_knowledge_id = None
         entry.resolved_at = datetime.now(timezone.utc)
         self.session.add(entry)
-        self.session.flush()
+        await self.session.flush()
         return entry
 
     @staticmethod

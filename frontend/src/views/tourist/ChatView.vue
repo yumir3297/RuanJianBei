@@ -33,6 +33,8 @@
             :speech-sync-active="activeAudioSegments > 0"
             :viseme-timeline="visemeTimeline"
             :avatar-state="avatarState"
+            :action="avatar.currentAction.value"
+            :action-key="avatar.actionKey.value"
             @loaded="handleAvatarLoaded"
             @error="handleAvatarLoadError"
           />
@@ -80,6 +82,44 @@
           </ul>
           <p v-else class="source-empty">提问后这里会显示参考资料</p>
         </div>
+        <section v-if="emotionAnalysis" class="emotion-analysis" :class="{ expanded: emotionPanelExpanded }">
+          <button
+            type="button"
+            class="emotion-analysis-toggle"
+            :aria-expanded="emotionPanelExpanded"
+            @click="emotionPanelExpanded = !emotionPanelExpanded"
+          >
+            <span class="emotion-analysis-dot" :data-emotion="emotionAnalysis.label"></span>
+            <span class="emotion-analysis-title">{{ emotionPanelTitle }}</span>
+            <strong>{{ emotionLabel(emotionAnalysis.label) }}</strong>
+            <span class="emotion-analysis-confidence">{{ formatEmotionPercent(emotionAnalysis.confidence) }}</span>
+            <span class="emotion-analysis-chevron" aria-hidden="true">⌄</span>
+          </button>
+          <div v-show="emotionPanelExpanded" class="emotion-analysis-detail">
+            <div class="emotion-metric-grid">
+              <div class="emotion-metric">
+                <span>文本判断</span>
+                <b>{{ textEmotionSignal ? emotionLabel(textEmotionSignal.label) : '未参与' }}</b>
+                <small>{{ textEmotionSignal ? formatEmotionPercent(textEmotionSignal.confidence) : '--' }}</small>
+              </div>
+              <div class="emotion-metric">
+                <span>声音判断</span>
+                <b>{{ audioEmotionSignal ? emotionLabel(audioEmotionSignal.label) : '未参与' }}</b>
+                <small>{{ audioEmotionSignal ? formatEmotionPercent(audioEmotionSignal.confidence) : '--' }}</small>
+              </div>
+              <div class="emotion-metric emotion-metric--fused">
+                <span>融合结果</span>
+                <b>{{ emotionLabel(emotionAnalysis.label) }}</b>
+                <small>{{ formatEmotionPercent(emotionAnalysis.confidence) }}</small>
+              </div>
+            </div>
+            <div class="emotion-analysis-meta">
+              <span>响应策略：{{ responseStrategyLabel }}</span>
+              <span>分析模态：{{ emotionModalitiesText }}</span>
+              <span v-if="emotionAnalysis.conflict" class="emotion-conflict">文本与声音存在差异，已按置信度融合</span>
+            </div>
+          </div>
+        </section>
       </aside>
 
       <!-- ④ 右卡片：快捷服务 -->
@@ -115,6 +155,20 @@
               <span class="explore-card-desc">{{ explanationLevelLabel }}</span>
             </button>
           </div>
+          <div class="hotline-section">
+            <div class="hotline-section-title">景区服务</div>
+            <div class="hotline-grid">
+              <button
+                v-for="(h, key) in hotlineConfig"
+                :key="key"
+                class="hotline-card"
+                @click="handleHotline(key)"
+              >
+                <span class="hotline-card-icon">{{ h.icon }}</span>
+                <span class="hotline-card-label">{{ h.label }}</span>
+              </button>
+            </div>
+          </div>
           <div class="style-selector" v-if="showStyleSelector">
             <button v-for="s in styleOptions" :key="s.key" :class="{ active: explanationLevel === s.key }" @click="explanationLevel = s.key; showStyleSelector = false">{{ s.label }}</button>
           </div>
@@ -125,14 +179,27 @@
     <!-- ⑤ 底部输入栏 -->
     <div class="input-row">
       <button class="image-btn" @click="toggleVisionPanel">拍照识景</button>
-      <input class="input-field" v-model="query" :placeholder="`想去哪里？我帮你规划…`" @keyup.enter="handleSubmit" :disabled="chatStore.streaming" autocomplete="off" name="tourist-query" />
-      <button class="voice-btn" :class="{ recording: speechListening || isRecording }" @click="toggleRecording" :disabled="chatStore.streaming || transcribing">{{ speechListening ? '结束语音' : isRecording ? `录音中 ${durationSeconds}s` : '语音提问' }}</button>
+      <input
+        class="input-field"
+        v-model="query"
+        :placeholder="voiceMode ? '按住说话…' : '想去哪里？我帮你规划…'"
+        @keyup.enter="handleSubmit"
+        :disabled="chatStore.streaming || voiceMode"
+        autocomplete="off"
+        name="tourist-query"
+      />
+      <button
+        class="voice-btn"
+        :class="{ recording: speechListening || isRecording }"
+        @click="toggleRecording"
+        :disabled="chatStore.streaming || transcribing"
+      >{{ transcribing ? '正在识别…' : voiceMode || speechListening || isRecording ? '⌨ 退出语音' : '语音提问' }}</button>
     </div>
 
     <!-- ⑥ 移动端底部 Tab 栏 + 抽屉 -->
     <nav class="mobile-tab-bar">
       <button :class="{ active: mobileTab === 'chat' }" @click="toggleMobileDrawer('chat')">💬 对话</button>
-      <button :class="{ active: mobileTab === 'quick' }" @click="toggleMobileDrawer('quick')">⚡ 快捷</button>
+      <button :class="{ active: mobileTab === 'quick' }" @click="toggleMobileDrawer('quick')">快捷</button>
     </nav>
 
     <transition name="drawer-fade">
@@ -211,6 +278,20 @@
                 <span class="explore-card-desc">{{ explanationLevelLabel }}</span>
               </button>
             </div>
+            <div class="hotline-section">
+              <div class="hotline-section-title">景区服务</div>
+              <div class="hotline-grid">
+                <button
+                  v-for="(h, key) in hotlineConfig"
+                  :key="key"
+                  class="hotline-card"
+                  @click="handleHotline(key); closeMobileDrawer()"
+                >
+                  <span class="hotline-card-icon">{{ h.icon }}</span>
+                  <span class="hotline-card-label">{{ h.label }}</span>
+                </button>
+              </div>
+            </div>
             <div class="style-selector" v-if="showStyleSelector">
               <button v-for="s in styleOptions" :key="s.key" :class="{ active: explanationLevel === s.key }" @click="explanationLevel = s.key; showStyleSelector = false">{{ s.label }}</button>
             </div>
@@ -222,6 +303,11 @@
     <div v-if="chatStore.errorMessage && !chatStore.streaming" class="voice-error-bar" role="alert">{{ chatStore.errorMessage }}</div>
 
     <!-- 语音状态条 -->
+    <div v-if="transcribing" class="speech-bar" aria-live="polite">
+      <span class="speech-pulse" aria-hidden="true"></span>
+      <strong>正在识别</strong>
+      <span>首次加载语音模型可能需要更长时间…</span>
+    </div>
     <div v-if="speechListening" class="speech-bar" aria-live="polite">
       <span class="speech-pulse" aria-hidden="true"></span>
       <strong>正在聆听</strong>
@@ -295,13 +381,14 @@ import { useRouter } from "vue-router";
 import ThreeAvatar from "../../components/ThreeAvatar.vue";
 import AvatarDisplay from "../../components/AvatarDisplay.vue";
 import { analyzeImage } from "../../api/vision";
-import { transcribeAudio } from "../../api/voice";
+import { getTranscriptionErrorMessage, transcribeAudio } from "../../api/voice";
 import { useAudioPlayer } from "../../composables/useAudioPlayer";
 import { renderMarkdown } from "../../composables/useMarkdown";
 import { useRecorder } from "../../composables/useRecorder";
 import { useSpeechRecognition } from "../../composables/useSpeechRecognition";
 import { useScenicBackground } from "../../composables/useScenicBackground";
 import { fetchAvatarConfig } from "../../api/admin";
+import { fetchWelcomeAudio } from "../../api/chat";
 import { normalizeAvatarPresetFromModelPath, DEFAULT_AVATAR_PRESET } from "../../utils/avatarConfig";
 import { GUIDE_PERSONA, useAvatar } from "../../composables/useAvatar";
 import { useWeather } from "../../composables/useWeather";
@@ -348,7 +435,7 @@ const GUIDE_STYLE_STORAGE_KEY = "a5-pending-guide-style-v1";
 const avatarConfig = ref({ modelKey: DEFAULT_AVATAR_PRESET, voiceType: "gentle-female" });
 
 const AVATAR_MODEL_MAP = {
-  monk: { name: "明彻法师", subtitle: "明彻法师 · 佛学文化导游" },
+  monk: { name: "宁灵", subtitle: "宁灵 · 佛学文化导游" },
   hanfu: { name: "清岚", subtitle: "清岚 · 文化叙事导游" },
   modern: { name: "景行", subtitle: "景行 · 智能导览导游" },
 };
@@ -367,12 +454,14 @@ async function loadAvatarConfig() {
 }
 
 const query = ref("");
+const voiceMode = ref(false);
 const explanationLevel = ref("adult");
 const transcribing = ref(false);
 const transcriptionConfidence = ref(-1);
 const showConfirmBar = ref(false);
 const transcriptionCandidates = ref([]);
 const confirmedTranscript = ref("");
+const pendingVoiceContext = ref(null);
 const speechBaseQuery = ref("");
 const speechSessionActive = ref(false);
 const recorderError = ref("");
@@ -390,6 +479,7 @@ const speechDurationMs = ref(0);
 const visemeTimeline = ref(null);
 const activeAudioSegments = ref(0);
 const sourceHighlightIndex = ref(-1);
+const emotionPanelExpanded = ref(false);
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const activeTab = ref('chat')
 const mobileTab = ref('chat')
@@ -425,8 +515,21 @@ function handleQuickAction(action) {
   if (chatStore.streaming) return
   if (action === 'recommend') submitQuery('推荐灵山值得去的景点')
   else if (action === 'photo') toggleVisionPanel()
-  else if (action === 'route') submitQuery('帮我规划一条灵山游览路线')
+  else if (action === 'route') submitQuery('帮我推荐灵山游览路线，避开人流')
   else if (action === 'style') showStyleSelector.value = !showStyleSelector.value
+}
+
+const hotlineConfig = {
+  broadcast: { label: '广播找人', icon: '📢', desc: '寻人广播·游客中心', number: '0510-85688631' },
+  complaint: { label: '景区投诉', icon: '📋', desc: '服务投诉建议', number: '400-168-0303转5' },
+  emergency: { label: '医疗急救', icon: '🩺', desc: '紧急医疗救助', number: '0510-85688120' },
+}
+
+function handleHotline(type) {
+  if (chatStore.streaming) return
+  const h = hotlineConfig[type]
+  if (!h) return
+  chatStore.messages.push({ role: 'assistant', content: `【${h.label}】请拨打景区服务热线：${h.number}` })
 }
 
 function closeVisionPanel() {
@@ -438,6 +541,41 @@ function clearVisionPanel() {
 }
 
 const voiceSupported = computed(() => speechSupported.value || recorderSupported.value);
+const EMOTION_LABELS = {
+  positive: "积极",
+  neutral: "中性",
+  confused: "困惑",
+  dissatisfied: "不满",
+  anxious: "焦虑",
+  urgent: "紧急",
+};
+const RESPONSE_STRATEGY_LABELS = {
+  positive: "亲切轻快",
+  neutral: "自然讲解",
+  confused: "简化并分步说明",
+  dissatisfied: "致歉并解决问题",
+  anxious: "安抚并优先指引",
+  urgent: "应急安全优先",
+};
+const emotionAnalysis = computed(() => chatStore.emotionAnalysis);
+const textEmotionSignal = computed(() =>
+  emotionAnalysis.value?.signals?.find((signal) => signal.source === "text_rules") || null,
+);
+const audioEmotionSignal = computed(() =>
+  emotionAnalysis.value?.signals?.find((signal) => signal.source !== "text_rules") || null,
+);
+const emotionPanelTitle = computed(() =>
+  emotionAnalysis.value?.modalities?.includes("audio") ? "多模态情绪" : "文本情绪",
+);
+const emotionModalitiesText = computed(() => {
+  const modalities = emotionAnalysis.value?.modalities || [];
+  if (modalities.includes("text") && modalities.includes("audio")) return "文本 + 声音";
+  if (modalities.includes("audio")) return "声音";
+  return "文本";
+});
+const responseStrategyLabel = computed(() =>
+  RESPONSE_STRATEGY_LABELS[emotionAnalysis.value?.response_strategy] || "自然讲解",
+);
 const speechPreviewText = computed(() => speechInterimText.value || speechFinalText.value);
 const confidenceLevelClass = computed(() => {
   if (transcriptionConfidence.value >= 0.7) return "conf-high";
@@ -516,9 +654,10 @@ function handleChangeMode() {
   if (chatStore.streaming || speechListening.value || isRecording.value) {
     return;
   }
+  voiceMode.value = false;
   chatStore.stopOutput();
   audioPlayer.stop();
-  router.push("/tourist/select");
+  router.push("/tourist/select?index=0").catch(() => {});
 }
 
 function toggleVisionPanel() {
@@ -537,6 +676,13 @@ function scrollToBottom() {
 watch(
   () => chatStore.messages.length,
   () => scrollToBottom(),
+);
+
+watch(
+  () => chatStore.emotionAnalysis,
+  () => {
+    emotionPanelExpanded.value = false;
+  },
 );
 
 watch(
@@ -571,10 +717,26 @@ watch([speechFinalText, speechInterimText], ([finalText, interimText]) => {
 });
 
 watch(speechListening, (listening, wasListening) => {
-  if (!listening && wasListening && speechSessionActive.value) {
-    query.value = mergeSpeechInput(speechBaseQuery.value, speechFinalText.value, "");
-    speechSessionActive.value = false;
-    avatar.setState("idle");
+  if (!listening && wasListening) {
+    voiceMode.value = false;
+    if (speechSessionActive.value) {
+      query.value = mergeSpeechInput(speechBaseQuery.value, speechFinalText.value, "");
+      pendingVoiceContext.value = {
+        audio_emotion: null,
+        audio_confidence: 0,
+        audio_source: "browser_speech_recognition",
+        audio_event: null,
+      };
+      speechSessionActive.value = false;
+      avatar.setState("idle");
+      // 浏览器语音识别结束后自动发送
+      const voiceCtx = pendingVoiceContext.value;
+      pendingVoiceContext.value = null;
+      submitQuery(query.value, voiceCtx ? {
+        inputMode: "voice",
+        emotionContext: voiceCtx,
+      } : {});
+    }
   }
 });
 
@@ -593,12 +755,36 @@ onMounted(() => {
   } catch {}
 
   if (chatStore.messages.length === 0) {
-    greetingTimer = window.setTimeout(() => {
+    greetingTimer = window.setTimeout(async () => {
       if (chatStore.messages.length === 0) {
+        const welcomeText = `您好！我是灵山智慧导游${avatarDisplayName.value}，很高兴陪您一起游览。想了解景点故事、规划路线，或认一认眼前的风景，都可以问我。`;
         chatStore.messages.push({
           role: "assistant",
-          content: `您好！我是灵山智慧导游${avatarDisplayName.value}，很高兴陪您一起游览。想了解景点故事、规划路线，或认一认眼前的风景，都可以问我。`,
+          content: welcomeText,
         });
+        avatar.triggerAction("welcome_invite");
+        // 使用百炼预生成的欢迎语音频
+        try {
+          const audio = await fetchWelcomeAudio();
+          if (audio && audio.base64_audio) {
+            avatar.setState("speaking");
+            audioPlayer.enqueue(
+              audio.base64_audio,
+              audio.duration_ms || welcomeText.length * 200,
+              () => { avatar.setState("idle"); },
+              "", // no text fallback — use the pre-generated audio only
+              (progress, elapsedMs, durationMs, timeline) => {
+                speechProgress.value = progress;
+                speechElapsedMs.value = elapsedMs;
+                speechDurationMs.value = durationMs;
+                if (timeline) visemeTimeline.value = timeline;
+              },
+              { rate: 1, volume: 0.8 },
+            );
+          }
+        } catch {
+          // 百炼音频不可用时静默降级，不播放
+        }
       }
       greetingTimer = null;
     }, 800);
@@ -609,19 +795,28 @@ onBeforeUnmount(() => {
   if (greetingTimer) {
     window.clearTimeout(greetingTimer);
   }
-  chatStore.stopOutput();
-  audioPlayer.stop();
-  abortSpeechRecognition();
-  revokeVisionPreview();
-  avatar.setState("idle");
-  stopWeather();
+  try { chatStore.stopOutput(); } catch {}
+  try { audioPlayer.stop(); } catch {}
+  try { abortSpeechRecognition(); } catch {}
+  if (isRecording.value) {
+    try { stopRecording(); } catch {}
+  }
+  try { revokeVisionPreview(); } catch {}
+  try { avatar.setState("idle"); } catch {}
+  try { stopWeather(); } catch {}
 });
 
 function handleSubmit() {
   if (speechListening.value || isRecording.value || transcribing.value) {
     return;
   }
-  submitQuery(query.value);
+  voiceMode.value = false;
+  const voiceContext = pendingVoiceContext.value;
+  pendingVoiceContext.value = null;
+  submitQuery(query.value, voiceContext ? {
+    inputMode: "voice",
+    emotionContext: voiceContext,
+  } : {});
 }
 
 function handleAvatarLoadError() {
@@ -660,6 +855,7 @@ function submitQuery(rawQuery, extraOptions = {}) {
         volume: 80,
       },
       onContext: (selection) => interactionStore.applyResolvedSelection(selection),
+      onThinking: () => avatar.setState("thinking"),
       onAvatar: (payload) => {
         try {
           avatar.handleAvatarEvent(payload);
@@ -702,11 +898,27 @@ async function toggleRecording() {
 
   recorderError.value = "";
 
+  // 退出语音模式
+  if (voiceMode.value) {
+    voiceMode.value = false;
+    if (speechListening.value) {
+      stopSpeechRecognition();
+    }
+    // 如果正在录音，不在此处调用 stopRecording，而是继续走到"正在录音 → 转文字"分支
+    if (!isRecording.value) {
+      return;
+    }
+    // isRecording=true 时继续往下走，进入下方录音转文字逻辑
+  }
+
+  // 正在聆听 → 结束聆听
   if (speechListening.value) {
     stopSpeechRecognition();
+    voiceMode.value = false;
     return;
   }
 
+  // 正在录音 → 停止并转文字
   if (isRecording.value) {
     const audioBlob = await stopRecording();
     if (!audioBlob) {
@@ -716,8 +928,16 @@ async function toggleRecording() {
     transcribing.value = true;
     try {
       const result = await transcribeAudio(audioBlob);
+      pendingVoiceContext.value = {
+        audio_emotion: result?.emotion || null,
+        audio_confidence: typeof result?.emotion_confidence === "number"
+          ? result.emotion_confidence
+          : 0,
+        audio_source: result?.emotion_source || "sensevoice",
+        audio_event: result?.audio_event || null,
+      };
       if (!result || !result.text) {
-        recorderError.value = "没听清楚，请靠近麦克风重新说一遍，或直接打字输入。";
+        recorderError.value = result?.error_message || "没听清楚，请靠近麦克风重新说一遍，或直接打字输入。";
         if (result && Array.isArray(result.candidates) && result.candidates.length > 0) {
           transcriptionCandidates.value = result.candidates.slice(0, 3);
         }
@@ -734,6 +954,17 @@ async function toggleRecording() {
         query.value = result.text;
         showConfirmBar.value = false;
         confirmedTranscript.value = result.text;
+        voiceMode.value = false;
+        transcribing.value = false;
+        avatar.setState("idle");
+        // 高置信度结果自动发送
+        const voiceCtx = pendingVoiceContext.value;
+        pendingVoiceContext.value = null;
+        submitQuery(result.text, voiceCtx ? {
+          inputMode: "voice",
+          emotionContext: voiceCtx,
+        } : {});
+        return;
       } else if (result.confidence >= 0.4 || result.needs_confirmation) {
         query.value = result.text;
         confirmedTranscript.value = result.text;
@@ -748,12 +979,13 @@ async function toggleRecording() {
           recorderError.value = "没听清楚，请靠近麦克风重新说一遍，或直接打字输入。";
         }
       }
-    } catch {
-      recorderError.value = "录音转写失败，请改用文字输入。";
+    } catch (error) {
+      recorderError.value = getTranscriptionErrorMessage(error);
       showConfirmBar.value = false;
       transcriptionConfidence.value = -1;
     } finally {
       transcribing.value = false;
+      voiceMode.value = false;
     }
     avatar.setState("idle");
     return;
@@ -761,7 +993,22 @@ async function toggleRecording() {
 
   audioPlayer.stop();
 
+  // 进入语音模式
+  voiceMode.value = true;
+
+  if (recorderSupported.value) {
+    pendingVoiceContext.value = null;
+    avatar.setState("listening");
+    await startRecording();
+    if (!isRecording.value) {
+      recorderError.value = "当前浏览器无法使用麦克风，请改用文字输入。";
+      avatar.setState("idle");
+    }
+    return;
+  }
+
   if (speechSupported.value) {
+    pendingVoiceContext.value = null;
     speechBaseQuery.value = query.value.trim();
     speechSessionActive.value = true;
     avatar.setState("listening");
@@ -791,6 +1038,7 @@ function confirmAndSubmit() {
   showConfirmBar.value = false;
   recorderError.value = "";
   transcriptionCandidates.value = [];
+  avatar.triggerAction("agree");
   if (query.value.trim()) {
     handleSubmit();
   }
@@ -801,6 +1049,7 @@ function retryRecording() {
   recorderError.value = "";
   transcriptionCandidates.value = [];
   query.value = confirmedTranscript.value;
+  pendingVoiceContext.value = null;
   avatar.setState("listening");
   startRecording();
 }
@@ -810,6 +1059,7 @@ function selectCandidate(candidateText) {
   recorderError.value = "";
   transcriptionCandidates.value = [];
   query.value = candidateText;
+  avatar.triggerAction("agree");
   handleSubmit();
 }
 
@@ -818,6 +1068,15 @@ function mergeSpeechInput(baseText, finalText, interimText) {
     .map((item) => item.trim())
     .filter(Boolean)
     .join(" ");
+}
+
+function emotionLabel(label) {
+  return EMOTION_LABELS[label] || "中性";
+}
+
+function formatEmotionPercent(value) {
+  const normalized = typeof value === "number" ? value : 0;
+  return `${Math.round(Math.max(0, Math.min(normalized, 1)) * 100)}%`;
 }
 
 function getSpeechErrorMessage(errorCode) {
@@ -869,6 +1128,7 @@ async function handleAnalyzeImage() {
     return;
   }
   visionAnalyzing.value = true;
+  avatar.triggerAction("look_around");
   visionError.value = "";
   visionResult.value = null;
   try {
@@ -982,14 +1242,14 @@ function formatConfidence(value) {
 .scenic-bg-img {
   position: absolute; inset: 0;
   background-position: center; background-repeat: no-repeat; background-size: cover;
-  filter: blur(10px) saturate(0.3) brightness(0.4);
+  filter: blur(10px) saturate(0.4) brightness(0.55);
   transform: scale(1.06);
 }
 .scenic-bg-overlay {
   position: absolute; inset: 0;
   background:
-    radial-gradient(ellipse 60% 40% at 50% 35%, transparent 0%, rgba(20,16,10,0.55) 80%),
-    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(22,18,10,0.5) 0%, transparent 70%);
+    radial-gradient(ellipse 60% 40% at 50% 35%, transparent 0%, rgba(20,16,10,0.38) 80%),
+    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(22,18,10,0.32) 0%, transparent 70%);
 }
 
 .back-btn {
@@ -1201,6 +1461,69 @@ function formatConfidence(value) {
 .side-card-body::-webkit-scrollbar-track { background: transparent; }
 .side-card-body::-webkit-scrollbar-thumb { background: rgba(232,228,219,0.15); border-radius: 2px; }
 .side-card-body::-webkit-scrollbar-thumb:hover { background: rgba(217,164,65,0.25); }
+
+.emotion-analysis {
+  flex-shrink: 0;
+  border-top: 1px solid rgba(255,250,242,0.09);
+  background: rgba(13,10,8,0.68);
+}
+.emotion-analysis-toggle {
+  width: 100%; min-height: 42px;
+  display: grid;
+  grid-template-columns: 9px minmax(0,1fr) auto auto 14px;
+  align-items: center; gap: 7px;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  color: rgba(232,228,219,0.65);
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.emotion-analysis-toggle:hover { background: rgba(255,250,242,0.035); }
+.emotion-analysis-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #9ca3af;
+  box-shadow: 0 0 7px rgba(156,163,175,0.4);
+}
+.emotion-analysis-dot[data-emotion="positive"] { background: #5ec9a4; box-shadow: 0 0 7px rgba(94,201,164,0.5); }
+.emotion-analysis-dot[data-emotion="confused"] { background: #6bb8e8; box-shadow: 0 0 7px rgba(107,184,232,0.5); }
+.emotion-analysis-dot[data-emotion="dissatisfied"] { background: #e8a840; box-shadow: 0 0 7px rgba(232,168,64,0.5); }
+.emotion-analysis-dot[data-emotion="anxious"] { background: #d9876a; box-shadow: 0 0 7px rgba(217,135,106,0.5); }
+.emotion-analysis-dot[data-emotion="urgent"] { background: #ef6b6b; box-shadow: 0 0 8px rgba(239,107,107,0.62); }
+.emotion-analysis-title {
+  min-width: 0;
+  color: rgba(232,228,219,0.52);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.emotion-analysis-toggle strong { color: #f8e7bb; font-size: 13px; }
+.emotion-analysis-confidence { color: rgba(232,228,219,0.42); font: 12px/1 system-ui,sans-serif; }
+.emotion-analysis-chevron {
+  color: rgba(232,228,219,0.38);
+  font-size: 17px;
+  transform: rotate(0deg);
+  transition: transform 0.2s ease;
+}
+.emotion-analysis.expanded .emotion-analysis-chevron { transform: rotate(180deg); }
+.emotion-analysis-detail {
+  padding: 2px 12px 12px;
+  border-top: 1px solid rgba(255,250,242,0.05);
+}
+.emotion-metric-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 6px; padding-top: 9px; }
+.emotion-metric {
+  min-width: 0;
+  padding: 7px;
+  border-radius: 7px;
+  background: rgba(255,250,242,0.035);
+  display: grid; gap: 3px;
+}
+.emotion-metric--fused { background: rgba(217,164,65,0.08); }
+.emotion-metric span { color: rgba(232,228,219,0.4); font-size: 10px; }
+.emotion-metric b { color: rgba(232,228,219,0.78); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+.emotion-metric small { color: #d9a441; font: 11px/1.2 system-ui,sans-serif; }
+.emotion-analysis-meta { display: grid; gap: 3px; margin-top: 8px; color: rgba(232,228,219,0.43); font-size: 11px; line-height: 1.45; }
+.emotion-conflict { color: #e8a840; }
 
 .msg-item { display: flex; flex-direction: column; }
 .msg-item.assistant { align-items: flex-start; }
@@ -1414,6 +1737,56 @@ function formatConfidence(value) {
   background: rgba(248,231,187,0.2);
   color: #f8e7bb;
   box-shadow: 0 0 14px rgba(248,231,187,0.16);
+}
+
+/* ---------- hotline section ---------- */
+.hotline-section {
+  margin-top: clamp(1px, 0.15vw, 4px);
+  padding-top: clamp(8px, 0.8vw, 14px);
+  border-top: 1px solid rgba(232,228,219,0.08);
+}
+.hotline-section-title {
+  font-family: "STKaiti","KaiTi",serif;
+  font-size: clamp(10px, 0.7vw, 13px); font-weight: 600;
+  color: rgba(232,228,219,0.35);
+  letter-spacing: 0.06em;
+  margin-bottom: clamp(5px, 0.5vw, 10px);
+  padding: 0 2px;
+}
+.hotline-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(4px, 0.4vw, 8px);
+}
+.hotline-card {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: clamp(2px, 0.2vw, 5px);
+  padding: clamp(4px, 0.5vw, 10px) clamp(2px, 0.3vw, 6px);
+  border-radius: clamp(6px, 0.5vw, 10px);
+  border: 1px solid rgba(232,228,219,0.10);
+  background: rgba(232,228,219,0.03);
+  cursor: pointer;
+  transition: border-color 0.25s ease, background 0.25s ease;
+  outline: none; min-width: 0;
+  font-family: inherit; color: inherit;
+}
+.hotline-card:hover {
+  border-color: rgba(248,113,113,0.35);
+  background: rgba(248,113,113,0.06);
+}
+.hotline-card:active { transform: scale(0.96); }
+.hotline-card:focus-visible { outline: 2px solid #f87171; outline-offset: 2px; }
+.hotline-card-icon {
+  font-size: clamp(14px, 1.2vw, 22px); flex-shrink: 0;
+  transition: transform 0.25s ease;
+}
+.hotline-card:hover .hotline-card-icon { transform: scale(1.12); }
+.hotline-card-label {
+  font-size: clamp(9px, 0.6vw, 12px); font-weight: 500;
+  color: rgba(232,228,219,0.6);
+  letter-spacing: 0.03em;
+  line-height: 1.2;
 }
 
 .input-row {
@@ -1838,7 +2211,7 @@ function formatConfidence(value) {
   display: inline-flex; align-items: center; gap: 10px;
   flex-shrink: 0;
 }
-.answer-feedback { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; color: rgba(232,228,219,.62); font-size: 11px; }
+.answer-feedback { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; margin-top: 8px; color: rgba(232,228,219,.62); font-size: 11px; }
 .answer-feedback button { border: 1px solid rgba(232,228,219,.2); border-radius: 999px; background: rgba(255,255,255,.04); color: rgba(255,250,242,.82); padding: 4px 7px; font-size: 11px; cursor: pointer; }
 .answer-feedback button:hover, .answer-feedback button.active { border-color: rgba(94,201,164,.75); background: rgba(94,201,164,.14); color: #b8f1dd; }
 .answer-feedback button:disabled { cursor: wait; opacity: .55; }

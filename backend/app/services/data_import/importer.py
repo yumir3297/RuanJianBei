@@ -5,7 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from time import perf_counter
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.models.behavior_summary import BehaviorSummary
@@ -42,7 +43,7 @@ class DataImportReport:
 
 
 class ProcessedDataImporter:
-    def __init__(self, session: Session, settings: Settings) -> None:
+    def __init__(self, session: AsyncSession, settings: Settings) -> None:
         self.session = session
         self.settings = settings
         self.knowledge_repository = KnowledgeRepository(session)
@@ -52,7 +53,7 @@ class ProcessedDataImporter:
         self.behavior_summary_repository = BehaviorSummaryRepository(session)
         self.qa_cache_repository = QACacheRepository(session)
 
-    def sync(self) -> DataImportReport:
+    async def sync(self) -> DataImportReport:
         start = perf_counter()
         knowledge_payload = self._read_json(self.settings.knowledge_entries_file)
         guide_sections_payload = self._read_json(self.settings.guide_sections_file)
@@ -65,14 +66,14 @@ class ProcessedDataImporter:
             guide_sections_payload=guide_sections_payload,
             route_payload=route_payload,
         )
-        knowledge_count = self._sync_knowledge_entries(prepared_knowledge)
-        chunk_count = self._sync_knowledge_chunks()
-        faq_count = self._sync_faq_entries(faq_payload)
-        route_count = self._sync_route_templates(route_payload)
-        behavior_count = self._sync_behavior_summary(behavior_summary_payload)
+        knowledge_count = await self._sync_knowledge_entries(prepared_knowledge)
+        chunk_count = await self._sync_knowledge_chunks()
+        faq_count = await self._sync_faq_entries(faq_payload)
+        route_count = await self._sync_route_templates(route_payload)
+        behavior_count = await self._sync_behavior_summary(behavior_summary_payload)
 
-        self.session.commit()
-        self.qa_cache_repository.invalidate()
+        await self.session.commit()
+        await self.qa_cache_repository.invalidate()
 
         return DataImportReport(
             knowledge_imported=knowledge_count,
@@ -104,7 +105,6 @@ class ProcessedDataImporter:
         for item in knowledge_payload:
             title = str(item["title"]).strip()
             source = str(item["source"]).strip()
-            key = (title, source)
             metadata = dict(item.get("metadata") or {})
             category = str(item.get("category", "general")).strip()
             if title in guide_sections_map or category in SECTION_TYPE_BY_CATEGORY:
@@ -124,7 +124,7 @@ class ProcessedDataImporter:
                     "metadata_json": json.dumps(metadata, ensure_ascii=False) if metadata else None,
                 }
             )
-            seen_keys.add(key)
+            seen_keys.add((title, source))
 
         for title, content in guide_sections_map.items():
             source = f"{guide_document_name} - {title}" if guide_document_name else title
@@ -152,11 +152,13 @@ class ProcessedDataImporter:
 
         return prepared
 
-    def _sync_knowledge_entries(self, entries: list[dict]) -> int:
+    async def _sync_knowledge_entries(self, entries: list[dict]) -> int:
         managed_sources = sorted({entry["source"] for entry in entries})
         existing_entries = {
             (entry.title, entry.source): entry
-            for entry in self.knowledge_repository.list_by_sources(managed_sources + [self.settings.default_knowledge_source])
+            for entry in await self.knowledge_repository.list_by_sources(
+                managed_sources + [self.settings.default_knowledge_source]
+            )
         }
         incoming_keys = {(entry["title"], entry["source"]) for entry in entries}
 
@@ -185,17 +187,17 @@ class ProcessedDataImporter:
 
         for key, entry in existing_entries.items():
             if entry.source == self.settings.default_knowledge_source or key not in incoming_keys:
-                self.session.delete(entry)
+                await self.session.delete(entry)
 
-        self.session.flush()
+        await self.session.flush()
         return len(entries)
 
-    def _sync_knowledge_chunks(self) -> int:
-        entries = self.knowledge_repository.list_all()
+    async def _sync_knowledge_chunks(self) -> int:
+        entries = await self.knowledge_repository.list_all()
         chunks = KnowledgeChunker().build_chunks(entries)
-        return self.knowledge_chunk_repository.replace_all(chunks)
+        return await self.knowledge_chunk_repository.replace_all(chunks)
 
-    def _sync_faq_entries(self, payload: list[dict]) -> int:
+    async def _sync_faq_entries(self, payload: list[dict]) -> int:
         entries = [
             FAQEntryRecord(
                 id=str(item["id"]).strip(),
@@ -206,10 +208,11 @@ class ProcessedDataImporter:
             )
             for item in payload
         ]
-        protected_faq_ids = KnowledgeBlindSpotRepository(self.session).list_resolved_faq_ids()
-        return self.faq_repository.replace_all(entries, preserve_ids=protected_faq_ids)
+        blind_spot_repo = KnowledgeBlindSpotRepository(self.session)
+        protected_faq_ids = await blind_spot_repo.list_resolved_faq_ids()
+        return await self.faq_repository.replace_all(entries, preserve_ids=protected_faq_ids)
 
-    def _sync_route_templates(self, payload: list[dict]) -> int:
+    async def _sync_route_templates(self, payload: list[dict]) -> int:
         entries = [
             RouteTemplate(
                 id=str(item["id"]).strip(),
@@ -223,9 +226,9 @@ class ProcessedDataImporter:
             )
             for item in payload
         ]
-        return self.route_repository.replace_all(entries)
+        return await self.route_repository.replace_all(entries)
 
-    def _sync_behavior_summary(self, payload: dict) -> int:
+    async def _sync_behavior_summary(self, payload: dict) -> int:
         summaries = [
             BehaviorSummary(
                 dataset_name=str(payload.get("dataset_name", "")).strip(),
@@ -236,7 +239,7 @@ class ProcessedDataImporter:
                 summary_json=json.dumps(payload, ensure_ascii=False),
             )
         ]
-        return self.behavior_summary_repository.replace_all(summaries)
+        return await self.behavior_summary_repository.replace_all(summaries)
 
     @staticmethod
     def _read_json(path: Path):

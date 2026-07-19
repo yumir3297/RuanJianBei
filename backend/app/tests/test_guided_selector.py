@@ -1,3 +1,5 @@
+import asyncio
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -90,10 +92,10 @@ def build_resolver():
 def test_query_entity_overrides_selected_attraction() -> None:
     session, resolver = build_resolver()
     try:
-        resolved = resolver.resolve(
+        resolved = asyncio.run(resolver.resolve(
             "五印坛城有什么特色？",
             SelectionContext(mode="attraction", attraction_id=13, topic_key="history"),
-        )
+        ))
 
         assert resolved.selection.mode == "attraction"
         assert resolved.selection.attraction_id == 16
@@ -110,7 +112,7 @@ def test_query_entity_overrides_selected_attraction() -> None:
 def test_invalid_selection_is_cleared_without_creating_scope() -> None:
     session, resolver = build_resolver()
     try:
-        resolved = resolver.resolve(
+        resolved = asyncio.run(resolver.resolve(
             "介绍一下",
             SelectionContext(
                 mode="attraction",
@@ -118,7 +120,7 @@ def test_invalid_selection_is_cleared_without_creating_scope() -> None:
                 topic_key="disabled",
                 route_id="missing",
             ),
-        )
+        ))
 
         assert resolved.selection.mode == "free_chat"
         assert resolved.selection.attraction_id is None
@@ -137,18 +139,18 @@ def test_invalid_selection_is_cleared_without_creating_scope() -> None:
 def test_topic_and_route_create_only_safe_scopes() -> None:
     session, resolver = build_resolver()
     try:
-        history = resolver.resolve(
+        history = asyncio.run(resolver.resolve(
             "我想了解这个主题",
             SelectionContext(mode="topic", topic_key="history"),
-        )
-        architecture = resolver.resolve(
+        ))
+        architecture = asyncio.run(resolver.resolve(
             "我想了解这个主题",
             SelectionContext(mode="topic", topic_key="architecture"),
-        )
-        route = resolver.resolve(
+        ))
+        route = asyncio.run(resolver.resolve(
             "这条路线怎么走？",
             SelectionContext(mode="route", route_id="route_001"),
-        )
+        ))
 
         assert history.scope is not None
         assert history.scope.category == "历史文化"
@@ -163,11 +165,11 @@ def test_topic_and_route_create_only_safe_scopes() -> None:
 def test_history_subject_is_used_only_without_valid_selection() -> None:
     session, resolver = build_resolver()
     try:
-        resolved = resolver.resolve(
+        resolved = asyncio.run(resolver.resolve(
             "它有什么特色？",
             None,
             ConversationContext(last_subject="灵山大佛"),
-        )
+        ))
 
         assert resolved.selection.attraction_id == 13
         assert resolved.resolution_source == "history"
@@ -188,7 +190,7 @@ def test_validated_subject_is_retained_for_five_followup_turns() -> None:
             "适合带孩子吗？",
             "还有什么值得了解？",
         ]:
-            resolved = resolver.resolve(query, None, context)
+            resolved = asyncio.run(resolver.resolve(query, None, context))
             assert resolved.selection.attraction_id == 13
             assert resolved.scope == RetrievalScope(source_entry_id=13)
             assert resolved.active_subject == "灵山大佛"

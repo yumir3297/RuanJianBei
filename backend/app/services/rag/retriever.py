@@ -27,7 +27,7 @@ class RepositoryBackedRAGService(BaseRAGService):
         scope: RetrievalScope | None = None,
     ) -> list[RetrievedDocument]:
         normalized = normalized_query or self.query_rewriter.rewrite(query)
-        candidates = self.knowledge_repository.search(
+        candidates = await self.knowledge_repository.search(
             normalized,
             limit=max(top_k * 4, 10),
             knowledge_id=scope.source_entry_id if scope else None,

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 import logging
 from hashlib import sha256
 from functools import lru_cache
@@ -7,10 +9,12 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.deps import get_app_settings, get_db_session
+from app.models.avatar_config import AvatarConfig
 from app.repositories.chat_log import ChatLogRepository
 from app.repositories.knowledge import KnowledgeRepository
 from app.repositories.knowledge_blind_spot import KnowledgeBlindSpotRepository
@@ -30,6 +34,7 @@ from app.services.qa.followup_suggestions import FollowUpSuggestionService
 from app.services.qa.guided_selector import GuidedSelectionResolver
 from app.services.qa.intent_router import IntentRouter
 from app.services.qa.pipeline import QAPipeline
+from app.services.qa.stream_events import StreamEvent
 from app.services.qa.runtime import get_runtime_faq_matcher
 from app.services.rag.bm25_reranker import BM25Reranker
 from app.services.rag.cross_encoder_reranker import CrossEncoderReranker
@@ -41,21 +46,21 @@ from app.services.rag.resilient_reranker import ResilientReranker
 from app.services.rag.retriever import RepositoryBackedRAGService
 from app.services.rag.vector_store import ChromaVectorStore
 from app.services.tts.bailian import BailianTTSService
+from app.services.tts.streaming import StreamingTTSService
 from app.services.tts.stub import StubTTSService
+from app.services.tts.voices import resolve_tts_voice
+from app.services.tts.welcome_cache import (
+    _derive_model_key,
+    generate_and_cache,
+    get_cached,
+    get_welcome_text,
+)
 
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 _cached_llm_service: OpenAICompatibleLLMService | None = None
 _cached_llm_signature: tuple | None = None
-TTS_VOICE_PRESETS = {
-    "gentle-female": "longwan_v3",
-    "calm-female": "longxiaoxia_v3",
-    "deep-male": "longsanshu_v3",
-    "lively-female": "longanqin_v3",
-}
-
-
 @lru_cache(maxsize=2)
 def get_cached_embedder(model_name: str, cache_dir: str) -> SentenceTransformerEmbedder:
     return SentenceTransformerEmbedder(
@@ -146,8 +151,8 @@ def build_answer_cache_namespace(settings: Settings) -> str:
     )
 
 
-def build_pipeline(
-    session: Session,
+async def build_pipeline(
+    session: AsyncSession,
     settings: Settings,
     *,
     tts_voice_preset: str | None = None,
@@ -158,7 +163,7 @@ def build_pipeline(
     route_repository = RouteRepository(session)
 
     query_rewriter = QueryRewriter()
-    faq_matcher = get_runtime_faq_matcher(session)
+    faq_matcher = await get_runtime_faq_matcher(session)
     fallback_rag = RepositoryBackedRAGService(
         knowledge_repository=knowledge_repository,
         query_rewriter=query_rewriter,
@@ -167,11 +172,12 @@ def build_pipeline(
 
     embedder: SentenceTransformerEmbedder | None = None
     try:
-        embedder = get_cached_embedder(
+        embedder = await asyncio.to_thread(
+            get_cached_embedder,
             settings.embedding_model_name,
             str(settings.model_cache_root),
         )
-        faq_matcher = get_runtime_faq_matcher(
+        faq_matcher = await get_runtime_faq_matcher(
             session,
             embedder=embedder,
             semantic_threshold=settings.faq_semantic_threshold,
@@ -191,7 +197,8 @@ def build_pipeline(
             ),
             embedder=embedder,
             query_rewriter=query_rewriter,
-            reranker=get_cached_reranker(
+            reranker=await asyncio.to_thread(
+                get_cached_reranker,
                 settings.reranker_model_name,
                 str(settings.model_cache_root),
                 settings.reranker_batch_size,
@@ -205,15 +212,23 @@ def build_pipeline(
         rag_service = fallback_rag
 
     tts_service = StubTTSService()
+    streaming_tts = None
     if settings.tts_provider == "bailian" and settings.tts_api_key:
         try:
             tts_service = BailianTTSService(
                 api_key=settings.tts_api_key,
                 base_url=settings.tts_base_url,
                 model=settings.tts_model,
-                voice=TTS_VOICE_PRESETS.get(tts_voice_preset, settings.tts_voice),
+                voice=resolve_tts_voice(tts_voice_preset, settings.tts_voice),
                 timeout_seconds=settings.tts_timeout_seconds,
                 use_compatible_api=False,
+            )
+            # 同时创建流式 TTS 服务
+            streaming_tts = StreamingTTSService(
+                api_key=settings.tts_api_key,
+                model=settings.tts_model,
+                voice=resolve_tts_voice(tts_voice_preset, settings.tts_voice),
+                enable_word_timestamp=True,
             )
         except Exception:
             logger.exception("Bailian TTS initialization failed; using stub.")
@@ -226,6 +241,7 @@ def build_pipeline(
         llm_service=get_cached_llm_service(settings),
         tts_service=tts_service,
         avatar_service=StubAvatarService(),
+        streaming_tts_service=streaming_tts,
         chat_log_repository=chat_log_repository,
         visitor_repository=VisitorRepository(session),
         guided_selector=GuidedSelectionResolver(
@@ -251,21 +267,81 @@ def build_pipeline(
 @router.post("/stream")
 async def stream_chat(
     payload: ChatRequest,
-    session: Session = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db_session),
     settings: Settings = Depends(get_app_settings),
 ) -> StreamingResponse:
-    pipeline = build_pipeline(
-        session,
-        settings,
-        tts_voice_preset=payload.tts_voice,
-    )
-
+    print(f"[API] /stream received: query={payload.query!r}, session_id={payload.session_id}, input_mode={payload.input_mode}, text_only={payload.text_only}, selection={payload.selection}", flush=True)
     async def event_generator():
-        async for event in pipeline.stream_chat(payload):
-            yield event.to_sse()
+        # Send a first event before local model initialization. This keeps the
+        # UI responsive during a cold start and proves that the SSE link works.
+        yield StreamEvent(type="status", data={"text": "正在准备导览知识..."}).to_sse()
+        try:
+            pipeline = await build_pipeline(
+                session,
+                settings,
+                tts_voice_preset=payload.tts_voice,
+            )
+            async for event in pipeline.stream_chat(payload):
+                yield event.to_sse()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Chat stream failed before completion")
+            yield StreamEvent(
+                type="error",
+                data={"message": "导览服务处理回答时发生错误，请稍后重试。"},
+            ).to_sse()
 
     return StreamingResponse(
         event_generator(),
         media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )
+
+@router.get("/welcome-audio")
+async def get_welcome_audio(
+    session: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_app_settings),
+):
+    """Return pre-generated welcome TTS audio for the active avatar config."""
+    result = await session.execute(
+        select(AvatarConfig).where(AvatarConfig.is_active.is_(True))
+    )
+    config = result.scalar_one_or_none()
+    if config is None:
+        return {"base64_audio": "", "duration_ms": 0, "provider": "no_active_config"}
+
+    model_key = _derive_model_key(config.model_path)
+    voice_type = config.voice_type
+
+    # Check cache
+    cached = get_cached(model_key, voice_type)
+    if cached and cached.base64_audio:
+        return {
+            "base64_audio": cached.base64_audio,
+            "duration_ms": cached.duration_ms,
+            "provider": cached.provider,
+        }
+
+    # Generate on-the-fly if TTS is available
+    if settings.tts_provider == "bailian" and settings.tts_api_key:
+        audio = await generate_and_cache(
+            model_key=model_key,
+            voice_type=voice_type,
+            api_key=settings.tts_api_key,
+            base_url=settings.tts_base_url,
+            model=settings.tts_model,
+            fallback_voice=settings.tts_voice,
+            timeout_seconds=settings.tts_timeout_seconds,
+        )
+        return {
+            "base64_audio": audio.base64_audio,
+            "duration_ms": audio.duration_ms,
+            "provider": audio.provider,
+        }
+
+    return {"base64_audio": "", "duration_ms": 0, "provider": "tts_not_configured"}

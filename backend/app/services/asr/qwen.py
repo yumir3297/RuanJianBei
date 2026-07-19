@@ -71,7 +71,8 @@ class QwenASRService(BaseASRService):
 
     async def _transcribe_bytes(self, client: httpx.AsyncClient, content: bytes) -> str:
         audio_b64 = base64.b64encode(content).decode()
-        parameters: dict[str, str] = {"format": "webm", "sample_rate": "16000"}
+        fmt = self._detect_format(content)
+        parameters: dict[str, str] = {"format": fmt, "sample_rate": "16000"}
         if self.settings.asr_vocabulary_id.strip():
             parameters["vocabulary_id"] = self.settings.asr_vocabulary_id.strip()
         payload = {
@@ -84,7 +85,7 @@ class QwenASRService(BaseASRService):
                             {
                                 "type": "input_audio",
                                 "input_audio": {
-                                    "data": f"data:audio/webm;base64,{audio_b64}"
+                                    "data": f"data:audio/{fmt};base64,{audio_b64}"
                                 },
                             }
                         ],
@@ -169,3 +170,14 @@ class QwenASRService(BaseASRService):
         if isinstance(exc, httpx.RequestError):
             return "Qwen ASR 网络请求失败。"
         return str(exc)[:200] or "Qwen ASR 暂时不可用。"
+
+    @staticmethod
+    def _detect_format(content: bytes) -> str:
+        """Detect audio format from magic bytes. Defaults to wav (what the frontend sends)."""
+        if content[:4] == b"RIFF":
+            return "wav"
+        if content[:4] == b"\x1a\x45\xdf\xa3":
+            return "webm"
+        if content[:3] == b"ID3" or (content[0] == 0xff and (content[1] & 0xe0) == 0xe0):
+            return "mp3"
+        return "wav"

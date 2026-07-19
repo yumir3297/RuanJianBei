@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.qa.faq_matcher import FAQMatcher
 from app.services.rag.embedder import BaseEmbedder
@@ -10,22 +10,22 @@ _faq_matcher = FAQMatcher()
 _last_reload_ms = 0.0
 
 
-def get_runtime_faq_matcher(
-    session: Session,
+async def get_runtime_faq_matcher(
+    session: AsyncSession,
     *,
     embedder: BaseEmbedder | None = None,
     semantic_threshold: float = 0.85,
 ) -> FAQMatcher:
     if not _faq_matcher.entries:
-        reload_runtime_faq_matcher(session)
+        await reload_runtime_faq_matcher(session)
     if embedder is not None:
         _faq_matcher.ensure_semantic_index(embedder, semantic_threshold)
     return _faq_matcher
 
 
-def reload_runtime_faq_matcher(session: Session) -> float:
+async def reload_runtime_faq_matcher(session: AsyncSession) -> float:
     global _last_reload_ms
-    _last_reload_ms = _faq_matcher.reload(session)
+    _last_reload_ms = await _faq_matcher.reload(session)
     return _last_reload_ms
 
 

@@ -19,6 +19,10 @@ class ASRResult:
     provider: str = "unknown"
     confidence_source: str = "provider"
     error_message: str = ""
+    emotion: str = "neutral"
+    emotion_confidence: float = 0.0
+    emotion_source: str = "unavailable"
+    audio_event: str = "speech"
 
     @property
     def needs_confirmation(self) -> bool:

@@ -1,4 +1,5 @@
 import { ref } from "vue";
+import { selectSpeakingAction } from "../components/avatar-actions.js";
 
 export const GUIDE_PERSONA = {
   name: "小灵",
@@ -16,18 +17,40 @@ export function useAvatar() {
   const currentState = ref("idle");
   const currentEmotion = ref("neutral");
   const currentViseme = ref("");
+  const currentAction = ref("");
+  const actionKey = ref(0);
 
   let idleTimer = null;
+  let lastSpeakingGestureAt = 0;
+
+  const SPEAKING_GESTURE_INTERVAL_MS = 9000;
 
   function setState(state) {
     if (!STATES.includes(state)) {
       return;
     }
     currentState.value = state;
+    if (["idle", "listening", "thinking"].includes(state)) {
+      currentEmotion.value = "neutral";
+    }
     resetIdleTimer(state);
   }
 
   function handleAvatarEvent(payload) {
+    if (!payload || typeof payload !== "object") return;
+    if (payload.action) {
+      triggerAction(payload.action);
+      lastSpeakingGestureAt = Date.now();
+    } else if (payload.viseme_text !== undefined) {
+      const now = Date.now();
+      if (now - lastSpeakingGestureAt >= SPEAKING_GESTURE_INTERVAL_MS) {
+        const speakingAction = selectSpeakingAction(payload.viseme_text);
+        if (speakingAction) {
+          triggerAction(speakingAction);
+          lastSpeakingGestureAt = now;
+        }
+      }
+    }
     if (payload.emotion) {
       currentEmotion.value = payload.emotion;
       if (payload.emotion === "happy") {
@@ -53,6 +76,13 @@ export function useAvatar() {
         setState("speaking");
       }
     }
+  }
+
+  function triggerAction(action) {
+    if (typeof action !== "string" || !action.trim()) return;
+    currentAction.value = action.trim();
+    // 即使连续触发同名动作，递增 key 也能让 ThreeAvatar 收到新的播放请求。
+    actionKey.value += 1;
   }
 
   function onAudioEnded() {
@@ -84,7 +114,10 @@ export function useAvatar() {
     currentState,
     currentEmotion,
     currentViseme,
+    currentAction,
+    actionKey,
     setState,
+    triggerAction,
     handleAvatarEvent,
     onAudioEnded,
   };

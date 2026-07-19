@@ -11,10 +11,11 @@
           :preset="activePreset"
           :emotion="greetEmotion"
           :is-speaking="false"
-          :waving="isWaving"
+          :action="welcomeAction"
+          :action-key="welcomeActionKey"
           :camera-offset-y="0.45"
           @error="avatarError = true"
-          @loaded="avatarError = false"
+          @loaded="handleAvatarLoaded"
         />
         <div v-else class="avatar-fallback" aria-label="数字人导游形象">
           <svg viewBox="0 0 280 400" class="avatar-svg">
@@ -45,7 +46,7 @@
 
       <div class="hero-text" aria-hidden="true">
         <h1 class="hero-title">灵山智慧导览</h1>
-        <p class="hero-sub">清岚 &middot; AI 数字人导览员</p>
+        <p class="hero-sub">{{ avatarName }} &middot; AI 数字人导览员</p>
       </div>
 
       <div class="cta-zone">
@@ -60,7 +61,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, computed, onBeforeUnmount, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import ThreeAvatar from "../components/ThreeAvatar.vue";
 import { useScenicBackground } from "../composables/useScenicBackground";
@@ -73,7 +74,16 @@ const { scenicBgUrl, welcomeText, refresh } = useScenicBackground();
 
 const activePreset = ref(DEFAULT_AVATAR_PRESET);
 const greetEmotion = ref("happy");
-const isWaving = ref(true);
+const welcomeAction = ref("");
+const welcomeActionKey = ref(0);
+let emotionTimer = null;
+
+const AVATAR_MODEL_MAP = {
+  monk: "宁灵",
+  hanfu: "清岚",
+  modern: "景行",
+};
+const avatarName = computed(() => AVATAR_MODEL_MAP[activePreset.value] || "清岚");
 
 async function loadAvatarPreset() {
   try {
@@ -92,15 +102,25 @@ function enterTourist() {
   router.push("/tourist/select");
 }
 
+function handleAvatarLoaded() {
+  avatarError.value = false;
+  greetEmotion.value = "happy";
+  welcomeAction.value = "two_hand_wave";
+  welcomeActionKey.value += 1;
+  if (emotionTimer) clearTimeout(emotionTimer);
+  emotionTimer = setTimeout(() => {
+    greetEmotion.value = "neutral";
+    emotionTimer = null;
+  }, 3800);
+}
+
 onMounted(() => {
   loadAvatarPreset();
   refresh();
-  setTimeout(() => {
-    isWaving.value = false;
-  }, 3000);
-  setTimeout(() => {
-    greetEmotion.value = "neutral";
-  }, 3500);
+});
+
+onBeforeUnmount(() => {
+  if (emotionTimer) clearTimeout(emotionTimer);
 });
 </script>
 

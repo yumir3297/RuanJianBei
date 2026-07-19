@@ -11,8 +11,8 @@ class RecommendEngine:
     def __init__(self, route_repository: RouteRepository) -> None:
         self.route_repository = route_repository
 
-    def generate(self, request: RecommendRequest) -> RecommendResponse:
-        routes = self.route_repository.list_all()
+    async def generate(self, request: RecommendRequest) -> RecommendResponse:
+        routes = await self.route_repository.list_all()
         if not routes:
             return RecommendResponse(routes=[])
 
@@ -29,6 +29,21 @@ class RecommendEngine:
     def _select_primary_route(self, routes, request: RecommendRequest):
         interests = " ".join(request.interests)
         audience_type = request.audience_type.strip().lower()
+
+        # Lightweight, explainable comfort rules for the competition demo.
+        # route_003 is the shortest official template and contains more indoor
+        # stops, so it is a safe default for heat, rain and low-walking needs.
+        comfort = set(request.comfort_preferences)
+        weather = (request.weather_condition or "").lower()
+        needs_comfort_route = bool(
+            comfort.intersection({"avoid_heat", "less_walking", "family", "senior", "rain"})
+            or (request.temperature_c is not None and request.temperature_c >= 30)
+            or any(marker in weather for marker in ("rain", "storm", "雨", "雷"))
+        )
+        if needs_comfort_route:
+            route = self._find_by_id(routes, "route_003")
+            if route is not None:
+                return route
 
         if any(keyword in interests for keyword in ("亲子", "孩子", "家庭")) or audience_type == "family":
             route = self._find_by_id(routes, "route_003")
@@ -75,6 +90,7 @@ class RecommendEngine:
             route_plan=route.route_plan,
             guide_points=guide_points,
             experiences=experiences,
+            comfort_tags=self._comfort_tags(request),
             source=route.source,
         )
 
@@ -90,6 +106,26 @@ class RecommendEngine:
         interests = "、".join(request.interests) if request.interests else "综合游览"
         audience = request.audience_type or "general"
         base = f"根据 {interests} 兴趣、{request.available_hours} 小时可用时间和 {audience} 人群偏好，匹配到 {route_title}。"
+        comfort_tags = RecommendEngine._comfort_tags(request)
+        if comfort_tags:
+            base = f"{base} 已结合{'、'.join(comfort_tags)}需求，优先选择较短路线与室内停留点。"
         if alternative:
             return f"{base} 这条路线作为低拥挤或备选方案返回，方便现场二次选择。"
         return base
+
+    @staticmethod
+    def _comfort_tags(request: RecommendRequest) -> list[str]:
+        labels = {
+            "avoid_heat": "减少暴晒",
+            "less_walking": "少走路",
+            "family": "亲子/老人友好",
+            "senior": "老人友好",
+            "rain": "雨天适配",
+        }
+        tags = [labels[item] for item in request.comfort_preferences if item in labels]
+        weather = request.weather_condition or ""
+        if request.temperature_c is not None and request.temperature_c >= 30 and "高温避暑" not in tags:
+            tags.append("高温避暑")
+        if any(marker in weather for marker in ("雨", "雷", "rain", "storm")) and "雨天适配" not in tags:
+            tags.append("雨天适配")
+        return tags

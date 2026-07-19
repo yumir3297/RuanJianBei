@@ -22,13 +22,13 @@ class QACache:
         self.max_items = max_items
         self.memory_cache: OrderedDict[str, CachedAnswer] = OrderedDict()
 
-    def get(self, normalized_query: str) -> CachedAnswer | None:
+    async def get(self, normalized_query: str) -> CachedAnswer | None:
         cached = self.memory_cache.get(normalized_query)
         if cached and cached.expires_at > datetime.now(UTC):
             self.memory_cache.move_to_end(normalized_query)
             return cached
 
-        entry = self.repository.get(normalized_query)
+        entry = await self.repository.get(normalized_query)
         if entry is None:
             return None
 
@@ -36,7 +36,7 @@ class QACache:
         if expires_at.tzinfo is None:
             expires_at = expires_at.replace(tzinfo=UTC)
         if expires_at <= datetime.now(UTC):
-            self.repository.invalidate(normalized_query)
+            await self.repository.invalidate(normalized_query)
             return None
 
         restored = CachedAnswer(
@@ -47,19 +47,19 @@ class QACache:
         self._remember(normalized_query, restored)
         return restored
 
-    def set(self, normalized_query: str, answer: str, sources: list[dict], ttl: int | None = None) -> CachedAnswer:
+    async def set(self, normalized_query: str, answer: str, sources: list[dict], ttl: int | None = None) -> CachedAnswer:
         expires_at = datetime.now(UTC) + timedelta(seconds=ttl or self.ttl_seconds)
         cached = CachedAnswer(answer=answer, sources=sources, expires_at=expires_at)
         self._remember(normalized_query, cached)
-        self.repository.set(normalized_query, answer, sources, expires_at)
+        await self.repository.set(normalized_query, answer, sources, expires_at)
         return cached
 
-    def invalidate(self, normalized_query: str | None = None) -> None:
+    async def invalidate(self, normalized_query: str | None = None) -> None:
         if normalized_query is None:
             self.memory_cache.clear()
         else:
             self.memory_cache.pop(normalized_query, None)
-        self.repository.invalidate(normalized_query)
+        await self.repository.invalidate(normalized_query)
 
     def _remember(self, normalized_query: str, cached: CachedAnswer) -> None:
         self.memory_cache[normalized_query] = cached

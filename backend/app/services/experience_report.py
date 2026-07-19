@@ -4,6 +4,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.chat_log import ChatLog
 from app.models.visitor_feedback import VisitorFeedback
@@ -16,16 +17,33 @@ REASON_LABELS = {"accuracy": "回答不准确", "detail": "内容不够详细", 
 class ExperienceReportService:
     """Aggregates persisted visitor interactions for the administration report."""
 
-    def __init__(self, session) -> None:
+    def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    def build(self, range_key: str) -> ExperienceReport:
+    async def build(self, range_key: str) -> ExperienceReport:
         days = RANGE_DAYS.get(range_key, 7)
         start = datetime.now() - timedelta(days=days - 1)
-        logs = self.session.execute(select(ChatLog).where(ChatLog.created_at >= start).order_by(ChatLog.created_at)).scalars().all()
-        real = self.session.execute(select(VisitorFeedback).where(VisitorFeedback.created_at >= start, VisitorFeedback.is_demo.is_(False)).order_by(VisitorFeedback.created_at)).scalars().all()
-        demo = [] if real else self.session.execute(select(VisitorFeedback).where(VisitorFeedback.created_at >= start, VisitorFeedback.is_demo.is_(True)).order_by(VisitorFeedback.created_at)).scalars().all()
-        feedback, data_mode = (real or demo), ("real" if real else "demo" if demo else "empty")
+        logs_result = await self.session.execute(
+            select(ChatLog).where(ChatLog.created_at >= start).order_by(ChatLog.created_at)
+        )
+        logs = logs_result.scalars().all()
+        real_result = await self.session.execute(
+            select(VisitorFeedback)
+            .where(VisitorFeedback.created_at >= start, VisitorFeedback.is_demo.is_(False))
+            .order_by(VisitorFeedback.created_at)
+        )
+        real = real_result.scalars().all()
+        if real:
+            feedback, data_mode = real, "real"
+        else:
+            demo_result = await self.session.execute(
+                select(VisitorFeedback)
+                .where(VisitorFeedback.created_at >= start, VisitorFeedback.is_demo.is_(True))
+                .order_by(VisitorFeedback.created_at)
+            )
+            demo = demo_result.scalars().all()
+            feedback, data_mode = demo, "demo" if demo else "empty"
+
         positive, negative = sum(x.rating == "positive" for x in feedback), sum(x.rating == "negative" for x in feedback)
         total = len(feedback)
         satisfaction = round(positive / total * 100, 1) if total else None
@@ -60,8 +78,8 @@ class ExperienceReportService:
             result.append(ExperienceSuggestion(level="attention", title="优先处理负向体验", detail="当前有效反馈满意度低于 80%，建议先复盘负反馈原因与对应回答。"))
         if reasons:
             label, count = reasons.most_common(1)[0]
-            result.append(ExperienceSuggestion(level="optimize", title=f"优化“{label}”", detail=f"该问题出现 {count} 次，可在知识库或回答模板中优先补强。"))
+            result.append(ExperienceSuggestion(level="optimize", title=f"优化\u201c{label}\u201d", detail=f"该问题出现 {count} 次，可在知识库或回答模板中优先补强。"))
         if questions:
             label, count = questions.most_common(1)[0]
-            result.append(ExperienceSuggestion(level="keep", title="完善热门问答", detail=f"“{label}”在当前周期被问及 {count} 次，建议作为快捷入口或重点讲解内容。"))
+            result.append(ExperienceSuggestion(level="keep", title="完善热门问答", detail=f"\u201c{label}\u201d在当前周期被问及 {count} 次，建议作为快捷入口或重点讲解内容。"))
         return result[:3] or [ExperienceSuggestion(level="keep", title="开始积累真实反馈", detail="游客完成问答后可点击有帮助或需要改进，系统将自动更新满意度趋势。")]

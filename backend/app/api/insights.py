@@ -7,7 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db_session
 from app.api.auth import require_admin_token
@@ -16,8 +16,15 @@ from app.models.knowledge_blind_spot import KnowledgeBlindSpot
 from app.models.visitor import VisitorProfile
 from app.models.visitor_feedback import VisitorFeedback
 from app.schemas.experience import FeedbackCreate, FeedbackResponse, ExperienceReport
-from app.schemas.insights import BlindSpotTopItem, QATrend, SpotAttentionItem, VisitorGroups
+from app.schemas.insights import (
+    BlindSpotTopItem,
+    EmotionInsights,
+    QATrend,
+    SpotAttentionItem,
+    VisitorGroups,
+)
 from app.services.experience_report import ExperienceReportService
+from app.services.insights import build_emotion_insights
 
 
 router = APIRouter()
@@ -32,6 +39,7 @@ HIT_LEVEL_LABELS = {
     "rag_llm_fallback": "RAG 大模型补全",
     "blind": "知识盲区",
 }
+
 
 
 def _load_json_list(payload: str | list[Any] | None) -> list[Any]:
@@ -77,8 +85,8 @@ def _hit_level_label(level: str | None) -> str:
 
 
 @router.get("/spot-attention", response_model=list[SpotAttentionItem])
-def get_spot_attention(_: None = Depends(require_admin_token), db: Session = Depends(get_db_session)) -> list[SpotAttentionItem]:
-    logs = db.execute(select(ChatLog.sources)).scalars().all()
+async def get_spot_attention(_: None = Depends(require_admin_token), db: AsyncSession = Depends(get_db_session)) -> list[SpotAttentionItem]:
+    logs = (await db.execute(select(ChatLog.sources))).scalars().all()
 
     spot_counts: Counter[str] = Counter()
     for sources in logs:
@@ -93,10 +101,10 @@ def get_spot_attention(_: None = Depends(require_admin_token), db: Session = Dep
 
 
 @router.get("/visitor-groups", response_model=VisitorGroups)
-def get_visitor_groups(_: None = Depends(require_admin_token), db: Session = Depends(get_db_session)) -> VisitorGroups:
-    profiles = db.execute(
+async def get_visitor_groups(_: None = Depends(require_admin_token), db: AsyncSession = Depends(get_db_session)) -> VisitorGroups:
+    profiles = (await db.execute(
         select(VisitorProfile.audience_type, VisitorProfile.preference_tags)
-    ).all()
+    )).all()
 
     audience_counts: Counter[str] = Counter()
     tag_counts: Counter[str] = Counter()
@@ -126,10 +134,10 @@ def get_visitor_groups(_: None = Depends(require_admin_token), db: Session = Dep
 
 
 @router.get("/qa-trend", response_model=QATrend)
-def get_qa_trend(_: None = Depends(require_admin_token), db: Session = Depends(get_db_session)) -> QATrend:
+async def get_qa_trend(_: None = Depends(require_admin_token), db: AsyncSession = Depends(get_db_session)) -> QATrend:
     thirty_days_ago = datetime.now() - timedelta(days=30)
 
-    daily = db.execute(
+    daily = (await db.execute(
         select(
             func.date(ChatLog.created_at).label("date"),
             func.count().label("count"),
@@ -137,12 +145,12 @@ def get_qa_trend(_: None = Depends(require_admin_token), db: Session = Depends(g
         .where(ChatLog.created_at >= thirty_days_ago)
         .group_by(func.date(ChatLog.created_at))
         .order_by(func.date(ChatLog.created_at))
-    ).all()
+    )).all()
 
-    hit_levels = db.execute(
+    hit_levels = (await db.execute(
         select(ChatLog.hit_level, func.count().label("count"))
         .group_by(ChatLog.hit_level)
-    ).all()
+    )).all()
 
     total_hits = sum(count for _, count in hit_levels) or 1
 
@@ -164,13 +172,13 @@ def get_qa_trend(_: None = Depends(require_admin_token), db: Session = Depends(g
 
 
 @router.get("/blind-spot-top", response_model=list[BlindSpotTopItem])
-def get_blind_spot_top(_: None = Depends(require_admin_token), db: Session = Depends(get_db_session)) -> list[BlindSpotTopItem]:
-    spots = db.execute(
+async def get_blind_spot_top(_: None = Depends(require_admin_token), db: AsyncSession = Depends(get_db_session)) -> list[BlindSpotTopItem]:
+    spots = (await db.execute(
         select(KnowledgeBlindSpot.normalized_query, KnowledgeBlindSpot.hit_count)
         .where(KnowledgeBlindSpot.status == "open")
         .order_by(KnowledgeBlindSpot.hit_count.desc())
         .limit(10)
-    ).all()
+    )).all()
 
     return [
         BlindSpotTopItem(rank=index + 1, query=query, hit_count=hit_count)
@@ -178,30 +186,39 @@ def get_blind_spot_top(_: None = Depends(require_admin_token), db: Session = Dep
     ]
 
 
+@router.get("/emotion-summary", response_model=EmotionInsights)
+async def get_emotion_summary(
+    _: None = Depends(require_admin_token),
+    db: AsyncSession = Depends(get_db_session),
+) -> EmotionInsights:
+    logs = (await db.execute(select(ChatLog).order_by(ChatLog.created_at.desc(), ChatLog.id.desc()))).scalars().all()
+    return build_emotion_insights(list(logs))
+
+
 @router.post("/feedback", response_model=FeedbackResponse)
-def submit_feedback(payload: FeedbackCreate, db: Session = Depends(get_db_session)) -> FeedbackResponse:
+async def submit_feedback(payload: FeedbackCreate, db: AsyncSession = Depends(get_db_session)) -> FeedbackResponse:
     if payload.chat_log_id is not None:
-        log = db.get(ChatLog, payload.chat_log_id)
+        log = await db.get(ChatLog, payload.chat_log_id)
         if log is None or log.session_id != payload.session_id:
             raise HTTPException(status_code=404, detail="未找到可评价的问答记录")
-        existing = db.execute(select(VisitorFeedback).where(VisitorFeedback.chat_log_id == payload.chat_log_id, VisitorFeedback.is_demo.is_(False))).scalar_one_or_none()
+        existing = (await db.execute(select(VisitorFeedback).where(VisitorFeedback.chat_log_id == payload.chat_log_id, VisitorFeedback.is_demo.is_(False)))).scalar_one_or_none()
         if existing is not None:
             existing.rating = payload.rating
             existing.reason_code = payload.reason_code
             existing.comment = payload.comment
-            db.commit()
+            await db.commit()
             return FeedbackResponse(id=existing.id, rating=existing.rating, message="评价已更新")
     feedback = VisitorFeedback(**payload.model_dump(), is_demo=False)
     db.add(feedback)
-    db.commit()
-    db.refresh(feedback)
+    await db.commit()
+    await db.refresh(feedback)
     return FeedbackResponse(id=feedback.id, rating=feedback.rating, message="感谢您的反馈")
 
 
 @router.get("/experience-report", response_model=ExperienceReport)
-def get_experience_report(
+async def get_experience_report(
     range: str = Query(default="week", pattern="^(today|week|month)$"),
     _: None = Depends(require_admin_token),
-    db: Session = Depends(get_db_session),
+    db: AsyncSession = Depends(get_db_session),
 ) -> ExperienceReport:
-    return ExperienceReportService(db).build(range)
+    return await ExperienceReportService(db).build(range)

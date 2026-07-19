@@ -1,0 +1,68 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'fontFamily': 'Microsoft YaHei, Arial', 'fontSize': '18px', 'lineColor': '#4B5F7A', 'primaryTextColor': '#14213D' }, 'flowchart': {'curve': 'basis', 'htmlLabels': true}}}%%
+flowchart LR
+  classDef client fill:#E8F1FF,stroke:#2F6BFF,stroke-width:2px,color:#14213D;
+  classDef api fill:#E8FAF2,stroke:#1E9E6A,stroke-width:2px,color:#123B2A;
+  classDef intelligence fill:#FFF4DE,stroke:#E78A00,stroke-width:2px,color:#5D3900;
+  classDef data fill:#F3ECFF,stroke:#805AD5,stroke-width:2px,color:#322052;
+  classDef external fill:#FDECEF,stroke:#D9485F,stroke-width:2px,color:#5C1723;
+  classDef runtime fill:#F4F7FA,stroke:#6A7C92,stroke-width:1.5px,color:#2D3B4D;
+
+  subgraph UI["① 交互与展示层 · Vue 单页应用"]
+    direction TB
+    V["Vue 3 + Vite<br/>Vue Router · Pinia"]
+    UX["Element Plus · ECharts<br/>Markdown 安全渲染"]
+    AV["Three.js + three-vrm<br/>VRM 数字人 / 表情 / 口型"]
+    V --- UX --- AV
+  end
+
+  subgraph APP["② 业务接入层 · FastAPI 模块化单体"]
+    direction TB
+    API["FastAPI · Uvicorn<br/>HTTP / SSE / 鉴权 / Schema"]
+    SVC["Service 编排层<br/>问答 · 推荐 · 情绪 · 语音 · 视觉 · 洞察"]
+    REPO["Repository / Model<br/>SQLAlchemy 异步数据访问"]
+    API --> SVC --> REPO
+  end
+
+  subgraph AI["③ 智能能力层 · 可替换 Provider / Strategy"]
+    direction TB
+    QA["问答 Pipeline<br/>FAQ → 缓存 → 混合 RAG → 生成 / 降级"]
+    MM["多模态感知与表达<br/>ASR · TTS · Qwen Vision · 数字人事件"]
+    LOCAL["本地推理<br/>BGE Embedding / Reranker<br/>PyTorch · ONNX Runtime"]
+    QA --- MM --- LOCAL
+  end
+
+  subgraph DATA["④ 数据与知识层"]
+    direction TB
+    PG[("PostgreSQL<br/>会话 · 用户画像 · 反馈 · 运营数据")]
+    CH[("ChromaDB<br/>向量索引与知识检索")]
+    KB["知识库 / 清洗景区数据<br/>FAQ · 文档切分 · 初始化数据"]
+    KB --> CH
+  end
+
+  subgraph EXT["⑤ 外部能力与演示配置"]
+    direction TB
+    DS["DeepSeek<br/>基于证据生成"]
+    BA["百炼 ASR / CosyVoice TTS"]
+    QW["Qwen Vision"]
+    OT["OpenWeatherMap · 浏览器语音<br/>Coze / 实时景区数据：预留或 Mock"]
+    DS --- BA --- QW --- OT
+  end
+
+  RT["运行与工程基座<br/>Node.js 20+ · Python 3.13+ · npm · Alembic · pytest"]
+
+  UI -->|"JSON 请求 / SSE 事件"| APP
+  APP -->|"业务编排"| AI
+  APP <-->|"持久化与查询"| DATA
+  AI <-->|"检索 / 索引"| DATA
+  AI <-->|"Provider 适配"| EXT
+  RT -.-> UI
+  RT -.-> APP
+  RT -.-> AI
+  RT -.-> DATA
+
+  class V,UX,AV client;
+  class API,SVC,REPO api;
+  class QA,MM,LOCAL intelligence;
+  class PG,CH,KB data;
+  class DS,BA,QW,OT external;
+  class RT runtime;

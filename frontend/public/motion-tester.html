@@ -6,11 +6,14 @@
 <title>数字人动作测试台</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: system-ui, sans-serif;
+  html, body {
+    height: 100%;
+    font-family: system-ui, "Noto Sans SC", sans-serif;
     background: #1a1612;
     color: #f0ece5;
-    height: 100vh;
+    color-scheme: dark;
+  }
+  body {
     display: flex;
   }
   .canvas-area {
@@ -18,49 +21,54 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: radial-gradient(ellipse 60% 50% at 50% 40%, rgba(26,22,18,0.3) 0%, #0d0b08 100%);
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 35%, transparent 0%, rgba(20,16,10,0.55) 80%),
+      radial-gradient(ellipse 80% 50% at 50% 100%, rgba(22,18,10,0.5) 0%, transparent 70%);
     position: relative;
     overflow: hidden;
   }
   .canvas-wrapper {
-    width: min(380px, 38vw);
-    height: min(440px, 62vh);
+    width: min(clamp(260px, 34vw, 480px), 100vw);
+    height: calc(min(clamp(320px, 42vh, 520px), 66vh) + 20px);
     position: relative;
+    transform: translateY(4%);
   }
   .canvas-area canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; display: block; }
   .status {
     position: absolute;
-    top: 20px; left: 50%; transform: translateX(-50%);
-    padding: 6px 16px;
+    top: 24px; left: 50%; transform: translateX(-50%);
+    padding: 6px 18px;
     border-radius: 999px;
-    background: rgba(23,18,14,0.8);
-    border: 1px solid rgba(255,250,242,0.12);
-    font-size: 14px;
-    color: rgba(232,228,219,0.6);
+    background: rgba(15, 23, 42, 0.85);
+    color: #94a3b8;
+    font-size: 13px;
     letter-spacing: 0.04em;
+    z-index: 10;
   }
-  .status.active { color: #d9a441; border-color: rgba(217,164,65,0.3); }
+  .status.active { color: #d9a441; }
   .panel {
     width: 300px;
     background: rgba(23,18,14,0.92);
     border-left: 1px solid rgba(255,250,242,0.08);
-    padding: 16px 14px;
+    padding: 20px 16px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
     overflow-y: auto;
   }
   .panel h1 {
-    font-family: "STKaiti","KaiTi",serif;
-    font-size: 26px;
-    color: #f8e7bb;
-    letter-spacing: 0.08em;
-    margin-bottom: 4px;
+    font-family: "STKaiti","KaiTi","STSong",serif;
+    font-size: 28px;
+    font-weight: 400;
+    color: rgba(232,228,219,0.88);
+    letter-spacing: 0.12em;
+    text-shadow: 0 0 30px rgba(217,164,65,0.1);
+    margin-bottom: 2px;
   }
   .panel h2 {
     font-size: 13px;
     font-weight: 400;
-    color: rgba(232,228,219,0.4);
+    color: rgba(232,228,219,0.35);
     letter-spacing: 0.06em;
   }
   .model-select {
@@ -69,17 +77,17 @@
   }
   .model-select button {
     flex: 1;
-    padding: 8px 0;
+    padding: 9px 0;
     border: 1px solid rgba(232,228,219,0.12);
     border-radius: 8px;
     background: rgba(232,228,219,0.03);
-    color: rgba(232,228,219,0.55);
+    color: rgba(232,228,219,0.5);
     font-family: inherit;
     font-size: 15px;
     cursor: pointer;
     transition: all 0.2s;
   }
-  .model-select button:hover { border-color: rgba(217,164,65,0.3); color: rgba(232,228,219,0.8); }
+  .model-select button:hover { border-color: rgba(217,164,65,0.3); color: rgba(232,228,219,0.75); }
   .model-select button.active { border-color: #d9a441; background: rgba(217,164,65,0.1); color: #d9a441; }
   .motion-grid {
     display: grid;
@@ -131,14 +139,18 @@
   .divider {
     height: 1px;
     background: rgba(255,250,242,0.06);
-    margin: 4px 0;
+    margin: 2px 0;
   }
   .loading {
     position: absolute;
     top: 50%; left: 50%;
     transform: translate(-50%,-50%);
-    color: rgba(232,228,219,0.5);
-    font-size: 16px;
+    color: #94a3b8;
+    font-size: 13px;
+    padding: 10px 18px;
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.85);
+    z-index: 10;
   }
 </style>
 </head>
@@ -158,6 +170,7 @@
   <div class="model-select">
     <button data-model="hanfu" class="active" onclick="switchModel('hanfu')">清岚</button>
     <button data-model="modern" onclick="switchModel('modern')">景行</button>
+    <button data-model="monk" onclick="switchModel('monk')">宁灵</button>
     <button data-model="procedural" onclick="switchModel('procedural')">程序化</button>
   </div>
   <div class="info-row">程序化 = 几何体降级模型，无四肢骨骼</div>
@@ -190,29 +203,29 @@
     <button class="motion-btn" data-motion="departure_pose" onclick="playMotion('departure_pose')">
       <span class="label">出发</span><span class="duration">3.0s</span>
     </button>
-    <button class="motion-btn" data-motion="clap" onclick="playMotion('clap')">
-      <span class="label">鼓掌</span><span class="duration">2.2s</span>
-    </button>
   </div>
 
   <div class="divider"></div>
 
   <div class="motion-grid" id="mixamoGrid">
     <button class="motion-btn" data-file="挥手.glb" onclick="playMixamoFile(this)"><span class="label">挥手</span></button>
-    <button class="motion-btn" data-file="挥手123.glb" onclick="playMixamoFile(this)"><span class="label">挥手123</span></button>
+    <button class="motion-btn" data-file="挥手123.glb" onclick="playMixamoFile(this)"><span class="label">挥手2</span></button>
     <button class="motion-btn" data-file="双手挥手.glb" onclick="playMixamoFile(this)"><span class="label">双手挥手</span></button>
-    <button class="motion-btn" data-file="同意.glb" onclick="playMixamoFile(this)"><span class="label">同意</span></button>
-    <button class="motion-btn" data-file="向前方指.glb" onclick="playMixamoFile(this)"><span class="label">向前方指</span></button>
-    <button class="motion-btn" data-file="指向手势.glb" onclick="playMixamoFile(this)"><span class="label">指向手势</span></button>
+    <button class="motion-btn" data-file="同意.glb" onclick="playMixamoFile(this)"><span class="label">同意/点头</span></button>
+    <button class="motion-btn" data-file="摇头摆手不.glb" onclick="playMixamoFile(this)"><span class="label">摇头摆手</span></button>
     <button class="motion-btn" data-file="指向身后.glb" onclick="playMixamoFile(this)"><span class="label">指向身后</span></button>
     <button class="motion-btn" data-file="思考.glb" onclick="playMixamoFile(this)"><span class="label">思考</span></button>
     <button class="motion-btn" data-file="握拳加油.glb" onclick="playMixamoFile(this)"><span class="label">握拳加油</span></button>
     <button class="motion-btn" data-file="站在大拇指你真棒.glb" onclick="playMixamoFile(this)"><span class="label">你真棒</span></button>
-    <button class="motion-btn" data-file="站着鼓掌.glb" onclick="playMixamoFile(this)"><span class="label">站着鼓掌</span></button>
     <button class="motion-btn" data-file="站起来热烈鼓掌.glb" onclick="playMixamoFile(this)"><span class="label">热烈鼓掌</span></button>
     <button class="motion-btn" data-file="我也没有办法.glb" onclick="playMixamoFile(this)"><span class="label">我也没有办法</span></button>
     <button class="motion-btn" data-file="抬手挡光看.glb" onclick="playMixamoFile(this)"><span class="label">抬手挡光看</span></button>
-    <button class="motion-btn" data-file="站着看346.glb" onclick="playMixamoFile(this)"><span class="label">站着看</span></button>
+    <button class="motion-btn" data-file="胜利.glb" onclick="playMixamoFile(this)"><span class="label">胜利</span></button>
+    <button class="motion-btn" data-file="一个肩膀靠.glb" onclick="playMixamoFile(this)"><span class="label">肩膀靠</span></button>
+    <button class="motion-btn" data-file="到处察看.glb" onclick="playMixamoFile(this)"><span class="label">到处察看</span></button>
+    <button class="motion-btn" data-file="在地左右换脚.glb" onclick="playMixamoFile(this)"><span class="label">左右换脚</span></button>
+    <button class="motion-btn" data-file="女性站立姿势3.glb" onclick="playMixamoFile(this)"><span class="label">站立姿势3</span></button>
+    <button class="motion-btn" data-file="女性站立姿势4.glb" onclick="playMixamoFile(this)"><span class="label">站立姿势4</span></button>
   </div>
 
   <div class="divider"></div>
@@ -242,6 +255,7 @@ import { VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
 const MODEL_URLS = {
   hanfu: "/models/hanfu.vrm",
   modern: "/models/male-guide.vrm",
+  monk: "/models/林二女.vrm",
   procedural: null,
 };
 
@@ -292,22 +306,6 @@ const MOTION_TEMPLATES = {
       { at: 0.7, name: "happy", value: 0 },
     ],
   },
-  clap: {
-    duration: 2200, blendIn: 200, blendOut: 350,
-    keyframes: [
-      { t: 0.0, lua_z: -0.35, lua_y: 0, rua_z: 0.35, rua_y: 0, lla_x: 0, lla_z: 0, rla_x: 0, rla_z: 0, head_z: 0, head_x: 0 },
-      { t: 0.25, lua_z: -0.25, lua_y: -0.3, rua_z: 0.25, rua_y: -0.3, lla_x: -1.5, lla_z: 0.1, rla_x: 1.5, rla_z: -0.1, head_z: 0, head_x: -0.02 },
-      { t: 0.45, lua_z: -0.15, lua_y: -0.35, rua_z: 0.15, rua_y: -0.35, lla_x: -1.55, lla_z: -0.25, rla_x: 1.55, rla_z: 0.25, head_z: 0, head_x: -0.02 },
-      { t: 0.55, lua_z: -0.22, lua_y: -0.32, rua_z: 0.22, rua_y: -0.32, lla_x: -1.5, lla_z: 0.2, rla_x: 1.5, rla_z: -0.2, head_z: 0, head_x: -0.02 },
-      { t: 0.7, lua_z: -0.15, lua_y: -0.35, rua_z: 0.15, rua_y: -0.35, lla_x: -1.55, lla_z: -0.25, rla_x: 1.55, rla_z: 0.25, head_z: 0, head_x: -0.02 },
-      { t: 0.8, lua_z: -0.22, lua_y: -0.32, rua_z: 0.22, rua_y: -0.32, lla_x: -1.5, lla_z: 0.2, rla_x: 1.5, rla_z: -0.2, head_z: 0, head_x: -0.02 },
-      { t: 1.0, lua_z: -0.35, lua_y: 0, rua_z: 0.35, rua_y: 0, lla_x: 0, lla_z: 0, rla_x: 0, rla_z: 0, head_z: 0, head_x: 0 },
-    ],
-    expressions: [
-      { at: 0.3, name: "happy", value: 0.25 },
-      { at: 0.85, name: "happy", value: 0 },
-    ],
-  },
 };
 
 function lerpKeys(keys, t) {
@@ -351,6 +349,17 @@ const MIXAMO_TO_VRM_BONES = {
   RightArm: "rightUpperArm", RightForeArm: "rightLowerArm", RightHand: "rightHand",
   Head: "head", Neck: "neck",
   LeftShoulder: "leftShoulder", RightShoulder: "rightShoulder",
+  // 手指骨骼（Mixamo → VRM）
+  LeftHandThumb1: "leftThumbMetacarpal", LeftHandThumb2: "leftThumbProximal", LeftHandThumb3: "leftThumbDistal",
+  LeftHandIndex1: "leftIndexProximal", LeftHandIndex2: "leftIndexIntermediate", LeftHandIndex3: "leftIndexDistal",
+  LeftHandMiddle1: "leftMiddleProximal", LeftHandMiddle2: "leftMiddleIntermediate", LeftHandMiddle3: "leftMiddleDistal",
+  LeftHandRing1: "leftRingProximal", LeftHandRing2: "leftRingIntermediate", LeftHandRing3: "leftRingDistal",
+  LeftHandPinky1: "leftLittleProximal", LeftHandPinky2: "leftLittleIntermediate", LeftHandPinky3: "leftLittleDistal",
+  RightHandThumb1: "rightThumbMetacarpal", RightHandThumb2: "rightThumbProximal", RightHandThumb3: "rightThumbDistal",
+  RightHandIndex1: "rightIndexProximal", RightHandIndex2: "rightIndexIntermediate", RightHandIndex3: "rightIndexDistal",
+  RightHandMiddle1: "rightMiddleProximal", RightHandMiddle2: "rightMiddleIntermediate", RightHandMiddle3: "rightMiddleDistal",
+  RightHandRing1: "rightRingProximal", RightHandRing2: "rightRingIntermediate", RightHandRing3: "rightRingDistal",
+  RightHandPinky1: "rightLittleProximal", RightHandPinky2: "rightLittleIntermediate", RightHandPinky3: "rightLittleDistal",
 };
 
 let renderer, scene, camera, vrm, avatarGroup, timer;
@@ -360,6 +369,7 @@ let savedRest = null;
 let userScale = 1.0;
 let userSpeed = 1.0;
 let currentModel = "hanfu";
+let particles;
 
 let mixamoPlaying = false;
 let mixamoStartTime = 0;
@@ -377,9 +387,10 @@ function initRenderer() {
 
   scene = new THREE.Scene();
   scene.background = null;
-  camera = new THREE.PerspectiveCamera(28, 380 / 440, 0.5, 20);
-  camera.position.set(0, 0.72, 4.8);
-  camera.lookAt(0, 0.72, 0);
+  scene.fog = new THREE.FogExp2(0x0f172a, 0.00015);
+  camera = new THREE.PerspectiveCamera(28, 380 / 440, 0.8, 20);
+  camera.position.set(0, 1.0, 4.8);
+  camera.lookAt(0, 1.0, 0);
 
   scene.add(new THREE.AmbientLight(0x404060, 0.6));
   const key = new THREE.DirectionalLight(0xffeedd, 2.0);
@@ -391,6 +402,32 @@ function initRenderer() {
   const rim = new THREE.PointLight(0xff9966, 1.5, 8);
   rim.position.set(0, 2.5, -2);
   scene.add(rim);
+
+  // Particles
+  const particleCount = 100;
+  const particleGeo = new THREE.BufferGeometry();
+  const positions = new Float32Array(particleCount * 3);
+  const colors = new Float32Array(particleCount * 3);
+  for (let i = 0; i < particleCount; i++) {
+    positions[i * 3] = (Math.random() - 0.5) * 5;
+    positions[i * 3 + 1] = Math.random() * 4 - 0.5;
+    positions[i * 3 + 2] = (Math.random() - 0.5) * 4;
+    colors[i * 3] = 0.2 + Math.random() * 0.3;
+    colors[i * 3 + 1] = 0.4 + Math.random() * 0.4;
+    colors[i * 3 + 2] = 0.5 + Math.random() * 0.5;
+  }
+  particleGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  particleGeo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  const particleMat = new THREE.PointsMaterial({
+    size: 0.025,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.6,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  particles = new THREE.Points(particleGeo, particleMat);
+  scene.add(particles);
 
   timer = new THREE.Timer();
 }
@@ -527,6 +564,7 @@ function animate() {
   animId = requestAnimationFrame(animate);
   timer.update();
   const dt = Math.min(timer.getDelta(), 0.1);
+  const t = performance.now() * 0.001;
 
   if (mixamoPlaying && currentMixamoSamples) {
     const elapsed = (performance.now() - mixamoStartTime) / 1000;
@@ -564,6 +602,17 @@ function animate() {
     }
   } else {
     playbackMotion();
+  }
+
+  // Particles
+  if (particles) {
+    const pos = particles.geometry.attributes.position.array;
+    for (let i = 0; i < pos.length / 3; i++) {
+      pos[i * 3 + 1] += (Math.sin(t * 2 + i) * 0.002) * dt * 10;
+      if (pos[i * 3 + 1] > 3) pos[i * 3 + 1] = -1;
+    }
+    particles.geometry.attributes.position.needsUpdate = true;
+    particles.rotation.y += dt * 0.03;
   }
 
   vrm?.update(dt);
@@ -712,10 +761,32 @@ window.playMixamoFile = async function(btnEl) {
   for (const track of clip.tracks) {
     const parts = track.name.split(".");
     const vrmName = MIXAMO_TO_VRM_BONES[parts[0]];
-    if (!vrmName || parts[1] !== "quaternion") continue;
+    if (!vrmName) continue;
     const bone = vrm.humanoid.getNormalizedBoneNode(vrmName);
     if (!bone) continue;
-    samples.push({ bone, times: new Float32Array(track.times), values: new Float32Array(track.values) });
+
+    if (parts[1] === "quaternion") {
+      samples.push({ bone, times: new Float32Array(track.times), values: new Float32Array(track.values) });
+    } else if (parts[1] === "rotation") {
+      // 欧拉角→四元数转换
+      const nk = track.times.length;
+      const quatVals = new Float32Array(nk * 4);
+      const euler = new THREE.Euler();
+      const tmpQ = new THREE.Quaternion();
+      for (let i = 0; i < nk; i++) {
+        euler.set(
+          THREE.MathUtils.degToRad(track.values[i * 3]),
+          THREE.MathUtils.degToRad(track.values[i * 3 + 1]),
+          THREE.MathUtils.degToRad(track.values[i * 3 + 2]),
+        );
+        tmpQ.setFromEuler(euler);
+        quatVals[i * 4] = tmpQ.x;
+        quatVals[i * 4 + 1] = tmpQ.y;
+        quatVals[i * 4 + 2] = tmpQ.z;
+        quatVals[i * 4 + 3] = tmpQ.w;
+      }
+      samples.push({ bone, times: new Float32Array(track.times), values: quatVals });
+    }
   }
 
   if (samples.length === 0) { setStatus("无匹配骨骼: " + file); return; }

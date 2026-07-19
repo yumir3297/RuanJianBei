@@ -82,18 +82,38 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from "vue";
-import { useRouter } from "vue-router";
+import { onBeforeUnmount, onMounted, ref, computed } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import { useScenicBackground } from "../../composables/useScenicBackground";
+import { fetchAvatarConfig } from "../../api/admin";
+import { normalizeAvatarPresetFromModelPath, DEFAULT_AVATAR_PRESET } from "../../utils/avatarConfig";
 
 const router = useRouter();
+const route = useRoute();
 const { scenicBgUrl } = useScenicBackground();
 
-const services = [
+const AVATAR_MODEL_MAP = {
+  monk: { name: "宁灵" },
+  hanfu: { name: "清岚" },
+  modern: { name: "景行" },
+};
+
+const avatarConfig = ref({ modelKey: DEFAULT_AVATAR_PRESET });
+
+async function loadAvatarConfig() {
+  try {
+    const cfg = await fetchAvatarConfig();
+    avatarConfig.value.modelKey = normalizeAvatarPresetFromModelPath(cfg?.model_path, DEFAULT_AVATAR_PRESET);
+  } catch { /* use default */ }
+}
+
+const avatarDisplayName = computed(() => AVATAR_MODEL_MAP[avatarConfig.value.modelKey]?.name || "清岚");
+
+const services = computed(() => [
   {
     id: "guide",
     title: "数字人导游",
-    description: "与虚拟导游「清岚」实时对话 · AI 语音互动 · 身临其境的景点讲解与个性化导览服务",
+    description: `与虚拟导游实时对话 · AI 语音互动 · 身临其境的景点讲解与个性化导览服务`,
     themeColor: "#c4964c",
     route: "/tourist",
   },
@@ -118,7 +138,7 @@ const services = [
     themeColor: "#4a6d8c",
     route: "/tourist/quiz",
   },
-];
+]);
 
 const activeIndex = ref(0);
 const isDragging = ref(false);
@@ -156,21 +176,21 @@ function cardTransform(i) {
 
 function goTo(index) {
   if (index === activeIndex.value) return;
-  if (index < 0 || index >= services.length) return;
+  if (index < 0 || index >= services.value.length) return;
   activeIndex.value = index;
 }
 
 function handleCardClick(svc) {
-  const idx = services.findIndex((s) => s.id === svc.id);
+  const idx = services.value.findIndex((s) => s.id === svc.id);
   if (idx !== activeIndex.value) {
     activeIndex.value = idx;
     return;
   }
-  router.push(svc.route);
+  router.push(svc.route).catch(() => {});
 }
 
 function goBack() {
-  router.push("/tourist/welcome");
+  router.push("/tourist/welcome").catch(() => {});
 }
 
 function onKeyDown(e) {
@@ -179,10 +199,10 @@ function onKeyDown(e) {
     if (activeIndex.value > 0) goTo(activeIndex.value - 1);
   } else if (e.key === "ArrowRight") {
     e.preventDefault();
-    if (activeIndex.value < services.length - 1) goTo(activeIndex.value + 1);
+    if (activeIndex.value < services.value.length - 1) goTo(activeIndex.value + 1);
   } else if (e.key === "Enter" || e.key === " ") {
     e.preventDefault();
-    router.push(services[activeIndex.value].route);
+    router.push(services.value[activeIndex.value].route).catch(() => {});
   }
 }
 
@@ -200,7 +220,7 @@ function dragMove(clientX) {
 function dragEnd() {
   if (!isDragging.value) return;
   isDragging.value = false;
-  if (dragDelta.value < -DRAG_THRESHOLD && activeIndex.value < services.length - 1) {
+  if (dragDelta.value < -DRAG_THRESHOLD && activeIndex.value < services.value.length - 1) {
     activeIndex.value++;
   } else if (dragDelta.value > DRAG_THRESHOLD && activeIndex.value > 0) {
     activeIndex.value--;
@@ -241,6 +261,8 @@ function onTouchEnd() {
 }
 
 onMounted(() => {
+  const idx = parseInt(route.query.index, 10);
+  if (idx >= 0 && idx < services.value.length) activeIndex.value = idx;
   document.addEventListener("keydown", onKeyDown);
   const area = carouselAreaRef.value;
   if (area) {

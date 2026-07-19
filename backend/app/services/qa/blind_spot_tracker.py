@@ -18,7 +18,7 @@ class BlindSpotTracker:
         self.repository = repository
         self.sample_limit = sample_limit
 
-    def record(
+    async def record(
         self,
         *,
         raw_query: str,
@@ -27,23 +27,23 @@ class BlindSpotTracker:
     ) -> KnowledgeBlindSpot:
         key = self._bounded_key(normalized_query)
         try:
-            entry = self.repository.record(
+            entry = await self.repository.record(
                 normalized_query=key,
                 raw_query=raw_query.strip(),
                 category=category,
                 sample_limit=self.sample_limit,
             )
-            self.repository.session.commit()
+            await self.repository.session.commit()
         except IntegrityError:
-            self.repository.session.rollback()
-            entry = self.repository.record(
+            await self.repository.session.rollback()
+            entry = await self.repository.record(
                 normalized_query=key,
                 raw_query=raw_query.strip(),
                 category=category,
                 sample_limit=self.sample_limit,
             )
-            self.repository.session.commit()
-        self.repository.session.refresh(entry)
+            await self.repository.session.commit()
+        await self.repository.session.refresh(entry)
         return entry
 
     @staticmethod

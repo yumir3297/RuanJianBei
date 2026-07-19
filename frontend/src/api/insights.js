@@ -16,6 +16,10 @@ export function fetchBlindSpotTop() {
   return http.get("/insights/blind-spot-top").then((r) => r.data);
 }
 
+export function fetchEmotionSummary() {
+  return http.get("/insights/emotion-summary").then((r) => r.data);
+}
+
 export function submitVisitorFeedback(payload) {
   return http.post("/insights/feedback", payload).then((r) => r.data);
 }

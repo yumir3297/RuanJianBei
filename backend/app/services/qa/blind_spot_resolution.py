@@ -19,12 +19,12 @@ class BlindSpotResolutionService:
         self.faq_repository = faq_repository
         self.session = blind_spot_repository.session
 
-    def resolve_with_faq(
+    async def resolve_with_faq(
         self,
         blind_spot_id: int,
         payload: ResolveBlindSpotWithFAQRequest,
     ) -> KnowledgeBlindSpot:
-        blind_spot = self.blind_spot_repository.get(blind_spot_id)
+        blind_spot = await self.blind_spot_repository.get(blind_spot_id)
         if blind_spot is None:
             raise NotFoundError("Knowledge blind spot not found.")
 
@@ -32,20 +32,20 @@ class BlindSpotResolutionService:
             payload.aliases,
             self.blind_spot_repository.load_samples(blind_spot.raw_query_samples_json),
         )
-        self.faq_repository.upsert(
+        await self.faq_repository.upsert(
             faq_id=payload.faq_id,
             category=payload.category,
             aliases_json=json.dumps(aliases, ensure_ascii=False),
             answer=payload.answer,
             sources_json=json.dumps(payload.sources, ensure_ascii=False),
         )
-        self.blind_spot_repository.mark_resolved_with_faq(
+        await self.blind_spot_repository.mark_resolved_with_faq(
             blind_spot,
             faq_id=payload.faq_id,
             category=payload.category,
         )
-        self.session.commit()
-        self.session.refresh(blind_spot)
+        await self.session.commit()
+        await self.session.refresh(blind_spot)
         return blind_spot
 
     @staticmethod
