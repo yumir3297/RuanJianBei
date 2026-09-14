@@ -74,3 +74,47 @@ docx_review_template1/
 Thumbs.db
 desktop.ini
 backend.zip
+
+# =====================
+# 评审启动包（含评审专用环境配置，不纳入 Git）
+# =====================
+评审启动包/
+评审启动包.zip
+软件杯最终finalllll提交版/
+软件杯相关数据版/
+
+# =====================
+# 含密钥的笔记与调试转储，绝对不纳入 Git
+# =====================
+coze api.txt
+coze.txt
+.coze_debug/
+**/.coze_debug/
+.backup/
+密钥*.txt
+*密钥*.md
+
+# =====================
+# 过程材料与大体积素材（本地保留，不上传）
+# =====================
+归档/
+视频/
+最终文本文档/
+ppt-visual-check/
+tools/
+*.pptx
+
+# =====================
+# 本地临时脚本与调试产物
+# =====================
+_check_*.py
+_check_*.ps1
+fix_codex_db.py
+fix_codex_db.js
+ppt-architecture-fix.json
+ppt-screenshots-patch.json
+数字人收尾.txt
+软件杯启动指南.txt
+
+# 最终提交压缩包可能含评审环境配置，不纳入 Git
+提交产物/

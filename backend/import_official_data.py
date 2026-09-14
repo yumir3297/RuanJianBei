@@ -47,5 +47,17 @@ async def import_data():
         print(f"    行为摘要: {report.behavior_imported}")
         print(f"    耗时:     {report.duration_ms}ms")
 
-asyncio.run(import_data())
+async def main():
+    try:
+        await import_data()
+    finally:
+        # aiosqlite keeps a worker thread alive until the async engine is
+        # disposed. Releasing it makes this one-shot import command exit
+        # cleanly in the self-contained reviewer package.
+        from app.db.session import engine
+
+        await engine.dispose()
+
+
+asyncio.run(main())
 print(">>> 数据导入完毕")

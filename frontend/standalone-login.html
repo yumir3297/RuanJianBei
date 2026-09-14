@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>灵山智慧导览 - 管理后台登录</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+
+.admin-login-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #fffaf2;
+  color: #241d16;
+}
+
+.login-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #342d26;
+  background: linear-gradient(155deg, #241d16 0%, #2e2620 50%, #3a3028 100%);
+  box-shadow: 0 2px 6px rgba(23, 18, 14, .12);
+}
+
+.login-hero h1 {
+  margin: 0;
+  color: #fff7eb;
+  font-size: clamp(28px, 3vw, 40px);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -.03em;
+}
+
+.login-hero p {
+  max-width: 520px;
+  margin: 11px 0 0;
+  color: rgba(255, 247, 235, .64);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.login-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 247, 235, .15);
+  border-radius: 2px;
+  background: rgba(255, 247, 235, .08);
+  color: #fff7eb;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.login-hero-badge i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 2px;
+  background: #44c07a;
+  box-shadow: 0 0 6px rgba(68, 192, 122, .55);
+}
+
+.login-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+}
+
+.login-card {
+  width: min(420px, 100%);
+  border: 1px solid #d4c8b8;
+  border-radius: 2px;
+  background: #fdf9f2;
+  box-shadow: 0 1px 3px rgba(23, 18, 14, .07);
+}
+
+.login-card-head {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e3d9cc;
+}
+
+.login-card-head h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -.03em;
+  color: #241d16;
+}
+
+.login-card-head p {
+  margin: 8px 0 0;
+  color: #675a4e;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 20px 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  color: #675a4e;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.password-wrap {
+  position: relative;
+}
+
+.password-input {
+  width: 100%;
+  height: 46px;
+  padding: 0 44px 0 14px;
+  border: 1px solid #d4c8b8;
+  border-radius: 2px;
+  background: #fffaf2;
+  color: #241d16;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.16s ease;
+}
+
+.password-input:focus {
+  border-color: #248550;
+  box-shadow: 0 0 0 2px rgba(36, 133, 80, .12);
+  outline: none;
+}
+
+.password-input::placeholder { color: #b8a898; }
+
+.eye-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 2px;
+  background: transparent;
+  color: #8c8174;
+  cursor: pointer;
+  transition: color 0.16s ease;
+}
+
+.eye-toggle:hover { color: #241d16; }
+.eye-toggle svg { width: 18px; height: 18px; }
+
+.login-error {
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid #e3c8c0;
+  border-radius: 2px;
+  background: #fdf3f0;
+  color: #b84c3b;
+  font-size: 12px;
+  line-height: 1.5;
+  display: none;
+}
+
+.login-error.visible { display: block; }
+
+.login-success {
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid #b8e0c8;
+  border-radius: 2px;
+  background: #f0fdf4;
+  color: #1e7043;
+  font-size: 12px;
+  line-height: 1.5;
+  display: none;
+}
+
+.login-success.visible { display: block; }
+
+.login-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+  min-height: 42px;
+  padding: 0 24px;
+  border: 1px solid #248550;
+  border-radius: 2px;
+  background: #248550;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: .02em;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(36, 133, 80, .3);
+  transition: background .16s ease, box-shadow .16s ease;
+}
+
+.login-submit:hover:not(:disabled) {
+  background: #1e7043;
+  box-shadow: 0 4px 12px rgba(36, 133, 80, .35);
+}
+
+.login-submit:disabled {
+  opacity: .7;
+  cursor: not-allowed;
+}
+
+.submit-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: none;
+}
+
+.submit-spinner.visible { display: inline-block; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.status-bar {
+  margin-top: 24px;
+  padding: 12px 16px;
+  border: 1px solid #d4c8b8;
+  border-radius: 2px;
+  background: #fdf9f2;
+  font-size: 12px;
+  color: #675a4e;
+  line-height: 1.6;
+  width: min(420px, 100%);
+}
+
+.status-bar code {
+  background: #f0e8da;
+  padding: 1px 5px;
+  border-radius: 2px;
+  font-size: 11px;
+}
+
+@media (max-width: 900px) {
+  .login-hero {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 16px;
+  }
+  .login-hero p { font-size: 13px; }
+  .login-body { padding: 32px 16px; }
+}
+
+@media (max-width: 640px) {
+  .login-card { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .submit-spinner { animation: none; }
+}
+</style>
+</head>
+<body>
+<div class="admin-login-page">
+  <header class="login-hero">
+    <div>
+      <h1>灵山智慧导览</h1>
+      <p>管理后台 · 景区 AI 数字人导览系统运营中心</p>
+    </div>
+    <span class="login-hero-badge"><i></i>安全登录</span>
+  </header>
+
+  <section class="login-body">
+    <div class="login-card">
+      <div class="login-card-head">
+        <h2>管理员登录</h2>
+        <p>请输入管理密码以访问后台运营面板</p>
+      </div>
+
+      <form id="loginForm" class="login-form">
+        <div class="form-group">
+          <label class="form-label" for="admin-password">管理密码</label>
+          <div class="password-wrap">
+            <input
+              id="admin-password"
+              type="password"
+              placeholder="请输入管理密码…"
+              class="password-input"
+              autocomplete="current-password"
+              spellcheck="false"
+            />
+            <button type="button" class="eye-toggle" id="eyeToggle" aria-label="切换密码可见性">
+              <svg id="eyeOff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg id="eyeOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <p id="errorMsg" class="login-error" role="alert"></p>
+        <p id="successMsg" class="login-success" role="status"></p>
+
+        <button type="submit" class="login-submit" id="submitBtn">
+          <span id="submitSpinner" class="submit-spinner"></span>
+          <span id="submitText">登录管理后台</span>
+        </button>
+      </form>
+    </div>
+
+    <div class="status-bar">
+      <strong>独立运行模式</strong><br/>
+      默认密码：<code>admin123</code><br/>
+      如需连接后端，修改下方 <code>BACKEND_URL</code> 变量。
+    </div>
+  </section>
+</div>
+
+<script>
+// ========== 配置 ==========
+// 设为后端地址即可连接真实 API，留空则使用纯前端校验
+const BACKEND_URL = "";  // 例如 "http://192.168.1.100:8000"
+const FALLBACK_PASSWORD = "admin123";
+// ============================
+
+const form = document.getElementById("loginForm");
+const pwdInput = document.getElementById("admin-password");
+const eyeToggle = document.getElementById("eyeToggle");
+const eyeOff = document.getElementById("eyeOff");
+const eyeOn = document.getElementById("eyeOn");
+const errorMsg = document.getElementById("errorMsg");
+const successMsg = document.getElementById("successMsg");
+const submitBtn = document.getElementById("submitBtn");
+const submitSpinner = document.getElementById("submitSpinner");
+const submitText = document.getElementById("submitText");
+
+let showPassword = false;
+
+pwdInput.focus();
+
+eyeToggle.addEventListener("click", () => {
+  showPassword = !showPassword;
+  pwdInput.type = showPassword ? "text" : "password";
+  eyeOff.style.display = showPassword ? "none" : "block";
+  eyeOn.style.display = showPassword ? "block" : "none";
+});
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  hideMessages();
+
+  const password = pwdInput.value.trim();
+  if (!password) {
+    showError("请输入管理密码");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    if (BACKEND_URL) {
+      // 连接后端模式
+      const resp = await fetch(BACKEND_URL + "/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data.detail || "密码错误");
+      }
+      localStorage.setItem("a5-admin-auth", data.token);
+      showSuccess("登录成功！Token 已存储。可前往后台页面。");
+    } else {
+      // 纯前端校验模式
+      if (password === FALLBACK_PASSWORD) {
+        const fakeToken = btoa("admin:" + Date.now());
+        localStorage.setItem("a5-admin-auth", fakeToken);
+        showSuccess("登录成功！（前端校验模式）");
+      } else {
+        throw new Error("密码错误，请重试");
+      }
+    }
+  } catch (err) {
+    showError(err.message || "登录失败，请检查网络连接");
+  } finally {
+    setLoading(false);
+  }
+});
+
+function showError(msg) {
+  errorMsg.textContent = msg;
+  errorMsg.classList.add("visible");
+}
+
+function showSuccess(msg) {
+  successMsg.textContent = msg;
+  successMsg.classList.add("visible");
+}
+
+function hideMessages() {
+  errorMsg.classList.remove("visible");
+  successMsg.classList.remove("visible");
+}
+
+function setLoading(loading) {
+  submitBtn.disabled = loading;
+  submitSpinner.classList.toggle("visible", loading);
+  submitText.textContent = loading ? "验证中…" : "登录管理后台";
+}
+</script>
+</body>
+</html>

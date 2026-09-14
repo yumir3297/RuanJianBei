@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.router import api_router
 from app.api.chat import close_cached_llm_service
@@ -35,6 +36,22 @@ from app.models import (  # noqa: F401
     VisitorFeedback,
 )
 from app.schemas.common import HealthResponse
+
+
+class SPAStaticFiles(StaticFiles):
+    """Serve a built single-page app without swallowing missing API routes."""
+
+    async def get_response(self, path: str, scope):
+        normalized_path = path.replace("\\", "/").lstrip("/")
+        try:
+            response = await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            if exc.status_code != 404 or normalized_path.startswith("api/"):
+                raise
+            return await super().get_response("index.html", scope)
+        if response.status_code == 404 and not normalized_path.startswith("api/"):
+            return await super().get_response("index.html", scope)
+        return response
 
 
 def _run_migrations() -> None:
@@ -122,6 +139,13 @@ def create_app() -> FastAPI:
 
         status_code = 200 if not failures else 503
         return JSONResponse(status_code=status_code, content={"status": "ready" if not failures else "not_ready", "failures": failures})
+
+    # In the reviewer bundle the prebuilt Vue app lives next to the backend.
+    # Mount it last so API routes, health checks, and uploaded UI assets retain
+    # their normal paths; Vite development remains unaffected.
+    frontend_dist = settings.project_root / "frontend" / "dist"
+    if frontend_dist.is_dir():
+        app.mount("/", SPAStaticFiles(directory=frontend_dist, html=True), name="frontend")
 
     return app
 

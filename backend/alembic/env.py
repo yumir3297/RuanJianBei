@@ -41,6 +41,10 @@ if not _db_url:
     _db_url = "postgresql+psycopg://postgres:postgres@localhost:5432/a5_scenic_guide"
 else:
     _db_url = _db_url.replace("postgresql+asyncpg://", "postgresql+psycopg://")
+    # Alembic migrations use SQLAlchemy's synchronous engine. The reviewer
+    # bundle runs the application with sqlite+aiosqlite, so convert only the
+    # migration connection to SQLite's synchronous driver.
+    _db_url = _db_url.replace("sqlite+aiosqlite://", "sqlite://")
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
