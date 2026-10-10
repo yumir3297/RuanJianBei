@@ -1,7 +1,7 @@
 <template>
   <div class="app-shell" :class="{ 'tourist-mode': isTouristRoute }">
     <header v-if="!isTouristRoute && !isFullBleedRoute && !isAdminRoute" class="topbar">
-      <h1>灵山胜境 AI 数字导游</h1>
+      <h1>景区 AI 数字人智慧导览平台</h1>
       <nav class="topbar-nav">
         <RouterLink to="/">开始游览</RouterLink>
         <RouterLink to="/admin/dashboard">运营管理</RouterLink>
@@ -102,6 +102,7 @@ function handleLogout() {
   margin: 0;
   background: var(--lingshan-paper);
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .fullbleed-shell {

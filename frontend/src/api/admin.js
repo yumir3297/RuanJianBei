@@ -82,3 +82,8 @@ export async function updateWelcomeText(text) {
   const { data } = await http.put("/admin/display-assets/welcome-text", { text });
   return data;
 }
+
+export async function updateTouristDisplaySettings(settings) {
+  const { data } = await http.put("/admin/display-assets/tourist-settings", settings);
+  return data.tourist_settings;
+}

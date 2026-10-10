@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 
-import { streamChat } from "../api/chat";
+import { deleteVisitorMemory, streamChat } from "../api/chat";
 import { submitVisitorFeedback } from "../api/insights";
 import { useAudioPlayer } from "../composables/useAudioPlayer";
 
@@ -19,6 +19,61 @@ let activeStreamController = null;
 let activeStreamToken = 0;
 let lastFailedRequest = null;
 const SESSION_STORAGE_KEY = "a5-chat-session-id";
+const VISITOR_STORAGE_KEY = "a5-visitor-id";
+
+/**
+ * 稳定的匿名游客标识，存在 localStorage（跨会话保留）。
+ * session_id 仍然只存活在 sessionStorage，两者用途不同：
+ * session_id 标识"这一次游览"，visitor_id 标识"这个人"。
+ */
+export function getVisitorId() {
+  const fallbackId = `visitor-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  if (typeof localStorage === "undefined") return fallbackId;
+  try {
+    const existing = localStorage.getItem(VISITOR_STORAGE_KEY);
+    // 长度上限与后端 ChatRequest.visitor_id 的 max_length=64 对齐：
+    // 脏数据若超长会让整个 /chat/stream 请求 422，宁可重发一个新标识。
+    if (existing && existing.length <= 64) return existing;
+    const visitorId = globalThis.crypto?.randomUUID?.() || fallbackId;
+    localStorage.setItem(VISITOR_STORAGE_KEY, visitorId);
+    return visitorId;
+  } catch {
+    // 无痕模式等场景 localStorage 会抛异常，降级为内存 id，不影响聊天
+    return fallbackId;
+  }
+}
+
+export function clearVisitorMemory() {
+  try {
+    localStorage.removeItem(VISITOR_STORAGE_KEY);
+  } catch {
+    // 忽略：清理失败不应阻断聊天
+  }
+}
+
+/**
+ * 隐私入口：先清服务端记忆，再丢掉本地标识。
+ * 服务端不可用时也要清掉本地标识——否则用户以为清干净了、实际仍会被认出来。
+ */
+export async function clearVisitorMemoryEverywhere() {
+  const existing = (() => {
+    try {
+      return localStorage.getItem(VISITOR_STORAGE_KEY);
+    } catch {
+      return null;
+    }
+  })();
+  let deleted = 0;
+  if (existing) {
+    try {
+      ({ deleted } = await deleteVisitorMemory(existing));
+    } catch {
+      // 服务端清除失败不阻断本地清理
+    }
+  }
+  clearVisitorMemory();
+  return deleted ?? 0;
+}
 
 export function getSessionId() {
   const fallbackId = `visitor-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -46,6 +101,8 @@ export const useChatStore = defineStore("chat", {
     voiceFallback: false,
     errorMessage: "",
     userStopped: false,
+    // 逐字字幕时间轴：[{text, begin_time, end_time, sentence_index}]，整段累计毫秒
+    subtitleWords: [],
   }),
   actions: {
     resetConversationContext() {
@@ -73,11 +130,15 @@ export const useChatStore = defineStore("chat", {
         activeStreamController = null;
       }
       audioPlayer.stop();
+      this.subtitleWords = [];
       this.streaming = false;
       this.voiceFallback = false;
       if (this.userStopped) {
         this.statusText = STOPPED_STATUS_TEXT;
       }
+    },
+    clearSubtitleWords() {
+      this.subtitleWords = [];
     },
     async sendMessage(query, selection = null, options = {}) {
       if (!query.trim()) {
@@ -117,6 +178,8 @@ export const useChatStore = defineStore("chat", {
             input_mode: options.inputMode || "text",
             text_only: false,
             persona: options.ttsConfig?.persona || null,
+            audience: options.audience || null,
+            visitor_id: getVisitorId(),
             tts_voice: options.ttsConfig?.voiceType || null,
             tts_rate: options.ttsConfig?.speechRate || 100,
             tts_volume: options.ttsConfig?.volume ?? 80,
@@ -201,7 +264,7 @@ export const useChatStore = defineStore("chat", {
                 },
               );
             },
-            audio_chunk: ({ base64, viseme_timeline, sample_rate, channels, bits }) => {
+            audio_chunk: ({ base64, viseme_timeline, word_timeline, sentence_index, sample_rate, channels, bits }) => {
               if (!isCurrentRequest()) {
                 return;
               }
@@ -224,6 +287,17 @@ export const useChatStore = defineStore("chat", {
               // 字级别时间戳 → viseme 时间线
               if (viseme_timeline) {
                 audioPlayer.updatePCMVisemeTimeline(viseme_timeline);
+              }
+              // 逐字字幕时间轴：后端按句下发（整段累计毫秒），直接拼接
+              if (word_timeline?.length) {
+                for (const word of word_timeline) {
+                  this.subtitleWords.push({
+                    text: word.text || "",
+                    begin_time: word.begin_time || 0,
+                    end_time: word.end_time || 0,
+                    sentence_index: sentence_index ?? 0,
+                  });
+                }
               }
             },
             avatar: (payload = {}) => {

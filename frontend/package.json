@@ -10,10 +10,12 @@
   },
   "dependencies": {
     "@pixiv/three-vrm": "^3.5.4",
+    "@pixiv/three-vrm-animation": "^3.5.4",
     "axios": "^1.11.0",
     "dompurify": "^3.4.11",
     "echarts": "^6.1.0",
     "element-plus": "^2.11.1",
+    "leaflet": "^1.9.4",
     "marked": "^18.0.5",
     "pinia": "^3.0.3",
     "three": "^0.184.0",
@@ -21,6 +23,7 @@
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
+    "@gltf-transform/cli": "^4.5.1",
     "@vitejs/plugin-vue": "^6.0.1",
     "vite": "^7.1.2"
   }

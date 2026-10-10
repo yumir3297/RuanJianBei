@@ -3,7 +3,7 @@
     <p class="tool-description">实时地图 × 数字人导览：看天气与客流，选一条路线，让导游陪你出发。</p>
 
     <div class="map-stage">
-      <div ref="mapEl" class="map-canvas" aria-label="灵山胜境实时地图"></div>
+      <div ref="mapEl" class="map-canvas" aria-label="景区实时地图"></div>
       <div class="map-layer-switch" role="group" aria-label="底图切换">
         <button type="button" :class="{ active: layer === 'vec' }" @click="setLayer('vec')">矢量</button>
         <button type="button" :class="{ active: layer === 'img' }" @click="setLayer('img')">影像</button>

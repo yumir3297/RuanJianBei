@@ -2,13 +2,8 @@ import { createRouter, createWebHistory } from "vue-router";
 
 import { useAuthStore } from "../stores/auth";
 
-const LandingPage = () => import("../views/LandingPage.vue");
-const HomePage = () => import("../views/HomePage.vue");
-const ChatView = () => import("../views/tourist/ChatView.vue");
-const ExploreView = () => import("../views/tourist/ExploreView.vue");
-const RouteView = () => import("../views/tourist/RouteView.vue");
-const QuizView = () => import("../views/tourist/QuizView.vue");
-const ModeSelectView = () => import("../views/tourist/ModeSelectView.vue");
+// Every visitor entry opens one persistent guide; legacy routes open its tools.
+const TouristView = () => import("../views/tourist/TouristView.vue");
 const Dashboard = () => import("../views/admin/Dashboard.vue");
 const AdminLogin = () => import("../views/admin/AdminLogin.vue");
 const KnowledgeManage = () => import("../views/admin/KnowledgeManage.vue");
@@ -17,6 +12,15 @@ const DisplayAssets = () => import("../views/admin/DisplayAssets.vue");
 const AnalyticsReport = () => import("../views/admin/AnalyticsReport.vue");
 const ExperienceReport = () => import("../views/admin/ExperienceReport.vue");
 const BlindSpotManage = () => import("../views/admin/BlindSpotManage.vue");
+
+function guideRedirect(to, tool) {
+  const query = { ...to.query };
+  delete query.selector;
+  delete query.index;
+  if (tool) query.tool = tool;
+  else delete query.tool;
+  return { path: "/tourist", query };
+}
 
 const router = createRouter({
   history: createWebHistory(),
@@ -27,37 +31,42 @@ const router = createRouter({
     {
       path: "/",
       name: "home",
-      component: LandingPage,
+      redirect: "/tourist",
     },
     {
       path: "/tourist/welcome",
       name: "tourist-welcome",
-      component: HomePage,
+      redirect: (to) => guideRedirect(to),
     },
     {
       path: "/tourist/select",
       name: "tourist-mode-select",
-      component: ModeSelectView,
+      redirect: (to) => guideRedirect(to),
     },
     {
       path: "/tourist",
       name: "chat",
-      component: ChatView,
+      component: TouristView,
     },
     {
       path: "/tourist/explore",
       name: "tourist-explore",
-      component: ExploreView,
+      redirect: (to) => guideRedirect(to, "explore"),
+    },
+    {
+      path: "/tourist/map",
+      name: "tourist-map",
+      redirect: (to) => guideRedirect(to, "map"),
     },
     {
       path: "/tourist/routes",
       name: "tourist-routes",
-      component: RouteView,
+      redirect: (to) => guideRedirect(to, "route"),
     },
     {
       path: "/tourist/quiz",
       name: "tourist-quiz",
-      component: QuizView,
+      redirect: (to) => guideRedirect(to, "quiz"),
     },
     {
       path: "/admin/login",

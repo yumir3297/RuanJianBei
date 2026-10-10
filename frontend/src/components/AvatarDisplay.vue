@@ -1,5 +1,5 @@
 <template>
-  <div :class="['avatar-display', `state-${state}`]" aria-label="灵山智慧导游小灵">
+  <div :class="['avatar-display', `state-${state}`]" aria-label="景区智慧导游小灵">
     <div class="avatar-ring">
       <svg class="avatar-face" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
         <circle class="avatar-head" cx="50" cy="48" r="34" />

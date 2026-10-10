@@ -132,6 +132,7 @@
                     <el-button @click="playPreviewAction('two_hand_wave')">双手欢迎</el-button>
                     <el-button @click="playPreviewAction('guide_narrate')">导览讲解</el-button>
                     <el-button @click="playPreviewAction('applaud')">热烈鼓掌</el-button>
+                    <el-button @click="playPreviewAction('vrma_standard_greet')">VRMA 问候</el-button>
                   </el-button-group>
                 </div>
                 <el-button-group v-if="false">
@@ -196,7 +197,7 @@ import {
 const STORAGE_KEY = "a5-avatar-config-v1";
 
 const modelList = [
-  { key: "monk", label: "宁灵", description: "庄重安定 · 佛教文化讲解", cssClass: "monk" },
+  { key: "monk", label: "宁灵", description: "庄重安定 · 国风文化讲解", cssClass: "monk" },
   { key: "hanfu", label: "清岚", description: "雅致温润 · 文化叙事导览", cssClass: "hanfu" },
   { key: "modern", label: "景行", description: "亲切利落 · 现代智能导览", cssClass: "modern" },
 ];
@@ -204,7 +205,7 @@ const modelList = [
 const voiceOptions = [
   { value: "gentle-female", label: "温柔女声 · 龙婉", providerVoice: "longwan_v3", description: "温暖亲切，适合欢迎与陪伴导览" },
   { value: "calm-female", label: "知性女声 · 龙小夏", providerVoice: "longxiaoxia_v3", description: "清晰沉静，适合文化知识讲解" },
-  { value: "deep-male", label: "沉稳男声 · 龙三叔", providerVoice: "longsanshu_v3", description: "稳重厚实，适合历史与佛学讲解" },
+  { value: "deep-male", label: "沉稳男声 · 龙三叔", providerVoice: "longsanshu_v3", description: "稳重厚实，适合历史文化讲解" },
   { value: "lively-female", label: "活泼女声 · 龙安琴", providerVoice: "longanqin_v3", description: "明快活泼，适合亲子互动场景" },
 ];
 
@@ -324,7 +325,7 @@ async function handleVoicePreview() {
   try {
     const result = await previewAvatarVoice(
       voiceType.value,
-      "您好，欢迎来到灵山胜境，我将为您提供智慧导览服务。",
+      "您好，欢迎来到本景区，我将为您提供智慧导览服务。",
     );
     previewAudio = new Audio(`data:${result.audio_mime_type || "audio/mpeg"};base64,${result.base64_audio}`);
     await previewAudio.play();

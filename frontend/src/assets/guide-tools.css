@@ -1,0 +1,101 @@
+.guide-tool-content { padding: 18px 20px 24px; font-size: 14px; color: var(--guide-ink); }
+.guide-tool-content button, .guide-tool-content input, .guide-tool-content select { font: inherit; }
+.guide-tool-content button { cursor: pointer; }
+.guide-tool-content button:disabled { opacity: .5; cursor: not-allowed; }
+.guide-tool-content :is(button,input,select,summary):focus-visible { outline: 2px solid var(--guide-green); outline-offset: 3px; }
+.tool-description { margin: 0 0 16px; font-size: 14px; color: var(--guide-muted); line-height: 1.7; }
+.tool-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.tool-filters input { grid-column: 1 / -1; }
+.tool-filters input, .tool-filters select { width: 100%; min-width: 0; min-height: 44px; padding: 8px 10px; border: 1px solid #dce5d6; border-radius: 8px; color: #34523c; background: #fafbf8; }
+.spot-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,230px),1fr)); gap: 12px; }
+.spot-card { display: grid; grid-template-columns: 80px minmax(0,1fr); gap: 12px; min-height: 100px; padding: 10px; border: 1px solid #e3e8df; border-radius: 12px; text-align: left; background: #fff; color: var(--guide-ink); }
+.spot-card:hover { border-color: #acbe9f; background: #fafcf7; }
+.spot-image { height: 80px; border-radius: 7px; overflow: hidden; display: grid; place-items: center; color: #8b9e7e; background: #eaf0e4; }
+.spot-image img { display: block; height: 100%; width: 100%; object-fit: cover; }
+.spot-copy { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.spot-copy strong { font-size: 14px; font-weight: 600; }
+.spot-copy > span { font-size: 12px; color: #71806a; line-height: 1.6; }
+.spot-copy small { color: #8c713d; font-size: 12px; margin-top: auto; }
+.tool-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.tool-chips button { min-height: 44px; padding: 7px 10px; border: 1px solid #e0e7d9; border-radius: 7px; color: #6a7c60; background: #f7f9f3; font-size: 12px; }
+.tool-chips button.active { color: var(--guide-green); border-color: #9eb594; background: #eaf1e3; }
+.tool-chips--secondary button { min-height: 44px; padding: 5px 8px; font-size: 12px; background: #fff; }
+.tool-filter-label { align-self: center; margin-right: 2px; color: #788773; font-size: 12px; }
+.question-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,200px),1fr)); gap: 8px; }
+.question-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 68px; text-align: left; padding: 12px; border: 1px solid #e4e9df; border-radius: 9px; color: var(--guide-ink); background: #fafbf8; }
+.question-card > span:first-child { display: flex; flex-direction: column; gap: 4px; }
+.question-card strong { font-size: 14px; font-weight: 600; }
+.question-card small { font-size: 12px; color: #778570; }
+.question-arrow { color: var(--guide-green); font-size: 16px; }
+.question-card:hover { border-color: #aec39f; background: #f2f6ed; }
+.tool-data-note { margin: 10px 0 14px; padding: 8px 10px; border-radius: 6px; background: #f3f6ee; font-size: 12px; color: #6d7c65; }
+.route-list { display: flex; flex-direction: column; gap: 10px; }
+.route-choice { display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid #e0e7d9; border-radius: 10px; background: #fff; text-align: left; color: var(--guide-ink); }
+.route-choice:hover { border-color: #a9be9d; background: #fafcf7; }
+.route-choice-top { display: flex; flex-direction: column; gap: 4px; }
+.route-choice-top strong { font-size: 14px; font-weight: 600; }
+.route-choice-top > span { font-size: 12px; color: #8a713e; }
+.route-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.route-tags small { padding: 2px 6px; background: #f0f4eb; border-radius: 4px; color: #6d7e5e; font-size: 12px; }
+.route-preview { font-size: 12px; color: #7b8774; line-height: 1.7; }
+.tool-back { min-height: 44px; border: 0; padding: 0; display: flex; align-items: center; gap: 6px; background: transparent; color: #758569; font-size: 12px; }
+.tool-back svg { width: 16px; height: 16px; }
+.route-detail-title { margin: 12px 0 4px; font-size: 17px; }
+.route-stops { padding: 0 0 0 24px; }
+.route-stops li { padding: 4px 0 8px 6px; font-size: 12px; line-height: 1.7; }
+.route-stops li::marker { color: var(--guide-green); font-weight: 500; }
+.route-detail { padding: 10px 0; border-block: 1px solid #e4e9df; font-size: 12px; margin-bottom: 16px; }
+.route-detail summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--guide-green); }
+.route-detail p { line-height: 1.8; white-space: pre-line; }
+.tool-primary { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 44px; padding: 10px 14px; border: 0; border-radius: 9px; color: #fff; background: var(--guide-green); }
+.tool-empty { font-size: 14px; text-align: center; color: #79876f; padding: 20px 0; }
+
+/* Shared list treatment, independent of the scenic content pack. */
+.guide-tool-content { padding: 12px; }
+.tool-description { color: var(--guide-muted); }
+.tool-filters input, .tool-filters select { color: var(--guide-ink); background: var(--guide-surface); border-color: var(--guide-line); border-radius: 4px; }
+.spot-grid, .question-grid { grid-template-columns: 1fr; gap: 0; }
+.spot-card, .question-card, .route-choice { padding: 12px 0; border: 0; border-bottom: 1px solid var(--guide-line); border-radius: 0; background: none; color: var(--guide-ink); }
+.spot-card { grid-template-columns: 56px minmax(0,1fr); gap: 10px; }
+.spot-image { height: 64px; border-radius: 4px; background: var(--guide-paper); color: var(--guide-muted); }
+.spot-copy > span, .spot-copy small, .question-card small, .route-choice-top > span, .route-preview { color: var(--guide-muted); }
+.spot-card:hover, .question-card:hover, .route-choice:hover { background: var(--guide-paper); }
+.tool-chips button { border-color: var(--guide-line); color: var(--guide-muted); background: var(--guide-surface); border-radius: 4px; }
+.tool-chips button.active { border-color: var(--guide-green); color: var(--guide-green); background: var(--guide-paper); }
+.tool-data-note, .route-tags small { color: var(--guide-muted); background: var(--guide-paper); }
+.tool-back, .tool-filter-label, .tool-empty { color: var(--guide-muted); }
+.route-stops li { font-size: 14px; }
+.route-stops li::marker, .route-detail summary, .question-arrow { color: var(--guide-green); }
+.route-detail { border-color: var(--guide-line); font-size: 14px; }
+.route-detail summary { min-height: 44px; }
+.tool-primary { background: var(--guide-green); color: #20372a; border-radius: 6px; }
+
+/* Panel actions share the guide's quiet typography and tactile controls. */
+.guide-tool-content { line-height: 1.7; letter-spacing: .025em; }
+.guide-tool-content :is(button,input,select) {
+  transition: color .18s ease, background-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.tool-filters input, .tool-filters select {
+  border: 0; border-radius: 8px; padding: 10px 12px;
+  background: #ffffff08; box-shadow: inset 0 0 0 1px #ffffff12;
+}
+.tool-filters :is(input,select):focus-visible { outline-offset: 2px; background: #ffffff0d; }
+.tool-filters select option { background: var(--guide-paper); color: var(--guide-ink); }
+.tool-chips button {
+  border: 0; border-radius: 999px; padding: 8px 12px;
+  font-size: 12px; font-weight: 500; background: #ffffff08;
+}
+.tool-chips button.active { color: var(--guide-ink); background: #dce7d71f; box-shadow: inset 0 0 0 1px #dce7d733; }
+.tool-chips button:hover:not(:disabled) { color: var(--guide-ink); background: #ffffff14; }
+.spot-card:hover, .question-card:hover, .route-choice:hover { background: #ffffff08; }
+.spot-copy strong, .question-card strong, .route-choice-top strong { font-weight: 500; letter-spacing: .035em; }
+.tool-primary {
+  min-height: 48px; border-radius: 999px; font-weight: 600; letter-spacing: .06em;
+  background: linear-gradient(180deg,#edf2e5,#c6d7be);
+  box-shadow: inset 0 1px 0 #ffffffb3,0 6px 16px #071a1426;
+}
+.tool-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: inset 0 1px 0 #ffffffb3,0 8px 20px #071a1440; }
+.tool-primary:active:not(:disabled) { transform: scale(.985); }
+@media (prefers-reduced-motion: reduce) {
+  .guide-tool-content :is(button,input,select) { transition: none; }
+}

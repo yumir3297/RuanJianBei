@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>灵山胜境 · 实时地图导览（功能测试页）</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+:root {
+  --brand: #2d5a4b;
+  --brand-deep: #1b2e25;
+  --brand-soft: #eaf0eb;
+  --gold: #c49b4c;
+  --gold-deep: #8b6d2b;
+  --gold-soft: #f5ecd8;
+  --paper: #f5f2ec;
+  --ink: #2c3a33;
+  --stone: #6b7a72;
+  --muted: #94a39c;
+  --line: rgba(45, 90, 75, 0.14);
+  --line-soft: rgba(45, 90, 75, 0.08);
+  --surface: #ffffff;
+  --warn: #b4552d;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --font: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", "Noto Sans SC", sans-serif;
+  --mono: "Consolas", "SFMono-Regular", "Menlo", monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- 顶栏 ---------- */
+.topbar {
+  height: 56px;
+  flex: 0 0 56px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  z-index: 500;
+}
+.brand-mark {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  background: var(--brand);
+  color: var(--gold-soft);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  flex: 0 0 auto;
+}
+.brand-text { display: flex; flex-direction: column; line-height: 1.25; }
+.brand-text b { font-size: 15px; font-weight: 600; letter-spacing: 0.02em; }
+.brand-text span { font-size: 11px; color: var(--muted); }
+.topbar-spacer { flex: 1; }
+.status-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid var(--line);
+  background: var(--brand-soft);
+  color: var(--brand-deep);
+  white-space: nowrap;
+}
+.pill.is-demo { background: var(--gold-soft); border-color: rgba(139, 109, 43, 0.22); color: var(--gold-deep); }
+.pill.is-live { background: var(--brand-soft); color: var(--brand); }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: 0 0 auto; }
+.pill.is-demo .dot { background: var(--gold); }
+
+/* ---------- 主体布局 ---------- */
+.layout { flex: 1; display: flex; min-height: 0; }
+.map-pane { flex: 1; position: relative; min-width: 0; background: #e7e4dc; }
+#map { position: absolute; inset: 0; }
+.side {
+  width: 404px;
+  flex: 0 0 404px;
+  border-left: 1px solid var(--line);
+  background: var(--paper);
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ---------- 卡片 ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--shadow);
+}
+.card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.card-head h2 { font-size: 14px; font-weight: 600; letter-spacing: 0.02em; }
+.card-head .badge {
+  font-size: 11px; padding: 1px 7px; border-radius: 999px;
+  background: var(--gold-soft); color: var(--gold-deep); border: 1px solid rgba(139,109,43,.2);
+  font-weight: 400;
+}
+.card-head .badge.live { background: var(--brand-soft); color: var(--brand); border-color: rgba(45,90,75,.18); }
+.card-head .spacer { flex: 1; }
+
+/* ---------- 实时数据 ---------- */
+.weather-row { display: flex; align-items: center; gap: 12px; padding-bottom: 12px; border-bottom: 1px dashed var(--line); }
+.weather-icon { font-size: 34px; line-height: 1; }
+.weather-main { display: flex; flex-direction: column; }
+.weather-temp { font-size: 24px; font-weight: 600; letter-spacing: -0.01em; }
+.weather-desc { font-size: 12px; color: var(--stone); }
+.weather-meta { margin-left: auto; font-size: 11px; color: var(--muted); text-align: right; line-height: 1.7; }
+
+.metric-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.metric {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  padding: 9px 10px;
+  background: var(--paper);
+}
+.metric .k { font-size: 11px; color: var(--stone); }
+.metric .v { font-size: 19px; font-weight: 600; line-height: 1.3; }
+.metric .v small { font-size: 11px; font-weight: 400; color: var(--stone); margin-left: 2px; }
+
+.bar-list { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.bar-item { font-size: 12px; }
+.bar-item .bar-top { display: flex; justify-content: space-between; color: var(--stone); margin-bottom: 3px; }
+.bar-item .bar-top b { color: var(--ink); font-weight: 600; }
+.bar-track { height: 6px; border-radius: 999px; background: var(--brand-soft); overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #4d7565, var(--brand)); }
+.bar-fill.is-warn { background: linear-gradient(90deg, #d99a4e, var(--warn)); }
+
+/* ---------- AI 导游 ---------- */
+.chat-log {
+  max-height: 288px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 2px;
+  margin-bottom: 10px;
+}
+.msg { display: flex; flex-direction: column; gap: 4px; max-width: 100%; }
+.msg .who { font-size: 11px; color: var(--muted); }
+.msg.user { align-items: flex-end; }
+.msg.user .bubble {
+  background: var(--brand);
+  color: #f3f7f4;
+  border-radius: 10px 10px 2px 10px;
+}
+.msg.bot .bubble {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 10px 10px 10px 2px;
+}
+.bubble { padding: 8px 11px; font-size: 13px; line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
+.bubble .hl { color: var(--gold-deep); font-weight: 600; }
+.tool-trace {
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.65;
+  background: #fbf7ec;
+  border: 1px solid rgba(139, 109, 43, 0.2);
+  border-left: 3px solid var(--gold);
+  border-radius: 6px;
+  padding: 7px 9px;
+  color: #6b5324;
+  overflow-x: auto;
+  white-space: pre;
+}
+.tool-trace .t-name { color: var(--brand); font-weight: 700; }
+.tool-trace .t-ok { color: #2f7d52; }
+.chat-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.chip {
+  font-family: inherit;
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--brand-deep);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.chip:hover { border-color: var(--brand); background: var(--brand-soft); }
+.chat-input-row { display: flex; gap: 8px; }
+.chat-input-row input {
+  flex: 1;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  outline: none;
+}
+.chat-input-row input:focus { border-color: var(--brand); background: var(--surface); }
+.btn {
+  font-family: inherit;
+  font-size: 13px;
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--brand);
+  background: var(--brand);
+  color: #f3f7f4;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--brand-deep); border-color: var(--brand-deep); }
+.btn.ghost { background: var(--surface); color: var(--brand); }
+.btn.ghost:hover { background: var(--brand-soft); }
+
+/* ---------- 路线 / POI ---------- */
+.field-row { display: flex; gap: 8px; align-items: center; }
+select, .field-row input {
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  outline: none;
+  width: 100%;
+}
+select:focus, .field-row input:focus { border-color: var(--brand); background: var(--surface); }
+
+.route-summary { margin-top: 10px; font-size: 12px; color: var(--stone); }
+.route-summary .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.tag {
+  font-size: 11px; padding: 2px 8px; border-radius: 999px;
+  background: var(--brand-soft); color: var(--brand-deep); border: 1px solid rgba(45,90,75,.16);
+}
+.route-steps { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 6px; }
+.route-steps .step { font-size: 12px; color: var(--ink); }
+.route-steps .arrow { color: var(--muted); font-size: 11px; }
+.route-meta { margin-top: 8px; display: flex; gap: 12px; font-size: 12px; color: var(--stone); }
+.route-meta b { color: var(--ink); }
+
+.poi-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; max-height: 210px; overflow-y: auto; }
+.poi-item {
+  display: flex; gap: 9px; align-items: flex-start;
+  padding: 8px 9px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.poi-item:hover { border-color: var(--brand); background: var(--brand-soft); }
+.poi-item.active { border-color: var(--gold); background: var(--gold-soft); }
+.poi-item .emoji { font-size: 17px; line-height: 1.3; }
+.poi-item .info { min-width: 0; }
+.poi-item .nm { font-size: 13px; font-weight: 600; }
+.poi-item .ds { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.poi-item .dist { margin-left: auto; font-size: 11px; color: var(--gold-deep); white-space: nowrap; }
+
+.note { font-size: 11.5px; color: var(--muted); line-height: 1.75; }
+.note b { color: var(--stone); font-weight: 600; }
+.note code { font-family: var(--mono); font-size: 11px; color: var(--brand); background: var(--brand-soft); padding: 0 4px; border-radius: 3px; }
+
+/* ---------- 地图浮层 ---------- */
+.map-overlay {
+  position: absolute;
+  z-index: 400;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(2px);
+}
+.legend { top: 12px; left: 12px; padding: 9px 11px; font-size: 11.5px; }
+.legend h3 { font-size: 11.5px; font-weight: 600; margin-bottom: 6px; color: var(--ink); }
+.legend-item { display: flex; align-items: center; gap: 6px; color: var(--stone); line-height: 1.9; }
+.legend-swatch { width: 10px; height: 10px; border-radius: 3px; flex: 0 0 auto; }
+.layer-switch { top: 12px; right: 12px; display: flex; overflow: hidden; }
+.layer-switch button {
+  font-family: inherit; font-size: 12px; padding: 7px 12px;
+  border: none; background: transparent; color: var(--stone); cursor: pointer;
+}
+.layer-switch button + button { border-left: 1px solid var(--line); }
+.layer-switch button.active { background: var(--brand); color: #f3f7f4; font-weight: 600; }
+
+/* 自定义图标 */
+.spot-pin {
+  display: flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 50% 50% 50% 2px;
+  transform: rotate(-45deg);
+  background: var(--brand);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  font-size: 12px;
+}
+.spot-pin span { transform: rotate(45deg); line-height: 1; }
+.spot-pin.zone-houshan { background: #7a5230; }
+.spot-pin.zone-huqu { background: #2f7d7d; }
+.spot-pin.zone-guangchang { background: var(--gold-deep); }
+.spot-pin.is-hl { box-shadow: 0 0 0 4px rgba(196, 155, 76, 0.45), 0 1px 5px rgba(0,0,0,.35); z-index: 900; }
+.leaflet-tooltip.spot-tip {
+  font-family: var(--font); font-size: 11.5px;
+  padding: 3px 7px; border-radius: 6px;
+  border: 1px solid var(--line); color: var(--ink);
+  box-shadow: var(--shadow);
+}
+
+/* Leaflet 控件本地化微调 */
+.leaflet-control-attribution { font-size: 10px; background: rgba(255,255,255,.8); }
+.leaflet-bar a { color: var(--brand-deep); }
+
+/* ---------- 移动端 ---------- */
+@media (max-width: 940px) {
+  body { overflow: auto; }
+  .layout { flex-direction: column; }
+  .map-pane { flex: 0 0 auto; height: 52vh; min-height: 320px; }
+  .side { width: auto; flex: 1 1 auto; border-left: none; border-top: 1px solid var(--line); }
+  .topbar { height: auto; min-height: 56px; flex-wrap: wrap; padding: 10px 12px; gap: 8px; }
+  .metric-row { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 420px) {
+  .metric-row { grid-template-columns: 1fr; }
+  .brand-text span { display: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand-mark">灵</div>
+  <div class="brand-text">
+    <b>灵山胜境 · 实时地图导览</b>
+    <span>实时地图 × AI 数字人导游 · 功能集成测试页</span>
+  </div>
+  <div class="topbar-spacer"></div>
+  <div class="status-group">
+    <span class="pill is-live" id="pillBasemap"><i class="dot"></i>底图 高德瓦片</span>
+    <span class="pill is-live" id="pillWeather"><i class="dot"></i>天气 实时</span>
+    <span class="pill is-demo" id="pillCrowd"><i class="dot"></i>客流 演示</span>
+    <span class="pill is-demo" id="pillTool"><i class="dot"></i>AI 工具调用 演示</span>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="map-pane">
+    <div id="map"></div>
+
+    <div class="map-overlay legend">
+      <h3>景点分区</h3>
+      <div class="legend-item"><i class="legend-swatch" style="background:#2d5a4b"></i>前山区</div>
+      <div class="legend-item"><i class="legend-swatch" style="background:#7a5230"></i>后山区</div>
+      <div class="legend-item"><i class="legend-swatch" style="background:#2f7d7d"></i>湖区</div>
+      <div class="legend-item"><i class="legend-swatch" style="background:#8b6d2b"></i>广场区</div>
+      <div class="legend-item" style="margin-top:4px;border-top:1px dashed var(--line);padding-top:5px">
+        <i class="legend-swatch" style="background:#c49b4c;border-radius:50%"></i>点位坐标：演示示意
+      </div>
+    </div>
+
+    <div class="map-overlay layer-switch" id="layerSwitch">
+      <button data-layer="vec" class="active">矢量</button>
+      <button data-layer="img">影像</button>
+    </div>
+  </section>
+
+  <aside class="side">
+
+    <section class="card">
+      <div class="card-head">
+        <h2>实时数据</h2>
+        <span class="spacer"></span>
+        <span class="badge live" id="weatherBadge">OpenWeather 实时</span>
+      </div>
+      <div class="weather-row" id="weatherRow">
+        <div class="weather-icon" id="weatherIcon">⏳</div>
+        <div class="weather-main">
+          <span class="weather-temp" id="weatherTemp">--°C</span>
+          <span class="weather-desc" id="weatherDesc">正在获取灵山天气…</span>
+        </div>
+        <div class="weather-meta" id="weatherMeta"></div>
+      </div>
+
+      <div class="metric-row">
+        <div class="metric">
+          <div class="k">当前在园人数</div>
+          <div class="v" id="inParkVal">--<small>人</small></div>
+        </div>
+        <div class="metric">
+          <div class="k">景区舒适度</div>
+          <div class="v" id="comfortVal">--</div>
+        </div>
+      </div>
+
+      <div class="bar-list" id="crowdList"></div>
+      <p class="note" style="margin-top:10px">
+        <b>客流为演示数据</b>，按景点热度模型生成；正式版接 <code>腾讯位置大数据 MCP</code> 的
+        <code>getRealTimeAreaTraffic</code> 获取区域实时人数与流入流出人次。
+      </p>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>AI 数字人导览</h2>
+        <span class="spacer"></span>
+        <span class="badge">工具调用演示</span>
+      </div>
+      <div class="chat-chips" id="chatChips"></div>
+      <div class="chat-log" id="chatLog"></div>
+      <div class="chat-input-row">
+        <input id="chatInput" type="text" placeholder="问点什么，例如：从九龙灌浴怎么去灵山大佛？" />
+        <button class="btn" id="chatSend">发送</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>路线规划</h2>
+        <span class="spacer"></span>
+        <span class="badge live">作品真实路线数据</span>
+      </div>
+      <div class="field-row">
+        <select id="routeSelect"></select>
+      </div>
+      <div class="route-summary" id="routeSummary"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>周边搜索</h2>
+        <span class="spacer"></span>
+        <span class="badge live">作品真实景点数据</span>
+      </div>
+      <div class="chat-chips" id="poiChips"></div>
+      <div class="poi-list" id="poiList"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>数据说明</h2></div>
+      <p class="note">
+        <b>真实：</b>底图为高德矢量/影像瓦片（测试用途，正式版应改用高德 JS API + 授权 Key）；天气取自 OpenWeatherMap 实时接口。<br>
+        <b>演示：</b>景点坐标为示意值（GCJ-02 近似，非测绘数据），正式版应通过高德地理编码/POI 检索获取；客流数据为热度模型生成的演示值；AI 工具调用为前端模拟。<br>
+        <b>正式链路：</b>前端 Vue → FastAPI 后端（LLM 导游 + MCP 客户端）→ 高德地图 MCP / 腾讯位置大数据 MCP。
+      </p>
+    </section>
+
+  </aside>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  /* ============================================================
+     0. 常量与真实数据来源
+     ------------------------------------------------------------
+     景点/路线名录：作品真实数据 frontend/src/constants/touristCatalog.js
+     天气：OpenWeatherMap 实时接口（与 useWeather.js 同源同坐标）
+     坐标 / 客流 / 工具调用：演示示意值（见页面「数据说明」卡）
+     ============================================================ */
+  const OWM_API_KEY = "5017890a67e8f42c8b5a550503ffa5a1";
+  const LINGSHAN_LAT = 31.4285;
+  const LINGSHAN_LON = 120.0998;
+  const POLL_INTERVAL_MS = 10 * 60 * 1000;
+
+  const ZONES = {
+    qianshan:   { label: "前山区", color: "#2d5a4b" },
+    houshan:    { label: "后山区", color: "#7a5230" },
+    huqu:       { label: "湖区",   color: "#2f7d7d" },
+    guangchang: { label: "广场区", color: "#8b6d2b" }
+  };
+
+  // 坐标均为演示示意值（GCJ-02 近似），heat 为热度模型输入
+  const SPOTS = [
+    { name: "灵山大佛",     emoji: "🗿", desc: "88米高青铜释迦牟尼佛像，灵山景区标志",     zone: "qianshan",   lat: 31.4328, lng: 120.0996, heat: 95 },
+    { name: "九龙灌浴",     emoji: "🐉", desc: "大型动态音乐群雕，再现佛祖诞生盛景",       zone: "qianshan",   lat: 31.4290, lng: 120.0994, heat: 92 },
+    { name: "降魔浮雕",     emoji: "🪨", desc: "青铜浮雕艺术长墙，讲述佛陀修行故事",       zone: "qianshan",   lat: 31.4298, lng: 120.0992, heat: 60 },
+    { name: "阿育王柱",     emoji: "🪷", desc: "古印度风格石柱，铭刻阿育王经文",           zone: "qianshan",   lat: 31.4306, lng: 120.0990, heat: 56 },
+    { name: "百子戏弥勒",   emoji: "😊", desc: "大型青铜雕塑群，弥勒与百名童子嬉戏",       zone: "qianshan",   lat: 31.4278, lng: 120.0998, heat: 64 },
+    { name: "灵山梵宫",     emoji: "🏰", desc: "佛教艺术殿堂，世界佛教论坛永久会址",       zone: "houshan",    lat: 31.4300, lng: 120.1045, heat: 88 },
+    { name: "五印坛城",     emoji: "🏔️", desc: "藏传佛教风格建筑，金顶辉煌庄严",           zone: "houshan",    lat: 31.4310, lng: 120.1058, heat: 78 },
+    { name: "曼飞龙塔",     emoji: "🕌", desc: "南传佛教风格白塔群，异域风情浓郁",         zone: "houshan",    lat: 31.4320, lng: 120.1048, heat: 54 },
+    { name: "无尽意斋",     emoji: "🍵", desc: "禅意茶道空间，静心品味人生",               zone: "houshan",    lat: 31.4290, lng: 120.1052, heat: 45 },
+    { name: "佛教文化博览馆", emoji: "🔔", desc: "动态升降佛塔，佛教科技艺术融合",           zone: "houshan",    lat: 31.4282, lng: 120.1040, heat: 58 },
+    { name: "菩提大道",     emoji: "🌳", desc: "景观步道，两侧菩提树绿荫如盖",             zone: "huqu",       lat: 31.4258, lng: 120.1010, heat: 62 },
+    { name: "五灯湖",       emoji: "🌊", desc: "风景如画的湖面，波光粼粼",                 zone: "huqu",       lat: 31.4245, lng: 120.1025, heat: 66 },
+    { name: "拈花广场",     emoji: "🌸", desc: "湖畔集散广场，莲花造型铺装",               zone: "huqu",       lat: 31.4235, lng: 120.1015, heat: 58 },
+    { name: "香月花街",     emoji: "🏘️", desc: "古色古香的商业步行街",                     zone: "huqu",       lat: 31.4228, lng: 120.1030, heat: 52 },
+    { name: "梵天花海",     emoji: "🌺", desc: "壮观的花海景观，四季换景",                 zone: "huqu",       lat: 31.4265, lng: 120.1035, heat: 55 },
+    { name: "鹿鸣谷",       emoji: "🦌", desc: "生态自然谷地，鹿鸣声声",                   zone: "huqu",       lat: 31.4275, lng: 120.1022, heat: 42 },
+    { name: "灵山大照壁",   emoji: "🧱", desc: "入口照壁浮雕，镌刻灵山胜境四字",           zone: "guangchang", lat: 31.4218, lng: 120.0965, heat: 72 },
+    { name: "佛足坛",       emoji: "🦶", desc: "佛足迹石刻，信众朝拜祈福之地",             zone: "guangchang", lat: 31.4244, lng: 120.0978, heat: 66 },
+    { name: "五智门",       emoji: "🚪", desc: "牌坊式山门，五门象征五智",                 zone: "guangchang", lat: 31.4256, lng: 120.0984, heat: 68 },
+    { name: "五明桥",       emoji: "🌉", desc: "汉白玉石拱桥，横跨香水海",                 zone: "guangchang", lat: 31.4232, lng: 120.0972, heat: 70 },
+    { name: "祥符禅寺",     emoji: "🏯", desc: "千年古刹，灵山佛教文化发源地",             zone: "guangchang", lat: 31.4272, lng: 120.0990, heat: 74 },
+    { name: "拈花堂",       emoji: "⛩️", desc: "景区入口广场，开启灵山之旅",               zone: "guangchang", lat: 31.4208, lng: 120.0975, heat: 60 }
+  ];
+
+  // 作品真实路线数据（PRESET_ROUTES）
+  const ROUTES = [
+    { id: "history-culture", title: "历史文化爱好者路线", category: "官方推荐", duration_label: "6小时深度游", tags: ["历史文化", "深度体验", "佛教艺术"],
+      spots: ["南门入园", "灵山大照壁（华夏第一壁）", "胜境广场", "佛手广场（天下第一掌）", "祥符禅寺（千年古刹历史讲解）", "杏坛广场", "佛前广场", "灵山大佛（佛教造像艺术解析）", "灵山梵宫（佛教艺术殿堂深度游）", "五印坛城（藏传佛教文化体验）", "三圣殿（佛教历史文化展示）", "出口"] },
+    { id: "nature-scenery", title: "自然风光爱好者路线", category: "官方推荐", duration_label: "5小时全景游", tags: ["自然风光", "太湖景观", "园林艺术"],
+      spots: ["南门入园", "佛足坛", "九龙灌浴（观赏表演）", "菩提大道（欣赏太湖风光）", "灵山大佛（登顶俯瞰全景）", "曼飞龙塔（园林景观）", "灵山精舍（禅意园林）", "梵宫广场", "出口"] },
+    { id: "family-kids", title: "亲子家庭路线", category: "官方推荐", duration_label: "4小时轻松游", tags: ["亲子互动", "轻松体验", "寓教于乐"],
+      spots: ["南门入园", "九龙灌浴（观赏动态表演）", "佛手广场（摸“天下第一掌”）", "百子戏弥勒（亲子互动）", "梵宫（欣赏艺术作品）", "五印坛城（体验藏式文化）", "出口"] },
+    { id: "quick-tour", title: "省力快捷游", category: "半日精选", duration_label: "2-2.5小时速览", tags: ["省力", "快捷", "核心景点"],
+      spots: ["灵山大照壁", "五明桥", "佛足坛", "五智门", "九龙灌浴", "灵山大佛", "佛教文化博览馆", "灵山梵宫"] },
+    { id: "half-day-elite", title: "半日精华游", category: "半日精选", duration_label: "3.5-4小时全景", tags: ["半日游", "精华覆盖", "灵活节奏"],
+      spots: ["灵山大照壁", "五明桥", "佛足坛", "五智门", "菩提大道", "九龙灌浴", "降魔浮雕", "阿育王柱", "百子戏弥勒", "祥符禅寺", "灵山大佛", "佛教文化博览馆", "灵山梵宫", "五印坛城", "曼飞龙塔"] },
+    { id: "photo-tour", title: "拍照出片游", category: "主题体验", duration_label: "3小时精选", tags: ["摄影", "拍照打卡", "视觉体验"],
+      spots: ["灵山大照壁", "五明桥", "佛足坛", "九龙灌浴", "降魔浮雕", "百子戏弥勒", "灵山大佛", "灵山梵宫", "五印坛城", "曼飞龙塔"] },
+    { id: "sunset-zen", title: "夕阳禅意游", category: "特色路线", duration_label: "2.5小时落日线", tags: ["夕阳", "禅意", "光影"],
+      spots: ["灵山梵宫", "五印坛城", "曼飞龙塔", "无尽意斋", "灵山大佛", "祥符禅寺", "百子戏弥勒", "阿育王柱", "降魔浮雕", "九龙灌浴", "菩提大道", "五智门", "佛足坛", "五明桥", "灵山大照壁"] }
+  ];
+
+  // 路线中的口语化节点 → 室内景点映射（演示用）
+  const ALIAS = {
+    "南门入园": "拈花堂", "胜境广场": "灵山大照壁", "佛手广场": "佛足坛",
+    "杏坛广场": "祥符禅寺", "佛前广场": "九龙灌浴", "三圣殿": "佛教文化博览馆",
+    "灵山精舍": "无尽意斋", "梵宫广场": "灵山梵宫", "梵宫": "灵山梵宫", "出口": "拈花堂"
+  };
+
+  const $ = function (id) { return document.getElementById(id); };
+  const spotByName = {};
+  SPOTS.forEach(function (s) { spotByName[s.name] = s; });
+
+  function resolveSpot(text) {
+    if (!text) return null;
+    var bare = String(text).replace(/[（(].*?[）)]/g, "").trim();
+    if (spotByName[bare]) return spotByName[bare];
+    var keys = Object.keys(spotByName);
+    for (var i = 0; i < keys.length; i++) {
+      if (bare.indexOf(keys[i]) >= 0) return spotByName[keys[i]];
+    }
+    if (ALIAS[bare] && spotByName[ALIAS[bare]]) return spotByName[ALIAS[bare]];
+    return null;
+  }
+
+  /* ============================================================
+     1. 地图：Leaflet + 高德矢量/影像瓦片
+     ============================================================ */
+  var map, vecLayer, imgLayer, markers = {}, routeLine = null, highlightKey = null;
+
+  function initMap() {
+    if (typeof L === "undefined") {
+      $("map").innerHTML = '<div style="padding:24px;color:#6b7a72;font-size:13px">地图库加载失败（离线？），请检查网络后刷新。</div>';
+      return;
+    }
+    map = L.map("map", { zoomControl: true, attributionControl: true })
+      .setView([LINGSHAN_LAT, LINGSHAN_LON], 15);
+
+    vecLayer = L.tileLayer(
+      "https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}",
+      { subdomains: ["1", "2", "3", "4"], maxZoom: 18, attribution: "底图 © 高德地图（测试用途）" }
+    );
+    imgLayer = L.tileLayer(
+      "https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}",
+      { subdomains: ["1", "2", "3", "4"], maxZoom: 18, attribution: "影像 © 高德地图（测试用途）" }
+    );
+    vecLayer.addTo(map);
+
+    $("layerSwitch").addEventListener("click", function (e) {
+      var btn = e.target.closest("button[data-layer]");
+      if (!btn) return;
+      Array.prototype.forEach.call(this.querySelectorAll("button"), function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      if (btn.getAttribute("data-layer") === "img") {
+        map.removeLayer(vecLayer); imgLayer.addTo(map);
+      } else {
+        map.removeLayer(imgLayer); vecLayer.addTo(map);
+      }
+    });
+
+    renderSpots();
+    map.whenReady(function () { setTimeout(function () { map.invalidateSize(); }, 120); });
+  }
+
+  function renderSpots() {
+    SPOTS.forEach(function (s) {
+      var cls = "spot-pin zone-" + s.zone;
+      var icon = L.divIcon({
+        className: "",
+        html: '<div class="' + cls + '" data-key="' + s.name + '"><span>' + s.emoji + "</span></div>",
+        iconSize: [26, 26], iconAnchor: [13, 24], tooltipAnchor: [0, -20]
+      });
+      var m = L.marker([s.lat, s.lng], { icon: icon, riseOnHover: true }).addTo(map);
+      m.bindTooltip(s.name, { className: "spot-tip", direction: "top", offset: [0, -18] });
+      m.on("click", function () { focusSpot(s.name); });
+      markers[s.name] = m;
+    });
+  }
+
+  function focusSpot(name, open) {
+    var s = spotByName[name];
+    if (!s || !map) return;
+    highlightKey = name;
+    Object.keys(markers).forEach(function (k) {
+      var el = markers[k].getElement();
+      var pin = el && el.querySelector(".spot-pin");
+      if (pin) pin.classList.toggle("is-hl", k === name);
+    });
+    map.flyTo([s.lat, s.lng], Math.max(map.getZoom(), 16), { duration: 0.6 });
+    if (open !== false) markers[name].openTooltip();
+    renderPoiList();
+  }
+
+  /* ============================================================
+     2. 实时天气：OpenWeatherMap（真实接口）
+     ============================================================ */
+  var WICON = {
+    Clear: "☀️", Clouds: "☁️", Rain: "🌧️", Drizzle: "🌦️",
+    Thunderstorm: "⛈️", Snow: "❄️", Mist: "🌫️", Fog: "🌫️", Haze: "🌫️", Smoke: "🌫️", Dust: "🌫️"
+  };
+
+  function weatherEmoji(main) { return WICON[main] || "🌤️"; }
+
+  function fetchWeather() {
+    var badge = $("weatherBadge");
+    var url = "https://api.openweathermap.org/data/2.5/weather?lat=" + LINGSHAN_LAT +
+      "&lon=" + LINGSHAN_LON + "&appid=" + OWM_API_KEY + "&units=metric&lang=zh_cn";
+    fetch(url)
+      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function (raw) {
+        var w = raw.weather && raw.weather[0] ? raw.weather[0] : { main: "Clear", description: "晴" };
+        $("weatherIcon").textContent = weatherEmoji(w.main);
+        $("weatherTemp").textContent = Math.round(raw.main.temp) + "°C";
+        $("weatherDesc").textContent = w.description + " · 体感 " + Math.round(raw.main.feels_like) + "°C";
+        $("weatherMeta").innerHTML =
+          "湿度 " + raw.main.humidity + "%<br>风速 " + raw.wind.speed + " m/s<br>" +
+          new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }) + " 更新";
+        badge.textContent = "OpenWeather 实时";
+        badge.className = "badge live";
+        $("pillWeather").innerHTML = '<i class="dot"></i>天气 实时';
+        $("pillWeather").className = "pill is-live";
+      })
+      .catch(function (err) {
+        $("weatherDesc").textContent = "天气获取失败，使用演示数据";
+        $("weatherIcon").textContent = "🌤️";
+        $("weatherTemp").textContent = "22°C";
+        $("weatherMeta").innerHTML = "接口不可用<br>（离线/额度）";
+        badge.textContent = "演示数据";
+        badge.className = "badge";
+        $("pillWeather").innerHTML = '<i class="dot"></i>天气 演示';
+        $("pillWeather").className = "pill is-demo";
+        if (window.console) console.warn("[map-tester] weather fallback:", err && err.message);
+      });
+  }
+
+  /* ============================================================
+     3. 客流：热度模型生成的演示数据
+     ============================================================ */
+  var ZONE_CAP = { qianshan: 5200, houshan: 4800, huqu: 3000, guangchang: 4600 };
+
+  function hourFactor() {
+    var h = new Date().getHours();
+    if (h < 8) return 0.12;
+    if (h < 10) return 0.5;
+    if (h < 12) return 0.82;
+    if (h < 14) return 1.0;
+    if (h < 16) return 0.86;
+    if (h < 18) return 0.5;
+    return 0.16;
+  }
+
+  function computeCrowd() {
+    var f = hourFactor();
+    var zoneOcc = {}, total = 0;
+    Object.keys(ZONES).forEach(function (z) { zoneOcc[z] = 0; });
+    SPOTS.forEach(function (s) { zoneOcc[s.zone] += s.heat * 5.2 * f; });
+    Object.keys(zoneOcc).forEach(function (z) { zoneOcc[z] = Math.round(zoneOcc[z]); total += zoneOcc[z]; });
+    return { f: f, zoneOcc: zoneOcc, total: total };
+  }
+
+  function renderCrowd() {
+    var d = computeCrowd();
+    $("inParkVal").innerHTML = d.total.toLocaleString("en-US") + "<small>人</small>";
+
+    var maxRatio = 0;
+    Object.keys(d.zoneOcc).forEach(function (z) {
+      maxRatio = Math.max(maxRatio, d.zoneOcc[z] / ZONE_CAP[z]);
+    });
+    var comfort = maxRatio > 0.82 ? "较拥挤" : maxRatio > 0.6 ? "舒适" : "宽松";
+    var comfortEl = $("comfortVal");
+    comfortEl.textContent = comfort;
+    comfortEl.style.color = maxRatio > 0.82 ? "var(--warn)" : "var(--brand)";
+
+    var order = ["qianshan", "houshan", "huqu", "guangchang"];
+    var html = "";
+    order.forEach(function (z) {
+      var pct = Math.min(100, Math.round(d.zoneOcc[z] / ZONE_CAP[z] * 100));
+      var warn = pct >= 80 ? " is-warn" : "";
+      html += '<div class="bar-item"><div class="bar-top"><span>' + ZONES[z].label +
+        '</span><b>' + d.zoneOcc[z].toLocaleString("en-US") + " 人 · " + pct + "%</b></div>" +
+        '<div class="bar-track"><div class="bar-fill' + warn + '" style="width:' + pct + '%"></div></div></div>';
+    });
+    $("crowdList").innerHTML = html;
+  }
+
+  /* ============================================================
+     4. 路线规划：作品真实路线数据 + 地图连线
+     ============================================================ */
+  function initRoutes() {
+    var sel = $("routeSelect");
+    sel.innerHTML = ROUTES.map(function (r) {
+      return '<option value="' + r.id + '">' + r.title + " · " + r.duration_label + "</option>";
+    }).join("");
+    sel.addEventListener("change", function () { renderRoute(sel.value); });
+    renderRoute(ROUTES[0].id);
+  }
+
+  function renderRoute(id) {
+    var r = null;
+    for (var i = 0; i < ROUTES.length; i++) if (ROUTES[i].id === id) r = ROUTES[i];
+    if (!r) return;
+
+    var pts = [];
+    var stepsHtml = [];
+    r.spots.forEach(function (name, idx) {
+      var s = resolveSpot(name);
+      stepsHtml.push('<span class="step">' + name.replace(/[（(].*?[）)]/g, "") + "</span>");
+      if (idx < r.spots.length - 1) stepsHtml.push('<span class="arrow">→</span>');
+      if (s) pts.push([s.lat, s.lng]);
+    });
+
+    $("routeSummary").innerHTML =
+      '<div class="tags">' + r.tags.map(function (t) { return '<span class="tag">' + t + "</span>"; }).join("") + "</div>" +
+      '<div class="route-meta"><span>时长 <b>' + r.duration_label + "</b></span>" +
+      "<span>节点 <b>" + r.spots.length + "</b></span>" +
+      "<span>可定位 <b>" + pts.length + "</b></span></div>" +
+      '<div class="route-steps">' + stepsHtml.join("") + "</div>";
+
+    if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+    if (pts.length > 1) {
+      routeLine = L.polyline(pts, { color: "#c49b4c", weight: 4, opacity: 0.9, dashArray: "2 8", lineCap: "round" }).addTo(map);
+      map.fitBounds(routeLine.getBounds(), { padding: [52, 52], maxZoom: 16 });
+    }
+
+    // 高亮路线上的景点
+    highlightKey = null;
+    Object.keys(markers).forEach(function (k) {
+      var el = markers[k].getElement();
+      var pin = el && el.querySelector(".spot-pin");
+      if (pin) pin.classList.remove("is-hl");
+    });
+  }
+
+  /* ============================================================
+     5. 周边搜索：按作品真实景点名录筛选
+     ============================================================ */
+  var poiFilter = "all";
+
+  function initPoi() {
+    var chips = [{ key: "all", label: "全部" }].concat(
+      Object.keys(ZONES).map(function (z) { return { key: z, label: ZONES[z].label }; })
+    );
+    $("poiChips").innerHTML = chips.map(function (c) {
+      return '<button class="chip" data-zone="' + c.key + '">' + c.label + "</button>";
+    }).join("");
+    $("poiChips").addEventListener("click", function (e) {
+      var btn = e.target.closest("button[data-zone]");
+      if (!btn) return;
+      poiFilter = btn.getAttribute("data-zone");
+      Array.prototype.forEach.call(this.querySelectorAll(".chip"), function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      renderPoiList();
+    });
+    renderPoiList();
+  }
+
+  function poiList() {
+    var list = SPOTS.filter(function (s) { return poiFilter === "all" || s.zone === poiFilter; });
+    return list.slice().sort(function (a, b) { return b.heat - a.heat; });
+  }
+
+  function distLabel(s) {
+    var dLat = (s.lat - LINGSHAN_LAT) * 111000;
+    var dLng = (s.lng - LINGSHAN_LON) * 111000 * Math.cos(LINGSHAN_LAT * Math.PI / 180);
+    var m = Math.sqrt(dLat * dLat + dLng * dLng) + (s.heat % 7) * 30;
+    return m > 1000 ? (m / 1000).toFixed(1) + " km" : Math.round(m) + " m";
+  }
+
+  function renderPoiList() {
+    var list = poiList();
+    $("poiList").innerHTML = list.map(function (s) {
+      var active = s.name === highlightKey ? " active" : "";
+      return '<div class="poi-item' + active + '" data-key="' + s.name + '">' +
+        '<div class="emoji">' + s.emoji + "</div>" +
+        '<div class="info"><div class="nm">' + s.name + "</div>" +
+        '<div class="ds">' + s.desc + "</div></div>" +
+        '<div class="dist">' + distLabel(s) + "</div></div>";
+    }).join("") || '<p class="note">该分区暂无景点。</p>';
+  }
+
+  function initPoiClick() {
+    $("poiList").addEventListener("click", function (e) {
+      var item = e.target.closest(".poi-item");
+      if (item) focusSpot(item.getAttribute("data-key"));
+    });
+  }
+
+  /* ============================================================
+     6. AI 数字人导览：MCP 工具调用链路演示
+     ============================================================ */
+  var TOOL = function (name, args, ok) {
+    return '<span class="t-name">' + name + "</span>(" + args + ")  " +
+      '<span class="t-ok">' + (ok || "✓ 200 · 0.3s") + "</span>\n";
+  };
+
+  var PRESET_Q = [
+    "现在景区人多吗？",
+    "从九龙灌浴怎么去灵山大佛？",
+    "推荐一条3小时路线",
+    "现在适合拍照吗？",
+    "灵山大佛有什么看点？"
+  ];
+
+  function initChat() {
+    $("chatChips").innerHTML = PRESET_Q.map(function (q) {
+      return '<button class="chip">' + q + "</button>";
+    }).join("");
+    $("chatChips").addEventListener("click", function (e) {
+      var btn = e.target.closest(".chip");
+      if (btn) ask(btn.textContent);
+    });
+    $("chatSend").addEventListener("click", function () { ask($("chatInput").value); });
+    $("chatInput").addEventListener("keydown", function (e) {
+      if (e.key === "Enter") ask($("chatInput").value);
+    });
+    botSay("您好，我是灵山胜境的 AI 数字人导游。我可以基于实时数据为您规划路线、介绍景点、播报客流与天气。", null, false);
+  }
+
+  function scrollChat() { var el = $("chatLog"); el.scrollTop = el.scrollHeight; }
+
+  function addUser(text) {
+    var d = document.createElement("div");
+    d.className = "msg user";
+    d.innerHTML = '<div class="who">游客</div><div class="bubble"></div>';
+    d.querySelector(".bubble").textContent = text;
+    $("chatLog").appendChild(d);
+    scrollChat();
+  }
+
+  function botSay(text, trace, typing) {
+    var d = document.createElement("div");
+    d.className = "msg bot";
+    d.innerHTML = '<div class="who">灵山 AI 导游</div>' +
+      (trace ? '<div class="tool-trace">' + trace + "</div>" : "") +
+      '<div class="bubble"></div>';
+    $("chatLog").appendChild(d);
+    var bubble = d.querySelector(".bubble");
+    scrollChat();
+    if (typing === false) { bubble.textContent = text; scrollChat(); return; }
+    var i = 0;
+    (function step() {
+      bubble.textContent = text.slice(0, i);
+      i += 2;
+      scrollChat();
+      if (i <= text.length) setTimeout(step, 16);
+    })();
+  }
+
+  function ask(raw) {
+    var text = String(raw || "").trim();
+    if (!text) return;
+    $("chatInput").value = "";
+    addUser(text);
+    // 模拟网络 + 工具调用延迟
+    setTimeout(function () { reply(text); }, 420);
+  }
+
+  function reply(q) {
+    // 意图 A：客流 / 人多
+    if (/人多|拥挤|客流|排队|实时人数|在园/.test(q)) {
+      var d = computeCrowd();
+      var busiest = Object.keys(d.zoneOcc).sort(function (a, b) {
+        return d.zoneOcc[b] / ZONE_CAP[b] - d.zoneOcc[a] / ZONE_CAP[a];
+      })[0];
+      var trace = TOOL("getRealTimeAreaTraffic", '{"area":"灵山胜境", "type":"in_park"}') +
+        TOOL("maps_weather", '{"city":"无锡" }');
+      botSay(
+        "当前在园约 " + d.total.toLocaleString("en-US") + " 人，" +
+        ZONES[busiest].label + "最热门（承载率约 " +
+        Math.round(d.zoneOcc[busiest] / ZONE_CAP[busiest] * 100) + "%）。\n" +
+        "建议先前往人流较小的" + ZONES[Object.keys(d.zoneOcc).sort(function (a, b) {
+          return d.zoneOcc[a] / ZONE_CAP[a] - d.zoneOcc[b] / ZONE_CAP[b];
+        })[0]].label + "，错峰游览体验更好。",
+        trace
+      );
+      return;
+    }
+
+    // 意图 B：导航 / 怎么去
+    var mNav = q.match(/(?:从)?(.+?)(?:怎么|怎样)(?:去|走|到)(.+?)[？?]?$/);
+    if (mNav || /导航|怎么去|怎么走|路线怎么/.test(q)) {
+      var fromStr = mNav ? mNav[1] : "九龙灌浴";
+      var toStr = mNav ? mNav[2] : "灵山大佛";
+      var a = resolveSpot(fromStr), b = resolveSpot(toStr);
+      if (a && b) {
+        var trace = TOOL("maps_geo", '{"address":"' + a.name + '"}') + "\n" +
+          TOOL("maps_geo", '{"address":"' + b.name + '"}') + "\n" +
+          TOOL("maps_direction_walking", '{"origin":"' + a.lng + "," + a.lat + '","destination":"' + b.lng + "," + b.lat + '"}');
+        var dLat = (b.lat - a.lat) * 111000;
+        var dLng = (b.lng - a.lng) * 111000 * Math.cos(LINGSHAN_LAT * Math.PI / 180);
+        var dist = Math.round(Math.sqrt(dLat * dLat + dLng * dLng));
+        var mins = Math.max(2, Math.round(dist / 65));
+        botSay(
+          "已为您规划步行路线：\n" + a.name + " → " + b.name + "\n" +
+          "全程约 " + dist + " 米，步行约 " + mins + " 分钟。\n" +
+          "沿途会经过" + (a.zone === b.zone ? ZONES[a.zone].label + "的主要景观" : ZONES[a.zone].label + "与" + ZONES[b.zone].label + "）") +
+          "，我已在地图上高亮终点。",
+          trace
+        );
+        focusSpot(b.name);
+        return;
+      }
+    }
+
+    // 意图 C：路线推荐
+    if (/路线|推荐.*游|怎么玩|一日|半天|小时/.test(q)) {
+      var target = /拍照|出片|摄影/.test(q) ? "photo-tour"
+        : /亲子|孩子|带娃/.test(q) ? "family-kids"
+        : /夕阳|日落|禅/.test(q) ? "sunset-zen"
+        : /快|省力|时间紧/.test(q) ? "quick-tour" : "half-day-elite";
+      var r = null;
+      ROUTES.forEach(function (x) { if (x.id === target) r = x; });
+      var trace = TOOL("maps_text_search", '{"keywords":"灵山 经典路线"}') +
+        TOOL("route_recommend", '{"duration_hint":"' + (/小时/.test(q) ? q.match(/\d+\s*小时/)[0] : "3小时") + '"}');
+      $("routeSelect").value = r.id;
+      renderRoute(r.id);
+      botSay(
+        "推荐「" + r.title + "」（" + r.duration_label + "）：\n" +
+        r.spots.map(function (s) { return s.replace(/[（(].*?[）)]/g, ""); }).join(" → ") +
+        "\n我已在地图上画出这条路线。",
+        trace
+      );
+      return;
+    }
+
+    // 意图 D：天气 / 拍照
+    if (/天气|下雨|温度|适合拍照|出片|光线/.test(q)) {
+      var trace = TOOL("maps_weather", '{"city":"无锡", "extensions":"all"}');
+      var temp = $("weatherTemp").textContent;
+      var desc = $("weatherDesc").textContent;
+      botSay(
+        "灵山实时天气：" + temp + "，" + desc + "。\n" +
+        (/晴|多云/.test(desc) ? "光照条件不错，适合在灵山大照壁、九龙灌浴、梵宫外景取景；清晨与日落前是出片黄金时段。"
+          : "当前光照一般，建议优先室内场景（梵宫、五印坛城），雨具请随身携带。"),
+        trace
+      );
+      return;
+    }
+
+    // 意图 E：指定景点介绍
+    var hit = resolveSpot(q);
+    if (hit) {
+      var trace = TOOL("maps_text_search", '{"keywords":"' + hit.name + '"}') +
+        TOOL("knowledge_retrieve", '{"query":"' + hit.name + '", "collection":"lingshan_guide"}');
+      botSay(
+        hit.emoji + " " + hit.name + "：" + hit.desc + "。\n" +
+        "位于" + ZONES[hit.zone].label + "，当前热度约 " + hit.heat + "/100（演示值）。需要我导航或加入路线吗？",
+        trace
+      );
+      focusSpot(hit.name);
+      return;
+    }
+
+    // 兜底
+    botSay(
+      "我目前主要支持：实时客流播报、景点讲解、步行导航、路线推荐与天气查询。\n" +
+      "您可以试试问：「现在景区人多吗」「从九龙灌浴怎么去灵山大佛」「推荐一条3小时路线」。",
+      null
+    );
+  }
+
+  /* ============================================================
+     启动
+     ============================================================ */
+  initMap();
+  initRoutes();
+  initPoi();
+  initPoiClick();
+  initChat();
+  fetchWeather();
+  renderCrowd();
+  setInterval(fetchWeather, POLL_INTERVAL_MS);
+  setInterval(renderCrowd, 60 * 1000);
+})();
+</script>
+</body>
+</html>

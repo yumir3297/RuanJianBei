@@ -2,7 +2,7 @@
   <div class="admin-login-page">
     <header class="login-hero">
       <div>
-        <h1>灵山智慧导览</h1>
+        <h1>智慧导览管理后台</h1>
         <p>管理后台 · 景区 AI 数字人导览系统运营中心</p>
       </div>
       <span class="login-hero-badge"><i></i>安全登录</span>

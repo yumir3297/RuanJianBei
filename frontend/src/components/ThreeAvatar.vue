@@ -16,7 +16,10 @@
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+// meshopt 解码器：压缩后的 VRM（EXT_meshopt_compression）加载必需。
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
+import { VRMAnimationLoaderPlugin } from "@pixiv/three-vrm-animation";
 
 import {
   buildAvatarByPreset,
@@ -262,6 +265,7 @@ async function tryUpgradeAvatarToVrm(preset) {
 
   try {
     const loader = new GLTFLoader();
+    loader.setMeshoptDecoder(MeshoptDecoder);
     loader.register((parser) => new VRMLoaderPlugin(parser));
     const gltf = await loader.loadAsync(vrmUrl);
     const vrm = gltf.userData.vrm;
@@ -419,14 +423,30 @@ function getActionBone(parts, name) {
   return parts?.__vrm?.humanoid?.getNormalizedBoneNode(name) || null;
 }
 
+// Mixamo 走普通 GLTFLoader；.vrma 需注册官方 VRMAnimationLoaderPlugin 解析 VRMC_vrm_animation 扩展。
+function createMotionLoader(kind) {
+  const loader = new GLTFLoader();
+  loader.setMeshoptDecoder(MeshoptDecoder);
+  if (kind === "vrma") {
+    loader.register((parser) => new VRMAnimationLoaderPlugin(parser));
+  }
+  return loader;
+}
+
 async function loadAvatarActionClip(definition) {
   if (avatarActionClipPromises.has(definition.name)) {
     return avatarActionClipPromises.get(definition.name);
   }
 
-  const promise = new GLTFLoader()
+  const promise = createMotionLoader(definition.kind)
     .loadAsync(encodeURI(`/motions/${definition.file}`))
     .then((gltf) => {
+      if (definition.kind === "vrma") {
+        const vrma = gltf.userData.vrmAnimations?.[0];
+        if (!vrma) throw new Error(`动作文件没有 VRM 动画：${definition.file}`);
+        disposeObject(gltf.scene);
+        return vrma;
+      }
       const clip = gltf.animations?.[0];
       if (!clip) throw new Error(`动作文件没有动画轨道：${definition.file}`);
       disposeObject(gltf.scene);
@@ -476,6 +496,23 @@ function createMixamoSamples(parts, clip) {
   return samples;
 }
 
+// .vrma：官方加载器已把轨道按 VRM 骨骼名整理成 Map，直接采样后与 Mixamo 共用回放管线。
+// 与官方 createVRMAnimationHumanoidTracks 保持一致：VRM 0.x 归一化 T-pose 与 1.0 存在朝向差异，
+// 需对四元数扁平数组的偶数位（x/z 分量）取反，等价于绕 Y 轴旋转 180°。
+function createVrmaSamples(parts, vrma) {
+  const isVrm0 = parts?.__vrm?.meta?.metaVersion === "0";
+  const samples = [];
+  vrma.humanoidTracks?.rotation?.forEach((track, boneName) => {
+    const bone = getActionBone(parts, boneName);
+    if (!bone) return;
+    const values = isVrm0
+      ? track.values.map((value, index) => (index % 2 === 0 ? -value : value))
+      : track.values;
+    samples.push({ bone, times: track.times, values });
+  });
+  return samples;
+}
+
 function restoreAvatarActionPose(action = activeAvatarAction) {
   if (!action) return;
   action.restBones.forEach((rest, bone) => bone.quaternion.copy(rest.quaternion));
@@ -515,8 +552,10 @@ function startAvatarAction(definition, clip = null, stateKey = "") {
 
   let samples = [];
   const actionBones = new Set();
-  if (definition.kind === "mixamo") {
-    samples = createMixamoSamples(parts, clip);
+  if (definition.kind === "mixamo" || definition.kind === "vrma") {
+    samples = definition.kind === "vrma"
+      ? createVrmaSamples(parts, clip)
+      : createMixamoSamples(parts, clip);
     samples.forEach((sample) => actionBones.add(sample.bone));
     if (!samples.length) throw new Error(`动作没有匹配当前 VRM 的骨骼：${definition.file}`);
   } else {
@@ -653,7 +692,8 @@ function updateActiveAvatarAction(nowMs) {
   }
 
   const blend = getAvatarActionBlend(action, elapsedMs);
-  if (action.definition.kind === "mixamo") {
+  if (action.definition.kind === "mixamo" || action.definition.kind === "vrma") {
+    // .vrma 与 Mixamo 采样结构完全一致（bone/times/values），共用同一条回放管线。
     applyMixamoAvatarAction(action, elapsedMs, blend);
   } else {
     applyKeyframeAvatarAction(action, elapsedMs, blend);
@@ -685,7 +725,7 @@ async function executeAvatarActionRequest(request) {
   }
 
   try {
-    const clip = request.definition.kind === "mixamo"
+    const clip = request.definition.kind === "mixamo" || request.definition.kind === "vrma"
       ? await loadAvatarActionClip(request.definition)
       : null;
     if (request.token !== avatarActionRequestToken) return;

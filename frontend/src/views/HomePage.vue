@@ -45,8 +45,8 @@
       </button>
 
       <div class="hero-text" aria-hidden="true">
-        <h1 class="hero-title">灵山智慧导览</h1>
-        <p class="hero-sub">{{ avatarName }} &middot; AI 数字人导览员</p>
+        <h1 class="hero-title">{{ touristSettings.brand_name }}</h1>
+        <p class="hero-sub">{{ touristSettings.guide_name || avatarName }} &middot; {{ touristSettings.guide_subtitle }}</p>
       </div>
 
       <div class="cta-zone">
@@ -70,7 +70,7 @@ import { normalizeAvatarPresetFromModelPath, DEFAULT_AVATAR_PRESET } from "../ut
 
 const router = useRouter();
 const avatarError = ref(false);
-const { scenicBgUrl, welcomeText, refresh } = useScenicBackground();
+const { scenicBgUrl, welcomeText, touristSettings, refresh } = useScenicBackground();
 
 const activePreset = ref(DEFAULT_AVATAR_PRESET);
 const greetEmotion = ref("happy");
@@ -99,7 +99,7 @@ function goHome() {
 }
 
 function enterTourist() {
-  router.push("/tourist/select");
+  router.push("/tourist");
 }
 
 function handleAvatarLoaded() {

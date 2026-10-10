@@ -127,11 +127,31 @@ const GLB_ACTIONS = {
   },
 };
 
+// .vrma 标准动作：VRM Animation 生态格式（VRMC_vrm_animation 1.0 规范）。
+// 与 Mixamo 路径不同：官方加载器直接按 VRM 骨骼名组织轨道，无需重定向表。
+// 之后从 VRoid Hub / BOOTH 下载任意 .vrma 放入 public/motions 即可按此方式接入。
+const VRMA_ACTIONS = {
+  vrma_standard_greet: {
+    label: "标准问候（VRMA）",
+    file: "标准问候.vrma",
+    priority: 84,
+    cooldownMs: 2500,
+  },
+};
+
 export const AVATAR_ACTIONS = Object.freeze({
   ...Object.fromEntries(Object.entries(KEYFRAME_ACTIONS).map(([name, item]) => [name, Object.freeze({ name, ...item })])),
   ...Object.fromEntries(Object.entries(GLB_ACTIONS).map(([name, item]) => [name, Object.freeze({
     name,
     kind: "mixamo",
+    blendInMs: 220,
+    blendOutMs: 320,
+    maxDurationMs: 6500,
+    ...item,
+  })])),
+  ...Object.fromEntries(Object.entries(VRMA_ACTIONS).map(([name, item]) => [name, Object.freeze({
+    name,
+    kind: "vrma",
     blendInMs: 220,
     blendOutMs: 320,
     maxDurationMs: 6500,

@@ -6,7 +6,7 @@ export const AVATAR_PRESETS = {
   monk: {
     key: "monk",
     label: "宁灵",
-    description: "智慧庄严 · 佛教文化讲解",
+    description: "智慧端庄 · 国风文化讲解",
     presetType: "monk",
     modelUrl: "/models/林二女.vrm",
   },

@@ -208,9 +208,9 @@
   <div class="divider"></div>
 
   <div class="motion-grid" id="mixamoGrid">
-    <button class="motion-btn" data-file="挥手.glb" onclick="playMixamoFile(this)"><span class="label">挥手</span></button>
-    <button class="motion-btn" data-file="挥手123.glb" onclick="playMixamoFile(this)"><span class="label">挥手2</span></button>
-    <button class="motion-btn" data-file="双手挥手.glb" onclick="playMixamoFile(this)"><span class="label">双手挥手</span></button>
+    <button class="motion-btn" data-file="双手挥手欢迎.glb" onclick="playMixamoFile(this)"><span class="label">双手挥手</span></button>
+    <button class="motion-btn" data-file="热烈挥手欢迎.glb" onclick="playMixamoFile(this)"><span class="label">热烈挥手</span></button>
+    <button class="motion-btn" data-file="挥手告别.glb" onclick="playMixamoFile(this)"><span class="label">挥手告别</span></button>
     <button class="motion-btn" data-file="同意.glb" onclick="playMixamoFile(this)"><span class="label">同意/点头</span></button>
     <button class="motion-btn" data-file="摇头摆手不.glb" onclick="playMixamoFile(this)"><span class="label">摇头摆手</span></button>
     <button class="motion-btn" data-file="指向身后.glb" onclick="playMixamoFile(this)"><span class="label">指向身后</span></button>
@@ -218,14 +218,24 @@
     <button class="motion-btn" data-file="握拳加油.glb" onclick="playMixamoFile(this)"><span class="label">握拳加油</span></button>
     <button class="motion-btn" data-file="站在大拇指你真棒.glb" onclick="playMixamoFile(this)"><span class="label">你真棒</span></button>
     <button class="motion-btn" data-file="站起来热烈鼓掌.glb" onclick="playMixamoFile(this)"><span class="label">热烈鼓掌</span></button>
-    <button class="motion-btn" data-file="我也没有办法.glb" onclick="playMixamoFile(this)"><span class="label">我也没有办法</span></button>
-    <button class="motion-btn" data-file="抬手挡光看.glb" onclick="playMixamoFile(this)"><span class="label">抬手挡光看</span></button>
-    <button class="motion-btn" data-file="胜利.glb" onclick="playMixamoFile(this)"><span class="label">胜利</span></button>
+    <button class="motion-btn" data-file="我也没有办法（双手一摊）.glb" onclick="playMixamoFile(this)"><span class="label">双手一摊</span></button>
+    <button class="motion-btn" data-file="抬手挡光看（风景）.glb" onclick="playMixamoFile(this)"><span class="label">抬手挡光看</span></button>
+    <button class="motion-btn" data-file="庆祝.glb" onclick="playMixamoFile(this)"><span class="label">庆祝</span></button>
     <button class="motion-btn" data-file="一个肩膀靠.glb" onclick="playMixamoFile(this)"><span class="label">肩膀靠</span></button>
-    <button class="motion-btn" data-file="到处察看.glb" onclick="playMixamoFile(this)"><span class="label">到处察看</span></button>
+    <button class="motion-btn" data-file="到处察看自己的身体.glb" onclick="playMixamoFile(this)"><span class="label">到处察看</span></button>
     <button class="motion-btn" data-file="在地左右换脚.glb" onclick="playMixamoFile(this)"><span class="label">左右换脚</span></button>
-    <button class="motion-btn" data-file="女性站立姿势3.glb" onclick="playMixamoFile(this)"><span class="label">站立姿势3</span></button>
-    <button class="motion-btn" data-file="女性站立姿势4.glb" onclick="playMixamoFile(this)"><span class="label">站立姿势4</span></button>
+    <button class="motion-btn" data-file="闲置姿势（放松）.glb" onclick="playMixamoFile(this)"><span class="label">闲置姿势</span></button>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="motion-grid" id="exprGrid">
+    <button class="motion-btn expr-btn" data-expr="happy" onclick="setPreviewExpression('happy')"><span class="label">微笑</span></button>
+    <button class="motion-btn expr-btn" data-expr="surprised" onclick="setPreviewExpression('surprised')"><span class="label">惊讶</span></button>
+    <button class="motion-btn expr-btn" data-expr="sad" onclick="setPreviewExpression('sad')"><span class="label">难过</span></button>
+    <button class="motion-btn expr-btn" data-expr="relaxed" onclick="setPreviewExpression('relaxed')"><span class="label">放松</span></button>
+    <button class="motion-btn expr-btn" data-expr="angry" onclick="setPreviewExpression('angry')"><span class="label">生气</span></button>
+    <button class="motion-btn expr-btn" data-expr="" onclick="setPreviewExpression(null)"><span class="label">清除表情</span></button>
   </div>
 
   <div class="divider"></div>
@@ -251,6 +261,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 
 const MODEL_URLS = {
   hanfu: "/models/hanfu.vrm",
@@ -481,6 +492,33 @@ function resetAllExpressions() {
   ["happy","angry","sad","relaxed","surprised","neutral","blink"].forEach(n => vrm.expressionManager.setValue(n, 0));
 }
 
+// ---------------- 表情预览 ----------------
+const EMOTION_NAMES = ["happy", "angry", "sad", "relaxed", "surprised"];
+let emotionTarget = null; // null = 不干预，交给动作模板
+const emotionCurrent = {};
+
+function setPreviewExpression(name) {
+  emotionTarget = name;
+  if (name === null) {
+    resetAllExpressions();
+    for (const n of EMOTION_NAMES) emotionCurrent[n] = 0;
+  }
+  document.querySelectorAll("#exprGrid .expr-btn").forEach(btn => {
+    btn.classList.toggle("playing", btn.dataset.expr === (name || ""));
+  });
+}
+
+function updatePreviewExpression(dt) {
+  if (!vrm?.expressionManager || emotionTarget === null) return;
+  const speed = Math.min(dt * 6, 1); // 约 0.2s 平滑过渡
+  for (const n of EMOTION_NAMES) {
+    const goal = emotionTarget === n ? 1 : 0;
+    const cur = emotionCurrent[n] || 0;
+    emotionCurrent[n] = Math.abs(goal - cur) < 0.01 ? goal : cur + (goal - cur) * speed;
+    vrm.expressionManager.setValue(n, emotionCurrent[n]);
+  }
+}
+
 function applyMotionBones(keyframes, t, blend, scale) {
   if (!savedRest) return;
   const values = lerpKeys(keyframes, t);
@@ -604,6 +642,8 @@ function animate() {
     playbackMotion();
   }
 
+  updatePreviewExpression(dt);
+
   // Particles
   if (particles) {
     const pos = particles.geometry.attributes.position.array;
@@ -642,6 +682,7 @@ async function loadVRM(url) {
   motion = null;
   savedRest = null;
   updateMotionButtons(null);
+  setPreviewExpression(null);
   setStatus("加载中...", false);
   const loadingMsg = document.getElementById("loadingMsg");
   if (loadingMsg) loadingMsg.style.display = "block";
@@ -671,6 +712,7 @@ async function loadVRM(url) {
 
   const loader = new GLTFLoader();
   loader.register(parser => new VRMLoaderPlugin(parser));
+  loader.setMeshoptDecoder(MeshoptDecoder);
   const gltf = await loader.loadAsync(url);
   const model = gltf.userData.vrm;
   if (!model) throw new Error("无VRM数据");
@@ -753,6 +795,7 @@ window.playMixamoFile = async function(btnEl) {
   console.log(`[${file}] 文件大小: ${buffer.byteLength} 字节`);
 
   const loader = new GLTFLoader();
+  loader.setMeshoptDecoder(MeshoptDecoder);
   const gltf = await new Promise((ok, fail) => loader.parse(buffer.slice(0), "", ok, fail));
   if (!gltf.animations?.length) { setStatus("无动画: " + file); return; }
 
@@ -814,6 +857,7 @@ window.playMixamoFile = async function(btnEl) {
 };
 
 window.switchModel = switchModel;
+window.setPreviewExpression = setPreviewExpression;
 
 window.playMotion = (name) => {
   if (motion && motion.name === name) return;

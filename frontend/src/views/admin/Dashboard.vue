@@ -3,7 +3,7 @@
     <header class="dashboard-hero">
       <div>
         <h1>管理总览</h1>
-        <p>灵山景区 AI 数字人智慧导览系统运行状态一览，实时监控知识资产、问答日志与游客画像核心指标。</p>
+        <p>景区 AI 数字人智慧导览系统运行状态一览，实时监控知识资产、问答日志与游客画像核心指标。</p>
       </div>
       <div class="hero-status">
         <span class="system-badge"><i></i>系统运行正常</span>

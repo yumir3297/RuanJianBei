@@ -3,7 +3,7 @@ import { selectSpeakingAction } from "../components/avatar-actions.js";
 
 export const GUIDE_PERSONA = {
   name: "小灵",
-  greeting: "您好！我是灵山智慧导游小灵，很高兴陪您一起游览。想了解景点故事、规划路线，或认一认眼前的风景，都可以问我。",
+  greeting: "您好！我是景区智慧导游小灵，很高兴陪您一起游览。想了解景点故事、规划路线，或认一认眼前的风景，都可以问我。",
   contextIntro: {
     general: "让我为您介绍一下：",
     photo: "让我看看您拍到了什么……",

@@ -62,11 +62,73 @@
       </div>
     </article>
 
+    <article class="panel-card customization-card">
+      <div class="section-heading">
+        <div>
+          <h3>游客端品牌与主题</h3>
+          <p>集中配置游客页品牌、数字人称呼、字体、强调色和风景照片的边缘渐隐效果。</p>
+        </div>
+        <el-tag size="small" type="success" effect="plain">游客页即时生效</el-tag>
+      </div>
+      <div class="card-body">
+        <div class="settings-grid">
+          <label class="settings-field"><span>品牌名称</span><el-input v-model="touristSettings.brand_name" maxlength="40" show-word-limit /></label>
+          <label class="settings-field"><span>首页导览文案</span><el-input v-model="touristSettings.landing_tagline" maxlength="80" /></label>
+          <label class="settings-field"><span>页脚说明（可留空）</span><el-input v-model="touristSettings.footer_text" maxlength="120" /></label>
+          <label class="settings-field"><span>数字人姓名（留空沿用形象配置）</span><el-input v-model="touristSettings.guide_name" maxlength="24" /></label>
+          <label class="settings-field"><span>数字人副标题</span><el-input v-model="touristSettings.guide_subtitle" maxlength="40" /></label>
+          <label class="settings-field"><span>游客端字体</span>
+            <el-select v-model="touristSettings.font_style">
+              <el-option label="文化衬线字体" value="serif" />
+              <el-option label="清晰无衬线字体" value="system" />
+            </el-select>
+          </label>
+          <label class="settings-field settings-color"><span>主题强调色</span><input v-model="touristSettings.primary_color" type="color" /><code>{{ touristSettings.primary_color }}</code></label>
+          <label class="settings-field settings-color"><span>背景渐隐色</span><input v-model="touristSettings.background_tint" type="color" /><code>{{ touristSettings.background_tint }}</code></label>
+          <label class="settings-field settings-range"><span>两侧渐隐宽度 <b>{{ touristSettings.edge_fade_width }}%</b></span><el-slider v-model="touristSettings.edge_fade_width" :min="20" :max="48" /></label>
+          <label class="settings-field settings-range"><span>渐隐深度 <b>{{ Math.round(touristSettings.background_tint_opacity * 100) }}%</b></span><el-slider v-model="touristSettings.background_tint_opacity" :min="0" :max="0.92" :step="0.02" /></label>
+          <label class="settings-field settings-range"><span>边缘模糊 <b>{{ touristSettings.edge_blur }}px</b></span><el-slider v-model="touristSettings.edge_blur" :min="0" :max="36" /></label>
+        </div>
+
+        <div class="module-settings">
+          <div class="module-settings-heading"><strong>游客端功能模块</strong><span>可改名称、启停和显示顺序</span></div>
+          <div v-for="(module, index) in touristSettings.modules" :key="module.id" class="module-setting-row">
+            <el-switch v-model="module.enabled" :aria-label="`启用${module.title}`" />
+            <el-input v-model="module.title" maxlength="24" :aria-label="`${module.title}显示名称`" />
+            <div class="module-order-actions">
+              <el-button text :disabled="index === 0" aria-label="上移" @click="moveModule(index, -1)">↑</el-button>
+              <el-button text :disabled="index === touristSettings.modules.length - 1" aria-label="下移" @click="moveModule(index, 1)">↓</el-button>
+            </div>
+          </div>
+        </div>
+        <div class="module-settings">
+          <div class="module-settings-heading"><strong>服务热线</strong><span>电话号码会显示在游客端服务菜单中</span></div>
+          <div v-for="hotline in touristSettings.hotlines" :key="hotline.id" class="hotline-setting-row">
+            <el-switch v-model="hotline.enabled" :aria-label="`启用${hotline.label}`" />
+            <el-input v-model="hotline.label" maxlength="24" aria-label="服务名称" />
+            <el-input v-model="hotline.number" maxlength="32" aria-label="联系电话" />
+          </div>
+        </div>
+        <div class="module-settings">
+          <div class="module-settings-heading"><strong>常用提问</strong><span>最多 8 条，会显示在游客端导览区</span></div>
+          <div v-for="(question, index) in touristSettings.quick_questions" :key="index" class="quick-question-setting-row">
+            <el-input v-model="touristSettings.quick_questions[index]" maxlength="80" :aria-label="`常用提问 ${index + 1}`" />
+            <el-button text type="danger" aria-label="删除提问" @click="touristSettings.quick_questions.splice(index, 1)">删除</el-button>
+          </div>
+          <el-button v-if="touristSettings.quick_questions.length < 8" text type="primary" @click="touristSettings.quick_questions.push('')">添加常用提问</el-button>
+        </div>
+        <div class="asset-actions settings-actions">
+          <el-button type="primary" :loading="settingsSaving" @click="handleSaveTouristSettings">保存游客端设置</el-button>
+          <el-button :disabled="settingsSaving" @click="resetTouristSettings">恢复默认并保存</el-button>
+        </div>
+      </div>
+    </article>
+
     <article class="panel-card">
       <div class="section-heading">
         <div>
           <h3>游客端风景背景</h3>
-          <p>替换数字人对话页面中的风景背景图。</p>
+          <p>替换游客页面的整页风景图。按钮使用固定底色，明暗照片都不会改变按钮颜色。</p>
         </div>
         <el-tag size="small" type="success" effect="plain">已接入</el-tag>
       </div>
@@ -203,9 +265,10 @@ import {
   clearTouristBackground,
   fetchDisplayAssets,
   uploadTouristBackground,
+  updateTouristDisplaySettings,
   updateWelcomeText,
 } from "../../api/admin";
-import { API_BASE_URL } from "../../api/http";
+import { resolveDisplayAssetUrl as resolveAssetUrl } from "../../api/display";
 import { invalidateScenicBackground } from "../../composables/useScenicBackground";
 
 const LANDING_STORAGE_KEY = "a5-landing-images-v1";
@@ -224,22 +287,39 @@ const backgroundAsset = ref({
   updated_at: "",
 });
 
-const DEFAULT_WELCOME = "欢迎来到灵山胜境，愿您在此感受禅佛意韵，尽享山水景致。";
+const DEFAULT_WELCOME = "欢迎来到这里，我会陪您探索景点、规划路线并了解景区服务。";
 const welcomeTextValue = ref(DEFAULT_WELCOME);
 const welcomeTextEditing = ref(false);
 const welcomeTextSaving = ref(false);
+
+const DEFAULT_TOURIST_SETTINGS = {
+  brand_name: "数字人导览", landing_tagline: "走进风景，听见这里的故事。", footer_text: "",
+  guide_name: "", guide_subtitle: "数字人导游",
+  primary_color: "#dce7d7", background_tint: "#18352b", background_tint_opacity: 0.72,
+  edge_fade_width: 36, edge_blur: 20, font_style: "serif",
+  modules: [
+    { id: "explore", title: "景点探索", enabled: true, order: 10 },
+    { id: "map", title: "实时地图", enabled: true, order: 20 },
+    { id: "route", title: "智能路线", enabled: true, order: 30 },
+    { id: "quiz", title: "文化故事", enabled: true, order: 40 },
+  ],
+  quick_questions: [
+    "有哪些值得看的景点？", "推荐一条游览路线", "这里有什么代表性的故事？", "附近适合拍照的景点有哪些？",
+  ],
+  hotlines: [
+    { id: "broadcast", label: "广播找人", description: "寻人广播·游客中心", number: "0510-85688631", enabled: true },
+    { id: "complaint", label: "景区投诉", description: "服务投诉建议", number: "400-168-0303转5", enabled: true },
+    { id: "emergency", label: "医疗急救", description: "紧急医疗救助", number: "0510-85688120", enabled: true },
+  ],
+};
+const touristSettings = ref(structuredClone(DEFAULT_TOURIST_SETTINGS));
+const settingsSaving = ref(false);
 
 const landingImages = ref([]);
 
 const backgroundPreviewUrl = computed(() =>
   selectedBackgroundPreviewUrl.value || resolveAssetUrl(backgroundAsset.value.asset_url),
 );
-
-function resolveAssetUrl(assetUrl) {
-  if (!assetUrl) return "";
-  if (/^https?:\/\//i.test(assetUrl)) return assetUrl;
-  return new URL(assetUrl, `${API_BASE_URL}/`).href;
-}
 
 function formatNow() {
   return new Intl.DateTimeFormat("zh-CN", {
@@ -353,6 +433,42 @@ async function loadDisplayAssetState() {
     updated_at: assets?.tourist_background?.updated_at || "",
   };
   welcomeTextValue.value = assets?.welcome_text || DEFAULT_WELCOME;
+  touristSettings.value = {
+    ...structuredClone(DEFAULT_TOURIST_SETTINGS),
+    ...(assets?.tourist_settings || {}),
+    modules: structuredClone(assets?.tourist_settings?.modules || DEFAULT_TOURIST_SETTINGS.modules),
+    quick_questions: [...(assets?.tourist_settings?.quick_questions || DEFAULT_TOURIST_SETTINGS.quick_questions)],
+    hotlines: structuredClone(assets?.tourist_settings?.hotlines || DEFAULT_TOURIST_SETTINGS.hotlines),
+  };
+}
+
+function moveModule(index, direction) {
+  const target = index + direction;
+  if (target < 0 || target >= touristSettings.value.modules.length) return;
+  const modules = [...touristSettings.value.modules];
+  [modules[index], modules[target]] = [modules[target], modules[index]];
+  modules.forEach((module, order) => { module.order = (order + 1) * 10; });
+  touristSettings.value.modules = modules;
+}
+
+function resetTouristSettings() {
+  touristSettings.value = structuredClone(DEFAULT_TOURIST_SETTINGS);
+  handleSaveTouristSettings();
+}
+
+async function handleSaveTouristSettings() {
+  if (settingsSaving.value) return;
+  settingsSaving.value = true;
+  try {
+    touristSettings.value = await updateTouristDisplaySettings(touristSettings.value);
+    lastUpdatedAt.value = formatNow();
+    invalidateScenicBackground();
+    ElMessage.success("游客端品牌与主题设置已保存");
+  } catch (error) {
+    ElMessage.error(`游客端设置保存失败：${error?.response?.data?.detail || error.message}`);
+  } finally {
+    settingsSaving.value = false;
+  }
 }
 
 async function loadPageData() {
@@ -591,6 +707,30 @@ onBeforeUnmount(() => { revokeBackgroundPreview(); });
   padding: 14px 18px 18px;
 }
 
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 20px;
+}
+
+.settings-field { display: grid; gap: 7px; min-width: 0; color: #4f5d55; font-size: 13px; }
+.settings-field :deep(.el-select) { width: 100%; }
+.settings-field b { color: #24382e; font-variant-numeric: tabular-nums; font-weight: 600; }
+.settings-color { grid-template-columns: 1fr auto auto; align-items: center; }
+.settings-color span { grid-column: 1 / -1; }
+.settings-color input { width: 46px; height: 34px; padding: 2px; border: 1px solid #d4c8b8; border-radius: 5px; background: white; }
+.settings-color code { color: #675a4e; font-size: 12px; }
+.settings-range { align-content: start; }
+.settings-range > span { display: flex; justify-content: space-between; gap: 8px; }
+.module-settings { margin-top: 24px; padding-top: 18px; border-top: 1px solid #e3d9cc; }
+.module-settings-heading { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; color: #241d16; font-size: 13px; }
+.module-settings-heading span { color: #8a8175; font-size: 12px; }
+.module-setting-row { display: grid; grid-template-columns: 42px minmax(0, 1fr) 74px; align-items: center; gap: 12px; min-height: 48px; border-bottom: 1px solid #eee7dc; }
+.hotline-setting-row { display: grid; grid-template-columns: 42px minmax(140px, .8fr) minmax(180px, 1.2fr); align-items: center; gap: 12px; min-height: 48px; border-bottom: 1px solid #eee7dc; }
+.quick-question-setting-row { display: grid; grid-template-columns: minmax(0, 1fr) 64px; align-items: center; gap: 8px; margin-bottom: 8px; }
+.module-order-actions { display: flex; justify-content: flex-end; }
+.settings-actions { margin-top: 18px; }
+
 .field-hint {
   color: #675a4e;
   font-size: 11px;
@@ -819,5 +959,8 @@ onBeforeUnmount(() => { revokeBackgroundPreview(); });
   .landing-gallery {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .settings-grid { grid-template-columns: 1fr; }
+  .module-settings-heading { flex-direction: column; gap: 3px; }
 }
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <div class="landing">
+  <div class="landing" :style="{ '--site-accent': touristSettings.primary_color }">
     <div class="visual">
       <div class="img-stack">
         <img
@@ -50,13 +50,12 @@
       </div>
 
       <p class="panel-desc">
-        指尖轻触，走进灵山。<br>
-        数字人导游带您领略胜境风华。
+        {{ landingTagline }}
       </p>
 
       <div class="panel-divider"></div>
 
-      <footer class="panel-footer">灵山胜境景区 &copy; 2026 | 软件杯参赛作品</footer>
+      <footer v-if="footerText" class="panel-footer">{{ footerText }}</footer>
     </section>
   </div>
 </template>
@@ -64,18 +63,17 @@
 <script setup>
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
+import { useScenicBackground } from "../composables/useScenicBackground";
 
 const LANDING_STORAGE_KEY = "a5-landing-images-v1";
 
 const router = useRouter();
+const { touristSettings } = useScenicBackground();
+const landingTagline = computed(() => touristSettings.value.landing_tagline);
+const footerText = computed(() => touristSettings.value.footer_text);
 
 const defaultSlides = [
-  { id: "buddha", src: "/assets/slides/灵山大佛.png", label: "灵山大佛" },
-  { id: "palace", src: "/assets/slides/灵山梵宫.png", label: "灵山梵宫" },
-  { id: "dragon", src: "/assets/slides/九龙灌浴.png", label: "九龙灌浴" },
-  { id: "gate", src: "/assets/slides/五智门.png", label: "五智门" },
-  { id: "bodhi", src: "/assets/slides/菩提大道.png", label: "菩提大道" },
-  { id: "street", src: "/assets/slides/香月花街.png", label: "香月花街" },
+  { id: "scene", src: "/assets/bg-scenic.png", label: "景区导览" },
 ];
 
 function loadLandingImages() {
@@ -118,7 +116,7 @@ function activateLink(link) {
 }
 
 function enterTourist() {
-  router.push("/tourist/welcome");
+  router.push("/tourist");
 }
 
 function enterAdmin() {
@@ -198,8 +196,8 @@ function enterAdmin() {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #248550;
-  box-shadow: 0 0 8px #248550;
+  background: var(--site-accent, #248550);
+  box-shadow: 0 0 8px var(--site-accent, #248550);
   flex-shrink: 0;
 }
 
@@ -227,7 +225,7 @@ function enterAdmin() {
   width: 36px;
   height: 3px;
   border-radius: 2px;
-  background: #248550;
+  background: var(--site-accent, #248550);
   margin-bottom: 32px;
 }
 
