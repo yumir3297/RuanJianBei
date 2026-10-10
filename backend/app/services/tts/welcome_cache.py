@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import logging
 
-from app.services.tts.bailian import BailianTTSService
+from app.core.config import get_settings
 from app.services.tts.base import TTSAudio
-from app.services.tts.voices import resolve_tts_voice
+from app.services.tts.factory import build_tts_service
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,8 @@ _welcome_cache: dict[str, TTSAudio] = {}
 
 def get_welcome_text(model_key: str) -> str:
     name = MODEL_NAMES.get(model_key, "小灵")
-    return f"您好！我是灵山智慧导游{name}，很高兴陪您一起游览。想了解景点故事、规划路线，或认一认眼前的风景，都可以问我。"
+    scenic_name = get_settings().scenic_name
+    return f"您好！我是{scenic_name}智慧导游{name}，很高兴陪您一起游览。想了解景点故事、规划路线，或认一认眼前的风景，都可以问我。"
 
 
 def _derive_model_key(model_path: str) -> str:
@@ -42,31 +43,34 @@ def get_cached(model_key: str, voice_type: str) -> TTSAudio | None:
     return _welcome_cache.get(_cache_key(model_key, voice_type))
 
 
-async def generate_and_cache(
-    model_key: str,
-    voice_type: str,
-    api_key: str,
-    base_url: str,
-    model: str,
-    fallback_voice: str,
-    timeout_seconds: float = 30.0,
-) -> TTSAudio:
-    """Synthesize the welcome TTS audio and cache it in memory."""
+async def generate_and_cache(model_key: str, voice_type: str) -> TTSAudio:
+    """Synthesize the welcome TTS audio and cache it in memory.
+
+    TTS provider 与凭据统一从全局配置读取（工厂分发），
+    调用方只关心角色与音色类型。
+    """
+    settings = get_settings()
     text = get_welcome_text(model_key)
-    provider_voice = resolve_tts_voice(voice_type, fallback_voice)
 
     try:
-        audio = await BailianTTSService(
-            api_key=api_key,
-            base_url=base_url,
-            model=model,
-            voice=provider_voice,
-            timeout_seconds=timeout_seconds,
-            use_compatible_api=False,
-        ).synthesize(text)
+        service = build_tts_service(settings, preset=voice_type)
+    except Exception:
+        logger.exception("Welcome audio TTS unavailable (provider=%s)", settings.tts_provider)
+        return TTSAudio(
+            base64_audio="",
+            duration_ms=0,
+            provider=f"{settings.tts_provider}_unavailable",
+        )
+
+    try:
+        audio = await service.synthesize(text)
     except Exception:
         logger.exception("Welcome audio TTS synthesis failed")
-        return TTSAudio(base64_audio="", duration_ms=0, provider="bailian_unavailable")
+        return TTSAudio(
+            base64_audio="",
+            duration_ms=0,
+            provider=f"{settings.tts_provider}_unavailable",
+        )
 
     if not audio.base64_audio:
         logger.warning("Welcome audio TTS returned empty audio")
@@ -74,7 +78,12 @@ async def generate_and_cache(
 
     key = _cache_key(model_key, voice_type)
     _welcome_cache[key] = audio
-    logger.info("Welcome audio cached for model=%s voice=%s (%d ms)", model_key, voice_type, audio.duration_ms)
+    logger.info(
+        "Welcome audio cached for model=%s voice=%s (%d ms)",
+        model_key,
+        voice_type,
+        audio.duration_ms,
+    )
     return audio
 
 

@@ -4,6 +4,8 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from app.core.config import get_settings
+
 if TYPE_CHECKING:
     from app.services.qa.faq_matcher import FAQEntry
 
@@ -177,6 +179,7 @@ class FAQSemanticGate:
 
     @staticmethod
     def _is_overview_query(query: str) -> bool:
-        if "灵山胜境" not in query and "这个景区" not in query:
+        scenic_name = get_settings().scenic_name
+        if scenic_name not in query and "这个景区" not in query:
             return False
         return any(term in query for term in ("介绍", "是什么景区", "在哪里", "概况"))

@@ -40,6 +40,11 @@ class ChatRequest(BaseModel):
     input_mode: Literal["text", "voice"] = "text"
     text_only: bool = False
     persona: Literal["hanfu", "monk", "modern"] | None = None
+    audience: Literal["child", "adult", "expert"] | None = None
+    """讲解口径（分众化）：儿童易懂 / 常规 / 文化深度。与 SelectionContext.audience_type
+    （路线推荐人群画像 family/culture/free/leisure/general）是两个独立概念，不要合并。"""
+    visitor_id: str | None = Field(default=None, min_length=1, max_length=64)
+    """稳定的匿名游客标识（前端 localStorage 生成），用于跨会话记忆；不承载任何身份信息。"""
     tts_voice: Literal[
         "gentle-female",
         "calm-female",

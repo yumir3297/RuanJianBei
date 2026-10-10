@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.core.config import get_settings
 from app.services.qa.guided_selector import ResolvedInteraction
 
 
@@ -36,6 +37,7 @@ class FollowUpSuggestionService:
         return [item.to_dict() for item in unique[:4]]
 
     def _build_suggestions(self, resolved: ResolvedInteraction) -> list[FollowUpSuggestion]:
+        scenic_name = get_settings().scenic_name
         subject = resolved.active_subject
         mode = resolved.selection.mode
 
@@ -57,7 +59,7 @@ class FollowUpSuggestionService:
         if mode == "topic" and subject:
             return [
                 FollowUpSuggestion("查看代表景点", f"{subject}有哪些代表景点？"),
-                FollowUpSuggestion("了解体验方式", f"在灵山胜境中可以怎样体验{subject}？"),
+                FollowUpSuggestion("了解体验方式", f"在{scenic_name}中可以怎样体验{subject}？"),
                 FollowUpSuggestion("安排主题游览", f"围绕{subject}怎样安排游览？"),
             ]
 
@@ -70,7 +72,7 @@ class FollowUpSuggestionService:
             ]
 
         return [
-            FollowUpSuggestion("看看主要景点", "灵山胜境有哪些主要景点？"),
-            FollowUpSuggestion("规划首次游览", "第一次游览灵山胜境应该怎么安排？"),
-            FollowUpSuggestion("获取实用建议", "灵山胜境有哪些实用游览建议？"),
+            FollowUpSuggestion("看看主要景点", f"{scenic_name}有哪些主要景点？"),
+            FollowUpSuggestion("规划首次游览", f"第一次游览{scenic_name}应该怎么安排？"),
+            FollowUpSuggestion("获取实用建议", f"{scenic_name}有哪些实用游览建议？"),
         ]

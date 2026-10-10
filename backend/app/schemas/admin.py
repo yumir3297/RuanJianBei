@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from app.schemas.display_assets import TouristDisplaySettings
 
 
 class AdminOverview(BaseModel):
@@ -65,7 +66,7 @@ class AvatarConfigActivateResponse(BaseModel):
 
 class AvatarVoicePreviewRequest(BaseModel):
     voice_type: str
-    text: str = "您好，欢迎来到灵山胜境，我将为您提供智慧导览服务。"
+    text: str = "您好，欢迎来到本景区，我将为您提供智慧导览服务。"
 
 
 class AvatarVoicePreviewResponse(BaseModel):
@@ -87,6 +88,12 @@ class TouristBackgroundAssetResponse(BaseModel):
 class DisplayAssetsResponse(BaseModel):
     tourist_background: TouristBackgroundAssetResponse
     welcome_text: str = ""
+    tourist_settings: TouristDisplaySettings = Field(default_factory=TouristDisplaySettings)
+
+
+class TouristDisplaySettingsUpdateResponse(BaseModel):
+    message: str
+    tourist_settings: TouristDisplaySettings
 
 
 class DisplayAssetUploadResponse(BaseModel):

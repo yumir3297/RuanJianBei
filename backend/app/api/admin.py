@@ -34,6 +34,7 @@ from app.schemas.admin import (
     DisplayAssetUploadResponse,
     RAGIndexBuildResponse,
     RAGIndexReport,
+    TouristDisplaySettingsUpdateResponse,
     WelcomeTextUpdateRequest,
     WelcomeTextUpdateResponse,
 )
@@ -49,8 +50,8 @@ from app.services.rag.embedder import SentenceTransformerEmbedder
 from app.services.rag.index_builder import RAGIndexBuilder
 from app.services.rag.vector_store import ChromaVectorStore
 from app.services.display_assets import DisplayAssetService
-from app.services.tts.bailian import BailianTTSService
-from app.services.tts.voices import resolve_tts_voice
+from app.schemas.display_assets import TouristDisplaySettings
+from app.services.tts.factory import build_tts_service, resolve_voice_for_provider
 from app.services.tts.welcome_cache import _derive_model_key, generate_and_cache
 
 
@@ -220,6 +221,7 @@ def _to_display_assets_response(service: DisplayAssetService) -> DisplayAssetsRe
     return DisplayAssetsResponse(
         tourist_background=assets["tourist_background"],
         welcome_text=assets["welcome_text"],
+        tourist_settings=assets["tourist_settings"],
     )
 
 
@@ -278,6 +280,18 @@ async def update_welcome_text(
     return WelcomeTextUpdateResponse(message="Welcome text updated.", welcome_text=text)
 
 
+@router.put("/display-assets/tourist-settings", response_model=TouristDisplaySettingsUpdateResponse)
+async def update_tourist_display_settings(
+    payload: TouristDisplaySettings,
+    settings: Settings = Depends(get_app_settings),
+) -> TouristDisplaySettingsUpdateResponse:
+    saved = _get_display_asset_service(settings).update_tourist_settings(payload)
+    return TouristDisplaySettingsUpdateResponse(
+        message="Tourist display settings updated.",
+        tourist_settings=TouristDisplaySettings.model_validate(saved),
+    )
+
+
 @router.put("/avatar-configs/{config_id}", response_model=AvatarConfigResponse)
 async def update_avatar_config(
     config_id: int,
@@ -299,8 +313,8 @@ async def update_avatar_config(
     await session.refresh(config)
 
     # 如果修改的是当前激活的角色，后台预生成欢迎语音频
-    if config.is_active and settings.tts_provider == "bailian" and settings.tts_api_key:
-        _schedule_welcome_audio_regeneration(config, settings)
+    if config.is_active and settings.tts_ready:
+        _schedule_welcome_audio_regeneration(config)
 
     return _to_avatar_config_response(config)
 
@@ -315,28 +329,28 @@ async def preview_avatar_voice(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"不支持的音色类型: {payload.voice_type}",
         )
-    if settings.tts_provider != "bailian" or not settings.tts_api_key:
+    if not settings.tts_ready:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="百炼 TTS 尚未配置，当前无法进行真实音色试听。",
+            detail="TTS 尚未配置，当前无法进行真实音色试听。",
         )
 
     text = payload.text.strip()[:100]
     if not text:
         raise HTTPException(status_code=422, detail="试听文本不能为空。")
-    provider_voice = resolve_tts_voice(payload.voice_type, settings.tts_voice)
-    audio = await BailianTTSService(
-        api_key=settings.tts_api_key,
-        base_url=settings.tts_base_url,
-        model=settings.tts_model,
-        voice=provider_voice,
-        timeout_seconds=settings.tts_timeout_seconds,
-        use_compatible_api=False,
-    ).synthesize(text)
+    provider_voice = resolve_voice_for_provider(settings, payload.voice_type)
+    try:
+        service = build_tts_service(settings, preset=payload.voice_type)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    audio = await service.synthesize(text)
     if not audio.base64_audio:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"音色 {provider_voice} 合成失败，请检查百炼音色权限或服务状态。",
+            detail=f"音色 {provider_voice} 合成失败，请检查 TTS 音色权限或服务状态。",
         )
     return AvatarVoicePreviewResponse(
         voice_type=payload.voice_type,
@@ -364,8 +378,8 @@ async def activate_avatar_config(
     await session.refresh(config)
 
     # 后台预生成欢迎语音频
-    if settings.tts_provider == "bailian" and settings.tts_api_key:
-        _schedule_welcome_audio_regeneration(config, settings)
+    if settings.tts_ready:
+        _schedule_welcome_audio_regeneration(config)
 
     return AvatarConfigActivateResponse(
         message=f"Avatar config '{config.name}' activated.",
@@ -373,19 +387,11 @@ async def activate_avatar_config(
     )
 
 
-def _schedule_welcome_audio_regeneration(config, settings: Settings):
+def _schedule_welcome_audio_regeneration(config) -> None:
     """Fire-and-forget background task to pre-generate welcome TTS audio."""
     model_key = _derive_model_key(config.model_path)
     asyncio.create_task(
-        generate_and_cache(
-            model_key=model_key,
-            voice_type=config.voice_type,
-            api_key=settings.tts_api_key,
-            base_url=settings.tts_base_url,
-            model=settings.tts_model,
-            fallback_voice=settings.tts_voice,
-            timeout_seconds=settings.tts_timeout_seconds,
-        )
+        generate_and_cache(model_key=model_key, voice_type=config.voice_type)
     )
 
 
@@ -402,27 +408,19 @@ async def regenerate_welcome_audio(
     if config is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active avatar config found.")
 
-    if settings.tts_provider != "bailian" or not settings.tts_api_key:
+    if not settings.tts_ready:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="百炼 TTS 尚未配置，无法预生成欢迎语音频。",
+            detail="TTS 尚未配置，无法预生成欢迎语音频。",
         )
 
     model_key = _derive_model_key(config.model_path)
-    audio = await generate_and_cache(
-        model_key=model_key,
-        voice_type=config.voice_type,
-        api_key=settings.tts_api_key,
-        base_url=settings.tts_base_url,
-        model=settings.tts_model,
-        fallback_voice=settings.tts_voice,
-        timeout_seconds=settings.tts_timeout_seconds,
-    )
+    audio = await generate_and_cache(model_key=model_key, voice_type=config.voice_type)
 
     if not audio.base64_audio:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="欢迎语音频合成失败，请检查百炼服务状态。",
+            detail="欢迎语音频合成失败，请检查 TTS 服务状态。",
         )
 
     return {

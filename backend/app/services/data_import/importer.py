@@ -278,6 +278,9 @@ class ProcessedDataImporter:
 
     @staticmethod
     def _infer_route_tags(route_payload: dict) -> list[str]:
+        explicit = route_payload.get("tags")
+        if isinstance(explicit, list) and explicit:
+            return [str(tag).strip() for tag in explicit if str(tag).strip()]
         title = str(route_payload.get("title", ""))
         if "亲子" in title or "家庭" in title:
             return ["亲子", "家庭", "互动"]

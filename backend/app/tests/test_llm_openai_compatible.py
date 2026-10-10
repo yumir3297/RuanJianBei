@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 import httpx
 
@@ -147,3 +148,46 @@ def test_service_does_not_append_full_fallback_after_partial_stream_failure() ->
     assert "连接中断" in answer
     assert "先为你展示检索到的官方资料" not in answer
     assert events[-1].finish_reason == "interrupted_network"
+
+
+def test_service_injects_audience_and_memory_into_system_prompt() -> None:
+    """分众化与跨会话记忆必须烘进 system prompt，而不是拼进用户问题文本。"""
+    captured: dict[str, str] = {}
+    sse = "\n".join(
+        [
+            'data: {"choices":[{"delta":{"content":"好的"},"finish_reason":"stop"}]}',
+            "",
+            "data: [DONE]",
+            "",
+        ]
+    )
+
+    async def run():
+        async def handler(request: httpx.Request) -> httpx.Response:
+            payload = json.loads(request.content)
+            captured["system"] = payload["messages"][0]["content"]
+            captured["user"] = payload["messages"][1]["content"]
+            return httpx.Response(200, text=sse, headers={"Content-Type": "text/event-stream"})
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            service = OpenAICompatibleLLMService(deepseek_settings(), client=client)
+            return [
+                event
+                async for event in service.stream_generate(
+                    "大佛有多高",
+                    documents(),
+                    audience="child",
+                    memory="【游客记忆】\n已经游览过：灵山大佛。",
+                )
+            ]
+
+    asyncio.run(run())
+
+    system = captured["system"]
+    assert "小朋友" in system
+    assert "【游客记忆】" in system
+    # 顺序：受众块 → 记忆块 → 证据规则
+    assert system.index("小朋友") < system.index("【游客记忆】") < system.index("【回答依据】")
+    # 指令不得污染用户问题文本
+    assert "小朋友" not in captured["user"]
+    assert "【游客记忆】" not in captured["user"]

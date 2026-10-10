@@ -38,7 +38,7 @@ class StreamingTTSSession:
         session = StreamingTTSSession(api_key, model, voice)
         await session.connect()
         await session.send_text("你好，")
-        await session.send_text("欢迎来到灵山。")
+        await session.send_text("欢迎来到本景区。")
         await session.finish()
         # 通过 try_receive() 获取音频块和字时间戳
         session.close()

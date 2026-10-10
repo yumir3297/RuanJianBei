@@ -12,8 +12,8 @@ _OPENERS: dict[str, list[str]] = {
         "根据官方资料记载——",
     ],
     "monk": [
-        "善哉，容我一一道来——",
-        "缘此——",
+        "容我一一道来——",
+        "据记载——",
         "依记载所言——",
     ],
     "modern": [
@@ -32,7 +32,7 @@ _NO_EVIDENCE: dict[str, str] = {
     ),
     "monk": (
         "此事在现有资料中尚无记载。"
-        "施主不妨换个问法，或先择一处景点，贫僧与你细讲。"
+        "您不妨换个问法，或先择一处景点，我为您细细道来。"
     ),
     "modern": (
         "目前资料里还没有这方面的信息哦。"
@@ -64,7 +64,7 @@ def no_evidence_reply(persona: str | None) -> str:
 
 def _has_human_tone(text: str) -> bool:
     """判断回答是否已经带了人味语气词。"""
-    human_markers = ("您", "咱们", "呢", "哦", "啦", "善哉", "缘此", "好嘞", "吧")
+    human_markers = ("您", "咱们", "呢", "哦", "啦", "好嘞", "吧")
     return any(m in text for m in human_markers)
 
 

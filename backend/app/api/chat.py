@@ -22,12 +22,11 @@ from app.repositories.qa_cache import QACacheRepository
 from app.repositories.quick_topic import QuickTopicRepository
 from app.repositories.route import RouteRepository
 from app.repositories.visitor import VisitorRepository
+from app.repositories.visitor_memory import VisitorMemoryRepository
 from app.schemas.chat import ChatRequest
 from app.services.llm.prompt_builder import SYSTEM_PROMPT_VERSION
 from app.services.avatar.stub import StubAvatarService
-from app.services.coze.client import CozeRoutePlanner
 from app.services.llm.openai_compatible import OpenAICompatibleLLMService
-from app.services.live_data.service import LiveDataService
 from app.services.qa.cache import QACache
 from app.services.qa.blind_spot_tracker import BlindSpotTracker
 from app.services.qa.followup_suggestions import FollowUpSuggestionService
@@ -45,10 +44,8 @@ from app.services.rag.reranker import Reranker
 from app.services.rag.resilient_reranker import ResilientReranker
 from app.services.rag.retriever import RepositoryBackedRAGService
 from app.services.rag.vector_store import ChromaVectorStore
-from app.services.tts.bailian import BailianTTSService
-from app.services.tts.streaming import StreamingTTSService
+from app.services.tts.factory import build_streaming_tts_service, build_tts_service
 from app.services.tts.stub import StubTTSService
-from app.services.tts.voices import resolve_tts_voice
 from app.services.tts.welcome_cache import (
     _derive_model_key,
     generate_and_cache,
@@ -213,25 +210,13 @@ async def build_pipeline(
 
     tts_service = StubTTSService()
     streaming_tts = None
-    if settings.tts_provider == "bailian" and settings.tts_api_key:
+    if settings.tts_ready:
         try:
-            tts_service = BailianTTSService(
-                api_key=settings.tts_api_key,
-                base_url=settings.tts_base_url,
-                model=settings.tts_model,
-                voice=resolve_tts_voice(tts_voice_preset, settings.tts_voice),
-                timeout_seconds=settings.tts_timeout_seconds,
-                use_compatible_api=False,
-            )
-            # 同时创建流式 TTS 服务
-            streaming_tts = StreamingTTSService(
-                api_key=settings.tts_api_key,
-                model=settings.tts_model,
-                voice=resolve_tts_voice(tts_voice_preset, settings.tts_voice),
-                enable_word_timestamp=True,
-            )
+            tts_service = build_tts_service(settings, preset=tts_voice_preset)
+            # 同时创建流式 TTS 服务（工厂按 provider 分发；不支持流式时返回 None）
+            streaming_tts = build_streaming_tts_service(settings, preset=tts_voice_preset)
         except Exception:
-            logger.exception("Bailian TTS initialization failed; using stub.")
+            logger.exception("TTS initialization failed; using stub.")
 
     return QAPipeline(
         query_rewriter=query_rewriter,
@@ -244,6 +229,7 @@ async def build_pipeline(
         streaming_tts_service=streaming_tts,
         chat_log_repository=chat_log_repository,
         visitor_repository=VisitorRepository(session),
+        visitor_memory_repository=VisitorMemoryRepository(session),
         guided_selector=GuidedSelectionResolver(
             knowledge_repository,
             QuickTopicRepository(session),
@@ -253,12 +239,6 @@ async def build_pipeline(
         blind_spot_tracker=BlindSpotTracker(KnowledgeBlindSpotRepository(session)),
         answer_cache_namespace=build_answer_cache_namespace(settings),
         intent_router=IntentRouter(),
-        live_data_service=LiveDataService(settings),
-        coze_route_planner=CozeRoutePlanner(
-            run_url=settings.coze_run_url,
-            token=settings.coze_token,
-            timeout_seconds=settings.coze_timeout_seconds,
-        ) if settings.coze_enabled else None,
         knowledge_repository=knowledge_repository,
         route_repository=route_repository,
     )
@@ -328,16 +308,8 @@ async def get_welcome_audio(
         }
 
     # Generate on-the-fly if TTS is available
-    if settings.tts_provider == "bailian" and settings.tts_api_key:
-        audio = await generate_and_cache(
-            model_key=model_key,
-            voice_type=voice_type,
-            api_key=settings.tts_api_key,
-            base_url=settings.tts_base_url,
-            model=settings.tts_model,
-            fallback_voice=settings.tts_voice,
-            timeout_seconds=settings.tts_timeout_seconds,
-        )
+    if settings.tts_ready:
+        audio = await generate_and_cache(model_key=model_key, voice_type=voice_type)
         return {
             "base64_audio": audio.base64_audio,
             "duration_ms": audio.duration_ms,
@@ -345,3 +317,19 @@ async def get_welcome_audio(
         }
 
     return {"base64_audio": "", "duration_ms": 0, "provider": "tts_not_configured"}
+
+
+@router.delete("/visitor-memory/{visitor_id}")
+async def clear_visitor_memory(
+    visitor_id: str,
+    session: AsyncSession = Depends(get_db_session),
+):
+    """清除该游客的跨会话记忆（隐私要求：记忆可查看、可清除）。
+
+    记忆只存行为偏好、不存身份信息；visitor_id 按匿名随机串处理，
+    超长或空值直接视为无可删除记录，不暴露任何枚举能力。
+    """
+    if not visitor_id or len(visitor_id) > 64:
+        return {"deleted": 0}
+    deleted = await VisitorMemoryRepository(session).delete(visitor_id)
+    return {"deleted": deleted}

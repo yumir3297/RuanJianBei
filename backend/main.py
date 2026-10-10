@@ -132,8 +132,6 @@ def create_app() -> FastAPI:
         for provider, key in ((settings.llm_provider, settings.llm_api_key), (settings.asr_provider, settings.asr_api_key), (settings.tts_provider, settings.tts_api_key)):
             if provider != "stub" and not key:
                 failures.append(f"{provider}_api_key_missing")
-        if settings.coze_enabled and (not settings.coze_run_url or not settings.coze_token):
-            failures.append("coze_configuration_missing")
         if settings.competition_mode and settings.admin_password == "admin123":
             failures.append("default_admin_password")
 

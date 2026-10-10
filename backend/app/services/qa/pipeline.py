@@ -6,7 +6,7 @@ import logging
 import re
 from asyncio import QueueEmpty
 from time import perf_counter
-import json
+from typing import TYPE_CHECKING
 
 # ── 拼音导入缓存 ──
 _PINYIN_FN = None
@@ -40,13 +40,14 @@ from app.repositories.chat_log import ChatLogRepository
 from app.repositories.knowledge import KnowledgeRepository
 from app.repositories.route import RouteRepository
 from app.repositories.visitor import VisitorRepository
+from app.repositories.visitor_memory import VisitorMemoryRepository
 from app.schemas.chat import ChatRequest, ConversationContext
+from app.schemas.recommend import RecommendRequest
 from app.services.avatar.base import BaseAvatarService
 from app.services.avatar.viseme import build_viseme_timeline, build_viseme_timeline_fallback
-from app.services.coze.client import CozeRoutePlan, CozeRoutePlanner, CozeRoutePlannerError
 from app.services.llm.base import BaseLLMService
+from app.services.llm.prompt_builder import get_audience_style
 from app.services.llm.types import LLMStreamEvent, LLMUsage
-from app.services.live_data.service import LiveDataService
 from app.services.emotion import (
     EmotionLabel,
     MultimodalEmotionFusion,
@@ -55,9 +56,10 @@ from app.services.emotion import (
     audio_emotion_signal,
     response_policy_for,
 )
+from app.services.memory.profile import build_memory_prompt
 from app.services.qa.cache import QACache
 from app.services.qa.blind_spot_tracker import BlindSpotTracker
-from app.services.qa.faq_matcher import FAQMatcher
+from app.services.qa.faq_matcher import FAQMatchResult, FAQMatcher
 from app.services.qa.followup_suggestions import FollowUpSuggestionService
 from app.services.qa.guided_selector import (
     GuidedSelectionResolver,
@@ -67,10 +69,17 @@ from app.services.qa.guided_selector import (
 from app.services.qa.intent_router import IntentRouter
 from app.services.qa.stream_events import StreamEvent
 from app.services.qa.answer_styler import polish_answer, no_evidence_reply
+from app.services.recommend.engine import RecommendEngine
 from app.services.rag.base import BaseRAGService, RetrievedDocument, RetrievalScope
 from app.services.rag.query_rewriter import QueryRewriter
 from app.services.tts.base import BaseTTSService
-from app.services.tts.streaming import StreamingTTSService, StreamingTTSSession
+
+if TYPE_CHECKING:  # pragma: no cover
+    from app.services.tts.streaming import StreamingTTSSession
+    from app.services.tts.volcengine import (
+        VolcengineStreamingTTSService,
+        VolcengineStreamingTTSSession,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +133,38 @@ def _extract_interests(request: ChatRequest) -> list[str]:
     return interests[:8]
 
 
+_FAMILY_AUDIENCE_TYPES = {"family"}
+
+
+def _resolve_narration_audience(request: ChatRequest) -> str:
+    """解析讲解口径（child/adult/expert）。
+
+    - 显式传入的 request.audience 优先；
+    - 否则按路线人群画像兜底：family -> child，其余 -> adult；
+    - culture/leisure/free 只是路线画像，不擅自升级为 expert。
+    """
+    if request.audience:
+        return request.audience
+    if _infer_audience_type(request) in _FAMILY_AUDIENCE_TYPES:
+        return "child"
+    return "adult"
+
+
+def _faq_evidence_document(match: FAQMatchResult) -> RetrievedDocument:
+    """把 FAQ 的官方答复包装成一条证据。
+
+    用途：受众非默认时，让 LLM 基于这条唯一证据换说法（分众化），
+    事实仍完全来自 FAQ 原文，不引入任何新资料。
+    """
+    return RetrievedDocument(
+        title="常见问题（景区官方答复）",
+        content=match.answer,
+        snippet=match.answer,
+        source="、".join(match.sources) or "景区官方 FAQ",
+        score=1.0,
+    )
+
+
 class QAPipeline:
     def __init__(
         self,
@@ -135,16 +176,15 @@ class QAPipeline:
         llm_service: BaseLLMService,
         tts_service: BaseTTSService,
         avatar_service: BaseAvatarService,
-        streaming_tts_service: StreamingTTSService | None = None,
+        streaming_tts_service: StreamingTTSService | VolcengineStreamingTTSService | None = None,
         chat_log_repository: ChatLogRepository,
         visitor_repository: VisitorRepository | None = None,
+        visitor_memory_repository: VisitorMemoryRepository | None = None,
         guided_selector: GuidedSelectionResolver,
         followup_suggestions: FollowUpSuggestionService,
         blind_spot_tracker: BlindSpotTracker | None = None,
         answer_cache_namespace: str = "default",
         intent_router: IntentRouter | None = None,
-        live_data_service: LiveDataService | None = None,
-        coze_route_planner: CozeRoutePlanner | None = None,
         knowledge_repository: KnowledgeRepository | None = None,
         route_repository: RouteRepository | None = None,
     ) -> None:
@@ -158,13 +198,12 @@ class QAPipeline:
         self.streaming_tts_service = streaming_tts_service
         self.chat_log_repository = chat_log_repository
         self.visitor_repository = visitor_repository
+        self.visitor_memory_repository = visitor_memory_repository
         self.guided_selector = guided_selector
         self.followup_suggestions = followup_suggestions
         self.blind_spot_tracker = blind_spot_tracker
         self.answer_cache_namespace = answer_cache_namespace
         self.intent_router = intent_router or IntentRouter()
-        self.live_data_service = live_data_service
-        self.coze_route_planner = coze_route_planner
         self.knowledge_repository = knowledge_repository
         self.route_repository = route_repository
         self.text_emotion_analyzer = TextEmotionAnalyzer()
@@ -173,6 +212,8 @@ class QAPipeline:
         self._active_response_policy = response_policy_for(self._active_emotion)
         self._active_text_emotion = None
         self._active_audio_emotion = None
+        # 由 stream_chat 开头的记忆加载填充；Phase B 之前恒为 None。
+        self._memory_prompt: str | None = None
 
     async def stream_chat(self, request: ChatRequest):
         start = perf_counter()
@@ -189,6 +230,21 @@ class QAPipeline:
         self._active_text_emotion = text_emotion
         self._active_audio_emotion = audio_emotion
         resolved = await self.guided_selector.resolve(request.query, request.selection, request.context)
+        audience = _resolve_narration_audience(request)
+
+        # 跨会话记忆：仅当带了稳定 visitor_id 且仓储可用时读取。
+        # 读失败不能影响回答，故整体 try/except 兜底。
+        self._memory_prompt = None
+        if self.visitor_memory_repository is not None and request.visitor_id:
+            try:
+                memory = await self.visitor_memory_repository.get(request.visitor_id)
+                if memory is not None:
+                    self._memory_prompt = (
+                        build_memory_prompt(VisitorMemoryRepository.decode(memory)) or None
+                    )
+            except Exception:
+                logger.exception("Visitor memory read failed; continuing without memory.")
+                self._memory_prompt = None
 
         # 视觉识别线索注入：用 Qwen 识别出的候选景点限定 RAG 检索范围
         vision = request.vision_context
@@ -230,30 +286,8 @@ class QAPipeline:
             },
         )
 
-        if self._should_use_dynamic_route(intent_decision, request):
-            print(f"[PIPELINE] dynamic route triggered, intent={intent_decision.intent}, calling Coze...", flush=True)
-            yield StreamEvent(type="status", data={"text": "创意路线私人定制中，用时可能较长，请稍等..."})
-            dynamic_plan = await self._try_dynamic_route(
-                request=request,
-                normalized_query=normalized_query,
-                resolved=resolved,
-                start=start,
-            )
-            print(f"[PIPELINE] dynamic_plan is {'NOT None' if dynamic_plan is not None else 'None'}", flush=True)
-            if dynamic_plan is not None:
-                async for event in self._emit_dynamic_route_answer(
-                    request=request,
-                    normalized_query=normalized_query,
-                    plan=dynamic_plan,
-                    start=start,
-                    resolved=resolved,
-                ):
-                    yield event
-                return
-            print("[PIPELINE] Coze failed, falling through to static_route", flush=True)
-
-        if intent_decision.intent in {"dynamic_route", "static_route"}:
-            static_route = await self._build_static_route_answer(request.query)
+        if intent_decision.intent == "static_route":
+            static_route = await self._build_static_route_answer(request)
             if static_route is not None:
                 answer, route_sources = static_route
                 yield StreamEvent(type="status", data={"text": "正在整理游览路线..."})
@@ -272,12 +306,15 @@ class QAPipeline:
             normalized_query,
             resolved.selection,
             answer_namespace=self.answer_cache_namespace,
+            audience=audience,
         )
         yield StreamEvent(type="status", data={"text": "正在查找答案..."})
 
         faq_result = self.faq_matcher.match(normalized_query)
+        faq_documents: list[RetrievedDocument] | None = None
+        faq_sources: list[dict] = []
         if faq_result.is_hit:
-            sources = [
+            faq_sources = [
                 {
                     "evidence_id": f"证据{index}",
                     "title": "FAQ",
@@ -286,18 +323,24 @@ class QAPipeline:
                 }
                 for index, source in enumerate(faq_result.sources, start=1)
             ]
-            styled_answer = polish_answer(faq_result.answer, request.persona, sources)
-            async for event in self._emit_final_answer(
-                request=request,
-                normalized_query=normalized_query,
-                answer=styled_answer,
-                sources=sources,
-                hit_level=f"faq_{faq_result.level}",
-                start=start,
-                resolved=resolved,
-            ):
-                yield event
-            return
+            if get_audience_style(audience):
+                # 受众非默认（child/expert）：不能直接吐 FAQ 原文，否则"切讲解方式没反应"。
+                # 改为把 FAQ 原文当作唯一证据交给 LLM 换风格——只换说法、不动事实。
+                # adult/未指定仍走零延迟的原文快路径（get_audience_style 返回空串）。
+                faq_documents = [_faq_evidence_document(faq_result)]
+            else:
+                styled_answer = polish_answer(faq_result.answer, request.persona, faq_sources)
+                async for event in self._emit_final_answer(
+                    request=request,
+                    normalized_query=normalized_query,
+                    answer=styled_answer,
+                    sources=faq_sources,
+                    hit_level=f"faq_{faq_result.level}",
+                    start=start,
+                    resolved=resolved,
+                ):
+                    yield event
+                return
 
         cached = await self.qa_cache.get(cache_key)
         if cached:
@@ -314,18 +357,25 @@ class QAPipeline:
                 yield event
             return
 
-        yield StreamEvent(type="status", data={"text": "正在检索景区知识..."})
-        documents = await self.rag_service.retrieve(
-            request.query,
-            normalized_query=normalized_query,
-            scope=resolved.scope,
-        )
-        sources = [
-            self._doc_to_source(document, evidence_id=f"证据{index}")
-            for index, document in enumerate(documents, start=1)
-        ]
-        if sources:
-            yield StreamEvent(type="sources", data={"docs": sources})
+        if faq_documents is not None:
+            yield StreamEvent(type="status", data={"text": "正在按你的讲解方式改写..."})
+            documents = faq_documents
+            sources = faq_sources
+            if faq_sources:
+                yield StreamEvent(type="sources", data={"docs": faq_sources})
+        else:
+            yield StreamEvent(type="status", data={"text": "正在检索景区知识..."})
+            documents = await self.rag_service.retrieve(
+                request.query,
+                normalized_query=normalized_query,
+                scope=resolved.scope,
+            )
+            sources = [
+                self._doc_to_source(document, evidence_id=f"证据{index}")
+                for index, document in enumerate(documents, start=1)
+            ]
+            if sources:
+                yield StreamEvent(type="sources", data={"docs": sources})
 
         if not documents:
             if self.blind_spot_tracker is not None:
@@ -351,6 +401,10 @@ class QAPipeline:
                 yield event
             return
 
+        # FAQ 走 LLM 改写时保留可观测的命中来源，便于与纯 FAQ 快路径区分。
+        llm_hit_level = f"faq_{faq_result.level}_styled" if faq_documents is not None else "rag"
+        llm_fallback_hit_level = f"{llm_hit_level}_llm_fallback"
+
         full_answer = ""
         sentence_buffer = ""
         llm_usage = LLMUsage()
@@ -359,7 +413,7 @@ class QAPipeline:
         audio_tasks: list[asyncio.Task[None]] = []
 
         # ── 流式 TTS 路径 ──
-        tts_stream: StreamingTTSSession | None = None
+        tts_stream: StreamingTTSSession | VolcengineStreamingTTSSession | None = None
         streaming_requested = (
             self.streaming_tts_service is not None
             and not request.text_only
@@ -376,6 +430,8 @@ class QAPipeline:
                     self._emotion_aware_query(request.query),
                     documents,
                     persona=request.persona,
+                    audience=audience,
+                    memory=self._memory_prompt,
                 ):
                     await mux_queue.put(("llm", item))
             except Exception as exc:
@@ -571,6 +627,12 @@ class QAPipeline:
                 logger.info("Blind spot recorded (LLM degraded): %s", normalized_query)
             except Exception:
                 logger.exception("Knowledge blind spot recording failed")
+        if degraded_llm and faq_documents is not None:
+            # FAQ 按受众改写失败时，不能把"AI讲解服务暂时不可用"甩给游客：
+            # FAQ 原文本身权威且完整，直接回落原文——风格没换成，但内容正确。
+            # 刻意保持 degraded_llm=True，避免把未改写的答案写进受众专属缓存，
+            # 否则一次 LLM 抖动就会长期污染该受众的缓存。
+            full_answer = polish_answer(faq_result.answer, request.persona, faq_sources)
         if not degraded_llm and self._active_emotion.label == EmotionLabel.NEUTRAL:
             await self.qa_cache.set(cache_key, full_answer, sources)
         latency_ms = int((perf_counter() - start) * 1000)
@@ -580,9 +642,10 @@ class QAPipeline:
             normalized_query=normalized_query,
             answer=full_answer,
             sources=sources,
-            hit_level="rag_llm_fallback" if degraded_llm else "rag",
+            hit_level=llm_fallback_hit_level if degraded_llm else llm_hit_level,
             latency_ms=latency_ms,
             request=request,
+            active_subject=resolved.active_subject,
         )
         logger.info(
             "LLM completed: finish_reason=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s cached_tokens=%s",
@@ -596,14 +659,14 @@ class QAPipeline:
         yield self._followup_event(resolved)
         yield self._done_event(
             chat_log_id=chat_log_id,
-            hit_level="rag_llm_fallback" if degraded_llm else "rag",
+            hit_level=llm_fallback_hit_level if degraded_llm else llm_hit_level,
             total_ms=latency_ms,
             degraded=degraded_llm,
             provider="deepseek" if not degraded_llm else "evidence_fallback",
         )
 
-    async def _build_static_route_answer(self, query: str) -> tuple[str, list[dict]] | None:
-        """Return a grounded route when the optional dynamic planner is unavailable."""
+    async def _build_static_route_answer(self, request: ChatRequest) -> tuple[str, list[dict]] | None:
+        """从后端预设路线模板中挑选一条路线作答，不依赖任何外部编排服务。"""
         if self.route_repository is None:
             return None
 
@@ -621,7 +684,7 @@ class QAPipeline:
                 None,
             )
 
-        normalized = (query or "").strip()
+        normalized = (request.query or "").strip()
         is_point_to_point = (
             "大佛" in normalized
             and "梵宫" in normalized
@@ -633,8 +696,7 @@ class QAPipeline:
                 routes[0],
             )
             answer = (
-                "从灵山大佛到灵山梵宫，建议沿景区主游线按现场导视前往："
-                "灵山大佛 → 灵山梵宫。"
+                f"推荐路线：{selected.route_plan}。"
                 "这段为园内步行路线；如需少走路，可在出发前向服务台确认当日摆渡安排。"
             )
         else:
@@ -647,6 +709,9 @@ class QAPipeline:
                 selected = pick("自然")
             elif any(marker in normalized for marker in ("老人", "省力", "半天", "3个小时", "三个小时")):
                 selected = pick("亲子", "自然")
+            # 关键词未命中时，交由后端预设路线引擎按游客偏好选路（时长 / 避峰 / 人群 / 兴趣）。
+            if selected is None:
+                selected = await self._select_preset_route(routes, request)
             selected = selected or routes[0]
 
             route_plan = selected.route_plan
@@ -665,7 +730,7 @@ class QAPipeline:
             elif "一日" in normalized or "全天" in normalized:
                 answer = (
                     f"一日游建议以{selected.title}为主线：{route_plan}。"
-                    "上午安排核心景点，下午可继续游览梵宫、五印坛城等文化建筑，并预留休息与用餐时间。"
+                    "上午安排核心景点，下午可继续游览沿线文化场馆与特色建筑，并预留休息与用餐时间。"
                 )
             else:
                 answer = f"推荐{selected.title}（{selected.duration_label}）：{route_plan}。"
@@ -677,153 +742,24 @@ class QAPipeline:
             "source": selected.source,
         }]
         return answer, sources
-    def _should_use_dynamic_route(self, intent_decision, request: ChatRequest) -> bool:
-        if not intent_decision.is_dynamic_route:
-            return False
-        if self.live_data_service is None or self.coze_route_planner is None:
-            return False
-        if not self.coze_route_planner.is_configured:
-            return False
-        return request.selection is not None or any(
-            marker in request.query for marker in ("路线", "线路", "怎么逛", "推荐")
-        )
-
-    async def _try_dynamic_route(
-        self,
-        *,
-        request: ChatRequest,
-        normalized_query: str,
-        resolved: ResolvedInteraction,
-        start: float,
-    ) -> CozeRoutePlan | None:
-        del normalized_query, start
-        if (
-            self.knowledge_repository is None
-            or self.route_repository is None
-            or self.live_data_service is None
-            or self.coze_route_planner is None
-        ):
+    async def _select_preset_route(self, routes, request: ChatRequest):
+        """按游客偏好从预设路线模板中选择主推路线，复用 RecommendEngine 的规则。"""
+        if self.route_repository is None:
             return None
-
-        attractions = await self.knowledge_repository.list_by_category("景点信息")
-        routes = await self.route_repository.list_all()
-        if not attractions or not routes:
-            return None
-
-        live_context = self.live_data_service.build_context(attractions)
-        payload = {
-            "question": request.query,
-            "visitor_profile_json": json.dumps(
-                self._build_visitor_profile(request, resolved),
-                ensure_ascii=False,
-            ),
-            "route_candidates_json": json.dumps(
-                self._build_route_candidates(routes, attractions),
-                ensure_ascii=False,
-            ),
-            "live_context_json": json.dumps(
-                live_context.model_dump(mode="json"),
-                ensure_ascii=False,
-            ),
-            "allowed_attraction_ids_json": json.dumps([str(item.id) for item in attractions], ensure_ascii=False),
-        }
-        try:
-            print("[PIPELINE] calling coze_route_planner.run()...", flush=True)
-            plan = await self.coze_route_planner.run(payload)
-            print(f"[PIPELINE] Coze returned plan with {len(plan.route_stops)} stops", flush=True)
-            self._validate_route_stop_ids(plan, payload["allowed_attraction_ids_json"])
-            return plan
-        except CozeRoutePlannerError as e:
-            print(f"[PIPELINE] CozeRoutePlannerError: {e}", flush=True)
-            logger.exception("Dynamic route planning failed; fallback to static QA.")
-            return None
-        except Exception as e:
-            print(f"[PIPELINE] Unexpected error in Coze: {type(e).__name__}: {e}", flush=True)
-            logger.exception("Unexpected error in dynamic route planning.")
-            return None
-
-    async def _emit_dynamic_route_answer(
-        self,
-        *,
-        request: ChatRequest,
-        normalized_query: str,
-        plan: CozeRoutePlan,
-        start: float,
-        resolved: ResolvedInteraction,
-    ):
-        answer = apply_answer_prefix(plan.answer.strip(), self._active_response_policy)
-        if plan.warning:
-            answer = f"{answer}\n\n提示：{plan.warning}"
-        if plan.adjustments:
-            answer = f"{answer}\n\n调整依据：{'；'.join(plan.adjustments)}"
-
-        sources = [
-            {
-                "evidence_id": f"动态{index}",
-                "title": source,
-                "snippet": source,
-                "source": "coze_dynamic_route",
-            }
-            for index, source in enumerate(plan.sources or ["官方路线候选", "实时上下文"], start=1)
-        ]
-        answer = self._ensure_inline_citations(answer, sources)
-        if sources:
-            yield StreamEvent(type="sources", data={"docs": sources})
-
-        if request.text_only:
-            yield StreamEvent(type="text", data={"text": answer, "is_complete": True})
-        else:
-            audio_queue: asyncio.Queue[StreamEvent] = asyncio.Queue()
-            audio_tasks: list[asyncio.Task[None]] = []
-            sentence_buffer = ""
-
-            for char in answer:
-                sentence_buffer += char
-                yield StreamEvent(type="text_chunk", data={"token": char})
-
-                if self._should_trigger_tts(char, sentence_buffer):
-                    sentence = sentence_buffer.strip()
-                    sentence_buffer = ""
-                    if sentence:
-                        audio_tasks.append(asyncio.create_task(self._queue_audio(sentence, audio_queue)))
-
-                while True:
-                    try:
-                        yield audio_queue.get_nowait()
-                    except QueueEmpty:
-                        break
-
-            if sentence_buffer.strip():
-                audio_tasks.append(asyncio.create_task(self._queue_audio(sentence_buffer.strip(), audio_queue)))
-
-            for task in audio_tasks:
-                await task
-                while True:
-                    try:
-                        yield audio_queue.get_nowait()
-                    except QueueEmpty:
-                        break
-
-            yield StreamEvent(type="text", data={"text": answer, "is_complete": True})
-
-        latency_ms = int((perf_counter() - start) * 1000)
-        chat_log_id = await self._persist_interaction(
+        selection = request.selection
+        requested_hours = selection.available_hours if selection and selection.available_hours else 4
+        recommend_request = RecommendRequest(
             session_id=request.session_id,
-            raw_query=request.query,
-            normalized_query=normalized_query,
-            answer=answer,
-            sources=sources,
-            hit_level="dynamic_route_coze",
-            latency_ms=latency_ms,
-            request=request,
+            interests=_extract_interests(request),
+            available_hours=min(max(int(requested_hours), 1), 12),
+            audience_type=_infer_audience_type(request),
+            avoid_crowded=bool(selection.avoid_crowded) if selection else False,
         )
-        yield self._followup_event(resolved)
-        yield self._done_event(
-            chat_log_id=chat_log_id,
-            hit_level="dynamic_route_coze",
-            total_ms=latency_ms,
-            provider="coze",
-        )
+        response = await RecommendEngine(self.route_repository).generate(recommend_request)
+        if not response.routes:
+            return None
+        target_id = response.routes[0].route_id
+        return next((route for route in routes if route.id == target_id), None)
 
     @staticmethod
     def _should_trigger_tts(token: str, buffer: str) -> bool:
@@ -843,50 +779,6 @@ class QAPipeline:
         if buffer[-1] in "，、," and len(buffer) >= 8:
             return True
         return len(buffer) >= 16
-
-    @staticmethod
-    def _build_visitor_profile(request: ChatRequest, resolved: ResolvedInteraction) -> dict:
-        selection = request.selection
-        return {
-            "audience_type": selection.audience_type if selection else None,
-            "available_hours": selection.available_hours if selection else None,
-            "avoid_crowded": selection.avoid_crowded if selection else None,
-            "interests": selection.interests if selection else [],
-            "active_subject": resolved.active_subject,
-            "input_mode": request.input_mode,
-        }
-
-    def _build_route_candidates(self, routes, attractions) -> dict:
-        return {
-            "routes": [
-                {
-                    "id": route.id,
-                    "name": route.title,
-                    "duration": route.duration_label,
-                    "route_plan": route.route_plan,
-                    "stops": self._extract_route_stops(route.route_plan, attractions),
-                }
-                for route in routes
-            ]
-        }
-
-    @staticmethod
-    def _extract_route_stops(route_plan: str, attractions) -> list[dict]:
-        stops: list[dict] = []
-        for attraction in attractions:
-            aliases = [item.strip() for item in attraction.aliases.split("|") if item.strip()]
-            terms = [attraction.title, *aliases]
-            if any(term and term in route_plan for term in terms):
-                stops.append({"attraction_id": str(attraction.id), "name": attraction.title})
-        return stops
-
-    @staticmethod
-    def _validate_route_stop_ids(plan: CozeRoutePlan, allowed_ids_json: str) -> None:
-        allowed_ids = set(json.loads(allowed_ids_json))
-        for stop in plan.route_stops:
-            attraction_id = str(stop.get("attraction_id", "")).strip()
-            if attraction_id and attraction_id not in allowed_ids:
-                raise CozeRoutePlannerError(f"Unexpected attraction id from Coze: {attraction_id}")
 
     async def _emit_final_answer(
         self,
@@ -943,6 +835,7 @@ class QAPipeline:
             hit_level=hit_level,
             latency_ms=latency_ms,
             request=request,
+            active_subject=resolved.active_subject,
         )
         yield self._followup_event(resolved)
         yield self._done_event(
@@ -964,6 +857,7 @@ class QAPipeline:
         hit_level: str,
         latency_ms: int,
         request: ChatRequest,
+        active_subject: str | None = None,
     ) -> int:
         """Persist every completed branch before exposing its completion event."""
         create_kwargs = dict(
@@ -1005,6 +899,17 @@ class QAPipeline:
                 )
             except Exception:
                 logger.exception("Visitor profile update failed.")
+        if self.visitor_memory_repository is not None and request.visitor_id:
+            try:
+                await self.visitor_memory_repository.record_visit(
+                    visitor_id=request.visitor_id,
+                    session_id=session_id,
+                    attraction_title=active_subject,
+                    interests=_extract_interests(request),
+                    narration_audience=_resolve_narration_audience(request),
+                )
+            except Exception:
+                logger.exception("Visitor memory write failed.")
         return log.id
 
     @staticmethod
@@ -1123,13 +1028,22 @@ class QAPipeline:
                 "bits": 16,
             }))
         elif tts_event.type == "word_timestamps":
-            # 字级别时间戳 → viseme 时间线
+            # 字级别时间戳 → viseme 时间线 + 原始逐字时间（前端字幕逐字同步用）
             timestamp_data = tts_event.data if isinstance(tts_event.data, dict) else {"words": tts_event.data}
-            viseme_timeline = self._words_to_viseme_timeline(timestamp_data.get("words", []))
+            raw_words = timestamp_data.get("words", [])
+            viseme_timeline = self._words_to_viseme_timeline(raw_words)
             if viseme_timeline:
                 results.append(StreamEvent(type="audio_chunk", data={
                     "viseme_timeline": viseme_timeline,
                     "sentence_index": timestamp_data.get("sentence_index", 0),
+                    "word_timeline": [
+                        {
+                            "text": word.get("text", ""),
+                            "begin_time": word.get("begin_time", 0),
+                            "end_time": word.get("end_time", 0),
+                        }
+                        for word in raw_words
+                    ],
                 }))
         elif tts_event.type == "sentence_begin":
             # 通知前端新句子开始

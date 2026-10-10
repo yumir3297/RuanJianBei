@@ -3,13 +3,11 @@ from types import SimpleNamespace
 from pathlib import Path
 
 from app.schemas.chat import ChatRequest
-from app.schemas.live_data import LiveContext
 from app.schemas.selection import SelectionContext
 from app.services.avatar.stub import StubAvatarService
-from app.services.coze.client import CozeRoutePlan
 from app.services.llm.openai_compatible import OpenAICompatibleLLMService
 from app.services.qa.cache import QACache
-from app.services.qa.faq_matcher import FAQMatcher
+from app.services.qa.faq_matcher import FAQEntry, FAQMatcher
 from app.services.qa.followup_suggestions import FollowUpSuggestionService
 from app.services.qa.guided_selector import ResolvedInteraction
 from app.services.qa.intent_router import IntentRouter
@@ -24,19 +22,19 @@ class DummyCacheRepo:
     def __init__(self):
         self.set_keys = []
 
-    def get(self, normalized_query):
+    async def get(self, normalized_query):
         return None
 
-    def set(self, normalized_query, answer, sources, expires_at):
+    async def set(self, normalized_query, answer, sources, expires_at):
         self.set_keys.append(normalized_query)
         return None
 
-    def invalidate(self, normalized_query=None):
+    async def invalidate(self, normalized_query=None):
         return None
 
 
 class DummyChatLogRepo:
-    def create(self, **kwargs):
+    async def create(self, **kwargs):
         return SimpleNamespace(id=1, **kwargs)
 
 
@@ -52,8 +50,12 @@ class DummyRouteRepository:
         title = "亲子轻松线"
         duration_label = "2小时"
         route_plan = "入口 -> 灵山大佛 -> 梵宫"
+        guide_points_json = "[]"
+        experiences_json = "[]"
+        source = "官方路线模板"
+        tags = "亲子|家庭|互动"
 
-    def list_all(self):
+    async def list_all(self):
         return [self.Route()]
 
 
@@ -76,12 +78,12 @@ class RecordingBlindSpotTracker:
     def __init__(self):
         self.calls = []
 
-    def record(self, **kwargs):
+    async def record(self, **kwargs):
         self.calls.append(kwargs)
 
 
 class DummyGuidedSelector:
-    def resolve(self, query, selection, context):
+    async def resolve(self, query, selection, context):
         del query, context
         return ResolvedInteraction(
             selection=selection or SelectionContext(),
@@ -110,8 +112,19 @@ class RecordingRAGService:
 
 
 class DummyLLMService:
-    async def stream_generate(self, query, documents, *, persona=None):
-        del query, documents, persona
+    def __init__(self):
+        self.received = []
+
+    async def stream_generate(self, query, documents, *, persona=None, audience=None, memory=None):
+        self.received.append(
+            {
+                "query": query,
+                "documents": list(documents),
+                "persona": persona,
+                "audience": audience,
+                "memory": memory,
+            }
+        )
         yield "基于官方证据回答。"
 
 
@@ -153,40 +166,43 @@ class FakeStreamingTTSService:
 
 
 class FallbackLLMService:
-    async def stream_generate(self, query, documents, *, persona=None):
-        del query, documents, persona
+    async def stream_generate(self, query, documents, *, persona=None, audience=None, memory=None):
+        del query, documents, persona, audience, memory
         from app.services.llm.types import LLMStreamEvent
 
         yield LLMStreamEvent(type="content", text="证据降级回答。[证据1]")
         yield LLMStreamEvent(type="finish", finish_reason="fallback_http_429")
 
 
-class DummyLiveDataService:
-    def build_context(self, attractions):
-        del attractions
-        return LiveContext(
-            is_mock=True,
-            source_label="mock",
-            weather={"condition": "晴"},
-            visitor_flow={"level": "中等"},
-            timestamp="2026-07-15T10:00:00+08:00",
-        )
+class DummyVisitorMemoryRepo:
+    """替身仓储：只替换 I/O，不替换记忆解码与提示词构建（那是真实代码）。"""
+
+    def __init__(self, memory=None):
+        self.memory = memory
+        self.recorded = []
+
+    async def get(self, visitor_id, *, site_id="default"):
+        return self.memory
+
+    async def record_visit(self, **kwargs):
+        self.recorded.append(kwargs)
+        return self.memory
 
 
-class DummyCozePlanner:
-    is_configured = True
+def _memory_row(**overrides):
+    from app.models.visitor_memory import VisitorMemory
 
-    async def run(self, payload):
-        assert "route_candidates_json" in payload
-        return CozeRoutePlan(
-            answer="建议先去灵山大佛，再前往梵宫，当前天气和客流为演示模拟数据。",
-            route_stops=[{"attraction_id": "13", "reason": "先看核心景点"}],
-            adjustments=["客流中等，建议梵宫稍后进入"],
-            sources=["官方路线候选", "实时上下文"],
-            warning="",
-            live_data_timestamp="2026-07-15T10:00:00+08:00",
-            raw_payload={},
-        )
+    values = {
+        "visitor_id": "v-1",
+        "site_id": "default",
+        "visited_attractions": '["灵山大佛"]',
+        "preference_tags": "[]",
+        "narration_audience": "child",
+        "visit_count": 2,
+        "last_session_id": "s-0",
+    }
+    values.update(overrides)
+    return VisitorMemory(**values)
 
 
 async def collect_events():
@@ -228,12 +244,13 @@ def test_pipeline_faq_path_emits_done() -> None:
 def test_pipeline_passes_resolved_scope_and_uses_selection_cache_key() -> None:
     cache_repository = DummyCacheRepo()
     rag_service = RecordingRAGService()
+    llm_service = DummyLLMService()
     pipeline = QAPipeline(
         query_rewriter=QueryRewriter(),
         faq_matcher=FAQMatcher(),
         qa_cache=QACache(cache_repository, ttl_seconds=60),
         rag_service=rag_service,
-        llm_service=DummyLLMService(),
+        llm_service=llm_service,
         tts_service=StubTTSService(),
         avatar_service=StubAvatarService(),
         chat_log_repository=DummyChatLogRepo(),
@@ -263,10 +280,131 @@ def test_pipeline_passes_resolved_scope_and_uses_selection_cache_key() -> None:
     source_event = next(event for event in events if event.type == "sources")
     assert source_event.data["docs"][0]["evidence_id"] == "证据1"
     assert len(cache_repository.set_keys) == 1
-    assert cache_repository.set_keys[0].startswith("qa:v3:")
+    assert cache_repository.set_keys[0].startswith("qa:v4:")
     assert events[-2].type == "followups"
     assert 2 <= len(events[-2].data["items"]) <= 4
     assert events[-1].type == "done"
+    # 受众必须一路透传到 LLM（未指定 == adult）
+    assert llm_service.received[-1]["audience"] == "adult"
+
+
+def test_pipeline_forwards_child_audience_to_llm_and_cache_key() -> None:
+    cache_repository = DummyCacheRepo()
+    llm_service = DummyLLMService()
+    pipeline = QAPipeline(
+        query_rewriter=QueryRewriter(),
+        faq_matcher=FAQMatcher(),
+        qa_cache=QACache(cache_repository, ttl_seconds=60),
+        rag_service=RecordingRAGService(),
+        llm_service=llm_service,
+        tts_service=StubTTSService(),
+        avatar_service=StubAvatarService(),
+        chat_log_repository=DummyChatLogRepo(),
+        guided_selector=DummyGuidedSelector(),
+        followup_suggestions=FollowUpSuggestionService(),
+    )
+
+    def run(audience):
+        async def scenario():
+            events = []
+            async for event in pipeline.stream_chat(
+                ChatRequest(
+                    query="有什么特色",
+                    session_id=f"audience-{audience}",
+                    text_only=True,
+                    selection=SelectionContext(mode="attraction", attraction_id=13),
+                    audience=audience,
+                )
+            ):
+                events.append(event)
+            return events
+
+        return asyncio.run(scenario())
+
+    cache_repository.set_keys.clear()
+    run("child")
+    assert llm_service.received[-1]["audience"] == "child"
+    child_keys = set(cache_repository.set_keys)
+
+    cache_repository.set_keys.clear()
+    run("expert")
+    assert llm_service.received[-1]["audience"] == "expert"
+    expert_keys = set(cache_repository.set_keys)
+
+    assert child_keys and expert_keys
+    assert child_keys.isdisjoint(expert_keys), "不同受众不得共用缓存键"
+
+
+def _build_test_pipeline(**overrides):
+    kwargs = dict(
+        query_rewriter=QueryRewriter(),
+        faq_matcher=FAQMatcher(),
+        qa_cache=QACache(DummyCacheRepo(), ttl_seconds=60),
+        rag_service=RecordingRAGService(),
+        llm_service=DummyLLMService(),
+        tts_service=StubTTSService(),
+        avatar_service=StubAvatarService(),
+        chat_log_repository=DummyChatLogRepo(),
+        guided_selector=DummyGuidedSelector(),
+        followup_suggestions=FollowUpSuggestionService(),
+    )
+    kwargs.update(overrides)
+    return QAPipeline(**kwargs)
+
+
+def _run_turn(pipeline, **request_overrides):
+    request_kwargs = {
+        "query": "有什么特色",
+        "session_id": "s-1",
+        "text_only": True,
+        "selection": SelectionContext(mode="attraction", attraction_id=13),
+    }
+    request_kwargs.update(request_overrides)
+
+    async def scenario():
+        events = []
+        async for event in pipeline.stream_chat(ChatRequest(**request_kwargs)):
+            events.append(event)
+        return events
+
+    return asyncio.run(scenario())
+
+
+def test_pipeline_injects_visitor_memory_and_records_visit() -> None:
+    llm_service = DummyLLMService()
+    memory_repo = DummyVisitorMemoryRepo(_memory_row())
+    pipeline = _build_test_pipeline(
+        llm_service=llm_service,
+        visitor_memory_repository=memory_repo,
+    )
+
+    _run_turn(pipeline, visitor_id="v-1")
+
+    memory_prompt = llm_service.received[-1]["memory"]
+    assert memory_prompt is not None
+    assert "【游客记忆】" in memory_prompt
+    assert "欢迎回来" in memory_prompt
+    assert "灵山大佛" in memory_prompt
+
+    recorded = memory_repo.recorded[-1]
+    assert recorded["visitor_id"] == "v-1"
+    assert recorded["session_id"] == "s-1"
+    assert recorded["attraction_title"] == "灵山大佛"
+    assert recorded["narration_audience"] == "adult"
+
+
+def test_pipeline_without_visitor_id_never_touches_memory() -> None:
+    llm_service = DummyLLMService()
+    memory_repo = DummyVisitorMemoryRepo(_memory_row())
+    pipeline = _build_test_pipeline(
+        llm_service=llm_service,
+        visitor_memory_repository=memory_repo,
+    )
+
+    _run_turn(pipeline)
+
+    assert llm_service.received[-1]["memory"] is None
+    assert memory_repo.recorded == []
 
 
 def test_pipeline_forwards_streaming_tts_events_without_waiting_for_http_audio() -> None:
@@ -301,6 +439,80 @@ def test_pipeline_forwards_streaming_tts_events_without_waiting_for_http_audio()
     assert streaming_tts.session.sent_text == ["基于官方证据回答。"]
     assert streaming_tts.session.closed is True
     assert event_types[-1] == "done"
+
+
+def test_streaming_word_timestamps_event_converts_to_real_viseme_timeline() -> None:
+    """词级时间戳必须原样驱动口型时间线，而不是退回 pypinyin 均匀估算。"""
+    pipeline = QAPipeline(
+        query_rewriter=QueryRewriter(),
+        faq_matcher=FAQMatcher(),
+        qa_cache=QACache(DummyCacheRepo(), ttl_seconds=60),
+        rag_service=DummyRAGService(),
+        llm_service=DummyLLMService(),
+        tts_service=StubTTSService(),
+        avatar_service=StubAvatarService(),
+        chat_log_repository=DummyChatLogRepo(),
+        guided_selector=DummyGuidedSelector(),
+        followup_suggestions=FollowUpSuggestionService(),
+    )
+
+    event = StreamingTTSEvent(type="word_timestamps", data={
+        "words": [
+            {"text": "灵山", "begin_time": 0, "end_time": 200},
+            {"text": "大佛", "begin_time": 200, "end_time": 500},
+        ],
+        "sentence_index": 2,
+        "characters": 4,
+    })
+
+    sse_events = pipeline._handle_streaming_tts_event(event)
+
+    assert len(sse_events) == 1
+    assert sse_events[0].type == "audio_chunk"
+    assert sse_events[0].data["sentence_index"] == 2
+    timeline = sse_events[0].data["viseme_timeline"]
+    # CosyVoice 字级时间戳：每个字一个词条，每词条一帧
+    assert len(timeline) == 2
+    assert timeline[0]["start"] == 0
+    assert timeline[0]["end"] == 200   # 帧边界严格来自真实时间戳
+    assert timeline[1]["start"] == 200
+    assert timeline[-1]["end"] == 500  # 结束时间来自真实时间戳而非估算
+    for frame in timeline:
+        assert set(frame) == {"start", "end", "value", "form"}
+
+
+def test_streaming_word_timestamps_event_carries_raw_word_timeline() -> None:
+    """word_timestamps 必须同时下发原始逐字时间（word_timeline），供前端字幕逐字同步。"""
+    pipeline = QAPipeline(
+        query_rewriter=QueryRewriter(),
+        faq_matcher=FAQMatcher(),
+        qa_cache=QACache(DummyCacheRepo(), ttl_seconds=60),
+        rag_service=DummyRAGService(),
+        llm_service=DummyLLMService(),
+        tts_service=StubTTSService(),
+        avatar_service=StubAvatarService(),
+        chat_log_repository=DummyChatLogRepo(),
+        guided_selector=DummyGuidedSelector(),
+        followup_suggestions=FollowUpSuggestionService(),
+    )
+
+    event = StreamingTTSEvent(type="word_timestamps", data={
+        "words": [
+            {"text": "灵山", "begin_time": 0, "end_time": 200},
+            {"text": "大佛", "begin_time": 200, "end_time": 500},
+        ],
+        "sentence_index": 2,
+        "characters": 4,
+    })
+
+    sse_events = pipeline._handle_streaming_tts_event(event)
+
+    chunk = next(e for e in sse_events if e.type == "audio_chunk")
+    # 原始逐字时间必须原样透传（text/begin_time/end_time），不得只转口型
+    assert chunk.data["word_timeline"] == [
+        {"text": "灵山", "begin_time": 0, "end_time": 200},
+        {"text": "大佛", "begin_time": 200, "end_time": 500},
+    ]
 
 
 def test_pipeline_records_blind_spot_only_when_rag_has_no_evidence() -> None:
@@ -394,7 +606,7 @@ def test_audio_event_contains_fallback_text_and_viseme_timeline() -> None:
     assert event.data["viseme_timeline"][-1]["value"] == 0.0
 
 
-def test_pipeline_uses_dynamic_route_when_coze_is_available() -> None:
+def test_pipeline_uses_backend_preset_route() -> None:
     pipeline = QAPipeline(
         query_rewriter=QueryRewriter(),
         faq_matcher=FAQMatcher(),
@@ -407,8 +619,6 @@ def test_pipeline_uses_dynamic_route_when_coze_is_available() -> None:
         guided_selector=DummyGuidedSelector(),
         followup_suggestions=FollowUpSuggestionService(),
         intent_router=IntentRouter(),
-        live_data_service=DummyLiveDataService(),
-        coze_route_planner=DummyCozePlanner(),
         knowledge_repository=DummyKnowledgeRepository(),
         route_repository=DummyRouteRepository(),
     )
@@ -419,7 +629,7 @@ def test_pipeline_uses_dynamic_route_when_coze_is_available() -> None:
             async for event in pipeline.stream_chat(
                 ChatRequest(
                     query="请根据天气和客流推荐一条亲子路线",
-                    session_id="dynamic-route",
+                    session_id="preset-route",
                     text_only=True,
                     selection=SelectionContext(mode="route", route_id="route_001", available_hours=2),
                 )
@@ -430,6 +640,106 @@ def test_pipeline_uses_dynamic_route_when_coze_is_available() -> None:
 
     intent_event = next(event for event in events if event.type == "intent")
     text_event = next(event for event in events if event.type == "text")
-    assert intent_event.data["intent"] == "dynamic_route"
-    assert "演示模拟数据" in text_event.data["text"]
+    assert intent_event.data["intent"] == "static_route"
+    assert "亲子轻松线" in text_event.data["text"]
     assert events[-1].type == "done"
+
+
+def _faq_matcher():
+    matcher = FAQMatcher()
+    matcher.add(
+        [
+            FAQEntry(
+                id="faq-opening",
+                category="practical",
+                aliases=["几点开门"],
+                answer="灵山胜境每日 8:00 开门，17:00 停止入园。",
+                sources=["景区官方公告"],
+            )
+        ]
+    )
+    return matcher
+
+
+def test_faq_fast_path_stays_llm_free_for_default_audience() -> None:
+    llm_service = DummyLLMService()
+    rag_service = RecordingRAGService()
+    pipeline = _build_test_pipeline(
+        faq_matcher=_faq_matcher(),
+        llm_service=llm_service,
+        rag_service=rag_service,
+    )
+
+    events = _run_turn(pipeline, query="几点开门")
+
+    assert llm_service.received == [], "默认受众下 FAQ 快路径不应调用 LLM"
+    assert rag_service.scopes == [], "FAQ 命中不应触发 RAG 检索"
+    text_event = next(event for event in events if event.type == "text")
+    assert "8:00" in text_event.data["text"]
+    assert events[-1].data["hit_level"] == "faq_exact"
+
+
+def test_faq_path_restyles_through_llm_for_child_audience() -> None:
+    llm_service = DummyLLMService()
+    rag_service = RecordingRAGService()
+    pipeline = _build_test_pipeline(
+        faq_matcher=_faq_matcher(),
+        llm_service=llm_service,
+        rag_service=rag_service,
+    )
+
+    events = _run_turn(pipeline, query="几点开门", audience="child")
+
+    assert len(llm_service.received) == 1, "非默认受众下 FAQ 必须走 LLM 改写"
+    assert llm_service.received[-1]["audience"] == "child"
+    assert rag_service.scopes == [], "FAQ 命中仍不应触发 RAG 检索"
+
+    documents = llm_service.received[-1]["documents"]
+    assert len(documents) == 1, "FAQ 原文应作为唯一证据交给 LLM"
+    assert "8:00" in documents[0].content
+
+    assert events[-1].data["hit_level"] == "faq_exact_styled"
+
+
+def test_faq_path_keeps_adult_on_fast_path_when_audience_is_adult() -> None:
+    llm_service = DummyLLMService()
+    pipeline = _build_test_pipeline(faq_matcher=_faq_matcher(), llm_service=llm_service)
+
+    events = _run_turn(pipeline, query="几点开门", audience="adult")
+
+    assert llm_service.received == [], "adult 与未指定等价，不应触发 LLM"
+    assert events[-1].data["hit_level"] == "faq_exact"
+
+
+def test_faq_styled_answer_is_cached_under_audience_specific_key() -> None:
+    cache_repository = DummyCacheRepo()
+    pipeline = _build_test_pipeline(
+        faq_matcher=_faq_matcher(),
+        qa_cache=QACache(cache_repository, ttl_seconds=60),
+        llm_service=DummyLLMService(),
+    )
+
+    _run_turn(pipeline, query="几点开门", audience="child")
+
+    assert len(cache_repository.set_keys) == 1
+    assert cache_repository.set_keys[0].startswith("qa:v4:")
+
+
+def test_faq_answer_survives_llm_outage_for_non_default_audience() -> None:
+    """LLM 降级时不能把"服务暂不可用"甩给游客——FAQ 原文本身权威且完整，应回落原文。"""
+    cache_repository = DummyCacheRepo()
+    pipeline = _build_test_pipeline(
+        faq_matcher=_faq_matcher(),
+        qa_cache=QACache(cache_repository, ttl_seconds=60),
+        llm_service=FallbackLLMService(),
+    )
+
+    events = _run_turn(pipeline, query="几点开门", audience="child")
+
+    text_event = next(event for event in events if event.type == "text")
+    assert "8:00" in text_event.data["text"], "应回落 FAQ 原文"
+    assert "证据降级回答" not in text_event.data["text"]
+
+    assert events[-1].data["degraded"] is True
+    assert events[-1].data["hit_level"] == "faq_exact_styled_llm_fallback"
+    assert cache_repository.set_keys == [], "未按受众改写的答案不得写入受众专属缓存"

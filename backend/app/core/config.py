@@ -9,6 +9,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_name: str = Field(default="A5 Scenic Guide AI")
+    scenic_name: str = Field(default="景区")
+    """景区名称：平台按景区自设置的核心配置，注入提示词与欢迎语（在 .env 中按景区配置）。"""
     app_env: str = Field(default="development")
     app_host: str = Field(default="0.0.0.0")
     app_port: int = Field(default=8000)
@@ -68,7 +70,8 @@ class Settings(BaseSettings):
     asr_timeout_seconds: float = Field(default=30.0, gt=0.0, le=180.0)
     asr_poll_interval_seconds: float = Field(default=0.8, gt=0.0, le=10.0)
     asr_max_audio_bytes: int = Field(default=10 * 1024 * 1024, ge=1024, le=50 * 1024 * 1024)
-    asr_hotwords: str = Field(default="灵山大佛,九龙灌浴,灵山梵宫,五印坛城,祥符禅寺,拈花堂,百子戏弥勒,阿育王柱,降魔浮雕,菩提大道,佛足坛,五智门,五明桥,五灯湖,曼飞龙塔,梵天花海,无尽意斋,香月花街,鹿鸣谷,大照壁")
+    asr_hotwords: str = Field(default="")
+    """景区专属 ASR 热词（逗号分隔），按景区在 .env 中自行配置。"""
     asr_local_model_dir: str = Field(default="D:/A5ScenicGuideModels/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17")
     asr_local_num_threads: int = Field(default=2, ge=1, le=16)
     asr_local_language: str = Field(default="zh")
@@ -83,14 +86,23 @@ class Settings(BaseSettings):
     tts_model: str = Field(default="cosyvoice-v3-flash")
     tts_voice: str = Field(default="longwan_v3")
     tts_timeout_seconds: float = Field(default=30.0, gt=0.0, le=120.0)
-    live_data_provider: str = Field(default="mock")
-    live_data_mock_weather: str = Field(default="晴")
-    live_data_mock_temperature: str = Field(default="22-28°C")
-    live_data_mock_crowd_level: str = Field(default="中等")
-    coze_enabled: bool = Field(default=False)
-    coze_run_url: str = Field(default="")
-    coze_token: str = Field(default="")
-    coze_timeout_seconds: float = Field(default=25.0, gt=0.0, le=60.0)
+    # 火山引擎豆包 TTS（v3 双向流式协议）；X-Api-Key 或 APP ID + Access Token 二选一
+    volcengine_tts_app_id: str = Field(default="")
+    volcengine_tts_access_key: str = Field(default="")
+    volcengine_tts_api_key: str = Field(default="")
+    volcengine_tts_resource_id: str = Field(default="seed-tts-2.0")
+    volcengine_tts_voice: str = Field(default="zh_female_cancan_uranus_bigtts")
+    volcengine_tts_format: str = Field(default="pcm")
+    volcengine_tts_sample_rate: int = Field(default=24000, ge=8000, le=48000)
+    qweather_api_key: str = Field(default="")
+    """和风天气 API KEY，仅在服务端使用，前端不接触。留空时接口安全降级。"""
+    qweather_api_host: str = Field(default="devapi.qweather.com")
+    """和风天气 API Host（控制台分配的专属域名，如 abcxyz.qweatherapi.com）。"""
+    qweather_lang: str = Field(default="zh")
+    qweather_timeout_seconds: float = Field(default=8.0, gt=0.0, le=60.0)
+    qweather_cache_ttl_seconds: int = Field(default=600, ge=0, le=3600)
+    qweather_default_lat: float = Field(default=31.4285, ge=-90.0, le=90.0)
+    qweather_default_lon: float = Field(default=120.0998, ge=-180.0, le=180.0)
     competition_mode: bool = Field(default=False)
     cors_origins: str = Field(default="http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://localhost:5175")
     admin_password: str = Field(default="admin123")
@@ -156,6 +168,22 @@ class Settings(BaseSettings):
     @property
     def ui_asset_manifest_file(self) -> Path:
         return (self.backend_root / self.ui_asset_manifest_path).resolve()
+
+    @property
+    def volcengine_tts_ready(self) -> bool:
+        """火山 TTS 凭据是否可用：X-Api-Key 单凭据，或 APP ID + Access Token 组合。"""
+        return bool(self.volcengine_tts_api_key) or bool(
+            self.volcengine_tts_app_id and self.volcengine_tts_access_key
+        )
+
+    @property
+    def tts_ready(self) -> bool:
+        """按 tts_provider 判断对应凭据是否齐备，作为是否启用真实 TTS 的统一开关。"""
+        if self.tts_provider == "volcengine":
+            return self.volcengine_tts_ready
+        if self.tts_provider == "bailian":
+            return bool(self.tts_api_key)
+        return False
 
     @property
     def processed_data_available(self) -> bool:

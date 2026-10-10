@@ -16,7 +16,7 @@ from app.schemas.knowledge import KnowledgeCreate
 
 DEFAULT_AVATAR_CONFIGS = (
     {
-        "name": "僧袍法师",
+        "name": "国风讲解员",
         "model_path": "preset:monk",
         "preview_url": "",
         "voice_type": "deep-male",
@@ -66,7 +66,7 @@ DEFAULT_QUICK_TOPICS = (
     },
     {
         "key": "blessing",
-        "label": "祈福体验",
+        "label": "文化体验",
         "category": "knowledge",
         "icon": "sparkles",
         "sort_order": 40,

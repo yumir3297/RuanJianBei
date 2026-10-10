@@ -31,17 +31,24 @@ def build_selection_cache_key(
     selection: SelectionContext,
     *,
     answer_namespace: str = "default",
+    audience: str | None = None,
 ) -> str:
+    """问答缓存键。
+
+    audience 必须入键：分众化风格是烘进 LLM 产出的，不能像 persona 那样在取缓存后再润色。
+    未指定与 adult 视为同一档（adult 不加风格块），避免同义键分叉。
+    """
     payload = {
         "query": normalized_query,
         "mode": selection.mode,
         "attraction_id": selection.attraction_id,
         "topic_key": selection.topic_key,
         "route_id": selection.route_id,
+        "audience": audience or "adult",
         "answer_namespace": answer_namespace,
     }
     serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return f"qa:v3:{hashlib.sha256(serialized.encode('utf-8')).hexdigest()}"
+    return f"qa:v4:{hashlib.sha256(serialized.encode('utf-8')).hexdigest()}"
 
 
 @dataclass(frozen=True, slots=True)

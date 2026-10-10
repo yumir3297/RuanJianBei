@@ -15,5 +15,7 @@ class BaseLLMService(ABC):
         documents: list[RetrievedDocument],
         *,
         persona: str | None = None,
+        audience: str | None = None,
+        memory: str | None = None,
     ) -> AsyncGenerator[LLMStreamEvent, None]:
         """Yield answer chunks for the current query."""

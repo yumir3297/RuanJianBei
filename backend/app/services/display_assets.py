@@ -7,16 +7,19 @@ from typing import Any
 from uuid import uuid4
 
 from fastapi import HTTPException, UploadFile, status
+from pydantic import ValidationError
 
 from app.core.config import Settings
+from app.schemas.display_assets import TouristDisplaySettings
 
 
 ALLOWED_IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp"}
 ALLOWED_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 TOURIST_BACKGROUND_KEY = "tourist_background"
 WELCOME_TEXT_KEY = "welcome_text"
+TOURIST_SETTINGS_KEY = "tourist_settings"
 
-DEFAULT_WELCOME_TEXT = "欢迎来到灵山胜境，愿您在此感受千年佛韵，尽享山水之美。"
+DEFAULT_WELCOME_TEXT = "欢迎来到这里，我会陪您探索景点、规划路线并了解景区服务。"
 
 
 class DisplayAssetService:
@@ -32,10 +35,24 @@ class DisplayAssetService:
     def get_assets(self) -> dict[str, dict[str, Any]]:
         manifest = self._load_manifest()
         asset = manifest.get(TOURIST_BACKGROUND_KEY)
+        try:
+            tourist_settings = TouristDisplaySettings.model_validate(
+                manifest.get(TOURIST_SETTINGS_KEY) or {}
+            ).model_dump(mode="json")
+        except ValidationError:
+            tourist_settings = TouristDisplaySettings().model_dump(mode="json")
         return {
             TOURIST_BACKGROUND_KEY: self._normalize_asset(asset),
             WELCOME_TEXT_KEY: manifest.get(WELCOME_TEXT_KEY, DEFAULT_WELCOME_TEXT),
+            TOURIST_SETTINGS_KEY: tourist_settings,
         }
+
+    def update_tourist_settings(self, settings: TouristDisplaySettings) -> dict[str, Any]:
+        self.ensure_storage()
+        manifest = self._load_manifest()
+        manifest[TOURIST_SETTINGS_KEY] = settings.model_dump(mode="json")
+        self._save_manifest(manifest)
+        return manifest[TOURIST_SETTINGS_KEY]
 
     def update_welcome_text(self, text: str) -> str:
         self.ensure_storage()

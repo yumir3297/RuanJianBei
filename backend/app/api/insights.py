@@ -40,6 +40,12 @@ HIT_LEVEL_LABELS = {
     "blind": "知识盲区",
 }
 
+FAQ_LEVEL_LABELS = {
+    "exact": "精确匹配",
+    "fuzzy": "模糊匹配",
+    "semantic": "语义匹配",
+}
+
 
 
 def _load_json_list(payload: str | list[Any] | None) -> list[Any]:
@@ -78,7 +84,21 @@ def _hit_level_label(level: str | None) -> str:
     if level in HIT_LEVEL_LABELS:
         return HIT_LEVEL_LABELS[level]
     if level.startswith("faq_"):
-        return f"FAQ {level.removeprefix('faq_').replace('_', ' ')}"
+        base = level.removeprefix("faq_")
+        degraded = base.endswith("_llm_fallback")
+        if degraded:
+            base = base.removesuffix("_llm_fallback")
+        styled = base.endswith("_styled")
+        if styled:
+            base = base.removesuffix("_styled")
+        if not styled and not degraded:
+            return f"FAQ {base.replace('_', ' ')}"
+        label = f"FAQ {FAQ_LEVEL_LABELS.get(base, base.replace('_', ' '))}"
+        if styled:
+            label = f"{label}（按受众改写）"
+        if degraded:
+            label = f"{label}·降级"
+        return label
     if level.startswith("rag_"):
         return f"RAG {level.removeprefix('rag_').replace('_', ' ')}"
     return level

@@ -42,6 +42,8 @@ class OpenAICompatibleLLMService(BaseLLMService):
         documents: list[RetrievedDocument],
         *,
         persona: str | None = None,
+        audience: str | None = None,
+        memory: str | None = None,
     ):
         if not documents:
             yield LLMStreamEvent(
@@ -64,7 +66,13 @@ class OpenAICompatibleLLMService(BaseLLMService):
 
         emitted_content = False
         try:
-            async for event in self._stream_provider(query, documents, persona=persona):
+            async for event in self._stream_provider(
+                query,
+                documents,
+                persona=persona,
+                audience=audience,
+                memory=memory,
+            ):
                 if event.type == "content" and event.text:
                     emitted_content = True
                 yield event
@@ -89,8 +97,16 @@ class OpenAICompatibleLLMService(BaseLLMService):
         documents: list[RetrievedDocument],
         *,
         persona: str | None = None,
+        audience: str | None = None,
+        memory: str | None = None,
     ) -> AsyncIterator[LLMStreamEvent]:
-        prompt = self.prompt_builder.build(query, documents, persona=persona)
+        prompt = self.prompt_builder.build(
+            query,
+            documents,
+            persona=persona,
+            audience=audience,
+            memory=memory,
+        )
         client = self._client or self._build_client()
         semaphore = self._get_semaphore(self.settings.llm_max_concurrency)
         payload = {
