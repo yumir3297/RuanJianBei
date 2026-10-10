@@ -8,9 +8,13 @@ from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 import re
 import sys
+from pathlib import Path
 
-SRC = r"D:\桌面\软件杯\docs\交付物-部署说明文档.md"
-DST = r"D:\桌面\软件杯\output\pdf\灵山胜境AI数字人导览系统-部署说明文档.docx"
+ROOT = Path(__file__).resolve().parents[1]
+GUIDE_DIR = ROOT / "软件杯提交物" / "03-启动包与部署" / "02-启动与部署指南"
+
+SRC = str(GUIDE_DIR / "交付物-部署说明文档.md")
+DST = str(GUIDE_DIR / "灵山胜境AI数字人导览系统-部署说明文档.docx")
 
 def set_cell_shading(cell, color):
     """设置单元格背景色"""

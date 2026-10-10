@@ -30,8 +30,9 @@ from reportlab.platypus.tableofcontents import TableOfContents
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "docs" / "作品说明文档.md"
-OUTPUT_DIR = ROOT / "output" / "pdf"
+DOC_DIR = ROOT / "软件杯提交物" / "01-设计文档" / "04-作品说明与达标材料"
+SOURCE = DOC_DIR / "作品说明文档.md"
+OUTPUT_DIR = DOC_DIR
 OUTPUT = OUTPUT_DIR / "景区AI数字人智能导览系统-作品说明文档.pdf"
 
 PAGE_W, PAGE_H = A4
@@ -139,7 +140,7 @@ class WorkDocTemplate(BaseDocTemplate):
             bottomMargin=BOTTOM,
             title="景区 AI 数字人智能导览系统作品说明文档",
             author="项目团队",
-            subject="软件杯作品说明文档",
+            subject="传智杯 Web+AI 赛道作品说明文档",
         )
         cover_frame = Frame(0, 0, PAGE_W, PAGE_H, id="cover", showBoundary=0)
         body_frame = Frame(

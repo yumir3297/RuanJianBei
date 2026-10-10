@@ -13,7 +13,7 @@ from docx.shared import Inches, Pt, RGBColor
 
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "docs" / "A5作品整改与补强建议书-2026-07-15.docx"
+OUT = ROOT / "软件杯提交物" / "01-设计文档" / "05-评审与整改材料" / "A5作品整改与补强建议书-2026-07-15.docx"
 
 BLUE = "2E74B5"
 DARK_BLUE = "1F4D78"
@@ -221,7 +221,7 @@ def configure_document(doc: Document) -> None:
     header = section.header.paragraphs[0]
     header.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     format_paragraph(header, 0, 0, 1.0)
-    set_run(header.add_run("中国软件杯 A5 作品整改与补强建议书"), size=8.5, color=MUTED)
+    set_run(header.add_run("传智杯 Web+AI 赛道作品整改与补强建议书"), size=8.5, color=MUTED)
     footer = section.footer.paragraphs[0]
     footer.alignment = WD_ALIGN_PARAGRAPH.CENTER
     format_paragraph(footer, 0, 0, 1.0)
@@ -232,7 +232,7 @@ def build() -> None:
     doc = Document()
     configure_document(doc)
 
-    add_text(doc, "中国软件杯 A5 作品", size=12, color=MUTED, bold=True, after=2)
+    add_text(doc, "传智杯 Web+AI 赛道作品", size=12, color=MUTED, bold=True, after=2)
     add_text(doc, "整改与补强建议书", size=25, color=INK, bold=True, after=5)
     add_text(doc, "适用对象：灵山胜境景区 AI 数字人导览系统 | 用途：提交前整改、任务拆分、答辩验收", size=11.5, color=MUTED, after=14)
     metadata = doc.add_table(rows=4, cols=2)

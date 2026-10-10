@@ -13,8 +13,9 @@ from docx.shared import Inches, Pt, RGBColor
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "docs" / "交付物-产品设计文档大纲.md"
-OUTPUT = ROOT / "docs" / "交付物-产品设计文档.docx"
+DOC_DIR = ROOT / "软件杯提交物" / "01-设计文档" / "03-产品设计文档"
+SOURCE = DOC_DIR / "交付物-产品设计文档大纲.md"
+OUTPUT = DOC_DIR / "交付物-产品设计文档.docx"
 
 CONTENT_WIDTH_DXA = 9360
 TABLE_INDENT_DXA = 120
@@ -321,7 +322,7 @@ def add_cover(doc: Document) -> None:
     kicker = doc.add_paragraph()
     kicker.alignment = WD_ALIGN_PARAGRAPH.CENTER
     kicker.paragraph_format.space_after = Pt(18)
-    run = kicker.add_run("第十四届中国软件杯 A5 赛题参赛作品")
+    run = kicker.add_run("传智杯 Web+AI 赛道（AI Web 网页开发挑战赛）参赛作品")
     set_run_font(run, size=11, color=GOLD, bold=True)
 
     title = doc.add_paragraph()
@@ -705,9 +706,9 @@ def build_document() -> None:
 
     core = doc.core_properties
     core.title = "灵山胜境 AI 数字人导览系统 - 产品设计文档"
-    core.subject = "第十四届中国软件杯 A5 赛题参赛作品"
+    core.subject = "传智杯 Web+AI 赛道参赛作品"
     core.author = "参赛团队"
-    core.keywords = "中国软件杯, AI数字人, 景区导览, RAG, 多模态"
+    core.keywords = "传智杯, Web+AI, AI数字人, 景区导览, RAG, 多模态"
     core.comments = "由项目 Markdown 设计文档生成"
 
     doc.save(OUTPUT)
