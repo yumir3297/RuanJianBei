@@ -287,7 +287,13 @@ def test_synthesize_collects_audio_and_estimates_duration(monkeypatch) -> None:
     audio = _run(svc.synthesize("你好"))
 
     assert audio.provider == "volcengine"
-    assert base64.b64decode(audio.base64_audio) == pcm
+    # 非流式 audio 事件要能被前端 AudioContext.decodeAudioData() 解码，必须是 WAV 容器而非裸 PCM
+    decoded = base64.b64decode(audio.base64_audio)
+    assert decoded[:4] == b"RIFF"
+    assert decoded[8:12] == b"WAVE"
+    data_marker = decoded.index(b"data", 12)
+    assert int.from_bytes(decoded[data_marker + 4 : data_marker + 8], "little") == len(pcm)
+    assert decoded[data_marker + 8 : data_marker + 8 + len(pcm)] == pcm
     assert audio.duration_ms == 1000
 
     # 端点与鉴权

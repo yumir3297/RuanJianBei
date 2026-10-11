@@ -19,7 +19,7 @@ class FakeKnowledgeRepository:
     def __init__(self, entries: list[FakeKnowledgeEntry]) -> None:
         self.entries = entries
 
-    def search(self, query: str, limit: int = 10, *, knowledge_id=None, category=None) -> list[FakeKnowledgeEntry]:
+    async def search(self, query: str, limit: int = 10, *, knowledge_id=None, category=None) -> list[FakeKnowledgeEntry]:
         del query, limit, knowledge_id, category
         return self.entries
 
@@ -55,7 +55,7 @@ class ScopedKnowledgeRepository(FakeKnowledgeRepository):
         super().__init__(entries)
         self.last_scope = None
 
-    def search(self, query: str, limit: int = 10, *, knowledge_id=None, category=None):
+    async def search(self, query: str, limit: int = 10, *, knowledge_id=None, category=None):
         del query, limit
         self.last_scope = (knowledge_id, category)
         return self.entries

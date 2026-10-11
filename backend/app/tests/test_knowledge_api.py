@@ -2,35 +2,29 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 from app.api import knowledge
 from app.api.auth import create_admin_token
 from app.core.config import get_settings
 from app.core.deps import get_db_session
 from app.core.exceptions import register_exception_handlers
-from app.db.base import Base
+from app.tests.async_db import open_test_session
 
 
 def build_client(tmp_path) -> TestClient:
-    engine = create_engine(
-        f"sqlite:///{tmp_path / 'knowledge-api.db'}",
-        connect_args={"check_same_thread": False},
-    )
-    Base.metadata.create_all(bind=engine)
-    session_local = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
+    db_path = tmp_path / "knowledge-api.db"
 
     app = FastAPI()
     register_exception_handlers(app)
     app.include_router(knowledge.router, prefix="/api/knowledge")
 
-    def override_db_session():
-        session = session_local()
+    async def override_db_session():
+        engine, session = await open_test_session(str(db_path))
         try:
             yield session
         finally:
-            session.close()
+            await session.close()
+            await engine.dispose()
 
     app.dependency_overrides[get_db_session] = override_db_session
     return TestClient(app)
