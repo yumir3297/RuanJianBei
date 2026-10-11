@@ -114,5 +114,5 @@ class KnowledgeRepository:
         return entry
 
     async def delete(self, entry: KnowledgeEntry) -> None:
-        self.session.delete(entry)
+        await self.session.delete(entry)
         await self.session.commit()
