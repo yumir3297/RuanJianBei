@@ -108,3 +108,68 @@ def test_admin_can_manage_knowledge_entries(tmp_path) -> None:
     final_list_response = client.get("/api/knowledge/", headers=headers)
     assert final_list_response.status_code == 200
     assert final_list_response.json() == []
+
+
+def test_delete_missing_knowledge_entry_returns_404(tmp_path) -> None:
+    client = build_client(tmp_path)
+
+    response = client.delete("/api/knowledge/9999", headers=admin_headers())
+
+    assert response.status_code == 404
+    assert response.json()["error"] == "not_found"
+
+
+def test_delete_removes_only_the_target_row(tmp_path) -> None:
+    """删除必须精确命中目标行，不能连带删掉或漏删别的行。"""
+    client = build_client(tmp_path)
+    headers = admin_headers()
+
+    ids = [
+        client.post(
+            "/api/knowledge/",
+            json={
+                "title": f"景点{index}",
+                "category": "景点信息",
+                "content": "内容",
+                "source": "自动化测试",
+            },
+            headers=headers,
+        ).json()["id"]
+        for index in range(3)
+    ]
+
+    assert client.delete(f"/api/knowledge/{ids[1]}", headers=headers).status_code == 200
+
+    remaining = {item["id"] for item in client.get("/api/knowledge/", headers=headers).json()}
+    assert remaining == {ids[0], ids[2]}
+
+
+def test_delete_is_not_repeatable(tmp_path) -> None:
+    client = build_client(tmp_path)
+    headers = admin_headers()
+    created_id = client.post("/api/knowledge/", json=knowledge_payload(), headers=headers).json()["id"]
+
+    assert client.delete(f"/api/knowledge/{created_id}", headers=headers).status_code == 200
+    assert client.delete(f"/api/knowledge/{created_id}", headers=headers).status_code == 404
+
+
+def test_update_missing_knowledge_entry_returns_404(tmp_path) -> None:
+    client = build_client(tmp_path)
+
+    response = client.put("/api/knowledge/9999", json={"title": "改不到"}, headers=admin_headers())
+
+    assert response.status_code == 404
+    assert response.json()["error"] == "not_found"
+
+
+def test_create_rejects_blank_required_fields(tmp_path) -> None:
+    """title/content/source 都有 min_length=1，空串必须被挡在写库之前。"""
+    client = build_client(tmp_path)
+
+    response = client.post(
+        "/api/knowledge/",
+        json={"title": "", "content": "", "source": ""},
+        headers=admin_headers(),
+    )
+
+    assert response.status_code == 422
