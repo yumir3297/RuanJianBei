@@ -1,6 +1,7 @@
 import asyncio
 
 from app.models.knowledge import KnowledgeEntry
+from app.models.knowledge_workspace import KnowledgeRevision
 from app.models.quick_topic import QuickTopic
 from app.models.route import RouteTemplate
 from app.repositories.knowledge import KnowledgeRepository
@@ -15,8 +16,7 @@ from app.tests.async_db import open_test_session
 
 async def build_resolver():
     engine, session = await open_test_session()
-    session.add_all(
-        [
+    entries = [
             KnowledgeEntry(
                 id=13,
                 title="灵山大佛",
@@ -74,7 +74,23 @@ async def build_resolver():
                 tags="历史|文化",
             ),
         ]
-    )
+    session.add_all(entries)
+    await session.flush()
+    for entry in entries:
+        if not isinstance(entry, KnowledgeEntry):
+            continue
+        revision = KnowledgeRevision(
+            id=f"test-revision-{entry.id}",
+            knowledge_entry_id=entry.id,
+            title=entry.title,
+            category=entry.category,
+            content=entry.content,
+            source=entry.source,
+            aliases=entry.aliases,
+        )
+        session.add(revision)
+        await session.flush()
+        entry.published_revision_id = revision.id
     await session.commit()
     resolver = GuidedSelectionResolver(
         KnowledgeRepository(session),

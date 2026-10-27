@@ -107,7 +107,9 @@ def test_admin_can_manage_knowledge_entries(tmp_path) -> None:
 
     final_list_response = client.get("/api/knowledge/", headers=headers)
     assert final_list_response.status_code == 200
-    assert final_list_response.json() == []
+    withdrawn = final_list_response.json()
+    assert len(withdrawn) == 1
+    assert withdrawn[0]["withdrawn_at"] is not None
 
 
 def test_delete_missing_knowledge_entry_returns_404(tmp_path) -> None:
@@ -119,8 +121,8 @@ def test_delete_missing_knowledge_entry_returns_404(tmp_path) -> None:
     assert response.json()["error"] == "not_found"
 
 
-def test_delete_removes_only_the_target_row(tmp_path) -> None:
-    """删除必须精确命中目标行，不能连带删掉或漏删别的行。"""
+def test_delete_withdraws_only_the_target_row(tmp_path) -> None:
+    """下架必须精确命中目标行，并保留管理员可审计的历史。"""
     client = build_client(tmp_path)
     headers = admin_headers()
 
@@ -140,8 +142,10 @@ def test_delete_removes_only_the_target_row(tmp_path) -> None:
 
     assert client.delete(f"/api/knowledge/{ids[1]}", headers=headers).status_code == 200
 
-    remaining = {item["id"] for item in client.get("/api/knowledge/", headers=headers).json()}
-    assert remaining == {ids[0], ids[2]}
+    rows = client.get("/api/knowledge/", headers=headers).json()
+    assert {item["id"] for item in rows} == set(ids)
+    assert next(item for item in rows if item["id"] == ids[1])["withdrawn_at"] is not None
+    assert all(item["withdrawn_at"] is None for item in rows if item["id"] != ids[1])
 
 
 def test_delete_is_not_repeatable(tmp_path) -> None:

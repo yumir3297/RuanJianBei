@@ -64,10 +64,10 @@
 
 **Interfaces:** `save_draft(entry_id:int|None,payload:KnowledgeCreate|KnowledgeUpdate,expected_version:int|None)->WorkspaceEntry`；`discard_draft(entry_id:int,expected_version:int)->None`；`withdraw(entry_id:int,expected_version:int)->None`。均为 async。POST/PUT `/api/knowledge/` 保存草稿；GET 返回管理员工作区数据；DELETE 下架；新增 DELETE `/{id}/draft` 主动丢弃。修改冲突返回 409。
 
-- [ ] 写失败测试：保存新草稿游客搜索为空；修改已发布条目游客仍见旧文；重新登录草稿仍在；重复版本编辑 409；丢弃不影响已发布；下架与旧任务竞争不能复活。
-- [ ] 运行 `python -m pytest app/tests/test_knowledge_workspace.py app/tests/test_knowledge_api.py -q`，先确认失败。
-- [ ] 实现不可变修订、乐观锁与事务。删除提交同时清空发布指针、递增 epoch、记录防恢复状态；游客 list/search/get/get_attraction 等入口仅返回有效已发布内容。新草稿 entry 的占位正文绝不作为游客数据。
-- [ ] 运行该组测试并确认通过，提交。
+- [x] 写失败测试：保存新草稿游客搜索为空；修改已发布条目游客仍见旧文；重新登录草稿仍在；重复版本编辑 409；丢弃不影响已发布；下架与旧任务竞争不能复活。
+- [x] 运行 `python -m pytest app/tests/test_knowledge_workspace.py app/tests/test_knowledge_api.py -q`，先确认失败。
+- [x] 实现不可变修订、乐观锁与事务。删除提交同时清空发布指针、递增 epoch、记录防恢复状态；游客 list/search/get/get_attraction 等入口仅返回有效已发布内容。新草稿 entry 的占位正文绝不作为游客数据。
+- [x] 运行该组测试并确认通过，提交。
 
 ## Task 3：版本化检索与缓存可见性
 
