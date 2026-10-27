@@ -13,6 +13,9 @@ class KnowledgeChunk(Base):
 
     chunk_id: Mapped[str] = mapped_column(String(120), primary_key=True)
     source_entry_id: Mapped[int] = mapped_column(ForeignKey("knowledge_entries.id"), nullable=False, index=True)
+    revision_id: Mapped[str | None] = mapped_column(
+        ForeignKey("knowledge_revisions.id", name="fk_knowledge_chunk_revision"), nullable=True, index=True
+    )
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     title: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
     category: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
