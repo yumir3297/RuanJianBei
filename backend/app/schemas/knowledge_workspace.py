@@ -52,3 +52,14 @@ class PublicationRead(BaseModel):
     id: str
     state: str
     error: str | None = None
+
+
+class PublicationSelection(BaseModel):
+    entry_id: int = Field(gt=0)
+    revision_id: str = Field(min_length=1, max_length=36)
+    expected_version: int = Field(ge=1)
+
+
+class PublicationCreate(BaseModel):
+    idempotency_key: str = Field(min_length=1, max_length=128)
+    items: list[PublicationSelection] = Field(min_length=1, max_length=100)

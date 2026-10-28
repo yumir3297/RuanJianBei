@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -21,6 +22,7 @@ from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging
 from app.db.bootstrap import bootstrap_avatar_configs, bootstrap_experience_demo_feedback, bootstrap_quick_topics, bootstrap_sample_data
 from app.db.session import AsyncSessionLocal
+from app.services.knowledge.jobs import run_publication_worker
 from app.models import (  # noqa: F401
     AvatarConfig,
     BehaviorSummary,
@@ -93,7 +95,11 @@ async def lifespan(_: FastAPI):
     async with AsyncSessionLocal() as session:
         faq_matcher = await get_runtime_faq_matcher(session, embedder=embedder)
 
+    publication_worker = asyncio.create_task(run_publication_worker(settings))
+
     yield
+    publication_worker.cancel()
+    await asyncio.gather(publication_worker, return_exceptions=True)
     await close_cached_llm_service()
     await close_cached_vision_service()
 
