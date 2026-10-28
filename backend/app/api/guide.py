@@ -22,6 +22,7 @@ from app.api.chat import build_pipeline
 from app.core.config import Settings
 from app.core.deps import get_app_settings, get_db_session
 from app.schemas.chat import ChatRequest
+from app.services.knowledge.visibility import VisibilityService
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -138,7 +139,10 @@ async def create_narration(
 ) -> dict[str, Any]:
     attraction = payload.attraction.strip()
     voice = payload.tts_voice or settings.tts_voice
-    key = _cache_key(attraction, voice, settings.llm_model or "stub")
+    # Unit-level callers may pass a lightweight placeholder session; production
+    # requests always use AsyncSession and therefore always namespace by DB epoch.
+    epoch = await VisibilityService(session).read_epoch() if hasattr(session, "execute") else 1
+    key = f"e{epoch}:" + _cache_key(attraction, voice, settings.llm_model or "stub")
 
     cached = _NARRATION_CACHE.get(key)
     if cached is not None:
@@ -149,6 +153,8 @@ async def create_narration(
         if cached is not None:
             return {**cached, "cached": True}
         result = await _generate(session, settings, attraction, payload.tts_voice)
+        if hasattr(session, "execute") and await VisibilityService(session).read_epoch() != epoch:
+            return _degraded(attraction, "knowledge_updated")
         if result["available"]:
             _NARRATION_CACHE[key] = result
         return result

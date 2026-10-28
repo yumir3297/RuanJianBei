@@ -28,6 +28,7 @@ from app.services.llm.prompt_builder import SYSTEM_PROMPT_VERSION
 from app.services.avatar.stub import StubAvatarService
 from app.services.llm.openai_compatible import OpenAICompatibleLLMService
 from app.services.qa.cache import QACache
+from app.services.knowledge.visibility import VisibilityService
 from app.services.qa.blind_spot_tracker import BlindSpotTracker
 from app.services.qa.followup_suggestions import FollowUpSuggestionService
 from app.services.qa.guided_selector import GuidedSelectionResolver
@@ -156,6 +157,7 @@ async def build_pipeline(
 ) -> QAPipeline:
     knowledge_repository = KnowledgeRepository(session)
     cache_repository = QACacheRepository(session)
+    visibility_service = VisibilityService(session)
     chat_log_repository = ChatLogRepository(session)
     route_repository = RouteRepository(session)
 
@@ -203,6 +205,7 @@ async def build_pipeline(
             ),
             fallback=fallback_rag,
             candidate_k=settings.rag_candidate_k,
+            visibility=visibility_service,
         )
     except Exception:
         logger.exception("Vector RAG initialization failed; using repository-backed fallback.")
@@ -241,6 +244,7 @@ async def build_pipeline(
         intent_router=IntentRouter(),
         knowledge_repository=knowledge_repository,
         route_repository=route_repository,
+        visibility_service=visibility_service,
     )
 
 

@@ -35,6 +35,12 @@ class BaseVectorStore(Protocol):
     def replace_all(self, records: Sequence[VectorStoreRecord]) -> int:
         """Replace the whole vector collection with the supplied records."""
 
+    def upsert(self, records: Sequence[VectorStoreRecord]) -> int:
+        """Insert or replace only the supplied records."""
+
+    def delete_ids(self, ids: Sequence[str]) -> None:
+        """Remove specific records from the collection."""
+
     def query(
         self,
         query_embedding: Sequence[float],
@@ -81,6 +87,22 @@ class ChromaVectorStore:
             metadatas=[record.metadata for record in records],
         )
         return len(records)
+
+    def upsert(self, records: Sequence[VectorStoreRecord]) -> int:
+        if not records:
+            return 0
+        collection = self._client.get_or_create_collection(name=self.collection_name)
+        collection.upsert(
+            ids=[record.id for record in records],
+            embeddings=[record.embedding for record in records],
+            documents=[record.document for record in records],
+            metadatas=[record.metadata for record in records],
+        )
+        return len(records)
+
+    def delete_ids(self, ids: Sequence[str]) -> None:
+        if ids and self._collection_exists():
+            self._client.get_collection(self.collection_name).delete(ids=list(ids))
 
     def query(
         self,

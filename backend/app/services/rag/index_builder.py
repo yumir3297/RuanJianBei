@@ -46,7 +46,7 @@ class RAGIndexBuilder:
             for chunk, document, embedding in zip(batch, documents, embeddings, strict=True):
                 records.append(
                     VectorStoreRecord(
-                        id=chunk.chunk_id,
+                        id=self._vector_id_for(chunk),
                         document=document,
                         metadata=self._metadata_for(chunk),
                         embedding=embedding,
@@ -69,15 +69,22 @@ class RAGIndexBuilder:
         metadata = self._decode_metadata(chunk.metadata_json)
         metadata.update(
             {
-                "chunk_id": chunk.chunk_id,
+                "chunk_id": self._vector_id_for(chunk),
                 "title": chunk.title,
                 "category": chunk.category,
                 "source": chunk.source,
                 "source_entry_id": chunk.source_entry_id,
+                "revision_id": chunk.revision_id or "",
                 "chunk_index": chunk.chunk_index,
             }
         )
         return self._sanitize_metadata(metadata)
+
+    @staticmethod
+    def _vector_id_for(chunk: KnowledgeChunk) -> str:
+        if chunk.revision_id:
+            return f"ke_{chunk.source_entry_id}_{chunk.revision_id}_{chunk.chunk_index:03d}"
+        return chunk.chunk_id
 
     def _decode_metadata(self, raw_metadata: str | None) -> dict[str, Any]:
         if not raw_metadata:
