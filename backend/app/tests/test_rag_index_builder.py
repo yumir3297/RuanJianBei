@@ -1,9 +1,11 @@
 import asyncio
 import json
+import sys
+from types import SimpleNamespace
 
 from app.models.knowledge_chunk import KnowledgeChunk
 from app.services.rag.index_builder import RAGIndexBuilder
-from app.services.rag.vector_store import VectorStoreRecord
+from app.services.rag.vector_store import ChromaVectorStore, VectorStoreRecord
 
 
 class FakeChunkRepository:
@@ -83,3 +85,102 @@ def test_rag_index_builder_indexes_chunks_with_metadata() -> None:
         assert vector_store.records[1].metadata["revision_id"] == "revision-8"
 
     asyncio.run(scenario())
+
+
+class _FakeCollection:
+    def __init__(self, name: str, *, fail_add: bool = False) -> None:
+        self.name = name
+        self.records = {}
+        self.fail_add = fail_add
+
+    def add(self, *, ids, embeddings, documents, metadatas):
+        if self.fail_add:
+            raise RuntimeError("staging write failed")
+        self.records.update(dict(zip(ids, documents, strict=True)))
+
+    def upsert(self, **kwargs):
+        return self.add(**kwargs)
+
+    def count(self):
+        return len(self.records)
+
+
+class _FakeChromaClient:
+    def __init__(self, *, fail_add=False, fail_delete=False):
+        self.collections = {"knowledge": _FakeCollection("knowledge")}
+        self.fail_add = fail_add
+        self.fail_delete = fail_delete
+
+    def create_collection(self, *, name):
+        collection = _FakeCollection(name, fail_add=self.fail_add)
+        self.collections[name] = collection
+        return collection
+
+    def get_or_create_collection(self, *, name):
+        return self.collections.setdefault(name, _FakeCollection(name))
+
+    def get_collection(self, name):
+        return self.collections[name]
+
+    def delete_collection(self, name):
+        if self.fail_delete and name == "knowledge":
+            raise RuntimeError("old collection cleanup failed")
+        self.collections.pop(name, None)
+
+    def list_collections(self):
+        return list(self.collections)
+
+
+def _chroma_store(tmp_path, monkeypatch, client):
+    monkeypatch.setitem(sys.modules, "chromadb", SimpleNamespace(PersistentClient=lambda path: client))
+    return ChromaVectorStore(tmp_path, "knowledge")
+
+
+def test_chroma_rebuild_failure_keeps_current_collection_and_pointer(tmp_path, monkeypatch) -> None:
+    client = _FakeChromaClient(fail_add=True)
+    store = _chroma_store(tmp_path, monkeypatch, client)
+    client.collections["knowledge"].records["old"] = "old document"
+    records = [VectorStoreRecord(id="new", document="new", metadata={}, embedding=[0.1])]
+
+    try:
+        store.replace_all(records)
+    except RuntimeError as exc:
+        assert "staging write failed" in str(exc)
+    else:
+        raise AssertionError("a failed staging write must fail the rebuild")
+
+    assert store.collection_name == "knowledge"
+    assert store.count() == 1
+    assert (tmp_path / "knowledge.active").exists() is False
+
+
+def test_chroma_rebuild_switches_pointer_before_best_effort_cleanup(tmp_path, monkeypatch) -> None:
+    client = _FakeChromaClient(fail_delete=True)
+    store = _chroma_store(tmp_path, monkeypatch, client)
+    client.collections["knowledge"].records["old"] = "old document"
+    records = [VectorStoreRecord(id="new", document="new", metadata={}, embedding=[0.1])]
+
+    assert store.replace_all(records) == 1
+    assert store.collection_name.startswith("knowledge_stage_")
+    assert store.count() == 1
+    assert "knowledge" in client.collections  # cleanup failure leaves old data recoverable
+
+
+def test_chroma_rebuild_stops_before_writing_when_free_space_is_low(tmp_path, monkeypatch) -> None:
+    from app.core.exceptions import AppError
+    from app.services.rag import vector_store as vector_store_module
+
+    client = _FakeChromaClient()
+    store = _chroma_store(tmp_path, monkeypatch, client)
+    client.collections["knowledge"].records["old"] = "old document"
+    monkeypatch.setattr(vector_store_module.shutil, "disk_usage", lambda _: SimpleNamespace(free=1))
+    try:
+        store.replace_all([VectorStoreRecord(id="new", document="new", metadata={}, embedding=[0.1])])
+    except AppError as exc:
+        assert exc.error_code == "insufficient_storage"
+    else:
+        raise AssertionError("index rebuild must stop when staging space is unavailable")
+
+    assert store.collection_name == "knowledge"
+    assert store.count() == 1
+    assert len(client.collections) == 1

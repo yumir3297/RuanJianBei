@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import os
 import re
+import shutil
 import uuid
 from pathlib import Path
 
@@ -27,6 +28,7 @@ class KnowledgeFileStorage:
     def __init__(self, settings: Settings) -> None:
         self.root = settings.knowledge_upload_root
         self.max_file_bytes = settings.knowledge_import_max_file_bytes
+        self.min_free_bytes = settings.knowledge_import_min_free_bytes
 
     async def store(self, upload: UploadFile) -> StoredUpload:
         original_filename = self._display_filename(upload.filename or "upload")
@@ -36,6 +38,12 @@ class KnowledgeFileStorage:
 
         token = uuid.uuid4().hex
         self.root.mkdir(parents=True, exist_ok=True)
+        if shutil.disk_usage(self.root).free < self.min_free_bytes:
+            raise AppError(
+                "Knowledge upload storage is low on free space. New imports are temporarily disabled.",
+                error_code="insufficient_storage",
+                status_code=507,
+            )
         final_path = self.root / f"{token}{suffix}"
         temporary_path = self.root / f".{token}.part"
         digest = hashlib.sha256()

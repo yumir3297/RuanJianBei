@@ -394,3 +394,29 @@ def test_upload_size_limit_is_enforced_without_leaving_partial_files(tmp_path) -
         assert not list(settings.knowledge_upload_root.glob("*"))
 
     asyncio.run(scenario())
+
+
+def test_upload_is_rejected_when_storage_reserve_is_below_threshold(tmp_path, monkeypatch) -> None:
+    from types import SimpleNamespace
+    from app.core.exceptions import AppError
+    from app.services.knowledge import file_storage
+    from app.services.knowledge.file_storage import KnowledgeFileStorage
+
+    settings = Settings(
+        knowledge_upload_dir=str(tmp_path / "low-space"),
+        knowledge_import_min_free_bytes=1024,
+    )
+    monkeypatch.setattr(file_storage.shutil, "disk_usage", lambda _: SimpleNamespace(free=100))
+
+    async def scenario() -> None:
+        storage = KnowledgeFileStorage(settings)
+        try:
+            await storage.store(_upload("guide.pdf", b"%PDF-1.7 CONTENT"))
+        except AppError as exc:
+            assert exc.error_code == "insufficient_storage"
+            assert exc.status_code == 507
+        else:
+            raise AssertionError("imports must stop when the configured storage reserve is unavailable")
+        assert not list(settings.knowledge_upload_root.glob("*"))
+
+    asyncio.run(scenario())

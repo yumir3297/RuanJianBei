@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 from time import perf_counter
+from uuid import uuid4
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -166,16 +168,18 @@ class ProcessedDataImporter:
             entry = existing_entries.get(key)
             aliases = "|".join(payload["aliases"])
             if entry is None:
-                self.session.add(
-                    KnowledgeEntry(
-                        title=payload["title"],
-                        category=payload["category"],
-                        content=payload["content"],
-                        source=payload["source"],
-                        aliases=aliases,
-                        metadata_json=payload["metadata_json"],
-                    )
+                entry = KnowledgeEntry(
+                    title=payload["title"],
+                    category=payload["category"],
+                    content=payload["content"],
+                    source=payload["source"],
+                    aliases=aliases,
+                    metadata_json=payload["metadata_json"],
+                    lock_version=1,
                 )
+                self.session.add(entry)
+                await self.session.flush()
+                await self._attach_import_draft(entry, payload, increment_version=False)
                 continue
 
             if entry.withdrawn_at is not None or entry.draft_revision_id is not None:
@@ -209,14 +213,38 @@ class ProcessedDataImporter:
                 )
                 continue
 
-            entry.category = payload["category"]
-            entry.content = payload["content"]
-            entry.aliases = aliases
-            entry.metadata_json = payload["metadata_json"]
-            self.session.add(entry)
+            await self._attach_import_draft(entry, payload)
 
         await self.session.flush()
         return len(entries)
+
+    async def _attach_import_draft(self, entry: KnowledgeEntry, payload: dict, *, increment_version: bool = True) -> None:
+        content_hash = hashlib.sha256(payload["content"].encode("utf-8")).hexdigest()
+        metadata = json.loads(payload["metadata_json"]) if payload["metadata_json"] else {}
+        metadata["processed_data_import"] = {"source": payload["source"], "content_hash": content_hash}
+        revision = KnowledgeRevision(
+            id=str(uuid4()),
+            knowledge_entry_id=entry.id,
+            base_revision_id=entry.published_revision_id,
+            title=payload["title"],
+            category=payload["category"],
+            content=payload["content"],
+            source=payload["source"],
+            aliases="|".join(payload["aliases"]),
+            metadata_json=json.dumps(metadata, ensure_ascii=False),
+            content_hash=content_hash,
+        )
+        self.session.add(revision)
+        await self.session.flush()
+        entry.title = payload["title"]
+        entry.category = payload["category"]
+        entry.content = payload["content"]
+        entry.source = payload["source"]
+        entry.aliases = revision.aliases
+        entry.metadata_json = revision.metadata_json
+        entry.draft_revision_id = revision.id
+        if increment_version:
+            entry.lock_version += 1
 
     async def _sync_knowledge_chunks(self) -> int:
         entries = await self.knowledge_repository.list_all()

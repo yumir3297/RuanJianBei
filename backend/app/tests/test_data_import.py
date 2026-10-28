@@ -41,6 +41,8 @@ def test_processed_data_importer_syncs_all_assets(tmp_path) -> None:
 
             big_buddha = await session.scalar(select(KnowledgeEntry).where(KnowledgeEntry.title == "灵山大佛"))
             assert big_buddha is not None
+            assert big_buddha.published_revision_id is None
+            assert big_buddha.draft_revision_id is not None
             assert big_buddha.metadata_json is not None
             big_buddha_metadata = json.loads(big_buddha.metadata_json)
             assert big_buddha_metadata["scenic_area"] == "灵山胜境"

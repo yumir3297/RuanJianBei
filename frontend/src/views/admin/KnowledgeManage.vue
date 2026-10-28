@@ -201,10 +201,10 @@
           <div class="action-list">
             <div class="action-item">
               <div class="action-copy">
-                <strong>同步官方资料</strong>
-                <p>将景区官方资料同步进知识池，适合答辩前统一口径与内容底稿。</p>
+                <strong>官方资料导入草稿</strong>
+                <p>将资料更新写入草稿区，逐条检查并确认后再发布给游客。</p>
               </div>
-              <el-button :icon="UploadFilled" :loading="syncing" @click="handleSync">立即同步</el-button>
+              <el-button :icon="UploadFilled" :loading="syncing" @click="handleSync">导入至草稿</el-button>
             </div>
 
             <div class="action-item">
@@ -762,7 +762,7 @@ async function handleSync() {
   syncing.value = true;
   try {
     const res = await syncOfficialData();
-    ElMessage.success(`数据同步完成，耗时约 ${(res.report.duration_ms / 1000).toFixed(1)}s`);
+    ElMessage.success(`资料已写入工作区，新增和变更内容需检查后发布；耗时约 ${(res.report.duration_ms / 1000).toFixed(1)}s`);
     await loadEntries();
   } catch (e) {
     ElMessage.error(`同步失败: ${e?.response?.data?.detail || e.message}`);

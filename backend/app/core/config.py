@@ -70,6 +70,7 @@ class Settings(BaseSettings):
     knowledge_upload_dir: str = Field(default="../.uploads/knowledge")
     knowledge_import_max_files: int = Field(default=20, ge=1, le=100)
     knowledge_import_max_file_bytes: int = Field(default=50 * 1024 * 1024, ge=1024, le=250 * 1024 * 1024)
+    knowledge_import_min_free_bytes: int = Field(default=100 * 1024 * 1024, ge=0)
     knowledge_import_max_pages: int = Field(default=500, ge=1, le=5000)
     knowledge_import_parse_timeout_seconds: int = Field(default=120, ge=1, le=900)
     asr_timeout_seconds: float = Field(default=30.0, gt=0.0, le=180.0)
