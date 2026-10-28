@@ -16,6 +16,7 @@ from app.core.exceptions import AppError, NotFoundError
 from app.models.knowledge import KnowledgeEntry
 from app.models.knowledge_chunk import KnowledgeChunk
 from app.models.knowledge_workspace import (
+    ImportConflict,
     KnowledgeRevision,
     KnowledgeState,
     PublicationItem,
@@ -69,6 +70,14 @@ class KnowledgePublicationService:
                 raise AppError("Withdrawn knowledge cannot be published.", error_code="knowledge_withdrawn", status_code=409)
             if entry.lock_version != selection.expected_version or entry.draft_revision_id != selection.revision_id:
                 raise AppError("The selected draft changed. Reload it before publishing.", error_code="knowledge_version_conflict", status_code=409)
+            pending_conflict = await self.session.scalar(
+                select(ImportConflict.id).where(
+                    ImportConflict.knowledge_entry_id == entry.id,
+                    ImportConflict.state == "pending",
+                ).limit(1)
+            )
+            if pending_conflict is not None:
+                raise AppError("Resolve pending source conflicts before publishing this entry.", error_code="pending_import_conflict", status_code=409)
             self.session.add(
                 PublicationItem(
                     id=str(uuid4()),
@@ -149,6 +158,14 @@ class KnowledgePublicationService:
                 raise AppError("A selected entry was withdrawn before publication.", error_code="knowledge_withdrawn", status_code=409)
             if revision.base_revision_id != entry.published_revision_id:
                 raise AppError("The selected draft is based on an older published version.", error_code="knowledge_version_conflict", status_code=409)
+            pending_conflict = await self.session.scalar(
+                select(ImportConflict.id).where(
+                    ImportConflict.knowledge_entry_id == entry.id,
+                    ImportConflict.state == "pending",
+                ).limit(1)
+            )
+            if pending_conflict is not None:
+                raise AppError("Resolve pending source conflicts before publishing this entry.", error_code="pending_import_conflict", status_code=409)
             snapshot = SimpleNamespace(
                 id=entry.id,
                 title=revision.title,
@@ -200,6 +217,14 @@ class KnowledgePublicationService:
                 raise AppError("A selected entry was withdrawn before publication.", error_code="knowledge_withdrawn", status_code=409)
             if revision.base_revision_id != entry.published_revision_id:
                 raise AppError("Another publication changed the published version.", error_code="knowledge_version_conflict", status_code=409)
+            pending_conflict = await self.session.scalar(
+                select(ImportConflict.id).where(
+                    ImportConflict.knowledge_entry_id == entry.id,
+                    ImportConflict.state == "pending",
+                ).limit(1)
+            )
+            if pending_conflict is not None:
+                raise AppError("Resolve pending source conflicts before publishing this entry.", error_code="pending_import_conflict", status_code=409)
             if expected_lock_version > entry.lock_version:
                 raise AppError("The knowledge entry version moved backwards.", error_code="knowledge_version_conflict", status_code=409)
 

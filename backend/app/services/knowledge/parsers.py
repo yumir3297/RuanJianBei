@@ -84,7 +84,16 @@ class JSONKnowledgeParser(BaseDocumentParser):
             content = str(item.get("content") or "").strip()
             if not title or not content:
                 continue
-            sections.append(ParsedSection(title=title[:200], content=content, section_path=f"条目 {index}"))
+            stable_id = str(item.get("stable_id") or item.get("id") or "").strip() or None
+            section_path = str(item.get("section_path") or "").strip() or None
+            sections.append(
+                ParsedSection(
+                    title=title[:200],
+                    content=content,
+                    section_path=section_path or f"条目 {index}",
+                    stable_id=stable_id,
+                )
+            )
         if not sections:
             raise AppError("The JSON document contains no valid knowledge entries.", error_code="empty_document", status_code=422)
         return sections

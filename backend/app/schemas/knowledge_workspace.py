@@ -58,6 +58,24 @@ class ImportJobRead(BaseModel):
     stage: str
     error: str | None = None
     knowledge_entry_ids: list[int] = Field(default_factory=list)
+    conflicts: list[ImportConflictRead] = Field(default_factory=list)
+
+
+class ImportConflictRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    knowledge_entry_id: int | None = None
+    current_revision_id: str | None = None
+    incoming_revision_id: str | None = None
+    kind: str
+    state: str
+
+
+class ImportConflictResolution(BaseModel):
+    choice: str = Field(pattern="^(keep_current|use_incoming|merge)$")
+    expected_version: int = Field(ge=1)
+    merged_payload: KnowledgeRevisionCreate | None = None
 
 
 class ParsedSection(BaseModel):
@@ -66,6 +84,7 @@ class ParsedSection(BaseModel):
     page_start: int | None = Field(default=None, ge=1)
     page_end: int | None = Field(default=None, ge=1)
     section_path: str | None = None
+    stable_id: str | None = None
 
 
 class PublicationRead(BaseModel):

@@ -19,13 +19,16 @@ from app.core.exceptions import AppError, NotFoundError
 from app.models.knowledge import KnowledgeEntry
 from app.models.knowledge_workspace import (
     ImportBatch,
+    ImportConflict,
     ImportJob,
     KnowledgeRevision,
     SourceDocument,
     SourceDocumentVersion,
 )
 from app.schemas.knowledge_workspace import ParsedSection
+from app.schemas.knowledge_workspace import ImportConflictResolution
 from app.services.knowledge.file_storage import KnowledgeFileStorage
+from app.services.knowledge.import_diff import section_identity
 from app.services.knowledge.parsers import BaseDocumentParser, parser_for_path
 
 logger = logging.getLogger(__name__)
@@ -54,6 +57,69 @@ class KnowledgeImportService:
         self.settings = settings
         self.storage = storage or KnowledgeFileStorage(settings)
         self.parser = parser
+
+    async def resolve_conflict(self, conflict_id: str, resolution: ImportConflictResolution) -> None:
+        conflict = await self.session.get(ImportConflict, conflict_id)
+        if conflict is None:
+            raise NotFoundError("Import conflict not found.")
+        if conflict.state != "pending":
+            raise AppError("This import conflict has already been resolved.", error_code="conflict_already_resolved", status_code=409)
+        if conflict.knowledge_entry_id is None:
+            raise AppError("This conflict cannot be attached to a knowledge entry.", error_code="invalid_import_conflict", status_code=409)
+        entry = await self.session.get(KnowledgeEntry, conflict.knowledge_entry_id)
+        if entry is None:
+            raise NotFoundError("The conflicted knowledge entry no longer exists.")
+        if entry.lock_version != resolution.expected_version:
+            raise AppError("The knowledge entry changed. Reload it before resolving the conflict.", error_code="knowledge_version_conflict", status_code=409)
+
+        if resolution.choice == "keep_current":
+            conflict.state = "resolved"
+            conflict.resolution_json = json.dumps({"choice": resolution.choice}, ensure_ascii=False)
+            await self.session.commit()
+            return
+
+        incoming = await self.session.get(KnowledgeRevision, conflict.incoming_revision_id)
+        if incoming is None:
+            raise NotFoundError("The incoming source revision no longer exists.")
+        if entry.draft_revision_id != conflict.current_revision_id:
+            raise AppError("The current draft changed. Reload it before resolving the conflict.", error_code="knowledge_version_conflict", status_code=409)
+        if resolution.choice == "use_incoming":
+            revision = incoming
+            revision.base_revision_id = entry.published_revision_id
+        else:
+            if resolution.merged_payload is None:
+                raise AppError("A merged revision is required.", error_code="missing_merged_revision")
+            payload = resolution.merged_payload
+            revision = KnowledgeRevision(
+                id=str(uuid4()),
+                knowledge_entry_id=entry.id,
+                base_revision_id=entry.published_revision_id,
+                source_document_version_id=incoming.source_document_version_id,
+                title=payload.title,
+                category=payload.category,
+                content=payload.content,
+                source=payload.source,
+                aliases="|".join(payload.aliases),
+                metadata_json=payload.metadata_json,
+                content_hash=hashlib.sha256(payload.content.encode("utf-8")).hexdigest(),
+                page_start=incoming.page_start,
+                page_end=incoming.page_end,
+                section_path=incoming.section_path,
+            )
+            self.session.add(revision)
+            await self.session.flush()
+
+        entry.draft_revision_id = revision.id
+        entry.title = revision.title
+        entry.category = revision.category
+        entry.content = revision.content
+        entry.source = revision.source
+        entry.aliases = revision.aliases
+        entry.metadata_json = revision.metadata_json
+        entry.lock_version += 1
+        conflict.state = "resolved"
+        conflict.resolution_json = json.dumps({"choice": resolution.choice, "revision_id": revision.id}, ensure_ascii=False)
+        await self.session.commit()
 
     async def create_import(
         self,
@@ -246,40 +312,91 @@ class KnowledgeImportService:
         version = await self.session.get(SourceDocumentVersion, job.document_version_id)
         if version is None:
             raise NotFoundError("The source document version no longer exists.")
+        source_revisions_result = await self.session.execute(
+            select(KnowledgeRevision)
+            .join(SourceDocumentVersion, KnowledgeRevision.source_document_version_id == SourceDocumentVersion.id)
+            .where(SourceDocumentVersion.document_id == version.document_id)
+            .order_by(KnowledgeRevision.created_at.desc())
+        )
+        previous_by_identity: dict[str, KnowledgeRevision] = {}
+        for previous_revision in source_revisions_result.scalars().all():
+            identity = self._revision_identity(previous_revision)
+            if identity and identity not in previous_by_identity:
+                previous_by_identity[identity] = previous_revision
+
         for section in sections:
+            identity = self._section_identity(section)
+            previous_revision = previous_by_identity.get(identity)
+            entry = (
+                await self.session.get(KnowledgeEntry, previous_revision.knowledge_entry_id)
+                if previous_revision is not None
+                else None
+            )
+            content_hash = hashlib.sha256(section.content.encode("utf-8")).hexdigest()
+            if previous_revision is not None and previous_revision.content_hash == content_hash:
+                continue
+
             source_suffix = f" p.{section.page_start}" if section.page_start else ""
             source = (version.original_filename[: 255 - len(source_suffix)] + source_suffix)[:255]
-            entry = KnowledgeEntry(
-                title=section.title,
-                category="待分类",
-                content=section.content,
-                source=source,
-                aliases="",
-                lock_version=1,
-            )
-            self.session.add(entry)
-            await self.session.flush()
+            if entry is None:
+                entry = KnowledgeEntry(
+                    title=section.title,
+                    category="待分类",
+                    content=section.content,
+                    source=source,
+                    aliases="",
+                    lock_version=1,
+                )
+                self.session.add(entry)
+                await self.session.flush()
             revision = KnowledgeRevision(
                 id=str(uuid4()),
                 knowledge_entry_id=entry.id,
+                base_revision_id=entry.published_revision_id,
                 title=section.title,
                 category="待分类",
                 content=section.content,
                 source=source,
                 aliases="",
                 metadata_json=json.dumps(
-                    {"source_document_id": version.document_id, "sha256": version.sha256},
+                    {
+                        "source_document_id": version.document_id,
+                        "sha256": version.sha256,
+                        "section_identity": identity,
+                        "stable_id": section.stable_id,
+                    },
                     ensure_ascii=False,
                 ),
                 source_document_version_id=version.id,
-                content_hash=hashlib.sha256(section.content.encode("utf-8")).hexdigest(),
+                content_hash=content_hash,
                 page_start=section.page_start,
                 page_end=section.page_end,
                 section_path=section.section_path,
             )
             self.session.add(revision)
             await self.session.flush()
-            entry.draft_revision_id = revision.id
+            if previous_revision is not None and entry.draft_revision_id not in {
+                None,
+                previous_revision.id,
+            }:
+                self.session.add(
+                    ImportConflict(
+                        id=str(uuid4()),
+                        job_id=job.id,
+                        knowledge_entry_id=entry.id,
+                        current_revision_id=entry.draft_revision_id,
+                        incoming_revision_id=revision.id,
+                        kind="content_changed",
+                        state="pending",
+                    )
+                )
+            else:
+                entry.title = revision.title
+                entry.category = revision.category
+                entry.content = revision.content
+                entry.source = revision.source
+                entry.draft_revision_id = revision.id
+                entry.lock_version += 1
         version.parse_status = "succeeded"
         version.parse_error = None
         job.state = "succeeded"
@@ -289,6 +406,27 @@ class KnowledgeImportService:
         job.lease_until = None
         await self.session.commit()
         await self._refresh_batch_state(job.batch_id)
+
+    @staticmethod
+    def _section_identity(section: ParsedSection) -> str:
+        return section_identity(section)
+
+    @staticmethod
+    def _revision_identity(revision: KnowledgeRevision) -> str:
+        if revision.metadata_json:
+            try:
+                identity = json.loads(revision.metadata_json).get("section_identity")
+                if identity:
+                    return str(identity).strip().casefold()
+            except (json.JSONDecodeError, AttributeError):
+                pass
+        try:
+            stable_id = json.loads(revision.metadata_json or "{}").get("stable_id")
+        except (json.JSONDecodeError, AttributeError):
+            stable_id = None
+        if stable_id:
+            return f"id:{str(stable_id).strip().casefold()}"
+        return section_identity(ParsedSection(title=revision.title, content=revision.content, section_path=revision.section_path))
 
     async def _mark_failed(self, job_id: str, owner: str, error: Exception) -> None:
         job = await self.session.get(ImportJob, job_id)

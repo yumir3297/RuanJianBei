@@ -14,7 +14,7 @@ from app.api.knowledge_imports import router as imports_router
 from app.api.auth import create_admin_token
 from app.core.config import get_settings
 from app.models.knowledge import KnowledgeEntry
-from app.models.knowledge_workspace import ImportBatch, ImportJob, KnowledgeRevision, SourceDocument, SourceDocumentVersion
+from app.models.knowledge_workspace import ImportBatch, ImportConflict, ImportJob, KnowledgeRevision, SourceDocument, SourceDocumentVersion
 from app.schemas.knowledge_workspace import ParsedSection
 from app.services.knowledge.imports import KnowledgeImportService
 from app.services.knowledge.parsers import BaseDocumentParser
@@ -116,6 +116,86 @@ def test_same_document_hash_is_not_parsed_or_drafted_twice(tmp_path) -> None:
             assert await session.scalar(select(KnowledgeRevision.id).limit(2)) is not None
             revisions = list((await session.execute(select(KnowledgeRevision))).scalars().all())
             assert len(revisions) == 1
+        finally:
+            await session.close()
+            await engine.dispose()
+
+    asyncio.run(scenario())
+
+
+def test_reimport_updates_matching_draft_and_preserves_conflicts(tmp_path) -> None:
+    db_path = str(tmp_path / "imports-revision.db")
+    settings = Settings(knowledge_upload_dir=str(tmp_path / "files"))
+
+    class ChangingParser(BaseDocumentParser):
+        def parse(self, path):
+            content = path.read_bytes().decode("utf-8").split("|", 1)[1]
+            return [ParsedSection(title="展馆", content=content, section_path="展馆/一层")]
+
+    async def scenario() -> None:
+        engine, session = await open_test_session(db_path)
+        try:
+            service = KnowledgeImportService(session, settings, parser=ChangingParser())
+            first = await service.create_import(
+                [_upload("guide.json", '{"entries":[]}|原始讲解'.encode())], document_ids=[None], idempotency_key="v1"
+            )
+            await service.run_import(first.jobs[0].id)
+            entry = (await session.execute(select(KnowledgeEntry))).scalar_one()
+            first_draft = entry.draft_revision_id
+
+            second = await service.create_import(
+                [_upload("guide.json", '{"entries":[]}|修订讲解'.encode())],
+                document_ids=[first.jobs[0].document_version_id and (await session.get(SourceDocumentVersion, first.jobs[0].document_version_id)).document_id],
+                idempotency_key="v2",
+            )
+            await service.run_import(second.jobs[0].id)
+            await session.refresh(entry)
+            assert entry.draft_revision_id != first_draft
+            updated = await session.get(KnowledgeRevision, entry.draft_revision_id)
+            assert updated.content == "修订讲解"
+
+            # A later human draft wins over a source update; the imported version is retained as a conflict.
+            from app.services.knowledge.workspace import KnowledgeWorkspaceService
+            from app.schemas.knowledge import KnowledgeUpdate
+            await KnowledgeWorkspaceService(session).save_draft(
+                entry.id,
+                KnowledgeUpdate(content="人工编辑"),
+                expected_version=entry.lock_version,
+            )
+            third = await service.create_import(
+                [_upload("guide.json", '{"entries":[]}|第三版'.encode())],
+                document_ids=[(await session.get(SourceDocumentVersion, second.jobs[0].document_version_id)).document_id],
+                idempotency_key="v3",
+            )
+            await service.run_import(third.jobs[0].id)
+            await session.refresh(entry)
+            current = await session.get(KnowledgeRevision, entry.draft_revision_id)
+            assert current.content == "人工编辑"
+            conflicts = list((await session.execute(select(ImportConflict))).scalars().all())
+            assert len(conflicts) == 1
+            incoming = await session.get(KnowledgeRevision, conflicts[0].incoming_revision_id)
+            assert incoming.content == "第三版"
+            from app.core.exceptions import AppError
+            from app.schemas.knowledge_workspace import ImportConflictResolution
+            from app.services.knowledge.publication import KnowledgePublicationService
+
+            try:
+                await KnowledgePublicationService(session).create_publication(
+                    [{"entry_id": entry.id, "revision_id": entry.draft_revision_id, "expected_version": entry.lock_version}],
+                    idempotency_key="blocked-by-import-conflict",
+                )
+            except AppError as exc:
+                assert exc.error_code == "pending_import_conflict"
+            else:
+                raise AssertionError("pending source conflicts must block publication")
+
+            await service.resolve_conflict(
+                conflicts[0].id,
+                ImportConflictResolution(choice="use_incoming", expected_version=entry.lock_version),
+            )
+            await session.refresh(entry)
+            assert entry.draft_revision_id == incoming.id
+            assert (await session.get(ImportConflict, conflicts[0].id)).state == "resolved"
         finally:
             await session.close()
             await engine.dispose()

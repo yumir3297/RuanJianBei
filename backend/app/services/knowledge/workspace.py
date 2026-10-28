@@ -50,8 +50,9 @@ class KnowledgeWorkspaceService:
                 raise AppError("This knowledge entry changed. Reload it before saving.", error_code="knowledge_version_conflict", status_code=409)
             expected_version = entry.lock_version
 
-        base_revision_id = entry.draft_revision_id or entry.published_revision_id
-        base_revision = await self.session.get(KnowledgeRevision, base_revision_id) if base_revision_id else None
+        base_revision_id = entry.published_revision_id
+        value_revision_id = entry.draft_revision_id or entry.published_revision_id
+        base_revision = await self.session.get(KnowledgeRevision, value_revision_id) if value_revision_id else None
         values = {
             "title": base_revision.title if base_revision else entry.title,
             "category": base_revision.category if base_revision else entry.category,

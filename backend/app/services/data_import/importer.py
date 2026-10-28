@@ -12,6 +12,7 @@ from app.core.config import Settings
 from app.models.behavior_summary import BehaviorSummary
 from app.models.faq import FAQEntryRecord
 from app.models.knowledge import KnowledgeEntry
+from app.models.knowledge_workspace import KnowledgeRevision
 from app.models.route import RouteTemplate
 from app.repositories.behavior_summary import BehaviorSummaryRepository
 from app.repositories.faq import FAQRepository
@@ -160,8 +161,6 @@ class ProcessedDataImporter:
                 managed_sources + [self.settings.default_knowledge_source]
             )
         }
-        incoming_keys = {(entry["title"], entry["source"]) for entry in entries}
-
         for payload in entries:
             key = (payload["title"], payload["source"])
             entry = existing_entries.get(key)
@@ -179,15 +178,42 @@ class ProcessedDataImporter:
                 )
                 continue
 
+            if entry.withdrawn_at is not None or entry.draft_revision_id is not None:
+                # Startup sync must not restore withdrawn entries or replace editor work.
+                continue
+            if entry.published_revision_id is not None:
+                published = await self.session.get(KnowledgeRevision, entry.published_revision_id)
+                if published is None:
+                    continue
+                if (
+                    published.title == payload["title"]
+                    and published.category == payload["category"]
+                    and published.content == payload["content"]
+                    and published.aliases == aliases
+                    and published.metadata_json == payload["metadata_json"]
+                ):
+                    continue
+                from app.schemas.knowledge import KnowledgeUpdate
+                from app.services.knowledge.workspace import KnowledgeWorkspaceService
+
+                await KnowledgeWorkspaceService(self.session).save_draft(
+                    entry.id,
+                    KnowledgeUpdate(
+                        title=payload["title"],
+                        category=payload["category"],
+                        content=payload["content"],
+                        aliases=payload["aliases"],
+                        metadata_json=payload["metadata_json"],
+                    ),
+                    expected_version=entry.lock_version,
+                )
+                continue
+
             entry.category = payload["category"]
             entry.content = payload["content"]
             entry.aliases = aliases
             entry.metadata_json = payload["metadata_json"]
             self.session.add(entry)
-
-        for key, entry in existing_entries.items():
-            if entry.source == self.settings.default_knowledge_source or key not in incoming_keys:
-                await self.session.delete(entry)
 
         await self.session.flush()
         return len(entries)

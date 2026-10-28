@@ -85,6 +85,14 @@ def test_processed_data_sync_preserves_faq_linked_to_resolved_blind_spot(tmp_pat
         try:
             importer = ProcessedDataImporter(session, settings)
             await importer.sync()
+            managed_source = await session.scalar(select(KnowledgeEntry.source).limit(1))
+            retained = KnowledgeEntry(
+                title="人工补充条目",
+                category="实用贴士",
+                content="这条不是数据源的一部分，不应被同步删除。",
+                source=managed_source,
+            )
+            session.add(retained)
             session.add(
                 FAQEntryRecord(
                     id="faq_admin_restroom_001",
@@ -109,6 +117,7 @@ def test_processed_data_sync_preserves_faq_linked_to_resolved_blind_spot(tmp_pat
 
             report = await importer.sync()
 
+            assert await session.get(KnowledgeEntry, retained.id) is not None
             preserved = await session.get(FAQEntryRecord, "faq_admin_restroom_001")
             assert report.faq_imported == 88
             assert preserved is not None

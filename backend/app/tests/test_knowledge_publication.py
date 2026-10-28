@@ -113,6 +113,40 @@ def test_batch_publication_embedding_failure_keeps_every_entry_unpublished(tmp_p
     asyncio.run(scenario())
 
 
+def test_multiple_draft_edits_keep_published_base_for_publication(tmp_path) -> None:
+    db_path = str(tmp_path / "publication-edited-draft.db")
+    vector_store = FakeVectorStore()
+
+    async def scenario() -> None:
+        engine, session = await open_test_session(db_path)
+        try:
+            from app.schemas.knowledge import KnowledgeCreate, KnowledgeUpdate
+
+            workspace = KnowledgeWorkspaceService(session)
+            entry, first = await workspace.save_draft(
+                None,
+                KnowledgeCreate(title="地点", category="景点信息", content="初稿", source="手册"),
+            )
+            entry, second = await workspace.save_draft(
+                entry.id, KnowledgeUpdate(content="修改稿"), expected_version=entry.lock_version
+            )
+            assert first.base_revision_id is None
+            assert second.base_revision_id is None
+            job = await KnowledgePublicationService(session, FakeEmbedder(), vector_store).create_publication(
+                [{"entry_id": entry.id, "revision_id": second.id, "expected_version": entry.lock_version}],
+                idempotency_key="publish-latest-draft-edit",
+            )
+            await KnowledgePublicationService(session, FakeEmbedder(), vector_store).run_publication(job.id)
+            await session.refresh(entry)
+            assert entry.published_revision_id == second.id
+            assert entry.content == "修改稿"
+        finally:
+            await session.close()
+            await engine.dispose()
+
+    asyncio.run(scenario())
+
+
 def test_successful_batch_switches_all_published_pointers_and_increments_epoch_once(tmp_path) -> None:
     db_path = str(tmp_path / "publication-success.db")
     selected = _seed_drafts(db_path)
