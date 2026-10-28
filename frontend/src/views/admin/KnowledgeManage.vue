@@ -1366,5 +1366,13 @@ onMounted(() => {
   .stat-grid {
     grid-template-columns: 1fr;
   }
+
+  .table-shell {
+    overflow-x: auto;
+  }
+
+  .knowledge-table {
+    min-width: 1100px;
+  }
 }
 </style>
