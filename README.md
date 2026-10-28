@@ -4,13 +4,13 @@
 
 ## 项目简介
 
-面向各类景区的通用 AI 数字人导览平台：景区名称、导游形象、欢迎语、语音热词等均按景区自设置，无需修改业务代码。默认内置"灵山胜境"示例景区数据用于演示。支持景点讲解、路线推荐、知识问答，集成 Live2D 数字人、语音交互、多模态图片识别、管理后台数据看板等功能。
+面向各类景区的通用 AI 数字人导览平台：景区名称、导游形象、欢迎语、语音热词等均按景区自设置，无需修改业务代码。默认内置"灵山胜境"示例景区数据用于演示。支持景点讲解、路线推荐、知识问答，集成 Three.js/VRM 数字人、语音交互、多模态图片识别、管理后台数据看板等功能。
 
 ## 技术栈
 
 | 层级 | 技术 |
 |------|------|
-| 前端 | Vue 3 + Vite + Element Plus + ECharts + Live2D |
+| 前端 | Vue 3 + Vite + Element Plus + ECharts + Three.js/VRM |
 | 后端 | Python FastAPI + Uvicorn |
 | AI | DeepSeek V4 Pro（LLM）/ Qwen3.7-Plus（视觉）/ BGE（嵌入&精排） |
 | 检索 | ChromaDB 向量库 + BM25 + Reranker |
@@ -18,12 +18,12 @@
 
 ## 快速启动
 
-> 详细指南见 [队友部署说明.md](./队友部署说明.md) 和 [作品启动指南.md](./作品启动指南.md)
+> 当前仓库的跨系统启动、依赖条件与验证命令见 [开发指南](./docs/DEVELOPMENT.md)。旧版部署说明和作品启动指南未包含在当前 Git 快照中。
 
 ### 前置要求
 
 - Python 3.13+
-- Node.js v20+
+- Node.js 满足 `^20.19.0 || >=22.12.0`（当前 Vite 锁文件要求）
 
 ### 1. 后端
 
@@ -54,6 +54,17 @@ npm run dev
 
 浏览器打开 `http://localhost:5173`
 
+## AI 开发与仓库地图
+
+- [AGENTS.md](./AGENTS.md)：Codex 开发规则与按任务阅读入口
+- [功能地图](./docs/REPO_MAP.md)：功能 → 前端 → API → 服务/数据 → 验证位置
+- [架构链路](./docs/ARCHITECTURE.md)：聊天、语音、图像、定位与管理数据流
+- [开发指南](./docs/DEVELOPMENT.md)：Windows、macOS、Linux 环境及测试命令
+- [多端矩阵](./docs/COMPATIBILITY.md)：手机、平板、桌面和浏览器能力的现状与验收
+
+地图维护校验（仓库根目录，无业务依赖）：`python scripts/check_repo_map.py`。
+其他代码助手也可直接读取这些 Markdown；`--json` 可导出实时 API 索引。
+
 ## 项目结构
 
 ```
@@ -70,7 +81,7 @@ npm run dev
 ├── frontend/          # Vue 3 前端
 │   ├── src/
 │   │   ├── views/     # 页面（游客端/管理后台）
-│   │   ├── components/# 组件（Live2D/Avatar/交互）
+│   │   ├── components/# 组件（Three.js/VRM/交互）
 │   │   ├── composables/# 组合式函数
 │   │   ├── stores/    # Pinia 状态
 │   │   └── api/       # 接口调用
