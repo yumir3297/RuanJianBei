@@ -70,6 +70,8 @@ class ImportConflictRead(BaseModel):
     incoming_revision_id: str | None = None
     kind: str
     state: str
+    current_revision: KnowledgeRevisionRead | None = None
+    incoming_revision: KnowledgeRevisionRead | None = None
 
 
 class ImportConflictResolution(BaseModel):

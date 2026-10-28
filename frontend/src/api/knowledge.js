@@ -20,3 +20,8 @@ export async function deleteKnowledge(id) {
   return data;
 }
 
+export async function discardKnowledgeDraft(id) {
+  const { data } = await http.delete(`/knowledge/${id}/draft`);
+  return data;
+}
+

@@ -462,6 +462,12 @@ class KnowledgeImportService:
         error = "; ".join(job.error for job in jobs if job.error) or None
         return ImportBatchResult(batch.id, state, stage, error, jobs)
 
+    async def list_recent_batches(self, limit: int = 20) -> list[ImportBatchResult]:
+        result = await self.session.execute(
+            select(ImportBatch.id).order_by(ImportBatch.created_at.desc()).limit(max(1, min(limit, 50)))
+        )
+        return [await self.get_batch(batch_id) for batch_id in result.scalars().all()]
+
     async def retry_batch(self, batch_id: str) -> ImportBatchResult:
         batch = await self.session.get(ImportBatch, batch_id)
         if batch is None:

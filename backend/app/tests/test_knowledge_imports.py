@@ -270,6 +270,9 @@ def test_admin_upload_api_returns_batch_and_per_file_status(tmp_path) -> None:
     )
     assert restored.status_code == 200
     assert restored.json()["jobs"][0]["document_version_id"] == batch["jobs"][0]["document_version_id"]
+    recent = client.get("/api/knowledge-imports/recent", headers={"Authorization": f"Bearer {token}"})
+    assert recent.status_code == 200
+    assert recent.json()[0]["id"] == batch["id"]
 
 
 def test_real_pdf_text_parser_preserves_page_numbers_and_flags_scan_only_files(tmp_path) -> None:

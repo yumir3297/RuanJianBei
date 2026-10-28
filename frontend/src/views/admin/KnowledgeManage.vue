@@ -41,6 +41,9 @@
       </template>
     </el-alert>
 
+    <ImportBatchPanel :entries="entries" @changed="loadEntries" />
+    <PublicationStatus :job="publicationJob" :retrying="retryingPublication" @retry="retryPublication" />
+
     <div class="stat-grid" v-loading="loading && !entries.length">
       <article
         v-for="card in summaryCards"
@@ -103,11 +106,24 @@
           </el-select>
         </div>
 
+        <div class="workspace-toolbar">
+          <span>{{ selectedRows.length }} 条草稿已选</span>
+          <el-button type="primary" :disabled="!selectedRows.length" :loading="publishing" @click="publishSelected">发布选中草稿</el-button>
+        </div>
+
         <el-skeleton v-if="loading" :rows="6" animated />
         <el-empty v-else-if="!entries.length" description="暂无知识条目，可先同步官方资料或手动新增" />
         <el-empty v-else-if="!filteredEntries.length" description="当前筛选条件下暂无符合条目" />
         <div v-else class="table-shell">
-          <el-table :data="pagedEntries" stripe class="knowledge-table">
+          <el-table :data="pagedEntries" stripe class="knowledge-table" row-key="id" @selection-change="selectedRows = $event">
+            <el-table-column type="selection" width="44" :selectable="(row) => Boolean(row.draft_revision_id) && !row.withdrawn_at" />
+            <el-table-column label="状态" width="104">
+              <template #default="{ row }">
+                <el-tag v-if="row.withdrawn_at" size="small" type="danger">已下架</el-tag>
+                <el-tag v-else-if="row.draft_revision_id" size="small" type="warning">待发布</el-tag>
+                <el-tag v-else size="small" type="success">已发布</el-tag>
+              </template>
+            </el-table-column>
             <el-table-column prop="title" label="标题" min-width="240">
               <template #default="{ row }">
                 <div class="title-cell">
@@ -146,11 +162,13 @@
               </template>
             </el-table-column>
 
-            <el-table-column label="操作" width="148">
+            <el-table-column label="操作" width="260" fixed="right">
               <template #default="{ row }">
                 <div class="table-actions">
                   <el-button type="primary" size="small" @click="openDialog(row)">编辑</el-button>
-                  <el-button type="danger" size="small" plain @click="handleDelete(row)">删除</el-button>
+                  <el-button v-if="row.draft_revision_id" size="small" type="success" plain @click="publishRows([row])">发布</el-button>
+                  <el-button v-if="row.draft_revision_id" size="small" plain @click="discardDraft(row)">丢弃草稿</el-button>
+                  <el-button v-if="!row.withdrawn_at" type="danger" size="small" plain @click="handleDelete(row)">下架</el-button>
                 </div>
               </template>
             </el-table-column>
@@ -329,14 +347,18 @@ import {
   UploadFilled,
 } from "@element-plus/icons-vue";
 import { ElMessage, ElMessageBox } from "element-plus";
+import ImportBatchPanel from "../../components/knowledge/ImportBatchPanel.vue";
+import PublicationStatus from "../../components/knowledge/PublicationStatus.vue";
 
 import {
   createKnowledge,
+  discardKnowledgeDraft,
   deleteKnowledge,
   fetchKnowledgeList,
   updateKnowledge,
 } from "../../api/knowledge";
 import { rebuildVectorIndex, syncOfficialData } from "../../api/admin";
+import { createKnowledgePublication, fetchKnowledgePublication, retryKnowledgePublication } from "../../api/knowledgePublications";
 
 const entries = ref([]);
 const loading = ref(false);
@@ -344,6 +366,10 @@ const error = ref("");
 const syncing = ref(false);
 const rebuilding = ref(false);
 const lastUpdatedAt = ref("");
+const selectedRows = ref([]);
+const publicationJob = ref(null);
+const publishing = ref(false);
+const retryingPublication = ref(false);
 
 const searchQuery = ref("");
 const selectedCategory = ref("");
@@ -363,6 +389,7 @@ const form = ref({
   content: "",
   source: "管理员手动录入",
   aliases: [],
+  expected_version: null,
 });
 
 const rules = {
@@ -603,6 +630,7 @@ function openDialog(row = null) {
       content: row.content,
       source: row.source || "管理员手动录入",
       aliases: [...(row.aliases || [])],
+      expected_version: row.lock_version,
     };
   } else {
     currentId.value = null;
@@ -612,6 +640,7 @@ function openDialog(row = null) {
       content: "",
       source: "管理员手动录入",
       aliases: [],
+      expected_version: null,
     };
   }
 
@@ -639,12 +668,14 @@ async function submitForm() {
 
     submitting.value = true;
     try {
+      const payload = { ...form.value };
+      if (!isEdit.value) delete payload.expected_version;
       if (isEdit.value) {
-        await updateKnowledge(currentId.value, form.value);
-        ElMessage.success("知识更新成功");
+        await updateKnowledge(currentId.value, payload);
+        ElMessage.success("已保存为草稿，发布前游客仍使用当前已发布版本");
       } else {
-        await createKnowledge(form.value);
-        ElMessage.success("知识创建成功");
+        await createKnowledge(payload);
+        ElMessage.success("已创建草稿，可单独发布");
       }
 
       dialogVisible.value = false;
@@ -659,14 +690,71 @@ async function submitForm() {
 
 async function handleDelete(row) {
   try {
-    await ElMessageBox.confirm(`确定删除知识 "${row.title}" 吗？`, "提示", { type: "warning" });
+    await ElMessageBox.confirm(`立即下架“${row.title}”？游客将无法再检索此条目。`, "确认下架", { type: "warning" });
     await deleteKnowledge(row.id);
-    ElMessage.success("删除成功");
+    ElMessage.success("已立即下架");
     await loadEntries();
   } catch (e) {
     if (e !== "cancel") {
       ElMessage.error(`删除失败: ${e?.response?.data?.detail || e.message}`);
     }
+  }
+}
+
+async function discardDraft(row) {
+  try {
+    await ElMessageBox.confirm(`丢弃“${row.title}”当前草稿？`, "丢弃草稿", { type: "warning" });
+    await discardKnowledgeDraft(row.id);
+    ElMessage.success("草稿已丢弃");
+    await loadEntries();
+  } catch (error) {
+    if (error !== "cancel") ElMessage.error(`丢弃失败：${error?.response?.data?.detail || error.message}`);
+  }
+}
+
+async function publishSelected() {
+  await publishRows(selectedRows.value);
+}
+
+async function publishRows(rows) {
+  const items = rows
+    .filter((row) => row.draft_revision_id && !row.withdrawn_at)
+    .map((row) => ({ entry_id: row.id, revision_id: row.draft_revision_id, expected_version: row.lock_version }));
+  if (!items.length) return;
+  publishing.value = true;
+  try {
+    publicationJob.value = await createKnowledgePublication(items);
+    await pollPublication(publicationJob.value.id);
+  } catch (error) {
+    ElMessage.error(`创建发布任务失败：${error?.response?.data?.detail || error.message}`);
+  } finally {
+    publishing.value = false;
+  }
+}
+
+async function pollPublication(id) {
+  publicationJob.value = await fetchKnowledgePublication(id);
+  if (["queued", "preparing"].includes(publicationJob.value.state)) {
+    window.setTimeout(() => pollPublication(id).catch((error) => ElMessage.error(`读取发布状态失败：${error.message}`)), 1400);
+    return;
+  }
+  if (publicationJob.value.state === "succeeded") {
+    ElMessage.success("所选草稿已发布");
+    selectedRows.value = [];
+    await loadEntries();
+  }
+}
+
+async function retryPublication() {
+  if (!publicationJob.value?.id) return;
+  retryingPublication.value = true;
+  try {
+    publicationJob.value = await retryKnowledgePublication(publicationJob.value.id);
+    await pollPublication(publicationJob.value.id);
+  } catch (error) {
+    ElMessage.error(`重试失败：${error?.response?.data?.detail || error.message}`);
+  } finally {
+    retryingPublication.value = false;
   }
 }
 
@@ -927,6 +1015,19 @@ onMounted(() => {
   border: 1px solid #d4c8b8;
   border-radius: 0;
   background: #fffaf2;
+}
+
+.workspace-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1px solid #d4c8b8;
+  background: #f7f0e5;
+  color: #675a4e;
+  font-size: 13px;
 }
 
 .search-input {
