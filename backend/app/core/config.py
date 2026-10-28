@@ -67,6 +67,11 @@ class Settings(BaseSettings):
     asr_vocabulary_id: str = Field(default="")
     asr_public_audio_base_url: str = Field(default="")
     asr_upload_dir: str = Field(default="../.uploads/asr")
+    knowledge_upload_dir: str = Field(default="../.uploads/knowledge")
+    knowledge_import_max_files: int = Field(default=20, ge=1, le=100)
+    knowledge_import_max_file_bytes: int = Field(default=50 * 1024 * 1024, ge=1024, le=250 * 1024 * 1024)
+    knowledge_import_max_pages: int = Field(default=500, ge=1, le=5000)
+    knowledge_import_parse_timeout_seconds: int = Field(default=120, ge=1, le=900)
     asr_timeout_seconds: float = Field(default=30.0, gt=0.0, le=180.0)
     asr_poll_interval_seconds: float = Field(default=0.8, gt=0.0, le=10.0)
     asr_max_audio_bytes: int = Field(default=10 * 1024 * 1024, ge=1024, le=50 * 1024 * 1024)
@@ -160,6 +165,10 @@ class Settings(BaseSettings):
     @property
     def asr_upload_root(self) -> Path:
         return (self.backend_root / self.asr_upload_dir).resolve()
+
+    @property
+    def knowledge_upload_root(self) -> Path:
+        return (self.backend_root / self.knowledge_upload_dir).resolve()
 
     @property
     def ui_asset_upload_root(self) -> Path:

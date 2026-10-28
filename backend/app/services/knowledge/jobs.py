@@ -6,6 +6,7 @@ import logging
 from app.core.config import Settings
 from app.db.session import AsyncSessionLocal
 from app.services.knowledge.publication import KnowledgePublicationService
+from app.services.knowledge.imports import KnowledgeImportService
 
 logger = logging.getLogger(__name__)
 
@@ -39,4 +40,23 @@ async def run_publication_worker(settings: Settings) -> None:
             raise
         except Exception:
             logger.exception("Knowledge publication worker iteration failed")
+            await asyncio.sleep(2)
+
+
+async def run_import_worker(settings: Settings) -> None:
+    while True:
+        try:
+            async with AsyncSessionLocal() as session:
+                queue = KnowledgeImportService(session, settings)
+                job_ids = await queue.pending_job_ids()
+            if job_ids:
+                for job_id in job_ids:
+                    async with AsyncSessionLocal() as session:
+                        await KnowledgeImportService(session, settings).run_import(job_id)
+            else:
+                await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Knowledge import worker iteration failed")
             await asyncio.sleep(2)

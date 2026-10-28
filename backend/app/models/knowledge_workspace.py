@@ -67,6 +67,11 @@ class ImportJob(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     idempotency_key: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    batch_id: Mapped[str | None] = mapped_column(
+        ForeignKey("knowledge_import_batches.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    original_filename: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    item_index: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     document_version_id: Mapped[str | None] = mapped_column(
         ForeignKey("source_document_versions.id"), nullable=True, index=True
     )
@@ -75,6 +80,17 @@ class ImportJob(Base):
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     lease_owner: Mapped[str | None] = mapped_column(String(128), nullable=True)
     lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class ImportBatch(Base):
+    __tablename__ = "knowledge_import_batches"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    idempotency_key: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    state: Mapped[str] = mapped_column(String(24), default="queued", nullable=False, index=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 

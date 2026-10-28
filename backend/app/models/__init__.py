@@ -6,6 +6,7 @@ from app.models.knowledge_chunk import KnowledgeChunk
 from app.models.knowledge import KnowledgeEntry
 from app.models.knowledge_workspace import (
     ImportConflict,
+    ImportBatch,
     ImportJob,
     KnowledgeRevision,
     KnowledgeState,
@@ -34,6 +35,7 @@ __all__ = [
     "SourceDocument",
     "SourceDocumentVersion",
     "ImportJob",
+    "ImportBatch",
     "ImportConflict",
     "PublicationJob",
     "PublicationItem",

@@ -46,6 +46,26 @@ class ImportBatchRead(BaseModel):
     state: str
     stage: str
     error: str | None = None
+    jobs: list[ImportJobRead] = Field(default_factory=list)
+
+
+class ImportJobRead(BaseModel):
+    id: str
+    filename: str
+    document_id: str | None = None
+    document_version_id: str | None = None
+    state: str
+    stage: str
+    error: str | None = None
+    knowledge_entry_ids: list[int] = Field(default_factory=list)
+
+
+class ParsedSection(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    content: str = Field(min_length=1)
+    page_start: int | None = Field(default=None, ge=1)
+    page_end: int | None = Field(default=None, ge=1)
+    section_path: str | None = None
 
 
 class PublicationRead(BaseModel):
