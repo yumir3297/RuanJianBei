@@ -10,6 +10,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_name: str = Field(default="A5 Scenic Guide AI")
     scenic_name: str = Field(default="景区")
+    site_id: str = Field(default="default", min_length=1, max_length=64)
     """景区名称：平台按景区自设置的核心配置，注入提示词与欢迎语（在 .env 中按景区配置）。"""
     app_env: str = Field(default="development")
     app_host: str = Field(default="0.0.0.0")

@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from sqlalchemy import delete, func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.tour_session import (
@@ -82,6 +83,17 @@ class TourSessionRepository:
             expires_at=datetime.now(UTC) + timedelta(days=IDEMPOTENCY_DAYS),
         ))
 
+    async def _commit_with_replay(self, owner_id: str, endpoint: str, key: str, payload: object) -> dict | None:
+        try:
+            await self.session.commit()
+            return None
+        except IntegrityError:
+            await self.session.rollback()
+            replay = await self._replay(owner_id, endpoint, key, payload)
+            if replay is None:
+                raise
+            return replay
+
     async def _session_result(self, item: TourSession, revision: TourSessionRevision | None = None) -> dict:
         if revision is None:
             revision = await self.session.scalar(select(TourSessionRevision).where(
@@ -117,7 +129,9 @@ class TourSessionRepository:
         await self.session.flush()
         result = await self._session_result(item, revision)
         self._remember(owner_id, "create", idempotency_key, request, result, item.id)
-        await self.session.commit()
+        replay = await self._commit_with_replay(owner_id, "create", idempotency_key, request)
+        if replay is not None:
+            return replay
         return result
 
     async def save_revision(
@@ -138,6 +152,9 @@ class TourSessionRepository:
                 TourSession.deleted_at.is_(None),
             ))
             await self.session.rollback()
+            replay = await self._replay(owner_id, "save", idempotency_key, request)
+            if replay is not None:
+                return replay
             if current is None:
                 return None
             raise RevisionConflict(int(current))
@@ -149,7 +166,9 @@ class TourSessionRepository:
         ))
         result_payload = await self._session_result(item, revision)
         self._remember(owner_id, "save", idempotency_key, request, result_payload, session_id)
-        await self.session.commit()
+        replay = await self._commit_with_replay(owner_id, "save", idempotency_key, request)
+        if replay is not None:
+            return replay
         return result_payload
 
     async def get_session(self, owner_id: str, session_id: str) -> dict | None:
@@ -223,11 +242,38 @@ class TourSessionRepository:
 
     async def list_trash(self, owner_id: str) -> list[dict]:
         now = datetime.now(UTC)
+        await self.purge_expired_sessions(owner_id)
         items = (await self.session.scalars(select(TourSession).where(
             TourSession.owner_id == owner_id, TourSession.deleted_at.is_not(None),
             TourSession.deleted_until > now,
         ).order_by(TourSession.deleted_at.desc()))).all()
         return [await self._session_result(item) for item in items]
+
+    async def purge_expired_sessions(self, owner_id: str) -> int:
+        now = datetime.now(UTC)
+        expired_ids = list((await self.session.scalars(select(TourSession.id).where(
+            TourSession.owner_id == owner_id,
+            TourSession.deleted_until <= now,
+        ))).all())
+        for session_id in expired_ids:
+            await self.session.execute(delete(TourArtifactReference).where(
+                TourArtifactReference.session_id == session_id,
+            ))
+            await self.session.execute(delete(TourSessionIdempotency).where(
+                TourSessionIdempotency.session_id == session_id,
+            ))
+            await self.session.execute(delete(TourSessionRevision).where(
+                TourSessionRevision.session_id == session_id,
+            ))
+            await self.session.execute(delete(TourSession).where(
+                TourSession.id == session_id, TourSession.owner_id == owner_id,
+            ))
+        await self.session.execute(delete(TourSessionIdempotency).where(
+            TourSessionIdempotency.owner_id == owner_id,
+            TourSessionIdempotency.expires_at <= now,
+        ))
+        await self.session.commit()
+        return len(expired_ids)
 
     async def undelete_session(self, owner_id: str, session_id: str) -> dict | None:
         now = datetime.now(UTC)
