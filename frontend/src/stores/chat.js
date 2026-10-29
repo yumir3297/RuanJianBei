@@ -78,11 +78,15 @@ export async function clearVisitorMemoryEverywhere() {
 export function getSessionId() {
   const fallbackId = `visitor-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   if (typeof sessionStorage === "undefined") return fallbackId;
-  const existing = sessionStorage.getItem(SESSION_STORAGE_KEY);
-  if (existing) return existing;
-  const sessionId = globalThis.crypto?.randomUUID?.() || fallbackId;
-  sessionStorage.setItem(SESSION_STORAGE_KEY, sessionId);
-  return sessionId;
+  try {
+    const existing = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if (existing) return existing;
+    const sessionId = globalThis.crypto?.randomUUID?.() || fallbackId;
+    sessionStorage.setItem(SESSION_STORAGE_KEY, sessionId);
+    return sessionId;
+  } catch {
+    return fallbackId;
+  }
 }
 
 function isAbortError(error) {

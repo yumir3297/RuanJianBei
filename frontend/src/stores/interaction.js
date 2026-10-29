@@ -182,7 +182,7 @@ export const useInteractionStore = defineStore("interaction", {
         this.topicKey = typeof saved.topicKey === "string" ? saved.topicKey : null;
         this.routeId = typeof saved.routeId === "string" ? saved.routeId : null;
       } catch {
-        window.localStorage.removeItem(STORAGE_KEY);
+        try { window.localStorage.removeItem(STORAGE_KEY); } catch { /* storage may be disabled */ }
       }
     },
     validateSelection() {
@@ -212,15 +212,17 @@ export const useInteractionStore = defineStore("interaction", {
       this.persist();
     },
     persist() {
-      window.localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-          mode: this.mode,
-          attractionId: this.attractionId,
-          topicKey: this.topicKey,
-          routeId: this.routeId,
-        }),
-      );
+      try {
+        window.localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({
+            mode: this.mode,
+            attractionId: this.attractionId,
+            topicKey: this.topicKey,
+            routeId: this.routeId,
+          }),
+        );
+      } catch { /* selection stays in memory when browser storage is blocked */ }
     },
   },
 });

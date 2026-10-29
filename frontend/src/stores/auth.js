@@ -3,9 +3,17 @@ import http from "../api/http";
 
 const AUTH_KEY = "a5-admin-auth";
 
+function readAuthToken() {
+  try { return localStorage.getItem(AUTH_KEY) || null; } catch { return null; }
+}
+
+function removeAuthToken() {
+  try { localStorage.removeItem(AUTH_KEY); } catch { /* storage may be disabled */ }
+}
+
 export const useAuthStore = defineStore("auth", {
   state: () => ({
-    token: localStorage.getItem(AUTH_KEY) || null,
+    token: readAuthToken(),
   }),
   getters: {
     isAuthenticated: (state) => !!state.token,
@@ -15,7 +23,7 @@ export const useAuthStore = defineStore("auth", {
       try {
         const { data } = await http.post("/auth/login", { password });
         this.token = data.token;
-        localStorage.setItem(AUTH_KEY, data.token);
+        try { localStorage.setItem(AUTH_KEY, data.token); } catch { /* keep auth in memory */ }
         return true;
       } catch (error) {
         const detail = error?.response?.data?.detail;
@@ -27,7 +35,7 @@ export const useAuthStore = defineStore("auth", {
     },
     logout() {
       this.token = null;
-      localStorage.removeItem(AUTH_KEY);
+      removeAuthToken();
     },
   },
 });

@@ -9,7 +9,9 @@ export default defineConfig({
     proxy: {
       "/api": {
         target: "http://127.0.0.1:8000",
-        changeOrigin: true,
+        // Preserve the browser's Host so the API's same-origin CSRF check can
+        // compare it with the original Origin header in local development.
+        changeOrigin: false,
       },
       "/ui-assets": {
         target: "http://127.0.0.1:8000",

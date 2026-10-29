@@ -18,7 +18,8 @@ const http = axios.create({
 });
 
 http.interceptors.request.use((config) => {
-  const token = localStorage.getItem(AUTH_KEY);
+  let token = null;
+  try { token = localStorage.getItem(AUTH_KEY); } catch { /* storage may be disabled */ }
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -29,7 +30,7 @@ http.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error?.response?.status === 401) {
-      localStorage.removeItem(AUTH_KEY);
+      try { localStorage.removeItem(AUTH_KEY); } catch { /* storage may be disabled */ }
     }
     return Promise.reject(error);
   },
