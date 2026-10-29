@@ -24,6 +24,11 @@ from app.models import (  # noqa: F401 确保所有模型注册到 Base.metadata
     VisitorMemory,
     VisitorProfile,
     VisitorFeedback,
+    TourIdentity,
+    TourSession,
+    TourSessionRevision,
+    TourArtifactReference,
+    TourSessionIdempotency,
 )
 
 config = context.config

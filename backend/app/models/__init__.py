@@ -11,6 +11,13 @@ from app.models.route import RouteTemplate
 from app.models.visitor import VisitorProfile
 from app.models.visitor_feedback import VisitorFeedback
 from app.models.visitor_memory import VisitorMemory
+from app.models.tour_session import (
+    TourArtifactReference,
+    TourIdentity,
+    TourSession,
+    TourSessionIdempotency,
+    TourSessionRevision,
+)
 
 __all__ = [
     "AvatarConfig",
@@ -26,4 +33,9 @@ __all__ = [
     "VisitorMemory",
     "VisitorProfile",
     "VisitorFeedback",
+    "TourIdentity",
+    "TourSession",
+    "TourSessionRevision",
+    "TourArtifactReference",
+    "TourSessionIdempotency",
 ]
