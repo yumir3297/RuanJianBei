@@ -9,6 +9,7 @@ from app.api.quick_select import router
 from app.core.deps import get_db_session
 from app.db.bootstrap import seed_quick_topics
 from app.models.knowledge import KnowledgeEntry
+from app.models.knowledge_workspace import KnowledgeRevision
 from app.models.quick_topic import QuickTopic
 from app.models.route import RouteTemplate
 from app.schemas.chat import ChatRequest
@@ -44,8 +45,7 @@ def test_quick_select_bootstrap_uses_existing_knowledge_and_routes(tmp_path) -> 
             disabled_topic = await session.get(QuickTopic, "dining")
             assert disabled_topic is not None
             disabled_topic.is_enabled = False
-            session.add_all(
-                [
+            entries = [
                     KnowledgeEntry(
                         title="灵山大佛",
                         category="景点信息",
@@ -73,7 +73,24 @@ def test_quick_select_bootstrap_uses_existing_knowledge_and_routes(tmp_path) -> 
                         tags="历史|文化",
                     ),
                 ]
-            )
+            session.add_all(entries)
+            await session.flush()
+            for entry in entries:
+                if not isinstance(entry, KnowledgeEntry):
+                    continue
+                revision = KnowledgeRevision(
+                    id=f"test-revision-{entry.id}",
+                    knowledge_entry_id=entry.id,
+                    title=entry.title,
+                    category=entry.category,
+                    content=entry.content,
+                    source=entry.source,
+                    aliases=entry.aliases,
+                    metadata_json=entry.metadata_json,
+                )
+                session.add(revision)
+                await session.flush()
+                entry.published_revision_id = revision.id
             await session.commit()
         finally:
             await session.close()

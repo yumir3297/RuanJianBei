@@ -25,9 +25,14 @@ class KnowledgeUpdate(BaseModel):
     source: str | None = Field(default=None, min_length=1, max_length=255)
     aliases: list[str] | None = None
     metadata_json: str | None = None
+    expected_version: int | None = Field(default=None, ge=1)
 
 
 class KnowledgeRead(KnowledgeBase):
     id: int
     created_at: datetime
     updated_at: datetime
+    published_revision_id: str | None = None
+    draft_revision_id: str | None = None
+    lock_version: int = 1
+    withdrawn_at: datetime | None = None

@@ -23,6 +23,7 @@ class VectorBackedRAGService(BaseRAGService):
         fallback: BaseRAGService | None = None,
         candidate_k: int = 20,
         reranker_gate: RerankerGate | None = None,
+        visibility=None,
     ) -> None:
         self.vector_store = vector_store
         self.embedder = embedder
@@ -31,6 +32,7 @@ class VectorBackedRAGService(BaseRAGService):
         self.fallback = fallback
         self.candidate_k = max(candidate_k, 1)
         self.reranker_gate = reranker_gate or RerankerGate()
+        self.visibility = visibility
         self.last_mode = "not_run"
         self.last_embedding_ms = 0.0
         self.last_vector_query_ms = 0.0
@@ -71,9 +73,22 @@ class VectorBackedRAGService(BaseRAGService):
         if not candidates:
             return await self._fallback_or_empty(query, normalized, top_k, scope, "no_candidates")
 
+        references = [
+            (int(result.metadata["source_entry_id"]), str(result.metadata["revision_id"]))
+            for result in candidates
+            if result.metadata.get("source_entry_id") is not None
+            and result.metadata.get("revision_id")
+        ]
+        visible = await self.visibility.filter_published(references) if self.visibility is not None else set(references)
         documents: list[RetrievedDocument] = []
         for result in candidates:
             meta = result.metadata
+            entry_id = meta.get("source_entry_id")
+            revision_id = meta.get("revision_id")
+            if self.visibility is not None and (
+                entry_id is None or not revision_id or (int(entry_id), str(revision_id)) not in visible
+            ):
+                continue
             documents.append(
                 RetrievedDocument(
                     title=meta.get("title", ""),
@@ -81,7 +96,24 @@ class VectorBackedRAGService(BaseRAGService):
                     snippet=result.document[:200],
                     source=meta.get("source", ""),
                     score=result.score,
+                    entry_id=int(entry_id) if entry_id is not None else None,
+                    revision_id=str(revision_id) if revision_id else None,
                 )
+            )
+
+        if self.visibility is not None and not documents:
+            return await self._fallback_or_empty(query, normalized, top_k, scope, "no_published_vectors")
+        if self.visibility is not None and len(documents) < top_k and self.fallback is not None:
+            fallback_documents = await self.fallback.retrieve(
+                query,
+                normalized_query=normalized,
+                top_k=top_k,
+                scope=scope,
+            )
+            known = {(doc.entry_id, doc.revision_id) for doc in documents}
+            documents.extend(
+                doc for doc in fallback_documents
+                if (doc.entry_id, doc.revision_id) not in known
             )
 
         decision = self.reranker_gate.decide(

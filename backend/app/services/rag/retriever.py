@@ -47,6 +47,8 @@ class RepositoryBackedRAGService(BaseRAGService):
                     snippet=entry.content[:160],
                     source=entry.source,
                     score=float(score),
+                    entry_id=getattr(entry, "id", None),
+                    revision_id=getattr(entry, "published_revision_id", None),
                 )
             )
 

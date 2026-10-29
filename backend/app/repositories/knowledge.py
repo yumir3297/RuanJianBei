@@ -33,7 +33,11 @@ class KnowledgeRepository:
     async def list_by_category(self, category: str) -> list[KnowledgeEntry]:
         stmt = (
             select(KnowledgeEntry)
-            .where(KnowledgeEntry.category == category)
+            .where(
+                KnowledgeEntry.category == category,
+                KnowledgeEntry.published_revision_id.is_not(None),
+                KnowledgeEntry.withdrawn_at.is_(None),
+            )
             .order_by(KnowledgeEntry.id.asc())
         )
         result = await self.session.execute(stmt)
@@ -41,7 +45,12 @@ class KnowledgeRepository:
 
     async def get_attraction(self, knowledge_id: int) -> KnowledgeEntry | None:
         entry = await self.get(knowledge_id)
-        if entry is None or entry.category != "景点信息":
+        if (
+            entry is None
+            or entry.category != "景点信息"
+            or entry.published_revision_id is None
+            or entry.withdrawn_at is not None
+        ):
             return None
         return entry
 
@@ -50,6 +59,8 @@ class KnowledgeRepository:
             select(KnowledgeEntry)
             .where(
                 KnowledgeEntry.category == "游览路线",
+                KnowledgeEntry.published_revision_id.is_not(None),
+                KnowledgeEntry.withdrawn_at.is_(None),
                 KnowledgeEntry.title.ilike(f"{route_title}%"),
             )
             .order_by(KnowledgeEntry.id.asc())
@@ -68,7 +79,12 @@ class KnowledgeRepository:
     ) -> list[KnowledgeEntry]:
         if knowledge_id is not None:
             entry = await self.get(knowledge_id)
-            if entry is None or (category is not None and entry.category != category):
+            if (
+                entry is None
+                or entry.published_revision_id is None
+                or entry.withdrawn_at is not None
+                or (category is not None and entry.category != category)
+            ):
                 return []
             return [entry]
 
@@ -76,6 +92,8 @@ class KnowledgeRepository:
         stmt = (
             select(KnowledgeEntry)
             .where(
+                KnowledgeEntry.published_revision_id.is_not(None),
+                KnowledgeEntry.withdrawn_at.is_(None),
                 KnowledgeEntry.title.ilike(pattern)
                 | KnowledgeEntry.content.ilike(pattern)
                 | KnowledgeEntry.aliases.ilike(pattern)
@@ -88,29 +106,19 @@ class KnowledgeRepository:
         return list(result.scalars().all())
 
     async def create(self, payload: KnowledgeCreate) -> KnowledgeEntry:
-        entry = KnowledgeEntry(
-            title=payload.title,
-            category=payload.category,
-            content=payload.content,
-            source=payload.source,
-            aliases="|".join(payload.aliases),
-            metadata_json=payload.metadata_json,
-        )
-        self.session.add(entry)
-        await self.session.commit()
-        await self.session.refresh(entry)
+        from app.services.knowledge.workspace import KnowledgeWorkspaceService
+
+        entry, _ = await KnowledgeWorkspaceService(self.session).save_draft(None, payload)
         return entry
 
     async def update(self, entry: KnowledgeEntry, payload: KnowledgeUpdate) -> KnowledgeEntry:
-        data = payload.model_dump(exclude_unset=True)
-        for key, value in data.items():
-            if key == "aliases" and value is not None:
-                setattr(entry, key, "|".join(value))
-            else:
-                setattr(entry, key, value)
-        self.session.add(entry)
-        await self.session.commit()
-        await self.session.refresh(entry)
+        from app.services.knowledge.workspace import KnowledgeWorkspaceService
+
+        entry, _ = await KnowledgeWorkspaceService(self.session).save_draft(
+            entry.id,
+            payload,
+            expected_version=payload.expected_version,
+        )
         return entry
 
     async def delete(self, entry: KnowledgeEntry) -> None:

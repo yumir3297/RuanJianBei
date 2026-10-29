@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -21,6 +22,7 @@ from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging
 from app.db.bootstrap import bootstrap_avatar_configs, bootstrap_experience_demo_feedback, bootstrap_quick_topics, bootstrap_sample_data
 from app.db.session import AsyncSessionLocal
+from app.services.knowledge.jobs import run_import_worker, run_publication_worker
 from app.models import (  # noqa: F401
     AvatarConfig,
     BehaviorSummary,
@@ -68,6 +70,7 @@ def _run_migrations() -> None:
 async def lifespan(_: FastAPI):
     settings = get_settings()
     settings.ui_asset_upload_root.mkdir(parents=True, exist_ok=True)
+    settings.knowledge_upload_root.mkdir(parents=True, exist_ok=True)
     settings.ui_asset_manifest_file.parent.mkdir(parents=True, exist_ok=True)
     _run_migrations()
     await bootstrap_quick_topics()
@@ -93,7 +96,13 @@ async def lifespan(_: FastAPI):
     async with AsyncSessionLocal() as session:
         faq_matcher = await get_runtime_faq_matcher(session, embedder=embedder)
 
+    publication_worker = asyncio.create_task(run_publication_worker(settings))
+    import_worker = asyncio.create_task(run_import_worker(settings))
+
     yield
+    publication_worker.cancel()
+    import_worker.cancel()
+    await asyncio.gather(publication_worker, import_worker, return_exceptions=True)
     await close_cached_llm_service()
     await close_cached_vision_service()
 

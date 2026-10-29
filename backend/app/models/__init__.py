@@ -4,6 +4,17 @@ from app.models.chat_log import ChatLog
 from app.models.faq import FAQEntryRecord
 from app.models.knowledge_chunk import KnowledgeChunk
 from app.models.knowledge import KnowledgeEntry
+from app.models.knowledge_workspace import (
+    ImportConflict,
+    ImportBatch,
+    ImportJob,
+    KnowledgeRevision,
+    KnowledgeState,
+    PublicationItem,
+    PublicationJob,
+    SourceDocument,
+    SourceDocumentVersion,
+)
 from app.models.knowledge_blind_spot import KnowledgeBlindSpot
 from app.models.qa_cache import QACacheEntry
 from app.models.quick_topic import QuickTopic
@@ -27,6 +38,15 @@ __all__ = [
     "FAQEntryRecord",
     "KnowledgeChunk",
     "KnowledgeEntry",
+    "KnowledgeRevision",
+    "KnowledgeState",
+    "SourceDocument",
+    "SourceDocumentVersion",
+    "ImportJob",
+    "ImportBatch",
+    "ImportConflict",
+    "PublicationJob",
+    "PublicationItem",
     "KnowledgeBlindSpot",
     "QACacheEntry",
     "QuickTopic",

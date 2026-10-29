@@ -91,6 +91,25 @@ class ItinerarySourceReference(StrictModel):
     content_version: str | None = Field(default=None, max_length=100)
 
 
+class PublishedCatalogEntryRead(StrictModel):
+    site_id: str
+    spot_code: str
+    entry_id: str
+    published_revision_id: str
+    title: str
+    aliases: list[str] = Field(default_factory=list)
+    source_label: str = ""
+    latitude: float | None = None
+    longitude: float | None = None
+    coordinate_evidence_id: str | None = None
+
+
+class PublishedCatalogResponse(StrictModel):
+    site_id: str
+    digest: str
+    items: list[PublishedCatalogEntryRead]
+
+
 class TourSnapshotV2(StrictModel):
     schema_version: Literal[2] = 2
     constraints: ItineraryConstraints = Field(default_factory=ItineraryConstraints)

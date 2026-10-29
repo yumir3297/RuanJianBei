@@ -11,6 +11,8 @@ class RetrievedDocument:
     snippet: str = ""
     source: str = ""
     score: float = 0.0
+    entry_id: int | None = None
+    revision_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

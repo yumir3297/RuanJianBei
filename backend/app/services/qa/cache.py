@@ -22,13 +22,14 @@ class QACache:
         self.max_items = max_items
         self.memory_cache: OrderedDict[str, CachedAnswer] = OrderedDict()
 
-    async def get(self, normalized_query: str) -> CachedAnswer | None:
-        cached = self.memory_cache.get(normalized_query)
+    async def get(self, normalized_query: str, *, epoch: int | None = None) -> CachedAnswer | None:
+        cache_key = self._key(normalized_query, epoch)
+        cached = self.memory_cache.get(cache_key)
         if cached and cached.expires_at > datetime.now(UTC):
-            self.memory_cache.move_to_end(normalized_query)
+            self.memory_cache.move_to_end(cache_key)
             return cached
 
-        entry = await self.repository.get(normalized_query)
+        entry = await self.repository.get(cache_key)
         if entry is None:
             return None
 
@@ -36,7 +37,7 @@ class QACache:
         if expires_at.tzinfo is None:
             expires_at = expires_at.replace(tzinfo=UTC)
         if expires_at <= datetime.now(UTC):
-            await self.repository.invalidate(normalized_query)
+            await self.repository.invalidate(cache_key)
             return None
 
         restored = CachedAnswer(
@@ -44,14 +45,18 @@ class QACache:
             sources=json.loads(entry.sources),
             expires_at=expires_at,
         )
-        self._remember(normalized_query, restored)
+        self._remember(cache_key, restored)
         return restored
 
-    async def set(self, normalized_query: str, answer: str, sources: list[dict], ttl: int | None = None) -> CachedAnswer:
+    async def set(
+        self, normalized_query: str, answer: str, sources: list[dict], ttl: int | None = None,
+        *, epoch: int | None = None,
+    ) -> CachedAnswer:
+        cache_key = self._key(normalized_query, epoch)
         expires_at = datetime.now(UTC) + timedelta(seconds=ttl or self.ttl_seconds)
         cached = CachedAnswer(answer=answer, sources=sources, expires_at=expires_at)
-        self._remember(normalized_query, cached)
-        await self.repository.set(normalized_query, answer, sources, expires_at)
+        self._remember(cache_key, cached)
+        await self.repository.set(cache_key, answer, sources, expires_at)
         return cached
 
     async def invalidate(self, normalized_query: str | None = None) -> None:
@@ -66,4 +71,10 @@ class QACache:
         self.memory_cache.move_to_end(normalized_query)
         while len(self.memory_cache) > self.max_items:
             self.memory_cache.popitem(last=False)
+
+    @staticmethod
+    def _key(normalized_query: str, epoch: int | None) -> str:
+        if epoch is None:
+            return normalized_query
+        return f"e{epoch}:{normalized_query}"
 

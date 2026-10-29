@@ -24,6 +24,7 @@ class KnowledgeChunker:
     def build_chunks(self, entries: list[KnowledgeEntry]) -> list[KnowledgeChunk]:
         chunks: list[KnowledgeChunk] = []
         for entry in entries:
+            revision_id = entry.published_revision_id
             entry_metadata = self._load_metadata(entry.metadata_json)
             entry_metadata.update(
                 {
@@ -31,16 +32,23 @@ class KnowledgeChunker:
                     "source_title": entry.title,
                     "source_category": entry.category,
                     "source": entry.source,
+                    "revision_id": revision_id or "",
                     "aliases": [item for item in entry.aliases.split("|") if item],
                 }
             )
 
             for index, content in enumerate(self._split_text(entry.content), start=1):
                 metadata = {**entry_metadata, "chunk_index": index}
+                chunk_id = (
+                    f"ke_{entry.id}_{revision_id}_{index:03d}"
+                    if revision_id
+                    else f"ke_{entry.id}_{index:03d}"
+                )
                 chunks.append(
                     KnowledgeChunk(
-                        chunk_id=f"ke_{entry.id}_{index:03d}",
+                        chunk_id=chunk_id,
                         source_entry_id=entry.id,
+                        revision_id=revision_id,
                         chunk_index=index,
                         title=entry.title,
                         category=entry.category,

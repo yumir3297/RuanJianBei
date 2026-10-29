@@ -15,7 +15,7 @@
 - W01 代码仅从独立分支 `codex/w01-tour-sessions` 的最新已验收提交引入；不覆盖其仍在进行的浏览器/验收文档。
 - 基线仓库已有未提交 F01/V03 修改；在其原工作树保持不变。仅在 V01 确有直接依赖时，按路径审阅并导入所需共享播放接口。
 - Cookie/CSRF、owner 过滤、写请求幂等与 expected_version 沿用 W01，任务 ID 不作为权限。
-- 只从已发布且未下架知识目录解析 spot_code；演示坐标不作权威路网或实时客流证据。
+- 只从 K01 当前发布修订、未下架知识目录解析 `metadata.attraction_id` 为 spot_code；演示坐标不作权威路网或实时客流证据。
 - 普通聊天 SSE 合约保持不变；规划意图只生成 allowlist 操作，服务器验证后经游客确认保存。
 - 计划预算是游览总预算；开始后只检查当前和未来部分。未知路段时长不计为 0，结果标 `unverified`。
 - 完成/跳过进度与行程修订分别保存；任何行程撤销不回滚实际游览事件。
@@ -78,8 +78,9 @@
 - Produces: `upgrade_snapshot(raw: dict) -> TourSnapshotV2`；`PublishedAttractionCatalog.list_for_site(site_id) -> CatalogSnapshot`；`parse_spot_reference(value: str, catalog: CatalogSnapshot) -> ResolvedSpot | AmbiguousSpot | UnknownSpot`。
 - Produces: `apply_manual_operation(snapshot: TourSnapshotV2, operation: ItineraryOperation, catalog: CatalogSnapshot) -> MutationResult`，结果含规范快照、diff 与 `pass|conflict|unverified`。
 
-- [ ] **Step 1: 明确数据库中的已发布 revision 与 `spot_code` 来源**
-  - W01 基线当前没有知识发布 revision/`attraction_id`/有效状态；仅有可编辑 `KnowledgeEntry`。只读目录契约已定义，数据库适配留待真实发布接口合入，禁止将普通条目当作已发布目录。
+- [x] **Step 1: 明确数据库中的已发布 revision 与 `spot_code` 来源**
+  - K01 用 `KnowledgeEntry.published_revision_id` / `withdrawn_at` 控制可见性；目录 join 对应 `KnowledgeRevision` 并读取该 revision metadata。此版 K01 为单景区服务，目录 `site_id` 必须等于 `Settings.site_id`；`metadata.attraction_id` 是稳定景点码，entry id 与 revision id 单独保留。
+  - V01 分支只读合入 K01 提交 `914c030` 的实现，不修改 `/Users/yumir/RuanJianBei` 原工作树；重复代码拒绝，歧义别名显式返回。
 - [x] **Step 2: 定义快照 V2 schema 及升级规则**
   - 严格枚举 `visit|rest`、来源、预算依据和执行状态；最多 50 条，分钟预算 1–720。
   - 老 `TourSnapshot` 升级只创建新修订；历史 JSON 不变；无法解析的 spot 保留名称但标 unknown。
@@ -91,7 +92,7 @@
   - 按 stop_id 操作；验证锁定、排除/必去、顺序引用、重复 stop、额外字段与上限；返回确定性 diff。
 - [ ] **Step 5: 加可用预算和迁移防回归验证**
   - 已发布目录只返回可见条目；未知与歧义状态单独呈现。
-  - 数据库升级/降级/再升级可用隔离 SQLite 完成；正式 PostgreSQL 迁移需使用现有本机/CI 环境确认。
+  - W01、K01 两条 Alembic 链已合并到单 head `f324abc9d012`，隔离 SQLite base→head→base→head 已通过；V01 自身迁移仍待添加和验证。正式 PostgreSQL 迁移需使用现有本机/CI 环境确认。
 
 ### Task 3: 持久执行进度与时间预算
 

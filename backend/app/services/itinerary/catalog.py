@@ -6,6 +6,12 @@ import re
 from dataclasses import dataclass
 from typing import Protocol, Sequence
 
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.knowledge import KnowledgeEntry
+from app.models.knowledge_workspace import KnowledgeRevision
+
 
 @dataclass(frozen=True, order=True)
 class PublishedAttraction:
@@ -57,6 +63,10 @@ class CatalogIntegrityError(ValueError):
     pass
 
 
+class CatalogSiteMismatch(ValueError):
+    pass
+
+
 def _normalize(value: str) -> str:
     return re.sub(r"[\s\-‐‑‒–—_]+", "", value).casefold()
 
@@ -100,6 +110,82 @@ class PublishedAttractionCatalog:
     async def list_for_site(self, site_id: str) -> CatalogSnapshot:
         rows = await self.source.list_published_attractions(site_id)
         return build_catalog_snapshot(site_id, rows)
+
+
+class K01PublishedAttractionSource:
+    """Read K01's current published revisions for this single-site application.
+
+    K01 currently stores no per-entry site_id; the caller's configured site_id
+    scopes this single-site database. A mismatched site is rejected rather than
+    silently returning the same global catalog for another park.
+    """
+
+    def __init__(self, session: AsyncSession, *, site_id: str) -> None:
+        self.session = session
+        self.site_id = site_id
+
+    async def list_published_attractions(self, site_id: str) -> Sequence[PublishedAttraction]:
+        if site_id != self.site_id:
+            raise CatalogSiteMismatch("景点目录仅绑定当前配置的景区")
+        result = await self.session.execute(
+            select(KnowledgeEntry, KnowledgeRevision)
+            .join(KnowledgeRevision, KnowledgeRevision.id == KnowledgeEntry.published_revision_id)
+            .where(
+                KnowledgeEntry.category == "景点信息",
+                KnowledgeEntry.published_revision_id.is_not(None),
+                KnowledgeEntry.withdrawn_at.is_(None),
+                KnowledgeRevision.knowledge_entry_id == KnowledgeEntry.id,
+                KnowledgeRevision.category == "景点信息",
+            )
+            .order_by(KnowledgeEntry.id.asc())
+        )
+        entries: list[PublishedAttraction] = []
+        for entry, revision in result.all():
+            metadata = _parse_metadata(revision.metadata_json)
+            spot_code = metadata.get("attraction_id")
+            if not isinstance(spot_code, str) or not spot_code.strip():
+                # A published attraction without a stable imported identity may
+                # remain in the general knowledge base, but is not a route stop.
+                continue
+            latitude, longitude, coordinate_evidence_id = _published_coordinates(metadata)
+            aliases = tuple(alias.strip() for alias in (revision.aliases or "").split("|") if alias.strip())
+            entries.append(PublishedAttraction(
+                site_id=site_id,
+                spot_code=spot_code.strip(),
+                entry_id=str(entry.id),
+                published_revision_id=revision.id,
+                title=revision.title,
+                aliases=aliases,
+                source_label=revision.source,
+                latitude=latitude,
+                longitude=longitude,
+                coordinate_evidence_id=coordinate_evidence_id,
+            ))
+        return entries
+
+
+def _parse_metadata(raw: str | None) -> dict:
+    if not raw:
+        return {}
+    try:
+        value = json.loads(raw)
+    except (TypeError, ValueError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _published_coordinates(metadata: dict) -> tuple[float | None, float | None, str | None]:
+    evidence_id = metadata.get("coordinate_evidence_id")
+    if not isinstance(evidence_id, str) or not evidence_id.strip():
+        return None, None, None
+    try:
+        latitude = float(metadata["latitude"])
+        longitude = float(metadata["longitude"])
+    except (KeyError, TypeError, ValueError):
+        return None, None, None
+    if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+        return None, None, None
+    return latitude, longitude, evidence_id.strip()
 
 
 def parse_spot_reference(value: str, catalog: CatalogSnapshot) -> SpotParseResult:

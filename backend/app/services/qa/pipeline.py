@@ -187,6 +187,7 @@ class QAPipeline:
         intent_router: IntentRouter | None = None,
         knowledge_repository: KnowledgeRepository | None = None,
         route_repository: RouteRepository | None = None,
+        visibility_service=None,
     ) -> None:
         self.query_rewriter = query_rewriter
         self.faq_matcher = faq_matcher
@@ -206,6 +207,7 @@ class QAPipeline:
         self.intent_router = intent_router or IntentRouter()
         self.knowledge_repository = knowledge_repository
         self.route_repository = route_repository
+        self.visibility_service = visibility_service
         self.text_emotion_analyzer = TextEmotionAnalyzer()
         self.emotion_fusion = MultimodalEmotionFusion()
         self._active_emotion = self.emotion_fusion.fuse(None, None)
@@ -217,6 +219,7 @@ class QAPipeline:
 
     async def stream_chat(self, request: ChatRequest):
         start = perf_counter()
+        request_epoch = await self.visibility_service.read_epoch() if self.visibility_service is not None else None
         text_emotion = self.text_emotion_analyzer.analyze(request.query)
         audio_emotion = None
         if request.emotion_context is not None:
@@ -299,6 +302,7 @@ class QAPipeline:
                     hit_level="static_route",
                     start=start,
                     resolved=resolved,
+                    expected_epoch=request_epoch,
                 ):
                     yield event
                 return
@@ -330,6 +334,9 @@ class QAPipeline:
                 faq_documents = [_faq_evidence_document(faq_result)]
             else:
                 styled_answer = polish_answer(faq_result.answer, request.persona, faq_sources)
+                if not await self._epoch_is_current(request_epoch):
+                    yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
+                    return
                 async for event in self._emit_final_answer(
                     request=request,
                     normalized_query=normalized_query,
@@ -338,12 +345,16 @@ class QAPipeline:
                     hit_level=f"faq_{faq_result.level}",
                     start=start,
                     resolved=resolved,
+                    expected_epoch=request_epoch,
                 ):
                     yield event
                 return
 
-        cached = await self.qa_cache.get(cache_key)
+        cached = await self.qa_cache.get(cache_key, epoch=request_epoch)
         if cached:
+            if not await self._epoch_is_current(request_epoch):
+                yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
+                return
             styled_answer = polish_answer(cached.answer, request.persona, cached.sources)
             async for event in self._emit_final_answer(
                 request=request,
@@ -353,6 +364,7 @@ class QAPipeline:
                 hit_level="cache",
                 start=start,
                 resolved=resolved,
+                expected_epoch=request_epoch,
             ):
                 yield event
             return
@@ -361,6 +373,9 @@ class QAPipeline:
             yield StreamEvent(type="status", data={"text": "正在按你的讲解方式改写..."})
             documents = faq_documents
             sources = faq_sources
+            if not await self._epoch_is_current(request_epoch):
+                yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
+                return
             if faq_sources:
                 yield StreamEvent(type="sources", data={"docs": faq_sources})
         else:
@@ -374,8 +389,15 @@ class QAPipeline:
                 self._doc_to_source(document, evidence_id=f"证据{index}")
                 for index, document in enumerate(documents, start=1)
             ]
+            if not await self._epoch_is_current(request_epoch):
+                yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
+                return
             if sources:
                 yield StreamEvent(type="sources", data={"docs": sources})
+
+        if not await self._epoch_is_current(request_epoch):
+            yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
+            return
 
         if not documents:
             if self.blind_spot_tracker is not None:
@@ -397,6 +419,7 @@ class QAPipeline:
                 hit_level="rag_insufficient",
                 start=start,
                 resolved=resolved,
+                expected_epoch=request_epoch,
             ):
                 yield event
             return
@@ -466,6 +489,7 @@ class QAPipeline:
             else None
         )
         llm_done = False
+        visibility_changed = False
         llm_error: Exception | None = None
         tts_connected = False
         tts_done = not streaming_requested
@@ -476,7 +500,13 @@ class QAPipeline:
 
         try:
             while not llm_done or not tts_done:
+                if not await self._epoch_is_current(request_epoch):
+                    visibility_changed = True
+                    break
                 kind, payload = await mux_queue.get()
+                if not await self._epoch_is_current(request_epoch):
+                    visibility_changed = True
+                    break
 
                 if kind == "llm":
                     event = self._coerce_llm_event(payload)
@@ -594,6 +624,9 @@ class QAPipeline:
 
         if llm_error is not None:
             raise llm_error
+        if visibility_changed:
+            yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
+            return
 
         if streaming_requested and tts_failed and not request.text_only:
             remaining_text = full_answer[tts_confirmed_chars:].strip()
@@ -633,8 +666,11 @@ class QAPipeline:
             # 刻意保持 degraded_llm=True，避免把未改写的答案写进受众专属缓存，
             # 否则一次 LLM 抖动就会长期污染该受众的缓存。
             full_answer = polish_answer(faq_result.answer, request.persona, faq_sources)
+        if not await self._epoch_is_current(request_epoch):
+            yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
+            return
         if not degraded_llm and self._active_emotion.label == EmotionLabel.NEUTRAL:
-            await self.qa_cache.set(cache_key, full_answer, sources)
+            await self.qa_cache.set(cache_key, full_answer, sources, epoch=request_epoch)
         latency_ms = int((perf_counter() - start) * 1000)
         chat_log_id = await self._persist_interaction(
             session_id=request.session_id,
@@ -647,6 +683,9 @@ class QAPipeline:
             request=request,
             active_subject=resolved.active_subject,
         )
+        if not await self._epoch_is_current(request_epoch):
+            yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
+            return
         logger.info(
             "LLM completed: finish_reason=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s cached_tokens=%s",
             llm_finish_reason,
@@ -790,11 +829,18 @@ class QAPipeline:
         hit_level: str,
         start: float,
         resolved: ResolvedInteraction,
+        expected_epoch: int | None = None,
     ):
+        if not await self._epoch_is_current(expected_epoch):
+            yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
+            return
         answer = apply_answer_prefix(answer, self._active_response_policy)
         answer = self._ensure_inline_citations(answer, sources)
         if sources:
             yield StreamEvent(type="sources", data={"docs": sources})
+        if not await self._epoch_is_current(expected_epoch):
+            yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
+            return
         yield StreamEvent(type="text", data={"text": answer, "is_complete": True})
         if not request.text_only:
             # 景点讲解（FAQ路径）用简短摘要做 TTS，避免长文本合成慢
@@ -812,6 +858,10 @@ class QAPipeline:
             audio_task = self.tts_service.synthesize(tts_text)
             avatar_task = self.avatar_service.drive(tts_text)
             audio, avatar = await asyncio.gather(audio_task, avatar_task)
+
+            if not await self._epoch_is_current(expected_epoch):
+                yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
+                return
 
             emotion = self._answer_emotion(hit_level, len(sources))
             avatar_data = {"viseme_text": avatar.viseme_text, "emotion": emotion}
@@ -845,6 +895,11 @@ class QAPipeline:
             degraded=hit_level in {"rag_insufficient", "rag_llm_fallback"},
             provider="local" if hit_level.startswith("faq_") or hit_level == "cache" else "rag",
         )
+
+    async def _epoch_is_current(self, expected_epoch: int | None) -> bool:
+        if expected_epoch is None or self.visibility_service is None:
+            return True
+        return await self.visibility_service.read_epoch() == expected_epoch
 
     async def _persist_interaction(
         self,

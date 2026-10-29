@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
+import os
 from pathlib import Path
+import shutil
 from typing import Any, Protocol, Sequence
 
 from app.core.exceptions import AppError
@@ -33,7 +36,13 @@ class BaseVectorStore(Protocol):
         """Return the number of records in the current collection."""
 
     def replace_all(self, records: Sequence[VectorStoreRecord]) -> int:
-        """Replace the whole vector collection with the supplied records."""
+        """Build separately and atomically switch readers to the complete replacement."""
+
+    def upsert(self, records: Sequence[VectorStoreRecord]) -> int:
+        """Insert or replace only the supplied records."""
+
+    def delete_ids(self, ids: Sequence[str]) -> None:
+        """Remove specific records from the collection."""
 
     def query(
         self,
@@ -47,7 +56,8 @@ class BaseVectorStore(Protocol):
 class ChromaVectorStore:
     def __init__(self, persist_dir: Path, collection_name: str) -> None:
         self.persist_dir = persist_dir
-        self.collection_name = collection_name
+        self.base_collection_name = collection_name
+        self.pointer_path = self.persist_dir / f"{collection_name}.active"
         self.persist_dir.mkdir(parents=True, exist_ok=True)
 
         try:
@@ -61,26 +71,86 @@ class ChromaVectorStore:
 
         self._client = chromadb.PersistentClient(path=str(self.persist_dir))
 
+    @property
+    def collection_name(self) -> str:
+        try:
+            active = self.pointer_path.read_text(encoding="utf-8").strip()
+        except OSError:
+            active = ""
+        if active and all(char.isalnum() or char in "._-" for char in active) and len(active) <= 63:
+            return active
+        return self.base_collection_name
+
     def count(self) -> int:
         if not self._collection_exists():
             return 0
         return self._client.get_collection(self.collection_name).count()
 
     def replace_all(self, records: Sequence[VectorStoreRecord]) -> int:
-        if self._collection_exists():
-            self._client.delete_collection(self.collection_name)
+        staged_bytes = sum(
+            len(record.document.encode("utf-8"))
+            + len(json.dumps(record.metadata, ensure_ascii=False).encode("utf-8"))
+            + len(record.embedding) * 4
+            + 256
+            for record in records
+        )
+        required_free = staged_bytes + 10 * 1024 * 1024
+        if shutil.disk_usage(self.persist_dir).free < required_free:
+            raise AppError(
+                "Vector index storage is low on free space. Rebuild was stopped before switching collections.",
+                error_code="insufficient_storage",
+                status_code=507,
+            )
+        old_name = self.collection_name
+        staging_name = f"{self.base_collection_name[:38]}_stage_{os.urandom(8).hex()}"
+        collection = self._client.create_collection(name=staging_name)
+        temp_pointer = self.pointer_path.with_name(f"{self.pointer_path.name}.{os.urandom(6).hex()}.tmp")
+        try:
+            if records:
+                for offset in range(0, len(records), 5000):
+                    batch = records[offset : offset + 5000]
+                    collection.add(
+                        ids=[record.id for record in batch],
+                        embeddings=[record.embedding for record in batch],
+                        documents=[record.document for record in batch],
+                        metadatas=[record.metadata for record in batch],
+                    )
+            temp_pointer.write_text(staging_name, encoding="utf-8")
+            os.replace(temp_pointer, self.pointer_path)
+        except Exception:
+            try:
+                temp_pointer.unlink(missing_ok=True)
+            except OSError:
+                pass
+            try:
+                self._client.delete_collection(staging_name)
+            except Exception:
+                pass
+            raise
 
-        collection = self._client.get_or_create_collection(name=self.collection_name)
+        if old_name != staging_name:
+            try:
+                self._client.delete_collection(old_name)
+            except Exception:
+                # The pointer has already switched; cleanup can be retried later.
+                pass
+        return len(records)
+
+    def upsert(self, records: Sequence[VectorStoreRecord]) -> int:
         if not records:
             return 0
-
-        collection.add(
+        collection = self._client.get_or_create_collection(name=self.collection_name)
+        collection.upsert(
             ids=[record.id for record in records],
             embeddings=[record.embedding for record in records],
             documents=[record.document for record in records],
             metadatas=[record.metadata for record in records],
         )
         return len(records)
+
+    def delete_ids(self, ids: Sequence[str]) -> None:
+        if ids and self._collection_exists():
+            self._client.get_collection(self.collection_name).delete(ids=list(ids))
 
     def query(
         self,

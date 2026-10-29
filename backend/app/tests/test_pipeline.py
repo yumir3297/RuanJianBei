@@ -288,6 +288,45 @@ def test_pipeline_passes_resolved_scope_and_uses_selection_cache_key() -> None:
     assert llm_service.received[-1]["audience"] == "adult"
 
 
+def test_pipeline_stops_streaming_and_does_not_cache_when_epoch_changes() -> None:
+    class ChangingVisibility:
+        reads = 0
+
+        async def read_epoch(self):
+            self.reads += 1
+            # Capture, retrieval checks, and first stream iteration see epoch 1;
+            # the next stream iteration observes a concurrent withdrawal.
+            return 1 if self.reads <= 5 else 2
+
+    cache_repository = DummyCacheRepo()
+    pipeline = _build_test_pipeline(
+        rag_service=RecordingRAGService(),
+        visibility_service=ChangingVisibility(),
+        qa_cache=QACache(cache_repository, ttl_seconds=60),
+    )
+
+    events = asyncio.run(_collect_pipeline_events(pipeline))
+
+    assert any(event.type == "text_chunk" for event in events)
+    assert not any(event.type == "text" and event.data.get("is_complete") for event in events)
+    assert events[-1].type == "error"
+    assert cache_repository.set_keys == []
+
+
+async def _collect_pipeline_events(pipeline):
+    events = []
+    async for event in pipeline.stream_chat(
+        ChatRequest(
+            query="有什么特色",
+            session_id="withdraw-during-stream",
+            text_only=True,
+            selection=SelectionContext(mode="attraction", attraction_id=13),
+        )
+    ):
+        events.append(event)
+    return events
+
+
 def test_pipeline_forwards_child_audience_to_llm_and_cache_key() -> None:
     cache_repository = DummyCacheRepo()
     llm_service = DummyLLMService()

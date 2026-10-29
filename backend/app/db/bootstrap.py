@@ -167,17 +167,11 @@ async def bootstrap_sample_data() -> None:
                 aliases=["坛城", "五印坛城"],
             ),
         ]
+        from app.services.knowledge.workspace import KnowledgeWorkspaceService
+
+        workspace = KnowledgeWorkspaceService(session)
         for item in samples:
-            entry = KnowledgeEntry(
-                title=item.title,
-                category=item.category,
-                content=item.content,
-                source=item.source,
-                aliases="|".join(item.aliases),
-                metadata_json=item.metadata_json,
-            )
-            session.add(entry)
-        await session.commit()
+            await workspace.save_draft(None, item)
 
 
 async def bootstrap_experience_demo_feedback() -> None:

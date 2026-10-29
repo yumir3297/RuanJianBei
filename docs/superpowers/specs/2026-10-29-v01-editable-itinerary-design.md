@@ -32,7 +32,7 @@
 
 W01 已在另一个对话验收，禁止直接修改 `/private/tmp/ruanjianbei-w01`。实施从已验收提交 `a8c2837` 的独立检出开始；当前主工作树 F01/V03 改动保持原样，只有确认依赖后才审阅导入。不能以 `672a104` 为唯一基线假装已经包含身份与修订。
 
-原设计预期 K01 提供只读 `PublishedAttractionCatalog`。已审阅的 W01 基线没有发布 revision、`attraction_id` 或有效状态字段；仅有可编辑 `KnowledgeEntry`，因此当前分支只先落目录契约/纯解析，不能直接查询并暴露现有条目。取得真实知识发布接口后再实现数据库适配器，并通过真实集成测试。
+W01 基线没有发布 revision；V01 集成 K01 提交 `914c030` 的只读可见性契约。适配器 join `KnowledgeEntry.published_revision_id` 对应的 `KnowledgeRevision`，过滤 `withdrawn_at`，且只使用该 revision metadata 中导入的 `attraction_id`。K01 当前未为每条 entry 保存 `site_id`，因此此适配器仅绑定现有单景区 `Settings.site_id`，请求其他 site 时拒绝；多景区隔离需 K01 增加每条知识的 site id 后再扩展。
 
 新增行程 API 与服务，不更改普通问答文本 SSE 契约。ChatView 仅装配上下文与工具；新的行程编辑与提案面板拆成组件。前端行程 store 与聊天消息 store 分离。
 
