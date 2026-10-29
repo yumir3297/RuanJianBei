@@ -9,7 +9,7 @@ from app.core.config import Settings
 from app.core.deps import get_app_settings, get_db_session
 from app.models.tour_session import TourIdentity
 from app.repositories.tour_session import IdempotencyConflict, RevisionConflict, TourSessionRepository
-from app.schemas.tour_session import CreateTourSessionRequest, SaveTourSessionRequest
+from app.schemas.tour_session import CreateTourSessionRequest, SaveTourSessionRequest, TourArtifactReferenceRequest
 from app.services.tour_session_identity import ensure_tour_identity, require_tour_write_protection
 
 router = APIRouter()
@@ -84,6 +84,48 @@ async def list_tour_revisions(
     if await TourSessionRepository(db).get_session(identity.id, session_id) is None:
         raise HTTPException(status_code=404, detail="游览不存在")
     return {"items": await TourSessionRepository(db).list_revisions(identity.id, session_id)}
+
+
+@router.get("/{session_id}/artifacts")
+async def list_tour_artifacts(
+    session_id: str,
+    identity: TourIdentity = Depends(get_tour_identity),
+    db: AsyncSession = Depends(get_db_session),
+):
+    items = await TourSessionRepository(db).list_artifact_references(identity.id, session_id)
+    if items is None:
+        raise HTTPException(status_code=404, detail="游览不存在")
+    return {"items": items}
+
+
+@router.get("/{session_id}/events")
+async def list_tour_events(
+    session_id: str,
+    identity: TourIdentity = Depends(get_tour_identity),
+    db: AsyncSession = Depends(get_db_session),
+):
+    items = await TourSessionRepository(db).list_events(identity.id, session_id)
+    if items is None:
+        raise HTTPException(status_code=404, detail="游览不存在")
+    return {"items": items}
+
+
+@router.post("/{session_id}/artifacts", status_code=status.HTTP_201_CREATED)
+async def add_tour_artifact(
+    session_id: str,
+    payload: TourArtifactReferenceRequest,
+    request: Request,
+    identity: TourIdentity = Depends(get_tour_identity),
+    db: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_app_settings),
+):
+    _protect_write(request, identity, settings)
+    item = await TourSessionRepository(db).add_artifact_reference(
+        identity.id, session_id, payload.artifact_type, payload.artifact_id, payload.revision_id,
+    )
+    if item is None:
+        raise HTTPException(status_code=404, detail="游览或历史版本不存在")
+    return item
 
 
 @router.get("/{session_id}")

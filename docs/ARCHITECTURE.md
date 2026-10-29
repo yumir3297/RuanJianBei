@@ -64,7 +64,18 @@ flowchart LR
 - 背景/欢迎语：[display_assets service](../backend/app/services/display_assets.py) 存储配置和上传资源；公开读取与后台写操作分开，URL 经 [display.js](../frontend/src/api/display.js) 解析。
 - 记忆：[visitor_memory repository](../backend/app/repositories/visitor_memory.py) 和 [memory/profile.py](../backend/app/services/memory/profile.py)；浏览器本地标识并不代表跨设备账号同步。
 
-## 5. 运行与部署
+## 5. 游客游览任务（W01）
+
+- 游览任务有独立 `tour_sessions.id`，不复用聊天 `session_id`。任务快照、不可变修订、事件和成果引用写入 SQL；草稿不进入 FAQ/RAG 公共检索。
+- 首版匿名身份由 `tour_identity` HttpOnly cookie 提供，服务端仅保存 credential SHA-256 摘要；身份有效期 365 天。CSRF cookie 与身份绑定，写请求同时校验同源 `Origin` 与 token。
+- `/api/tour-sessions` 的读取和写入均以匿名身份 owner_id 过滤。管理员 bearer token 不扩大游客任务读取权限。景区 ID 由服务端 `SITE_ID` 配置写入，不接受游客请求覆盖。
+- 每次保存创建新 revision；`expected_version` 不匹配返回 409。创建与保存要求幂等键，同键同请求重放原响应，同键不同请求冲突。
+- 删除进入 30 天回收站，可恢复；超期由回收站查询时清理。历史版本恢复会产生新 revision。事件接口只读并按所有者隔离。
+- 前端以 `RouteView` 的“我的游览”入口创建/查看/删除游览任务，可把当前路线作为行程快照保存。匿名身份不支持跨设备找回；cookie 被禁用时前端提示无法持久化。
+
+当前自动化覆盖 repository、身份/CSRF、API 隔离和幂等键；真实浏览器刷新、关闭重开、服务重启与 cookie 禁用行为仍待手动验收。模型与接口索引见 [REPO_MAP.md](REPO_MAP.md)。
+
+## 6. 运行与部署
 
 - `backend/main.py` 启动时执行 Alembic、bootstrap 与模型预热；先备好数据库、处理数据与模型缓存。
 - `GET /health` 是进程级响应；`GET /ready` 检查部分数据库/配置条件，两者都不等于完整外部 AI 验收。

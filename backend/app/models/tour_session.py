@@ -54,6 +54,17 @@ class TourArtifactReference(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
+class TourSessionEvent(Base):
+    __tablename__ = "tour_session_events"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    session_id: Mapped[str] = mapped_column(ForeignKey("tour_sessions.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_type: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    payload_json: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+
+
 class TourSessionIdempotency(Base):
     __tablename__ = "tour_session_idempotency"
     __table_args__ = (UniqueConstraint("owner_id", "endpoint", "key", name="uq_tour_idempotency_owner_endpoint_key"),)

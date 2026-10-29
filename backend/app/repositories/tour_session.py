@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.tour_session import (
     TourArtifactReference,
     TourSession,
+    TourSessionEvent,
     TourSessionIdempotency,
     TourSessionRevision,
 )
@@ -83,6 +84,12 @@ class TourSessionRepository:
             expires_at=datetime.now(UTC) + timedelta(days=IDEMPOTENCY_DAYS),
         ))
 
+    def _add_event(self, session_id: str, event_type: str, version: int, payload: dict | None = None) -> None:
+        self.session.add(TourSessionEvent(
+            id=str(uuid4()), session_id=session_id, event_type=event_type,
+            version=version, payload_json=_encode(payload or {}), created_at=datetime.now(UTC),
+        ))
+
     async def _commit_with_replay(self, owner_id: str, endpoint: str, key: str, payload: object) -> dict | None:
         try:
             await self.session.commit()
@@ -126,6 +133,7 @@ class TourSessionRepository:
         revision = TourSessionRevision(id=str(uuid4()), session_id=item.id, version=1,
                                        snapshot_json=_encode(payload))
         self.session.add_all([item, revision])
+        self._add_event(item.id, "created", 1)
         await self.session.flush()
         result = await self._session_result(item, revision)
         self._remember(owner_id, "create", idempotency_key, request, result, item.id)
@@ -136,7 +144,7 @@ class TourSessionRepository:
 
     async def save_revision(
         self, owner_id: str, session_id: str, expected_version: int, payload: dict,
-        idempotency_key: str,
+        idempotency_key: str, event_type: str = "saved",
     ) -> dict:
         request = {"session_id": session_id, "expected_version": expected_version, "snapshot": payload}
         replay = await self._replay(owner_id, "save", idempotency_key, request)
@@ -161,6 +169,7 @@ class TourSessionRepository:
         revision = TourSessionRevision(id=str(uuid4()), session_id=session_id,
                                        version=expected_version + 1, snapshot_json=_encode(payload))
         self.session.add(revision)
+        self._add_event(session_id, event_type, expected_version + 1)
         item = await self.session.scalar(select(TourSession).where(
             TourSession.id == session_id, TourSession.owner_id == owner_id,
         ))
@@ -195,6 +204,50 @@ class TourSessionRepository:
         return [{"id": row.id, "version": row.version, "snapshot": _decode(row.snapshot_json),
                  "created_at": row.created_at.isoformat() if row.created_at else None} for row in rows]
 
+    async def add_artifact_reference(
+        self, owner_id: str, session_id: str, artifact_type: str, artifact_id: str,
+        revision_id: str | None = None,
+    ) -> dict | None:
+        item = await self.session.scalar(select(TourSession.id).where(
+            TourSession.id == session_id, TourSession.owner_id == owner_id,
+        ))
+        if item is None:
+            return None
+        if revision_id is not None:
+            revision = await self.session.scalar(select(TourSessionRevision.id).where(
+                TourSessionRevision.id == revision_id,
+                TourSessionRevision.session_id == session_id,
+            ))
+            if revision is None:
+                return None
+        reference = TourArtifactReference(
+            id=str(uuid4()), session_id=session_id, revision_id=revision_id,
+            artifact_type=artifact_type, artifact_id=artifact_id,
+        )
+        self.session.add(reference)
+        session_version = await self.session.scalar(select(TourSession.version).where(
+            TourSession.id == session_id, TourSession.owner_id == owner_id,
+        ))
+        self._add_event(session_id, "artifact_linked", int(session_version or 1), {
+            "artifact_type": artifact_type, "artifact_id": artifact_id,
+        })
+        await self.session.commit()
+        return {"id": reference.id, "session_id": session_id, "revision_id": revision_id,
+                "artifact_type": artifact_type, "artifact_id": artifact_id}
+
+    async def list_artifact_references(self, owner_id: str, session_id: str) -> list[dict] | None:
+        owned = await self.session.scalar(select(TourSession.id).where(
+            TourSession.id == session_id, TourSession.owner_id == owner_id,
+        ))
+        if owned is None:
+            return None
+        rows = (await self.session.scalars(select(TourArtifactReference).where(
+            TourArtifactReference.session_id == session_id,
+        ).order_by(TourArtifactReference.created_at))).all()
+        return [{"id": row.id, "revision_id": row.revision_id, "artifact_type": row.artifact_type,
+                 "artifact_id": row.artifact_id, "created_at": row.created_at.isoformat() if row.created_at else None}
+                for row in rows]
+
     async def restore_revision(
         self, owner_id: str, session_id: str, revision_id: str, expected_version: int,
         idempotency_key: str,
@@ -206,7 +259,21 @@ class TourSessionRepository:
         if source is None:
             return None
         return await self.save_revision(owner_id, session_id, expected_version,
-                                        _decode(source.snapshot_json), idempotency_key)
+                                        _decode(source.snapshot_json), idempotency_key, "restored")
+
+    async def list_events(self, owner_id: str, session_id: str) -> list[dict] | None:
+        owned = await self.session.scalar(select(TourSession.id).where(
+            TourSession.id == session_id, TourSession.owner_id == owner_id,
+        ))
+        if owned is None:
+            return None
+        rows = (await self.session.scalars(select(TourSessionEvent).where(
+            TourSessionEvent.session_id == session_id,
+        ).order_by(TourSessionEvent.created_at, TourSessionEvent.id))).all()
+        return [{"id": row.id, "event_type": row.event_type, "version": row.version,
+                 "payload": _decode(row.payload_json),
+                 "created_at": row.created_at.isoformat() if row.created_at else None}
+                for row in rows]
 
     async def delete_session(self, owner_id: str, session_id: str, expected_version: int) -> dict | None:
         now = datetime.now(UTC)
@@ -234,6 +301,7 @@ class TourSessionRepository:
                 id=str(uuid4()), session_id=session_id, version=expected_version + 1,
                 snapshot_json=current_revision.snapshot_json,
             ))
+        self._add_event(session_id, "deleted", expected_version + 1)
         await self.session.commit()
         item = await self.session.scalar(select(TourSession).where(
             TourSession.id == session_id, TourSession.owner_id == owner_id,
@@ -298,6 +366,7 @@ class TourSessionRepository:
                 id=str(uuid4()), session_id=session_id, version=item.version + 1,
                 snapshot_json=current_revision.snapshot_json,
             ))
+        self._add_event(session_id, "recovered", item.version + 1)
         await self.session.commit()
         await self.session.refresh(item)
         return await self._session_result(item)

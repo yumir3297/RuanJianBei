@@ -43,6 +43,11 @@ def test_tour_session_api_scopes_access_and_preserves_conflicts():
                 task = created.json()
                 assert task["site_id"] == "lingshan"
                 assert task["version"] == 1
+                artifact = await owner.post(f"/api/tour-sessions/{task['id']}/artifacts", headers={
+                    "Origin": "http://testserver", "X-CSRF-Token": csrf,
+                }, json={"artifact_type": "itinerary", "artifact_id": "itinerary-v1", "revision_id": task["revision_id"]})
+                assert artifact.status_code == 201
+                assert len((await owner.get(f"/api/tour-sessions/{task['id']}/artifacts")).json()["items"]) == 1
                 replay = await owner.post("/api/tour-sessions", headers=headers, json={
                     "title": "亲子游", "snapshot": {"constraints": {"available_minutes": 180}, "stops": []},
                 })
@@ -64,6 +69,7 @@ def test_tour_session_api_scopes_access_and_preserves_conflicts():
                     assert (await stranger.get(f"/api/tour-sessions/{task['id']}", headers={
                         "Authorization": f"Bearer {admin_token}",
                     })).status_code == 404
+                    assert (await stranger.get(f"/api/tour-sessions/{task['id']}/events")).status_code == 404
                     denied = await stranger.put(f"/api/tour-sessions/{task['id']}", headers={
                         "Origin": "http://testserver", "X-CSRF-Token": stranger_csrf, "Idempotency-Key": "save-1",
                     }, json={"expected_version": 1, "snapshot": {"stops": [{"name": "灵山大佛"}]}})
@@ -90,6 +96,10 @@ def test_tour_session_api_scopes_access_and_preserves_conflicts():
                 })
                 assert recovered.status_code == 200
                 assert recovered.json()["snapshot"]["stops"][0]["name"] == "灵山大佛"
+                events = (await owner.get(f"/api/tour-sessions/{task['id']}/events")).json()["items"]
+                assert [event["event_type"] for event in events] == [
+                    "created", "artifact_linked", "saved", "deleted", "recovered",
+                ]
                 purge_without_confirmation = await owner.delete(
                     f"/api/tour-sessions/{task['id']}/purge", headers={
                         "Origin": "http://testserver", "X-CSRF-Token": csrf,

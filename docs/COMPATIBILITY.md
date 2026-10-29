@@ -48,7 +48,7 @@ Windows/Linux 的校验命令已提供，当前仅在 macOS 主机执行；其�
 | GPS/模拟 | [useGeolocation](../frontend/src/composables/useGeolocation.js)、[useNarration](../frontend/src/composables/useNarration.js) | HTTPS、权限、真实坐标、低精度/景区外、模拟状态可辨别；原生 coords 字段适配风险见架构，不能用模拟巡游代验真 GPS |
 | 3D 人物 | [ThreeAvatar](../frontend/src/components/ThreeAvatar.vue)、[AvatarDisplay](../frontend/src/components/AvatarDisplay.vue) | WebGL/模型加载失败、低端机温升、切形象和多次开关工具；失败保留 SVG 降级和输入功能 |
 | 图像上传 | [vision API](../frontend/src/api/vision.js)、[vision.py](../backend/app/api/vision.py) | JPEG/PNG/WebP、空文件、超过服务端上限、相册 HEIC；不支持格式应有可恢复提示 |
-| 游客标识/后台 token | [chat store](../frontend/src/stores/chat.js)、[auth store](../frontend/src/stores/auth.js) | 存储受限、隐私模式、退出/401、清除记忆失败；不把本地标识描述为跨设备登录 |
+| 游客标识/游览任务身份 | [chat store](../frontend/src/stores/chat.js)、[tourSessions store](../frontend/src/stores/tourSessions.js)、[auth store](../frontend/src/stores/auth.js) | 游览任务使用 365 天 HttpOnly 匿名 cookie，仅同一浏览器恢复；测刷新/重开/服务重启、cookie 禁用、跨浏览器隔离和清除站点 cookie；不支持跨设备找回 |
 | 流式网络 | [useSSEStream](../frontend/src/composables/useSSEStream.js) | 建连超时、分块边界、连接中断、连续重试、停止后晚到消息；不承诺离线问答 |
 
 安全上下文和媒体策略参考 [MDN getUserMedia](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia)、[Geolocation](https://developer.mozilla.org/en-US/docs/Web/API/Geolocation_API)、[Autoplay](https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Autoplay)。

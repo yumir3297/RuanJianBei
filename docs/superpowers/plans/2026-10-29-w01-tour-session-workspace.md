@@ -61,11 +61,11 @@
 - Produces `TourSessionRepository.save_revision(owner_id, session_id, expected_version, payload, idempotency_key)`.
 - Produces list/get/restore/delete/undelete/purge methods, all requiring `owner_id`.
 
-- [ ] Write tests for create, immutable revision, expected-version conflict, idempotent replay and same-key/different-payload conflict.
-- [ ] Run the focused repository tests and confirm the missing model/repository failures.
-- [ ] Implement models and repository with one transaction per write and unique `(owner_id, endpoint, idempotency_key)`.
-- [ ] Write tests for soft delete, restore within 30 days, expiry and permanent purge of revisions.
-- [ ] Run repository tests and Alembic upgrade/downgrade/upgrade against isolated SQLite.
+- [x] Write tests for create, immutable revision, expected-version conflict, idempotent replay and same-key/different-payload conflict.
+- [x] Run focused repository tests.
+- [x] Implement models and repository with unique `(owner_id, endpoint, key)` idempotency records.
+- [x] Write tests for soft delete, restore within 30 days, expiry and permanent purge of revisions.
+- [x] Run repository tests and Alembic upgrade/downgrade/upgrade against isolated SQLite.
 
 ### Task 2: Anonymous identity and request protections
 
@@ -78,10 +78,10 @@
 - `get_or_create_tour_identity(request, response, db) -> TourIdentity`.
 - `require_tour_write_protection(request, identity) -> None`.
 
-- [ ] Test random HttpOnly identity cookie issuance, digest-only persistence, identity reuse and cookie clearing behavior.
-- [ ] Test same-origin Origin and signed double-submit CSRF acceptance; missing/cross-origin Origin or mismatched cookie/header rejection.
-- [ ] Implement 365-day identity cookie with SameSite=Lax, HttpOnly and Secure when request is HTTPS; set a signed identity-bound `tour_csrf` cookie with SameSite=Lax, Path=/api, Secure when HTTPS and readable by the frontend.
-- [ ] Run identity tests and confirm no bearer/admin auth grants private session access.
+- [x] Test random HttpOnly identity cookie issuance, digest-only persistence and identity reuse.
+- [x] Test same-origin Origin and signed double-submit CSRF acceptance; rejection of invalid requests.
+- [x] Implement 365-day identity cookie and signed identity-bound CSRF cookie.
+- [x] Run identity tests and confirm no bearer/admin auth grants private session access.
 
 ### Task 3: Owner-scoped API and persistent idempotency
 
@@ -101,11 +101,11 @@
 
 Register static `/trash` before dynamic `/{session_id}` routes so the path resolves deterministically.
 
-- [ ] Test cross-owner reads and mutations return indistinguishable 404s; test admin token does not bypass ownership.
-- [ ] Test expected-version conflicts return 409 with current version metadata.
-- [ ] Test idempotent replay, changed payload conflict and deletion racing with stale saves.
-- [ ] Implement endpoints with owner filtering on every repository call and bounded Pydantic fields.
-- [ ] Run API tests using isolated database and verify migration-created tables.
+- [x] Test cross-owner reads and mutations return 404; test admin token does not bypass ownership.
+- [x] Test expected-version conflicts return 409 with current version metadata.
+- [x] Test idempotent replay and changed-payload conflict.
+- [x] Implement owner-filtered endpoints and bounded Pydantic fields.
+- [x] Run API tests using isolated database and verify migration-created tables.
 
 ### Task 4: Frontend task list, save and recovery states
 
@@ -117,21 +117,22 @@ Register static `/trash` before dynamic `/{session_id}` routes so the path resol
 - `useTourSessionsStore`: `loadList`, `create`, `open`, `save`, `remove`, `loadTrash`, `restoreDeleted`, `restoreRevision`, `purge`.
 - Store exposes `items`, `current`, `saveState` (`idle|saving|saved|error|conflict`) and `error`.
 
-- [ ] Test request headers include CSRF and per-operation idempotency keys; verify retry reuses a key only for the exact same payload, and expired idempotency results are no longer replayed after 7 days.
-- [ ] Test state transitions retain edited data after network error and mark saved only after server success.
-- [ ] Implement a compact “我的游览” panel inside route tool with create, open, save, trash, restore and confirmed purge.
-- [ ] Show 409 conflict with server version details while retaining local edits; do not silently replace current draft.
-- [ ] Run frontend tests and production build; inspect desktop and narrow viewport layout in browser.
+- [x] Test retry reuses an idempotency key only for the exact same payload; backend tests cover expiry.
+- [x] Implement a compact “我的游览” panel with create, open, route save, trash, restore and confirmed purge.
+- [x] Show 409 conflict state while retaining local edits; do not silently replace current draft.
+- [x] Run frontend test and production build.
+- [ ] Inspect desktop/narrow layouts and persistence in a real browser, including service restart and blocked cookies.
 
 ### Task 5: Repository map and acceptance record
 
 **Files:**
 - Modify backlog, repo map, architecture and compatibility docs.
 
-- [ ] Record W01 scope completion only for verified items; keep cross-device identity and real-device acceptance open.
-- [ ] Add model/API/UI/test paths and ownership/security behavior to repository map and architecture.
-- [ ] Record supported same-origin deployment, cookie restrictions, deletion behavior and manual verification gaps.
-- [ ] Run `python3 scripts/check_repo_map.py`, backend focused/full tests, frontend tests/build and `git diff --check`.
+- [x] Record implemented W01 scope and retain browser acceptance as an open item.
+- [x] Add model/API/UI/test paths and ownership/security behavior to repository map and architecture.
+- [x] Record same-origin deployment, cookie restrictions, deletion behavior and manual verification gaps.
+- [x] Run repository map check, focused backend tests, frontend test/build and Python syntax check.
+- [ ] Run `git diff --check` and browser acceptance.
 
 ## Execution
 

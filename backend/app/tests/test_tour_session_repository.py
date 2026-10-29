@@ -161,3 +161,48 @@ def test_expired_trash_cannot_be_restored_and_expired_idempotency_is_reusable():
             await db.close()
             await engine.dispose()
     _run(scenario)
+
+
+def test_artifact_reference_must_belong_to_the_owned_tour_revision():
+    async def scenario():
+        from app.repositories.tour_session import TourSessionRepository
+        engine, db = await open_test_session()
+        try:
+            repo = TourSessionRepository(db)
+            created = await repo.create_session("owner-a", "default", "Trip", {}, "create-1")
+            reference = await repo.add_artifact_reference(
+                "owner-a", created["id"], "itinerary", "route-result-1", created["revision_id"],
+            )
+            assert reference["artifact_id"] == "route-result-1"
+            assert len(await repo.list_artifact_references("owner-a", created["id"])) == 1
+            assert await repo.add_artifact_reference(
+                "owner-b", created["id"], "summary", "private-summary",
+            ) is None
+            assert await repo.add_artifact_reference(
+                "owner-a", created["id"], "summary", "bad-revision", "unknown-revision",
+            ) is None
+        finally:
+            await db.close()
+            await engine.dispose()
+    _run(scenario)
+
+
+def test_session_events_record_lifecycle_and_are_owner_scoped():
+    async def scenario():
+        from app.repositories.tour_session import TourSessionRepository
+        engine, db = await open_test_session()
+        try:
+            repo = TourSessionRepository(db)
+            created = await repo.create_session("owner-a", "default", "Trip", {"stops": []}, "create-1")
+            saved = await repo.save_revision("owner-a", created["id"], 1, {"stops": ["灵山大佛"]}, "save-1")
+            history = await repo.list_revisions("owner-a", created["id"])
+            await repo.restore_revision("owner-a", created["id"], history[0]["id"], saved["version"], "restore-1")
+            await repo.delete_session("owner-a", created["id"], 3)
+            events = await repo.list_events("owner-a", created["id"])
+            assert [event["event_type"] for event in events] == ["created", "saved", "restored", "deleted"]
+            assert [event["version"] for event in events] == [1, 2, 3, 4]
+            assert await repo.list_events("owner-b", created["id"]) is None
+        finally:
+            await db.close()
+            await engine.dispose()
+    _run(scenario)

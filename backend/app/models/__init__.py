@@ -17,6 +17,7 @@ from app.models.tour_session import (
     TourSession,
     TourSessionIdempotency,
     TourSessionRevision,
+    TourSessionEvent,
 )
 
 __all__ = [
@@ -36,6 +37,7 @@ __all__ = [
     "TourIdentity",
     "TourSession",
     "TourSessionRevision",
+    "TourSessionEvent",
     "TourArtifactReference",
     "TourSessionIdempotency",
 ]

@@ -91,7 +91,7 @@ def decorated_routes(tree: ast.Module, owner: str, prefix: str, file: str) -> li
                 raise ValueError(f"Unsupported route decorator at {file}:{node.name}")
             path = (literal(decorator.args[0], file) if decorator.args
                     else keyword(decorator, "path", file))
-            if not path.startswith("/"):
+            if path and not path.startswith("/"):
                 raise ValueError(f"Route path must start with / at {file}:{node.name}")
             result.append({"method": decorator.func.attr.upper(), "path": prefix + path,
                            "file": file, "handler": node.name})

@@ -59,3 +59,9 @@ class CreateTourSessionRequest(BaseModel):
 class SaveTourSessionRequest(BaseModel):
     expected_version: int = Field(ge=1)
     snapshot: TourSnapshot
+
+
+class TourArtifactReferenceRequest(BaseModel):
+    revision_id: str | None = Field(default=None, max_length=36)
+    artifact_type: Literal["itinerary", "narration", "recognition", "summary"]
+    artifact_id: str = Field(min_length=1, max_length=100)

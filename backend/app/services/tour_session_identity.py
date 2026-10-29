@@ -70,11 +70,13 @@ async def ensure_tour_identity(
             httponly=True, secure=secure, samesite="lax", path="/api",
         )
 
-    csrf = _csrf_token(identity.id, secret)
-    response.set_cookie(
-        CSRF_COOKIE, csrf, max_age=IDENTITY_TTL_DAYS * 24 * 60 * 60,
-        httponly=False, secure=secure, samesite="lax", path="/api",
-    )
+    csrf = request.cookies.get(CSRF_COOKIE, "")
+    if not _valid_csrf(csrf, identity.id, secret):
+        csrf = _csrf_token(identity.id, secret)
+        response.set_cookie(
+            CSRF_COOKIE, csrf, max_age=IDENTITY_TTL_DAYS * 24 * 60 * 60,
+            httponly=False, secure=secure, samesite="lax", path="/api",
+        )
     return identity, csrf
 
 

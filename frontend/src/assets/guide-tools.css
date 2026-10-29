@@ -99,3 +99,34 @@
 @media (prefers-reduced-motion: reduce) {
   .guide-tool-content :is(button,input,select) { transition: none; }
 }
+.tour-session-panel {
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid rgba(101, 126, 112, .22);
+  border-radius: 16px;
+  background: rgba(250, 250, 246, .86);
+}
+.tour-session-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.tour-session-heading h4 { margin: 0; color: #294d3e; font-size: 15px; }
+.tour-session-heading p, .tour-session-empty { margin: 4px 0 10px; color: #78847a; font-size: 12px; }
+.tour-session-primary, .tour-session-secondary, .tour-session-danger, .tour-session-link {
+  min-height: 34px; padding: 7px 11px; border-radius: 10px; font: inherit; cursor: pointer;
+}
+.tour-session-primary { width: 100%; margin: 8px 0; border: 0; background: #315b48; color: #fff; font-weight: 650; }
+.tour-session-secondary { border: 1px solid #d4ddd5; background: #fff; color: #365b49; font-size: 12px; white-space: nowrap; }
+.tour-session-danger { border: 1px solid #e4c7be; background: #fff8f6; color: #9a4b37; font-size: 12px; white-space: nowrap; }
+.tour-session-link { padding: 4px 0; border: 0; background: transparent; color: #47715c; font-size: 12px; }
+.tour-session-status, .tour-session-current { margin: 8px 0; color: #476c57; font-size: 12px; }
+.tour-session-error { margin: 8px 0; color: #a34535; font-size: 12px; line-height: 1.5; }
+.tour-session-stops { margin: 8px 0; padding-inline-start: 22px; color: #49584d; font-size: 13px; }
+.tour-session-list { display: grid; gap: 6px; margin: 8px 0; padding: 0; list-style: none; }
+.tour-session-list li { display: flex; align-items: center; gap: 7px; padding: 8px; border: 1px solid #e3e9e2; border-radius: 11px; background: white; }
+.tour-session-open { display: grid; flex: 1; gap: 3px; min-width: 0; padding: 0; border: 0; background: transparent; text-align: left; color: #344b3c; cursor: pointer; }
+.tour-session-list small { color: #818b82; font-size: 11px; }
+.tour-session-list--trash { border-top: 1px solid #e5e9e4; padding-top: 8px; }
+@media (max-width: 520px) {
+  .tour-session-panel { padding: 12px; }
+  .tour-session-list li { flex-wrap: wrap; }
+  .tour-session-open { flex-basis: 100%; }
+  .tour-session-list .tour-session-danger, .tour-session-list .tour-session-secondary { flex: 1; }
+}
