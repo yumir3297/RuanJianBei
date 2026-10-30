@@ -189,6 +189,8 @@ class QAPipeline:
         route_repository: RouteRepository | None = None,
         visibility_service=None,
         speech_profile: dict | None = None,
+        vision_catalog=None,
+        vision_site_id: str | None = None,
     ) -> None:
         self.query_rewriter = query_rewriter
         self.faq_matcher = faq_matcher
@@ -210,6 +212,8 @@ class QAPipeline:
         self.route_repository = route_repository
         self.visibility_service = visibility_service
         self.speech_profile = speech_profile
+        self.vision_catalog = vision_catalog
+        self.vision_site_id = vision_site_id
         self.text_emotion_analyzer = TextEmotionAnalyzer()
         self.emotion_fusion = MultimodalEmotionFusion()
         self._active_emotion = self.emotion_fusion.fuse(None, None)
@@ -254,7 +258,26 @@ class QAPipeline:
         # 识别候选尚未经游客确认，也不能用模型自报置信度当成校准概率。
         # 避免将候选、旧选择或历史景点静默视为当前照片的事实。
         vision = request.vision_context
-        if vision is not None:
+        if vision is not None and vision.confirmation is not None:
+            confirmation = vision.confirmation
+            selected_spot = None
+            if self.vision_catalog is not None and confirmation.site_id == self.vision_site_id:
+                try:
+                    catalog = await self.vision_catalog.list_for_site(self.vision_site_id)
+                    selected_spot = next((item for item in catalog.entries if item.site_id == self.vision_site_id and item.spot_code == confirmation.spot_code and item.published_revision_id == confirmation.published_revision_id), None)
+                except Exception:
+                    logger.exception("Confirmed visual attraction catalog lookup failed")
+            if selected_spot is None or not selected_spot.entry_id.isdigit() or int(selected_spot.entry_id) < 1:
+                yield StreamEvent(type="error", data={"message": "景点已下架、更新或不属于当前景区，请重新选择。"})
+                return
+            resolved = ResolvedInteraction(
+                selection=resolved.selection,
+                scope=RetrievalScope(source_entry_id=int(selected_spot.entry_id)),
+                resolution_source="selection",
+                active_subject=selected_spot.title,
+                warnings=resolved.warnings,
+            )
+        elif vision is not None:
             resolved = ResolvedInteraction(
                 selection=resolved.selection,
                 scope=None,

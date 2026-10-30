@@ -12,12 +12,19 @@ class ConversationContext(BaseModel):
     history_summary: str | None = None
 
 
+class VisionConfirmation(BaseModel):
+    site_id: str = Field(min_length=1, max_length=64)
+    spot_code: str = Field(min_length=1, max_length=100)
+    published_revision_id: str = Field(min_length=1, max_length=36)
+
+
 class VisionContext(BaseModel):
     scene_summary: str = ""
     candidate_attractions: list[str] = Field(default_factory=list)
     visual_tags: list[str] = Field(default_factory=list)
     retrieval_query: str = ""
     confidence: float = Field(default=0.0, ge=0.0, le=1.0, allow_inf_nan=False)
+    confirmation: VisionConfirmation | None = None
 
 
 class EmotionContext(BaseModel):

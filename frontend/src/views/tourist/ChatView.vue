@@ -262,7 +262,15 @@
             <span class="vision-label">画面特征</span>
             <span v-for="item in visionResult.visual_tags" :key="item" class="vision-tag">{{ item }}</span>
           </div>
-          <div class="vision-meta">识别把握：{{ formatConfidence(visionResult.confidence) }}</div>
+          <div class="vision-meta">模型识别把握（未经校准）：{{ formatConfidence(visionResult.confidence) }}</div>
+          <label for="vision-published-spot">自行确认已发布景点（可选）</label>
+          <select id="vision-published-spot" v-model="visionSelectedSpot" :disabled="visionCatalogLoading">
+            <option value="">不确认，继续开放检索</option>
+            <option v-for="spot in visionCatalog.items" :key="spot.spot_code" :value="spot.spot_code">{{ spot.title }}{{ spot.source_label ? `（${spot.source_label}）` : '' }}</option>
+          </select>
+          <p v-if="visionCatalogError" class="vision-error">已发布景点目录暂不可用，可不确认直接提问。</p>
+          <p v-else-if="!visionCatalogLoading && !visionCatalog.items.length">目录没有可选景点，可不确认直接提问。</p>
+          <p>识别候选仅供参考，请自行选择；所选景点并不证明照片内容。</p>
           <button :disabled="chatStore.streaming || !visionResult.retrieval_query" @click="askFromImage">请导游讲讲这里</button>
         </div>
       </div>
@@ -283,6 +291,8 @@ import RouteView from "./RouteView.vue";
 import QuizView from "./QuizView.vue";
 import "../../assets/guide-tools.css";
 import { analyzeImage, getVisionErrorMessage } from "../../api/vision";
+import { fetchItineraryCatalog } from "../../api/itinerary.js";
+import { visionConfirmation } from "../../utils/visionConfirmation.js";
 import { createLatestRequest } from "../../utils/latestRequest";
 import { createIdempotencyKey } from "../../utils/idempotencyKey";
 import { getTranscriptionErrorMessage, transcribeAudio } from "../../api/voice";
@@ -453,6 +463,16 @@ const visionResult = ref(null);
 const visionAnalyzing = ref(false);
 const visionError = ref("");
 const visionPanelOpen = ref(false);
+const visionCatalog = ref({ items: [] });
+const visionSelectedSpot = ref("");
+const visionCatalogLoading = ref(false);
+const visionCatalogError = ref(false);
+function resetVisionConfirmation() {
+  visionSelectedSpot.value = "";
+  visionCatalog.value = { items: [] };
+  visionCatalogLoading.value = false;
+  visionCatalogError.value = false;
+}
 const speechProgress = ref(0);
 const speechElapsedMs = ref(0);
 const speechDurationMs = ref(0);
@@ -510,6 +530,7 @@ function handleHotline(type) {
 function closeVisionPanel() {
   visionPanelOpen.value = false
   visionRequests.cancel()
+  resetVisionConfirmation()
   visionAnalyzing.value = false
   stopCamera()
 }
@@ -537,6 +558,8 @@ async function captureFromCamera() {
   if (!file) {
     return
   }
+  visionRequests.cancel()
+  resetVisionConfirmation()
   visionError.value = ""
   visionResult.value = null
   visionFile.value = file
@@ -1204,6 +1227,8 @@ function openVisionFilePicker() {
 function handleVisionFileChange(event) {
   const file = event.target.files?.[0];
   visionRequests.cancel();
+  visionAnalyzing.value = false;
+  resetVisionConfirmation();
   visionFile.value = null;
   visionIdempotencyKey.value = "";
   revokeVisionPreview();
@@ -1233,6 +1258,7 @@ async function handleAnalyzeImage() {
     return;
   }
   const request = visionRequests.begin();
+  resetVisionConfirmation();
   visionAnalyzing.value = true;
   avatar.triggerAction("look_around");
   visionError.value = "";
@@ -1243,7 +1269,18 @@ async function handleAnalyzeImage() {
       "这张图片可能对应景区哪个位置？请提取可用于景区资料检索的线索。",
       { signal: request.signal, idempotencyKey: visionIdempotencyKey.value },
     );
-    if (request.isCurrent()) visionResult.value = result;
+    if (request.isCurrent()) {
+      visionResult.value = result;
+      visionCatalogLoading.value = true;
+      try {
+        const catalog = await fetchItineraryCatalog();
+        if (request.isCurrent()) visionCatalog.value = catalog;
+      } catch {
+        if (request.isCurrent()) visionCatalogError.value = true;
+      } finally {
+        if (request.isCurrent()) visionCatalogLoading.value = false;
+      }
+    }
   } catch (error) {
     if (!request.isCurrent()) return;
     visionError.value = getVisionErrorMessage(error);
@@ -1262,11 +1299,13 @@ function askFromImage() {
     "图片识别线索如下，仅用于检索官方资料，不作为事实来源：",
     retrievalQuery,
   ].join("\n");
-  submitQuery(limitChatQuery(prompt), { visionContext: visionResult.value });
+  const confirmation = visionConfirmation(visionCatalog.value, visionSelectedSpot.value);
+  submitQuery(limitChatQuery(prompt), { visionContext: { ...visionResult.value, ...(confirmation ? { confirmation } : {}) } });
 }
 
 function clearVisionState() {
   visionRequests.cancel();
+  resetVisionConfirmation();
   visionAnalyzing.value = false;
   visionFile.value = null;
   visionIdempotencyKey.value = "";

@@ -36,6 +36,7 @@ from app.services.qa.followup_suggestions import FollowUpSuggestionService
 from app.services.qa.guided_selector import GuidedSelectionResolver
 from app.services.qa.intent_router import IntentRouter
 from app.services.qa.pipeline import QAPipeline
+from app.services.itinerary.catalog import K01PublishedAttractionSource, PublishedAttractionCatalog
 from app.services.qa.stream_events import StreamEvent, with_sse_heartbeat
 from app.services.qa.runtime import get_runtime_faq_matcher
 from app.services.rag.bm25_reranker import BM25Reranker
@@ -251,6 +252,8 @@ async def build_pipeline(
         knowledge_repository=knowledge_repository,
         route_repository=route_repository,
         visibility_service=visibility_service,
+        vision_catalog=PublishedAttractionCatalog(K01PublishedAttractionSource(session, site_id=settings.site_id)),
+        vision_site_id=settings.site_id,
     )
 
 
