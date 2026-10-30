@@ -20,7 +20,7 @@
 
 知识问答结合 FAQ 和检索结果生成回答；知识发布及可见性由后端知识服务管理，问答链路对发布版本变化进行检查。模型服务由配置决定，未配置真实供应商时存在 stub 或降级路径；检索结果及来源展示不自动证明回答真实，仍需逐条核对。见 `backend/app/services/qa/pipeline.py`、`backend/app/services/knowledge/`、`backend/app/core/config.py`。
 
-视觉识别与最终问答是独立阶段；语音输入经过转写确认，语音输出可通过服务端合成与前端播放。支持与体验受供应商、模型、浏览器权限和设备影响；不得依据接口存在推断真实环境成功。见 `backend/app/api/vision.py`、`backend/app/api/voice.py`、`frontend/src/composables/useRecorder.js`、`frontend/src/composables/useAudioPlayer.js`。
+视觉识别与最终问答是独立阶段。游客可以从已发布目录选择景点，后端校验站点、景点代码和发布版本后限定检索；未经确认时开放检索并提示。模型线索和用户选择不证明照片识别正确，已发布资料也不自动等同官方资料。提供浏览器语音识别与录音转写：部分转写可确认或修正，浏览器识别和符合自动发送条件的转写会直接提交。语音可通过服务端合成与前端播放。支持与体验受供应商、模型、浏览器权限和设备影响；不得依据接口存在推断真实环境成功。见 `backend/app/api/vision.py`、`backend/app/api/voice.py`、`frontend/src/composables/useRecorder.js`、`frontend/src/composables/useAudioPlayer.js`。
 
 ## 五、行程功能实现
 
@@ -33,6 +33,8 @@ AI 修改先生成提案，后台任务保存状态；系统校验快照、景�
 测试覆盖示例：`backend/app/tests/test_pipeline.py`、`test_stream_knowledge_integration.py`、`test_itinerary_provenance.py`、`test_tour_progress_and_proposals.py`、`test_tool_execution_acceptance.py`，以及 `frontend/tests/proposal-recovery.test.mjs`。这些测试使用隔离数据或假供应商，不能直接代表真实设备和供应商性能。100 题评测集格式检查和评测脚本单元测试曾在隔离条件下通过，格式通过不等于回答准确；见 `eval/testset/e2e_qa_100.json`、`eval/tests/`。
 
 后端在 `backend/` 目录按照 `docs/DEVELOPMENT.md` 配置数据库、数据与模型后运行 `python -m uvicorn main:app`；持久提案需另启动 `python -m app.services.tool_execution.worker`。前端在 `frontend/` 运行 `npm ci` 和 `npm run dev`。启动可能执行迁移、初始化及模型预热，不能把示例命令理解为所有平台均已验收。真实密钥不得写入文档或提交。
+
+目前知识库按配置使用单站点数据库，不是逐条多租户隔离。W02 迁移的父节点调整以旧迁移未部署为前提，已有数据库须先核查版本和 schema，参见 `docs/development/W02_INTEGRATION.md`。停止浏览器等待并不等于取消服务端任务或撤回供应商调用；不确定的外部结果可能产生重复调用费用。
 
 ## 七、特点与局限
 
