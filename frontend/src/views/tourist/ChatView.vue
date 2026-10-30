@@ -88,7 +88,7 @@
         <label class="explanation-select"><GuideIcon name="settings" /><span>讲解方式</span><select v-model="explanationLevel" aria-label="讲解方式"><option v-for="style in styleOptions" :key="style.key" :value="style.key">{{ style.label }}讲解</option></select></label>
         <label class="explanation-select speech-rate-select"><GuideIcon name="settings" /><span>语速</span><select v-model.number="speechRate" aria-label="语音讲解语速"><option v-for="rate in speechRateOptions" :key="rate" :value="rate">{{ rate.toFixed(1) }}×</option></select></label>
         <div class="narration-note"><h3>当前讲解</h3><p v-if="narrationSummary">{{ narrationSummary }}</p><p v-else class="narration-empty">提问后，讲解摘要会显示在这里。</p><small v-if="narrationSummary">完整内容可在文字记录中查看</small></div>
-        <p v-if="chatStore.errorMessage" class="rail-error" role="alert">{{ chatStore.errorMessage }} <button type="button" class="retry-btn" @click="retryLastAnswer">重新尝试</button></p>
+        <p v-if="chatStore.errorMessage" class="rail-error" role="alert">{{ chatStore.errorMessage }} <button v-if="chatStore.retryAvailable" type="button" class="retry-btn" @click="retryLastAnswer">重新尝试</button></p>
         <button id="text-panel-trigger" type="button" class="text-panel-trigger" :aria-expanded="textExpanded" @click="toggleTextPanel"><GuideIcon name="book" />文字记录与资料<span>{{ chatStore.messages.length > 1 ? chatStore.messages.length - 1 : '' }}</span><GuideIcon name="chevron" /></button>
       <dialog ref="textDialogRef" class="conversation-panel" aria-label="文字记录与参考资料" @cancel.prevent="closeTextPanel" @click="handleDialogBackdrop($event, closeTextPanel)">
         <header class="conversation-header"><div><h2>文字记录</h2><p>需要时，回看讲解和参考资料。</p></div><button type="button" class="icon-button" aria-label="收起文字记录" @click="closeTextPanel"><GuideIcon name="close" /></button></header>
@@ -158,7 +158,7 @@
             <button v-for="item in chatStore.followups" :key="item.query" type="button" :disabled="chatStore.streaming" @click="handleFollowup(item.query)">{{ item.label }}</button>
           </div>
           <div v-if="chatStore.userStopped && !chatStore.streaming" class="stop-notice" role="status">已停止输出</div>
-          <div v-if="chatStore.errorMessage && !chatStore.streaming" class="error-notice" role="alert"><span>{{ chatStore.errorMessage }}</span><button type="button" class="retry-btn" @click="retryLastAnswer">重新尝试</button></div>
+          <div v-if="chatStore.errorMessage && !chatStore.streaming" class="error-notice" role="alert"><span>{{ chatStore.errorMessage }}</span><button v-if="chatStore.retryAvailable" type="button" class="retry-btn" @click="retryLastAnswer">重新尝试</button></div>
         </div>
         <div id="source-log" role="tabpanel" aria-label="参考资料" :class="['side-card-body', { hidden: activeTab !== 'source' }]">
           <ul class="source-list" v-if="displayedSources.length">
@@ -1262,6 +1262,7 @@ async function handleAnalyzeImage() {
   if (!visionFile.value || visionAnalyzing.value) {
     return;
   }
+  visionCaptureGuard.cancel();
   const request = visionRequests.begin();
   resetVisionConfirmation();
   visionAnalyzing.value = true;
@@ -1306,7 +1307,17 @@ function askFromImage() {
     retrievalQuery,
   ].join("\n");
   const confirmation = visionConfirmation(visionCatalog.value, visionSelectedSpot.value);
-  submitQuery(limitChatQuery(prompt), { visionContext: { ...visionResult.value, ...(confirmation ? { confirmation } : {}) } });
+  const submittedResult = visionResult.value;
+  submitQuery(limitChatQuery(prompt), {
+    visionContext: { ...submittedResult, ...(confirmation ? { confirmation } : {}) },
+    onVisionConfirmationStale: () => {
+      if (visionResult.value !== submittedResult) return;
+      visionSelectedSpot.value = "";
+      visionCatalog.value = { items: [] };
+      visionCatalogError.value = true;
+      visionError.value = "所选景点已更新或下架，请关闭并重新打开识景面板，重新选择。";
+    },
+  });
 }
 
 function clearVisionState() {

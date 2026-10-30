@@ -270,7 +270,7 @@ class QAPipeline:
                 except Exception:
                     logger.exception("Confirmed visual attraction catalog lookup failed")
             if selected_spot is None or not selected_spot.entry_id.isdigit() or int(selected_spot.entry_id) < 1:
-                yield StreamEvent(type="error", data={"message": "景点已下架、更新或不属于当前景区，请重新选择。"})
+                yield StreamEvent(type="error", data={"code": "vision_confirmation_stale", "message": "景点已下架、更新或不属于当前景区，请重新选择。"})
                 return
             confirmed_visual_title = selected_spot.title
             resolved = ResolvedInteraction(

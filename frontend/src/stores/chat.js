@@ -107,6 +107,7 @@ export const useChatStore = defineStore("chat", {
     streaming: false,
     voiceFallback: false,
     errorMessage: "",
+    retryAvailable: false,
     userStopped: false,
     // 逐字字幕时间轴：[{text, begin_time, end_time, sentence_index}]，整段累计毫秒
     subtitleWords: [],
@@ -123,6 +124,7 @@ export const useChatStore = defineStore("chat", {
       this.stopOutput();
       this.messages = [];
       this.errorMessage = "";
+      this.retryAvailable = false;
       this.userStopped = false;
       lastFailedRequest = null;
       this.resetConversationContext();
@@ -159,6 +161,7 @@ export const useChatStore = defineStore("chat", {
 
       this.stopOutput();
       this.errorMessage = "";
+      this.retryAvailable = false;
       this.userStopped = false;
       const requestToken = activeStreamToken;
       const metrics = createChatMetrics();
@@ -400,8 +403,10 @@ export const useChatStore = defineStore("chat", {
                 (item) => typeof item?.label === "string" && typeof item?.query === "string",
               );
             },
-            error: ({ message } = {}) => {
-              throw new Error(message || "导览服务处理回答时发生错误。");
+            error: ({ message, code } = {}) => {
+              const error = new Error(message || "导览服务处理回答时发生错误。");
+              error.code = code;
+              throw error;
             },
             done: ({ chat_log_id: chatLogId, completion } = {}) => {
               if (!isCurrentRequest()) {
@@ -451,7 +456,13 @@ export const useChatStore = defineStore("chat", {
         this.streaming = false;
         this.statusText = INCOMPLETE_STATUS_TEXT;
         this.errorMessage = error?.message || "导览服务暂时不可用，请稍后重试。";
-        lastFailedRequest = { query, selection, options };
+        if (error?.code === "vision_confirmation_stale" && options.visionContext?.confirmation) {
+          lastFailedRequest = null;
+          options.onVisionConfirmationStale?.();
+        } else {
+          lastFailedRequest = { query, selection, options };
+          this.retryAvailable = true;
+        }
       } finally {
         if (textTimer !== null) globalThis.clearTimeout(textTimer);
         if (activeFlushPending === flushPendingText) activeFlushPending = null;

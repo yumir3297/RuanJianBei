@@ -194,3 +194,14 @@ test('unconfirmed photo warning stays attached to its answer after completion', 
   await store.sendMessage('这是什么');
   assert.match(store.messages.at(-1).warning, /照片.*未确认.*核对/);
 });
+
+test('stale vision confirmation is not retried and notifies its originating handler', async () => {
+  let calls = 0, invalidations = 0;
+  globalThis.fetch = async () => { calls++; return response('event: error\ndata: {"code":"vision_confirmation_stale","message":"景点已更新，请重新选择。"}\n\n'); };
+  const store = useChatStore();
+  await store.sendMessage('识景', null, { visionContext: { confirmation: { site_id:'s',spot_code:'a',published_revision_id:'r' } }, onVisionConfirmationStale: () => invalidations++ });
+  assert.equal(invalidations, 1);
+  assert.match(store.errorMessage, /重新选择/);
+  await store.retryLastMessage();
+  assert.equal(calls, 1);
+});
