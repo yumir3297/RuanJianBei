@@ -292,7 +292,7 @@ import QuizView from "./QuizView.vue";
 import "../../assets/guide-tools.css";
 import { analyzeImage, getVisionErrorMessage } from "../../api/vision";
 import { fetchItineraryCatalog } from "../../api/itinerary.js";
-import { visionConfirmation } from "../../utils/visionConfirmation.js";
+import { visionConfirmation, createVisionAsyncGuard } from "../../utils/visionConfirmation.js";
 import { createLatestRequest } from "../../utils/latestRequest";
 import { createIdempotencyKey } from "../../utils/idempotencyKey";
 import { getTranscriptionErrorMessage, transcribeAudio } from "../../api/voice";
@@ -456,6 +456,7 @@ const recorderError = ref("");
 const messageListRef = ref(null);
 const visionFileInputRef = ref(null);
 const visionRequests = createLatestRequest();
+const visionCaptureGuard = createVisionAsyncGuard();
 const visionFile = ref(null);
 const visionIdempotencyKey = ref("");
 const visionPreviewUrl = ref("");
@@ -530,6 +531,7 @@ function handleHotline(type) {
 function closeVisionPanel() {
   visionPanelOpen.value = false
   visionRequests.cancel()
+  visionCaptureGuard.cancel()
   resetVisionConfirmation()
   visionAnalyzing.value = false
   stopCamera()
@@ -554,11 +556,12 @@ async function toggleCamera() {
 
 async function captureFromCamera() {
   if (!cameraActive.value || visionAnalyzing.value) return
-  const file = await capturePhoto()
+  const file = await visionCaptureGuard.run(() => capturePhoto())
   if (!file) {
     return
   }
   visionRequests.cancel()
+  visionCaptureGuard.cancel()
   resetVisionConfirmation()
   visionError.value = ""
   visionResult.value = null
@@ -824,7 +827,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   pageActive = false;
-  visionRequests.cancel();
+  visionRequests.cancel()
+  visionCaptureGuard.cancel();
   transcriptionRequests.cancel();
   toolMedia.removeEventListener("change", syncPanels);
   stopCamera();
@@ -1226,7 +1230,8 @@ function openVisionFilePicker() {
 
 function handleVisionFileChange(event) {
   const file = event.target.files?.[0];
-  visionRequests.cancel();
+  visionRequests.cancel()
+  visionCaptureGuard.cancel();
   visionAnalyzing.value = false;
   resetVisionConfirmation();
   visionFile.value = null;
@@ -1272,6 +1277,7 @@ async function handleAnalyzeImage() {
     if (request.isCurrent()) {
       visionResult.value = result;
       visionCatalogLoading.value = true;
+      visionCatalogError.value = false;
       try {
         const catalog = await fetchItineraryCatalog();
         if (request.isCurrent()) visionCatalog.value = catalog;
@@ -1295,8 +1301,8 @@ function askFromImage() {
     return;
   }
   const prompt = [
-    "请根据这张图片识别出的线索，基于官方资料介绍它最可能对应的景区景点。",
-    "图片识别线索如下，仅用于检索官方资料，不作为事实来源：",
+    "请根据这张图片识别出的线索，基于已发布资料介绍它最可能对应的景区景点。",
+    "图片识别线索如下，仅用于检索已发布资料，不作为事实来源：",
     retrievalQuery,
   ].join("\n");
   const confirmation = visionConfirmation(visionCatalog.value, visionSelectedSpot.value);
@@ -1304,7 +1310,8 @@ function askFromImage() {
 }
 
 function clearVisionState() {
-  visionRequests.cancel();
+  visionRequests.cancel()
+  visionCaptureGuard.cancel();
   resetVisionConfirmation();
   visionAnalyzing.value = false;
   visionFile.value = null;
@@ -1488,8 +1495,24 @@ function handleToolQuestion(payload) {
 watch(activeTool, () => nextTick(syncToolDialog));
 watch(visionPanelOpen, async (open) => {
   await nextTick();
+  if (open !== visionPanelOpen.value) return;
   const dialog = visionDialogRef.value;
-  if (open && !dialog.open) dialog.showModal();
+  if (open && !dialog.open) {
+    dialog.showModal();
+    if (visionResult.value && !visionCatalog.value.items?.length) {
+      const request = visionRequests.begin();
+      visionCatalogLoading.value = true;
+      visionCatalogError.value = false;
+      try {
+        const catalog = await fetchItineraryCatalog();
+        if (request.isCurrent()) visionCatalog.value = catalog;
+      } catch {
+        if (request.isCurrent()) visionCatalogError.value = true;
+      } finally {
+        if (request.isCurrent()) visionCatalogLoading.value = false;
+      }
+    }
+  }
   else if (!open && dialog.open) dialog.close();
 });
 
