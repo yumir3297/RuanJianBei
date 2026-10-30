@@ -222,3 +222,29 @@ def test_unknown_external_result_requires_explicit_retry_confirmation():
             await db.close()
             await engine.dispose()
     asyncio.run(scenario())
+
+
+def test_cancel_waiting_user_closes_step_and_preserves_unknown_outcome():
+    async def scenario():
+        from sqlalchemy import select
+        from app.models.tool_execution import ToolAttempt, ToolStep
+        engine, db = await open_test_session()
+        try:
+            _tours, tools, tour, job, _snapshot = await _queued_fixture(db)
+            lease = await tools.claim_next("worker")
+            assert await tools.start_attempt(lease, max_attempts=1)
+            assert await tools.mark_external_call(lease)
+            assert await tools.fail_step(lease, "timeout", retryable=False, external_outcome="unknown")
+            cancelled = await tools.request_cancel("tourist", "owner-a", "site", tour["id"], job["id"], "cancel-unknown")
+            assert cancelled["status"] == "cancelled"
+            assert cancelled["reason"] == "cancelled_external_outcome_unknown"
+            assert cancelled["steps"][0]["status"] == "cancelled"
+            step = await db.scalar(select(ToolStep).where(ToolStep.job_id == job["id"]))
+            attempt = await db.scalar(select(ToolAttempt).where(ToolAttempt.step_id == step.id))
+            assert step.external_state == "unknown"
+            assert attempt.outcome == "unknown" and attempt.external_state == "unknown"
+            assert await tools.claim_next("other") is None
+        finally:
+            await db.close()
+            await engine.dispose()
+    asyncio.run(scenario())

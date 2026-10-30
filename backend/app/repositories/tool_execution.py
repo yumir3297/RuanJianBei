@@ -148,7 +148,7 @@ class ToolExecutionRepository:
         ))).all()
         any_uncertain = False
         for step in steps:
-            uncertain = step.external_state == "may_have_run"
+            uncertain = step.external_state in ("may_have_run", "unknown")
             any_uncertain = any_uncertain or uncertain
             step.status = status
             step.error_code = "external_outcome_unknown" if uncertain else reason[:80]
@@ -884,6 +884,11 @@ class ToolExecutionRepository:
         if job is None:
             await self.session.rollback()
             return None
+        if self.session.get_bind().dialect.name == "postgresql":
+            # Serialize with mark_external_call, which locks this job before changing the step.
+            job = await self.session.scalar(select(ToolJob).where(
+                ToolJob.id == job.id,
+            ).with_for_update().execution_options(populate_existing=True))
         if job.status in ACTIVE_STATES:
             active_step = await self.session.scalar(select(ToolStep).where(
                 ToolStep.job_id == job.id, ToolStep.status == "running",
@@ -898,20 +903,7 @@ class ToolExecutionRepository:
                      lease_owner=None, lease_until=None, fence=ToolJob.fence + 1,
                      completed_at=now, updated_at=now).execution_options(synchronize_session=False))
             if result.rowcount == 1:
-                if active_step:
-                    active_step.status = "cancelled"
-                    active_step.error_code = "cancelled"
-                    if uncertain:
-                        active_step.external_state = "unknown"
-                    active_step.updated_at = now
-                    attempt = await self.session.scalar(select(ToolAttempt).where(
-                        ToolAttempt.step_id == active_step.id,
-                        ToolAttempt.attempt_number == active_step.attempt_count,
-                    ))
-                    if attempt and attempt.finished_at is None:
-                        attempt.finished_at = now
-                        attempt.outcome = "unknown" if uncertain else "cancelled"
-                        attempt.error_code = "external_outcome_unknown" if uncertain else "cancelled"
+                await self._close_steps(job.id, "cancelled", "cancelled", now)
                 await self._event(job.id, "cancelled", "任务已取消", {
                     "external_outcome_unknown": uncertain,
                 })
