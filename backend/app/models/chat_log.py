@@ -28,4 +28,5 @@ class ChatLog(Base):
     emotion_conflict: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     emotion_modalities: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
     response_strategy: Mapped[str] = mapped_column(String(30), default="neutral", nullable=False)
+    speech_metadata: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

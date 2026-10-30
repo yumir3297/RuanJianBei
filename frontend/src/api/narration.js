@@ -7,9 +7,9 @@ import http from "./http";
  * @param {string} [ttsVoice] 可选音色
  * @returns {Promise<{attraction:string,text:string,base64_audio:string,duration_ms:number,provider:string,cached:boolean,available:boolean,reason:string}>}
  */
-export async function fetchSpotNarration(attraction, ttsVoice) {
+export async function fetchSpotNarration(attraction, ttsVoice, options = {}) {
   const payload = { attraction };
   if (ttsVoice) payload.tts_voice = ttsVoice;
-  const { data } = await http.post("/guide/narration", payload, { timeout: 30000 });
+  const { data } = await http.post("/guide/narration", payload, { timeout: 30000, signal: options.signal });
   return data;
 }

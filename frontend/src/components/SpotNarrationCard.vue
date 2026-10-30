@@ -14,7 +14,7 @@
       <button type="button" class="nc-btn" :disabled="loading" @click="$emit('replay')">
         {{ loading ? "讲解生成中…" : "重听" }}
       </button>
-      <button type="button" class="nc-btn ghost" :disabled="!playing" @click="$emit('stop')">停止</button>
+      <button type="button" class="nc-btn ghost" :disabled="!playing && !loading" @click="$emit('stop')">停止</button>
     </div>
   </div>
 </template>
@@ -32,7 +32,7 @@ const props = defineProps({
 });
 defineEmits(["close", "replay", "stop"]);
 
-const subtitle = computed(() => (props.degraded ? "离线讲解 · 浏览器朗读" : "数字人语音讲解"));
+const subtitle = computed(() => (props.degraded ? "备用讲解" : "数字人语音讲解"));
 </script>
 
 <style scoped>

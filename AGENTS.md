@@ -10,7 +10,7 @@
 - 启动、安装依赖、测试时看 [跨系统开发指南](docs/DEVELOPMENT.md)。
 - 改页面、录音、图片、定位、数字人或部署地址时看 [多端验证矩阵](docs/COMPATIBILITY.md)。
 - 前端约定见 [frontend/AGENTS.md](frontend/AGENTS.md)；后端见 [backend/AGENTS.md](backend/AGENTS.md)。
-- 现有产品方向见 [功能路线图](docs/plans/2026-10-27-feature-roadmap.md)，其中待办不代表已实现。
+- 产品阶段与依赖见 [功能路线图](docs/plans/2026-10-27-feature-roadmap.md)；双端工作台任务、状态和验收见 [待开发清单](docs/plans/2026-10-28-ai-workbench-backlog.md)。待办不代表已实现，路线图不替代具体功能设计。
 
 ## 工作约定
 

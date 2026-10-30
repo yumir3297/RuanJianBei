@@ -9,13 +9,13 @@
         <RouterLink class="admin-entry" to="/admin/dashboard">运营管理</RouterLink>
       </div>
     </header>
-    <main class="guide-layout" :class="{ 'tool-open': activeTool, 'text-open': textExpanded }">
+    <main class="guide-layout" :class="{ 'tool-open': activeTool, 'map-open': activeTool === 'map', 'text-open': textExpanded }">
       <aside class="feature-rail" aria-label="导览功能">
         <div class="rail-heading"><h2>导览</h2><p>选择内容，听导游讲解</p></div>
         <nav class="tool-dock" aria-label="导览工具"><button v-for="tool in tools" :id="'tool-trigger-' + tool.id" :key="tool.id" type="button" :class="{ active: activeTool === tool.id }" :aria-expanded="activeTool === tool.id" aria-controls="guide-tools" @click="setTool(tool.id)"><GuideIcon :name="tool.icon" /><span>{{ tool.title }}</span><GuideIcon name="chevron" class="dock-chevron" /></button></nav>
       <dialog ref="toolDialogRef" id="guide-tools" class="tool-sheet" aria-labelledby="tool-title" @cancel.prevent="closeTool" @click="handleDialogBackdrop($event, closeTool)">
         <header class="tool-sheet-header"><h3 ref="toolHeadingRef" id="tool-title" tabindex="-1"><GuideIcon :name="selectedTool?.icon" />{{ selectedTool?.title }}</h3><button type="button" class="icon-button" aria-label="收起导览工具" @click="closeTool"><GuideIcon name="close" /></button></header>
-        <div class="tool-sheet-body"><KeepAlive><component :is="selectedTool.component" v-if="selectedTool" :key="activeTool" :busy="inputBusy" v-bind="activeTool === 'route' ? { weather } : activeTool === 'map' ? { weather, scenicColor, colorLabel: weatherColorLabel } : {}" @ask="handleToolQuestion" /></KeepAlive></div>
+        <div class="tool-sheet-body"><KeepAlive><component :is="selectedTool.component" v-if="selectedTool" :key="activeTool" :busy="inputBusy" v-bind="activeTool === 'route' ? { weather } : activeTool === 'map' ? { weather, scenicColor, colorLabel: weatherColorLabel, speechRate } : {}" @ask="handleToolQuestion" /></KeepAlive></div>
       </dialog>
         <div v-if="!activeTool" class="rail-discovery"><h3>常用提问</h3><button v-for="question in touristSettings.quick_questions.slice(0, 3)" :key="question" type="button" :disabled="inputBusy" @click="handleQuickQuestion(question)">{{ question }}<GuideIcon name="chevron" /></button></div>
       </aside>
@@ -35,6 +35,7 @@
       <span class="speech-pulse" aria-hidden="true"></span>
       <strong>正在识别</strong>
       <span>首次加载语音模型可能需要更长时间…</span>
+      <button type="button" class="confirm-btn confirm-btn--dismiss" @click="cancelTranscription">取消识别</button>
     </div>
     <div v-if="speechListening || isRecording" class="speech-bar" aria-live="polite">
       <span class="speech-pulse" aria-hidden="true"></span>
@@ -85,12 +86,14 @@
       <aside class="narration-rail" aria-label="讲解辅助">
         <div class="rail-heading"><h2>讲解</h2><p>按你的需要调整讲解方式</p></div>
         <label class="explanation-select"><GuideIcon name="settings" /><span>讲解方式</span><select v-model="explanationLevel" aria-label="讲解方式"><option v-for="style in styleOptions" :key="style.key" :value="style.key">{{ style.label }}讲解</option></select></label>
+        <label class="explanation-select speech-rate-select"><GuideIcon name="settings" /><span>语速</span><select v-model.number="speechRate" aria-label="语音讲解语速"><option v-for="rate in speechRateOptions" :key="rate" :value="rate">{{ rate.toFixed(1) }}×</option></select></label>
         <div class="narration-note"><h3>当前讲解</h3><p v-if="narrationSummary">{{ narrationSummary }}</p><p v-else class="narration-empty">提问后，讲解摘要会显示在这里。</p><small v-if="narrationSummary">完整内容可在文字记录中查看</small></div>
-        <p v-if="chatStore.errorMessage" class="rail-error" role="alert">{{ chatStore.errorMessage }}</p>
+        <p v-if="chatStore.errorMessage" class="rail-error" role="alert">{{ chatStore.errorMessage }} <button type="button" class="retry-btn" @click="retryLastAnswer">重新尝试</button></p>
         <button id="text-panel-trigger" type="button" class="text-panel-trigger" :aria-expanded="textExpanded" @click="toggleTextPanel"><GuideIcon name="book" />文字记录与资料<span>{{ chatStore.messages.length > 1 ? chatStore.messages.length - 1 : '' }}</span><GuideIcon name="chevron" /></button>
       <dialog ref="textDialogRef" class="conversation-panel" aria-label="文字记录与参考资料" @cancel.prevent="closeTextPanel" @click="handleDialogBackdrop($event, closeTextPanel)">
         <header class="conversation-header"><div><h2>文字记录</h2><p>需要时，回看讲解和参考资料。</p></div><button type="button" class="icon-button" aria-label="收起文字记录" @click="closeTextPanel"><GuideIcon name="close" /></button></header>
         <label class="compact-explanation-select"><GuideIcon name="settings" /><span>讲解方式</span><select v-model="explanationLevel" aria-label="讲解方式"><option v-for="style in styleOptions" :key="style.key" :value="style.key">{{ style.label }}讲解</option></select></label>
+        <label class="compact-explanation-select compact-speech-rate-select"><GuideIcon name="settings" /><span>语速</span><select v-model.number="speechRate" aria-label="语音讲解语速"><option v-for="rate in speechRateOptions" :key="rate" :value="rate">{{ rate.toFixed(1) }}×</option></select></label>
       <section class="side-card" aria-label="导游对话" :class="{ speaking: chatStore.streaming }">
         <div class="side-card-head">
           <div class="side-card-tabs" role="tablist" aria-label="对话与资料">
@@ -104,7 +107,13 @@
           <article v-for="(message, index) in chatStore.messages" v-show="!message.isWelcome || chatStore.messages.length > 1" :key="`${message.role}-${index}`" :class="['msg-item', message.role, { latest: index === chatStore.messages.length - 1 }]">
             <div v-if="message.role === 'assistant'" class="msg-bubble" v-html="renderAnswer(message.content, index === chatStore.messages.length - 1)" @click="handleCitationClick"></div>
             <div v-else class="msg-bubble">{{ message.content }}</div>
-            <div v-if="message.role === 'assistant' && !message.isWelcome && message.content && !chatStore.streaming" class="answer-feedback" aria-label="回答评价">
+            <div v-if="message.role === 'assistant' && !message.isWelcome && message.chatLogId && message.completion === 'complete' && !chatStore.streaming" class="answer-replay">
+              <button type="button" :disabled="message.replayLoading" :aria-busy="message.replayLoading" @click="replayAnswer(message)">{{ message.replayLoading ? '正在准备语音…' : message.replayPlaying ? '正在重播' : '重播讲解' }}</button>
+              <span v-if="message.replayError" class="feedback-error" role="alert">{{ message.replayError }}</span>
+            </div>
+            <p v-if="message.completion === 'incomplete'" class="error-notice">回答未完成，已保留现有内容。</p>
+            <p v-else-if="message.completion === 'stopped'" class="error-notice">已停止生成。</p>
+            <div v-if="message.role === 'assistant' && !message.isWelcome && message.content && message.completion !== 'incomplete' && message.completion !== 'stopped' && !chatStore.streaming" class="answer-feedback" aria-label="回答评价">
               <span>这条讲解有帮助吗？</span>
               <button type="button" :class="{ active: message.feedbackRating === 'positive' }" :disabled="message.feedbackSubmitting" @click="chatStore.submitFeedback(message, 'positive')">有帮助</button>
               <button type="button" :class="{ active: message.feedbackPendingRating === 'negative' || message.feedbackRating === 'negative' }" :disabled="message.feedbackSubmitting" @click="message.feedbackPendingRating = message.feedbackPendingRating === 'negative' ? null : 'negative'">需改进</button>
@@ -122,7 +131,7 @@
             <button v-for="item in chatStore.followups" :key="item.query" type="button" :disabled="chatStore.streaming" @click="handleFollowup(item.query)">{{ item.label }}</button>
           </div>
           <div v-if="chatStore.userStopped && !chatStore.streaming" class="stop-notice" role="status">已停止输出</div>
-          <div v-if="chatStore.errorMessage && !chatStore.streaming" class="error-notice" role="alert"><span>{{ chatStore.errorMessage }}</span><button type="button" class="retry-btn" @click="chatStore.retryLastMessage()">重新尝试</button></div>
+          <div v-if="chatStore.errorMessage && !chatStore.streaming" class="error-notice" role="alert"><span>{{ chatStore.errorMessage }}</span><button type="button" class="retry-btn" @click="retryLastAnswer">重新尝试</button></div>
         </div>
         <div id="source-log" role="tabpanel" aria-label="参考资料" :class="['side-card-body', { hidden: activeTab !== 'source' }]">
           <ul class="source-list" v-if="chatStore.sources.length">
@@ -246,7 +255,9 @@ import MapView from "./MapView.vue";
 import RouteView from "./RouteView.vue";
 import QuizView from "./QuizView.vue";
 import "../../assets/guide-tools.css";
-import { analyzeImage } from "../../api/vision";
+import { analyzeImage, getVisionErrorMessage } from "../../api/vision";
+import { createLatestRequest } from "../../utils/latestRequest";
+import { createIdempotencyKey } from "../../utils/idempotencyKey";
 import { getTranscriptionErrorMessage, transcribeAudio } from "../../api/voice";
 import { useAudioPlayer } from "../../composables/useAudioPlayer";
 import { renderMarkdown } from "../../composables/useMarkdown";
@@ -255,12 +266,14 @@ import { useCamera } from "../../composables/useCamera";
 import { useSpeechRecognition } from "../../composables/useSpeechRecognition";
 import { useScenicBackground } from "../../composables/useScenicBackground";
 import { fetchAvatarConfig } from "../../api/admin";
-import { fetchWelcomeAudio } from "../../api/chat";
+import { fetchWelcomeAudio, replayChatAnswer } from "../../api/chat";
 import { normalizeAvatarPresetFromModelPath, DEFAULT_AVATAR_PRESET } from "../../utils/avatarConfig";
 import { GUIDE_PERSONA, useAvatar } from "../../composables/useAvatar";
 import { useWeather } from "../../composables/useWeather";
-import { useChatStore } from "../../stores/chat";
+import { getSessionId, useChatStore } from "../../stores/chat";
 import { useInteractionStore } from "../../stores/interaction";
+import { readSpeechRate, SPEECH_RATE_OPTIONS, writeSpeechRate } from "../../utils/speechRatePreference";
+import { createChatReplayController } from "../../utils/chatReplay";
 
 const router = useRouter();
 const route = useRoute();
@@ -273,6 +286,9 @@ const feedbackReasons = [
 ];
 const chatStore = useChatStore();
 const interactionStore = useInteractionStore();
+const speechRate = ref(readSpeechRate());
+const speechRateOptions = SPEECH_RATE_OPTIONS;
+watch(speechRate, (rate) => writeSpeechRate(rate));
 const { scenicBgUrl, hasScenicBackground, welcomeText, touristSettings } = useScenicBackground();
 function rgbaHex(hex, alpha) {
   const value = /^#([\da-f]{6})$/i.exec(hex || "")?.[1] || "18352b";
@@ -322,6 +338,36 @@ const {
 const avatar = useAvatar();
 const { weather, scenicColor, displayText: weatherCaption, colorLabel: weatherColorLabel, startPolling: startWeather, stopPolling: stopWeather } = useWeather();
 const audioPlayer = useAudioPlayer();
+const chatReplay = createChatReplayController({
+  requestReplay: replayChatAnswer,
+  audioPlayer,
+  getSessionId,
+  getVoice: () => avatarConfig.value.voiceType,
+  getRate: () => speechRate.value,
+  onMode: (_message, mode) => {
+    if (mode !== "silent") {
+      activeAudioSegments.value += 1;
+      avatar.setState("speaking");
+    }
+  },
+  onProgress: (_message, progress, elapsedMs, durationMs, timeline) => {
+    speechProgress.value = progress;
+    speechElapsedMs.value = elapsedMs;
+    speechDurationMs.value = durationMs;
+    if (timeline) visemeTimeline.value = timeline;
+  },
+  onEnded: () => {
+    activeAudioSegments.value = Math.max(activeAudioSegments.value - 1, 0);
+    if (activeAudioSegments.value === 0) {
+      avatar.setState("idle");
+      speechProgress.value = 0;
+      speechElapsedMs.value = 0;
+      speechDurationMs.value = 0;
+      visemeTimeline.value = null;
+      chatStore.clearSubtitleWords();
+    }
+  },
+});
 const avatarState = avatar.currentState;
 const avatarError = ref(false);
 const avatarLoaded = ref(false);
@@ -352,6 +398,7 @@ const query = ref("");
 const voiceMode = ref(false);
 const explanationLevel = ref("adult");
 const transcribing = ref(false);
+const transcriptionRequests = createLatestRequest();
 const transcriptionConfidence = ref(-1);
 const showConfirmBar = ref(false);
 const transcriptionCandidates = ref([]);
@@ -362,7 +409,9 @@ const speechSessionActive = ref(false);
 const recorderError = ref("");
 const messageListRef = ref(null);
 const visionFileInputRef = ref(null);
+const visionRequests = createLatestRequest();
 const visionFile = ref(null);
+const visionIdempotencyKey = ref("");
 const visionPreviewUrl = ref("");
 const visionResult = ref(null);
 const visionAnalyzing = ref(false);
@@ -424,6 +473,8 @@ function handleHotline(type) {
 
 function closeVisionPanel() {
   visionPanelOpen.value = false
+  visionRequests.cancel()
+  visionAnalyzing.value = false
   stopCamera()
 }
 
@@ -453,6 +504,7 @@ async function captureFromCamera() {
   visionError.value = ""
   visionResult.value = null
   visionFile.value = file
+  visionIdempotencyKey.value = createIdempotencyKey()
   revokeVisionPreview()
   visionPreviewUrl.value = URL.createObjectURL(file)
   stopCamera()
@@ -694,7 +746,7 @@ onMounted(() => {
                 speechDurationMs.value = durationMs;
                 if (timeline) visemeTimeline.value = timeline;
               },
-              { rate: 1, volume: 0.8 },
+              { rate: speechRate.value, volume: 0.8 },
             );
           }
         } catch {
@@ -708,6 +760,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   pageActive = false;
+  visionRequests.cancel();
+  transcriptionRequests.cancel();
   toolMedia.removeEventListener("change", syncPanels);
   stopCamera();
   if (greetingTimer) {
@@ -755,6 +809,16 @@ function handleQuickQuestion(question) {
   submitQuery(question);
 }
 
+function retryLastAnswer() {
+  return chatStore.retryLastMessage({
+    ttsConfig: { playbackRate: speechRate.value },
+  });
+}
+
+function replayAnswer(message) {
+  return chatReplay.replay(message);
+}
+
 function submitQuery(rawQuery, extraOptions = {}) {
   const value = rawQuery.trim();
   if (!value || chatStore.streaming) {
@@ -769,7 +833,7 @@ function submitQuery(rawQuery, extraOptions = {}) {
       audience: explanationLevel.value,
       ttsConfig: {
         voiceType: avatarConfig.value.voiceType,
-        speechRate: 100,
+        playbackRate: speechRate.value,
         volume: 80,
       },
       onContext: (selection) => interactionStore.applyResolvedSelection(selection),
@@ -795,6 +859,15 @@ function submitQuery(rawQuery, extraOptions = {}) {
           visemeTimeline.value = null;
           chatStore.clearSubtitleWords();
         }
+      },
+      onPlaybackStopped: () => {
+        activeAudioSegments.value = 0;
+        avatar.setState("idle");
+        speechProgress.value = 0;
+        speechElapsedMs.value = 0;
+        speechDurationMs.value = 0;
+        visemeTimeline.value = null;
+        chatStore.clearSubtitleWords();
       },
       onSpeechProgress: (progress, elapsedMs, timeline, actualDurationMs) => {
         speechProgress.value = progress;
@@ -845,9 +918,14 @@ async function toggleRecording() {
       avatar.setState("idle");
       return;
     }
+    const transcriptionRequest = transcriptionRequests.begin();
     transcribing.value = true;
     try {
-      const result = await transcribeAudio(audioBlob);
+      const result = await transcribeAudio(audioBlob, {
+        signal: transcriptionRequest.signal,
+        idempotencyKey: createIdempotencyKey(),
+      });
+      if (!transcriptionRequest.isCurrent()) return;
       pendingVoiceContext.value = {
         audio_emotion: result?.emotion || null,
         audio_confidence: typeof result?.emotion_confidence === "number"
@@ -900,12 +978,15 @@ async function toggleRecording() {
         }
       }
     } catch (error) {
+      if (!transcriptionRequest.isCurrent()) return;
       recorderError.value = getTranscriptionErrorMessage(error);
       showConfirmBar.value = false;
       transcriptionConfidence.value = -1;
     } finally {
-      transcribing.value = false;
-      voiceMode.value = false;
+      if (transcriptionRequest.isCurrent()) {
+        transcribing.value = false;
+        voiceMode.value = false;
+      }
     }
     avatar.setState("idle");
     return;
@@ -949,6 +1030,15 @@ async function toggleRecording() {
     voiceMode.value = false;
     avatar.setState("idle");
   }
+}
+
+function cancelTranscription() {
+  transcriptionRequests.cancel();
+  transcribing.value = false;
+  voiceMode.value = false;
+  pendingVoiceContext.value = null;
+  recorderError.value = "已取消识别，可重新录音或使用文字输入。";
+  avatar.setState("idle");
 }
 
 function dismissConfirmBar() {
@@ -1028,13 +1118,17 @@ function openVisionFilePicker() {
 
 function handleVisionFileChange(event) {
   const file = event.target.files?.[0];
+  visionRequests.cancel();
+  visionFile.value = null;
+  visionIdempotencyKey.value = "";
+  revokeVisionPreview();
   visionError.value = "";
   visionResult.value = null;
   if (!file) {
     return;
   }
-  if (!file.type.startsWith("image/")) {
-    visionError.value = "请选择图片文件。";
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+    visionError.value = "请选择 JPEG、PNG 或 WebP 图片。";
     event.target.value = "";
     return;
   }
@@ -1044,6 +1138,7 @@ function handleVisionFileChange(event) {
     return;
   }
   visionFile.value = file;
+  visionIdempotencyKey.value = createIdempotencyKey();
   revokeVisionPreview();
   visionPreviewUrl.value = URL.createObjectURL(file);
 }
@@ -1052,19 +1147,23 @@ async function handleAnalyzeImage() {
   if (!visionFile.value || visionAnalyzing.value) {
     return;
   }
+  const request = visionRequests.begin();
   visionAnalyzing.value = true;
   avatar.triggerAction("look_around");
   visionError.value = "";
   visionResult.value = null;
   try {
-    visionResult.value = await analyzeImage(
+    const result = await analyzeImage(
       visionFile.value,
       "这张图片可能对应景区哪个位置？请提取可用于景区资料检索的线索。",
+      { signal: request.signal, idempotencyKey: visionIdempotencyKey.value },
     );
+    if (request.isCurrent()) visionResult.value = result;
   } catch (error) {
-    visionError.value = `图片识别失败：${error.message}`;
+    if (!request.isCurrent()) return;
+    visionError.value = getVisionErrorMessage(error);
   } finally {
-    visionAnalyzing.value = false;
+    if (request.isCurrent()) visionAnalyzing.value = false;
   }
 }
 
@@ -1082,7 +1181,10 @@ function askFromImage() {
 }
 
 function clearVisionState() {
+  visionRequests.cancel();
+  visionAnalyzing.value = false;
   visionFile.value = null;
+  visionIdempotencyKey.value = "";
   visionResult.value = null;
   visionError.value = "";
   if (visionFileInputRef.value) {

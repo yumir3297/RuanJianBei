@@ -187,6 +187,7 @@ class QAPipeline:
         intent_router: IntentRouter | None = None,
         knowledge_repository: KnowledgeRepository | None = None,
         route_repository: RouteRepository | None = None,
+        speech_profile: dict | None = None,
     ) -> None:
         self.query_rewriter = query_rewriter
         self.faq_matcher = faq_matcher
@@ -206,6 +207,7 @@ class QAPipeline:
         self.intent_router = intent_router or IntentRouter()
         self.knowledge_repository = knowledge_repository
         self.route_repository = route_repository
+        self.speech_profile = speech_profile
         self.text_emotion_analyzer = TextEmotionAnalyzer()
         self.emotion_fusion = MultimodalEmotionFusion()
         self._active_emotion = self.emotion_fusion.fuse(None, None)
@@ -385,7 +387,7 @@ class QAPipeline:
                     normalized_query=normalized_query,
                     category="rag_no_docs",
                 )
-                    logger.info("Blind spot recorded (RAG no docs): %s", normalized_query)
+                    logger.info("Blind spot recorded (RAG no docs)")
                 except Exception:
                     logger.exception("Knowledge blind spot recording failed")
             answer = no_evidence_reply(request.persona)
@@ -411,12 +413,29 @@ class QAPipeline:
         llm_finish_reason: str | None = None
         audio_queue: asyncio.Queue[StreamEvent] = asyncio.Queue()
         audio_tasks: list[asyncio.Task[None]] = []
+        audio_concurrency = asyncio.Semaphore(3)
+
+        def schedule_audio(sentence: str) -> None:
+            previous = audio_tasks[-1] if audio_tasks else None
+            audio_tasks.append(asyncio.create_task(
+                self._queue_audio(sentence, audio_queue, previous=previous, semaphore=audio_concurrency, notify=notify_audio)
+            ))
+
+        async def notify_audio() -> None:
+            await mux_queue.put(("audio_ready", None))
+
+        async def cancel_audio() -> None:
+            for task in audio_tasks:
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(*audio_tasks, return_exceptions=True)
 
         # ── 流式 TTS 路径 ──
         tts_stream: StreamingTTSSession | VolcengineStreamingTTSSession | None = None
         streaming_requested = (
             self.streaming_tts_service is not None
             and not request.text_only
+            and faq_documents is None
         )
         if streaming_requested and self.streaming_tts_service is not None:
             tts_stream = self.streaming_tts_service.create_session()
@@ -514,6 +533,13 @@ class QAPipeline:
                         for sse in self._handle_streaming_tts_event(tts_event):
                             yield sse
                     event = None
+                elif kind == "audio_ready":
+                    while True:
+                        try:
+                            yield audio_queue.get_nowait()
+                        except QueueEmpty:
+                            break
+                    event = None
                 else:
                     event = None
 
@@ -529,18 +555,18 @@ class QAPipeline:
                         continue
                     full_answer += token
                     sentence_buffer += token
-                    yield StreamEvent(type="text_chunk", data={"token": token})
+                    if faq_documents is None:
+                        yield StreamEvent(type="text_chunk", data={"token": token})
 
                     if streaming_requested:
                         if not tts_failed:
                             tts_text_buffer += token
-                    else:
+                    elif faq_documents is None:
                         # HTTP TTS：句子级别缓冲
-                        if self._should_trigger_tts(token, sentence_buffer):
-                            sentence = sentence_buffer.strip()
-                            sentence_buffer = ""
-                            if sentence and not request.text_only:
-                                audio_tasks.append(asyncio.create_task(self._queue_audio(sentence, audio_queue)))
+                        sentences, sentence_buffer = self._take_speakable_sentences(sentence_buffer)
+                        for sentence in sentences:
+                            if not request.text_only:
+                                schedule_audio(sentence)
 
                         while True:
                             try:
@@ -578,6 +604,9 @@ class QAPipeline:
 
                 if llm_done and streaming_requested and not tts_connected and tts_failed:
                     tts_done = True
+        except BaseException:
+            await cancel_audio()
+            raise
         finally:
             for task in (llm_task, tts_task):
                 if task is not None and not task.done():
@@ -593,22 +622,8 @@ class QAPipeline:
                     logger.exception("Failed to close streaming TTS session")
 
         if llm_error is not None:
+            await cancel_audio()
             raise llm_error
-
-        if streaming_requested and tts_failed and not request.text_only:
-            remaining_text = full_answer[tts_confirmed_chars:].strip()
-            if remaining_text:
-                audio_tasks.append(asyncio.create_task(self._queue_audio(remaining_text, audio_queue)))
-        elif not streaming_requested and sentence_buffer.strip() and not request.text_only:
-            audio_tasks.append(asyncio.create_task(self._queue_audio(sentence_buffer.strip(), audio_queue)))
-
-        for task in audio_tasks:
-            await task
-            while True:
-                try:
-                    yield audio_queue.get_nowait()
-                except QueueEmpty:
-                    break
 
         degraded_llm = bool(
             llm_finish_reason
@@ -617,6 +632,36 @@ class QAPipeline:
                 or llm_finish_reason.startswith("interrupted_")
             )
         )
+        if degraded_llm and faq_documents is not None:
+            # Do not speak a partial rewrite that will be replaced by the FAQ.
+            full_answer = polish_answer(faq_result.answer, request.persona, faq_sources)
+
+        faq_text_sent = faq_documents is not None
+        if faq_text_sent:
+            yield StreamEvent(type="text", data={"text": full_answer, "is_complete": True})
+
+        if faq_documents is not None and not request.text_only:
+            if full_answer.strip():
+                schedule_audio(full_answer.strip())
+        elif streaming_requested and tts_failed and not request.text_only:
+            remaining_text = full_answer[tts_confirmed_chars:].strip()
+            if remaining_text:
+                schedule_audio(remaining_text)
+        elif not streaming_requested and sentence_buffer.strip() and not request.text_only:
+            schedule_audio(sentence_buffer.strip())
+
+        try:
+            for task in audio_tasks:
+                await task
+                while True:
+                    try:
+                        yield audio_queue.get_nowait()
+                    except QueueEmpty:
+                        break
+        except BaseException:
+            await cancel_audio()
+            raise
+
         if degraded_llm and self.blind_spot_tracker is not None:
             try:
                 await self.blind_spot_tracker.record(
@@ -624,15 +669,9 @@ class QAPipeline:
                     normalized_query=normalized_query,
                     category="llm_fallback",
                 )
-                logger.info("Blind spot recorded (LLM degraded): %s", normalized_query)
+                logger.info("Blind spot recorded (LLM degraded)")
             except Exception:
                 logger.exception("Knowledge blind spot recording failed")
-        if degraded_llm and faq_documents is not None:
-            # FAQ 按受众改写失败时，不能把"AI讲解服务暂时不可用"甩给游客：
-            # FAQ 原文本身权威且完整，直接回落原文——风格没换成，但内容正确。
-            # 刻意保持 degraded_llm=True，避免把未改写的答案写进受众专属缓存，
-            # 否则一次 LLM 抖动就会长期污染该受众的缓存。
-            full_answer = polish_answer(faq_result.answer, request.persona, faq_sources)
         if not degraded_llm and self._active_emotion.label == EmotionLabel.NEUTRAL:
             await self.qa_cache.set(cache_key, full_answer, sources)
         latency_ms = int((perf_counter() - start) * 1000)
@@ -655,7 +694,11 @@ class QAPipeline:
             llm_usage.total_tokens,
             llm_usage.cached_tokens,
         )
-        yield StreamEvent(type="text", data={"text": full_answer, "is_complete": True})
+        incomplete = bool(
+            llm_finish_reason and llm_finish_reason.startswith("interrupted_") and faq_documents is None
+        )
+        if not faq_text_sent:
+            yield StreamEvent(type="text", data={"text": full_answer, "is_complete": not incomplete})
         yield self._followup_event(resolved)
         yield self._done_event(
             chat_log_id=chat_log_id,
@@ -663,6 +706,7 @@ class QAPipeline:
             total_ms=latency_ms,
             degraded=degraded_llm,
             provider="deepseek" if not degraded_llm else "evidence_fallback",
+            completion="incomplete" if incomplete else "complete",
         )
 
     async def _build_static_route_answer(self, request: ChatRequest) -> tuple[str, list[dict]] | None:
@@ -762,12 +806,16 @@ class QAPipeline:
         return next((route for route in routes if route.id == target_id), None)
 
     @staticmethod
-    def _should_trigger_tts(token: str, buffer: str) -> bool:
-        if token in "。！？!?":
-            return True
-        if token in "，、" and len(buffer) >= 8:
-            return True
-        return False
+    def _take_speakable_sentences(buffer: str) -> tuple[list[str], str]:
+        sentences: list[str] = []
+        start = 0
+        for index, char in enumerate(buffer):
+            if char in "。！？!?；;\n" or (char in "，、," and index - start + 1 >= 8):
+                sentence = buffer[start:index + 1].strip()
+                if sentence:
+                    sentences.append(sentence)
+                start = index + 1
+        return sentences, buffer[start:]
 
     @staticmethod
     def _should_flush_streaming_tts(buffer: str) -> bool:
@@ -869,6 +917,13 @@ class QAPipeline:
             hit_level=hit_level,
             latency_ms=latency_ms,
         )
+        if self.speech_profile is not None and not request.text_only:
+            from app.services.tts.speech_profile import answer_fingerprint, build_speech_cache_key
+
+            metadata = dict(self.speech_profile)
+            metadata["answer_version"] = answer_fingerprint(answer)
+            metadata["cache_key"] = build_speech_cache_key(answer, self.speech_profile)
+            create_kwargs["speech_metadata"] = metadata
         if isinstance(self.chat_log_repository, ChatLogRepository):
             create_kwargs.update(
                 input_mode=request.input_mode,
@@ -920,6 +975,7 @@ class QAPipeline:
         total_ms: int,
         degraded: bool = False,
         provider: str = "local",
+        completion: str = "complete",
     ) -> StreamEvent:
         return StreamEvent(
             type="done",
@@ -929,12 +985,31 @@ class QAPipeline:
                 "total_ms": total_ms,
                 "degraded": degraded,
                 "provider": provider,
+                "completion": completion,
             },
         )
 
-    async def _queue_audio(self, sentence: str, queue: asyncio.Queue[StreamEvent]) -> None:
-        audio = await self.tts_service.synthesize(sentence)
+    async def _queue_audio(
+        self, sentence: str, queue: asyncio.Queue[StreamEvent], *,
+        previous: asyncio.Task[None] | None = None, semaphore: asyncio.Semaphore | None = None,
+        notify=None,
+    ) -> None:
+        async def synthesize():
+            try:
+                return await self.tts_service.synthesize(sentence)
+            except Exception:
+                logger.exception("TTS sentence synthesis failed; preserving text")
+                from app.services.tts.base import TTSAudio
+                return TTSAudio(base64_audio="", duration_ms=0, provider="tts_unavailable")
+
+        if semaphore is None:
+            audio = await synthesize()
+        else:
+            async with semaphore:
+                audio = await synthesize()
         avatar = await self.avatar_service.drive(sentence)
+        if previous is not None:
+            await previous
         await queue.put(StreamEvent(type="avatar", data={
             "viseme_text": avatar.viseme_text,
             "emotion": self._active_response_policy.avatar_emotion,
@@ -947,6 +1022,8 @@ class QAPipeline:
                 audio.provider,
             )
         )
+        if notify is not None:
+            await notify()
 
     @classmethod
     def _build_audio_event(
@@ -1023,7 +1100,7 @@ class QAPipeline:
             b64 = base64.b64encode(tts_event.data).decode("ascii")
             results.append(StreamEvent(type="audio_chunk", data={
                 "base64": b64,
-                "sample_rate": 24000,
+                "sample_rate": tts_event.sample_rate,
                 "channels": 1,
                 "bits": 16,
             }))
