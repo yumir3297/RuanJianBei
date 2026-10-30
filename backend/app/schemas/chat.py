@@ -59,6 +59,24 @@ class ChatRequest(BaseModel):
     emotion_context: EmotionContext | None = None
 
 
+class ChatReplayRequest(BaseModel):
+    chat_log_id: int = Field(gt=0)
+    session_id: str = Field(min_length=1, max_length=100)
+    tts_voice: Literal[
+        "gentle-female",
+        "calm-female",
+        "deep-male",
+        "lively-female",
+    ] | None = None
+
+
+class ChatReplayResponse(BaseModel):
+    base64_audio: str
+    duration_ms: int = Field(ge=0)
+    provider: str
+    available: bool
+
+
 class SourceItem(BaseModel):
     evidence_id: str | None = None
     title: str

@@ -374,6 +374,48 @@ def test_pipeline_forwards_child_audience_to_llm_and_cache_key() -> None:
     assert child_keys.isdisjoint(expert_keys), "不同受众不得共用缓存键"
 
 
+def test_pipeline_persists_answer_version_and_generated_speech_profile():
+    class RecordingRepository:
+        async def create(self, **kwargs):
+            self.created = kwargs
+            return SimpleNamespace(id=1, **kwargs)
+
+    profile = {
+        "provider": "bailian",
+        "model": "cosyvoice-v3-flash",
+        "voice_preset": "deep-male",
+        "voice_id": "longsanshu_v3",
+        "format": "mp3",
+        "sample_rate": 24000,
+        "rate": 100,
+        "profile_hash": "profile-hash",
+    }
+    repository = RecordingRepository()
+    pipeline = _build_test_pipeline(speech_profile=profile, chat_log_repository=repository)
+    request = ChatRequest(
+        query="问题",
+        session_id="speech-profile-session",
+        tts_voice="deep-male",
+    )
+
+    asyncio.run(pipeline._persist_interaction(
+        session_id=request.session_id,
+        raw_query=request.query,
+        normalized_query=request.query,
+        answer="持久保存的回答",
+        sources=[],
+        hit_level="rag",
+        latency_ms=1,
+        request=request,
+    ))
+
+    metadata = repository.created["speech_metadata"]
+    assert metadata["answer_version"]
+    assert metadata["profile_hash"] == "profile-hash"
+    assert metadata["voice_preset"] == "deep-male"
+    assert metadata["voice_id"] == "longsanshu_v3"
+
+
 def _build_test_pipeline(**overrides):
     kwargs = dict(
         query_rewriter=QueryRewriter(),
@@ -554,7 +596,22 @@ def test_streaming_word_timestamps_event_carries_raw_word_timeline() -> None:
     ]
 
 
-def test_pipeline_records_blind_spot_only_when_rag_has_no_evidence() -> None:
+def test_streamed_audio_uses_the_provider_sample_rate() -> None:
+    pipeline = QAPipeline(
+        query_rewriter=QueryRewriter(), faq_matcher=FAQMatcher(),
+        qa_cache=QACache(DummyCacheRepo(), ttl_seconds=60), rag_service=DummyRAGService(),
+        llm_service=DummyLLMService(), tts_service=StubTTSService(), avatar_service=StubAvatarService(),
+        chat_log_repository=DummyChatLogRepo(), guided_selector=DummyGuidedSelector(),
+        followup_suggestions=FollowUpSuggestionService(),
+    )
+    event = StreamingTTSEvent(type="audio_chunk", data=b"\0\0", sample_rate=16000)
+    chunk = pipeline._handle_streaming_tts_event(event)[0]
+    assert chunk.data["sample_rate"] == 16000
+
+
+def test_pipeline_records_blind_spot_only_when_rag_has_no_evidence(caplog) -> None:
+    import logging
+    caplog.set_level(logging.INFO, logger="app.services.qa.pipeline")
     tracker = RecordingBlindSpotTracker()
     pipeline = QAPipeline(
         query_rewriter=QueryRewriter(),
@@ -588,6 +645,7 @@ def test_pipeline_records_blind_spot_only_when_rag_has_no_evidence() -> None:
         }
     ]
     assert events[-1].type == "done"
+    assert "卫生间在哪里" not in caplog.text
 
 
 def test_pipeline_does_not_cache_provider_fallback_answer() -> None:
@@ -617,6 +675,138 @@ def test_pipeline_does_not_cache_provider_fallback_answer() -> None:
 
     assert cache_repository.set_keys == []
     assert events[-1].type == "done"
+
+
+def test_partial_model_interruption_marks_answer_incomplete() -> None:
+    from app.services.llm.types import LLMStreamEvent
+
+    class InterruptedLLM:
+        async def stream_generate(self, *args, **kwargs):
+            yield LLMStreamEvent(type="content", text="尚未讲完")
+            yield LLMStreamEvent(type="finish", finish_reason="interrupted_network")
+
+    pipeline = QAPipeline(
+        query_rewriter=QueryRewriter(), faq_matcher=FAQMatcher(),
+        qa_cache=QACache(DummyCacheRepo(), ttl_seconds=60),
+        rag_service=RecordingRAGService(), llm_service=InterruptedLLM(),
+        tts_service=StubTTSService(), avatar_service=StubAvatarService(),
+        chat_log_repository=DummyChatLogRepo(), guided_selector=DummyGuidedSelector(),
+        followup_suggestions=FollowUpSuggestionService(),
+    )
+
+    async def run():
+        return [event async for event in pipeline.stream_chat(
+            ChatRequest(query="讲解景点", session_id="interrupted", text_only=True)
+        )]
+
+    events = asyncio.run(run())
+    final_text = next(event for event in events if event.type == "text")
+    assert final_text.data["text"] == "尚未讲完"
+    assert final_text.data["is_complete"] is False
+    assert events[-1].type == "done"
+    assert events[-1].data["completion"] == "incomplete"
+
+
+def test_http_tts_preserves_sentence_order_when_later_synthesis_finishes_first() -> None:
+    from app.services.tts.base import TTSAudio
+
+    class SentencesLLM:
+        async def stream_generate(self, *args, **kwargs):
+            yield "第一句话。"
+            await asyncio.sleep(0.002)
+            yield "第二句话。"
+
+    class OutOfOrderTTS:
+        async def synthesize(self, text):
+            await asyncio.sleep(0.02 if text.startswith("第一") else 0.001)
+            return TTSAudio(base64_audio="AA==", duration_ms=100, provider="fake")
+
+    pipeline = QAPipeline(
+        query_rewriter=QueryRewriter(), faq_matcher=FAQMatcher(),
+        qa_cache=QACache(DummyCacheRepo(), ttl_seconds=60), rag_service=RecordingRAGService(),
+        llm_service=SentencesLLM(), tts_service=OutOfOrderTTS(), avatar_service=StubAvatarService(),
+        chat_log_repository=DummyChatLogRepo(), guided_selector=DummyGuidedSelector(),
+        followup_suggestions=FollowUpSuggestionService(),
+    )
+
+    async def run():
+        return [event async for event in pipeline.stream_chat(
+            ChatRequest(query="讲解景点", session_id="ordered-audio", text_only=False)
+        )]
+
+    events = asyncio.run(run())
+    assert [event.data["text"] for event in events if event.type == "audio"] == ["第一句话。", "第二句话。"]
+
+
+def test_stopping_generation_cancels_pending_http_tts() -> None:
+    async def run():
+        started = asyncio.Event()
+        cancelled = asyncio.Event()
+
+        class WaitingLLM:
+            async def stream_generate(self, *args, **kwargs):
+                yield "第一句话。"
+                await asyncio.Event().wait()
+
+        class WaitingTTS:
+            async def synthesize(self, text):
+                started.set()
+                try:
+                    await asyncio.Event().wait()
+                except asyncio.CancelledError:
+                    cancelled.set()
+                    raise
+
+        pipeline = QAPipeline(
+            query_rewriter=QueryRewriter(), faq_matcher=FAQMatcher(),
+            qa_cache=QACache(DummyCacheRepo(), ttl_seconds=60), rag_service=RecordingRAGService(),
+            llm_service=WaitingLLM(), tts_service=WaitingTTS(), avatar_service=StubAvatarService(),
+            chat_log_repository=DummyChatLogRepo(), guided_selector=DummyGuidedSelector(),
+            followup_suggestions=FollowUpSuggestionService(),
+        )
+
+        async def consume():
+            async for _ in pipeline.stream_chat(ChatRequest(query="讲解景点", session_id="stop-tts", text_only=False)):
+                pass
+
+        consumer = asyncio.create_task(consume())
+        await asyncio.wait_for(started.wait(), timeout=1)
+        consumer.cancel()
+        try:
+            await consumer
+        except asyncio.CancelledError:
+            pass
+        assert cancelled.is_set()
+
+    asyncio.run(run())
+
+
+def test_first_http_tts_audio_is_emitted_while_llm_waits_for_next_sentence() -> None:
+    async def run():
+        release_llm = asyncio.Event()
+
+        class PausedLLM:
+            async def stream_generate(self, *args, **kwargs):
+                yield "第一句话。"
+                await release_llm.wait()
+                yield "第二句话。"
+
+        pipeline = QAPipeline(
+            query_rewriter=QueryRewriter(), faq_matcher=FAQMatcher(),
+            qa_cache=QACache(DummyCacheRepo(), ttl_seconds=60), rag_service=RecordingRAGService(),
+            llm_service=PausedLLM(), tts_service=StubTTSService(), avatar_service=StubAvatarService(),
+            chat_log_repository=DummyChatLogRepo(), guided_selector=DummyGuidedSelector(),
+            followup_suggestions=FollowUpSuggestionService(),
+        )
+        async def first_audio():
+            async for event in pipeline.stream_chat(ChatRequest(query="讲解景点", session_id="early-audio", text_only=False)):
+                if event.type == "audio":
+                    release_llm.set()
+                    return event.data["text"]
+
+        assert await asyncio.wait_for(first_audio(), timeout=0.2) == "第一句话。"
+
+    asyncio.run(run())
 
 
 def test_direct_answer_appends_inline_citation_when_sources_exist() -> None:
@@ -782,3 +972,27 @@ def test_faq_answer_survives_llm_outage_for_non_default_audience() -> None:
     assert events[-1].data["degraded"] is True
     assert events[-1].data["hit_level"] == "faq_exact_styled_llm_fallback"
     assert cache_repository.set_keys == [], "未按受众改写的答案不得写入受众专属缓存"
+
+
+def test_interrupted_faq_restyle_never_speaks_discarded_partial_answer() -> None:
+    from app.services.llm.types import LLMStreamEvent
+
+    class InterruptedFAQ:
+        async def stream_generate(self, *args, **kwargs):
+            yield LLMStreamEvent(type="content", text="景区晚上十点开门。")
+            await asyncio.sleep(0.01)
+            yield LLMStreamEvent(type="finish", finish_reason="interrupted_network")
+
+    pipeline = _build_test_pipeline(
+        faq_matcher=_faq_matcher(), llm_service=InterruptedFAQ(),
+        streaming_tts_service=FakeStreamingTTSService(),
+    )
+    events = _run_turn(pipeline, query="几点开门", audience="child", text_only=False)
+    final_text = next(event.data["text"] for event in events if event.type == "text")
+    spoken = [event.data["text"] for event in events if event.type == "audio"]
+    assert "8:00" in final_text
+    assert spoken == [final_text]
+    assert not any(event.type == "text_chunk" and "晚上十点" in event.data.get("token", "") for event in events)
+    assert not any(event.type == "audio_chunk" for event in events)
+    assert next(i for i, event in enumerate(events) if event.type == "text") < next(i for i, event in enumerate(events) if event.type == "audio")
+    assert events[-1].data["completion"] == "complete"

@@ -1,8 +1,9 @@
 import http from "./http";
+import { createIdempotencyKey } from "../utils/idempotencyKey.js";
 
-export async function createKnowledgePublication(items) {
+export async function createKnowledgePublication(items, key = createIdempotencyKey()) {
   const { data } = await http.post("/knowledge-publications/", {
-    idempotency_key: crypto.randomUUID(),
+    idempotency_key: key,
     items,
   });
   return data;

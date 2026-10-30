@@ -1,6 +1,12 @@
 # 架构与业务链路
 
 核验于 2026-10-29，V01 分支基线 `098553f`，并有未提交实施改动。此处只描述已落入代码的链路；V01 仍有未验收事项。
+> 2026-10-29 工作副本增量：ASR 与视觉接口支持可选 `Idempotency-Key`，按接口、键和请求 fingerprint 做 5 分钟进程内 single-flight 与 JSON 结果缓存；同键不同请求返回 409，超过 128 条/1 MiB 响应上限时拒绝新任务或淘汰过期/最近最少使用结果。不保存上传内容；旧客户端兼容。该能力不跨多 worker 或重启，聊天 SSE 和 K01 发布仍未接入持久幂等。实现入口见 [功能地图](REPO_MAP.md)。
+> 真实 ASR provider 收到非 WAV 音频时，在占用既有 ASR 容量后通过 [audio_duration](../backend/app/services/audio_duration.py) 用受限 ffprobe 检查系统私有临时文件，校验音轨和时长后才调用 provider；结束后删除临时文件，最长运行时间可配置。该路径需部署系统安装 FFmpeg；游客录音器固定输出 WAV，不依赖它。当前只检查容器探测出的时长，不承诺完整解码验证。
+> 生产环境 `APP_ENV=production` 时，管理员默认密码/签名密钥或过短值会阻止应用启动；`/ready` 同步报告配置缺项，不回显秘密。游客 API 仍公开；[CapacityLimiter](../backend/app/services/capacity.py) 只管单进程并发，不是时间窗口速率限制或多实例防刷。
+> 2026-10-28 工作副本增量：聊天 SSE 在原有事件上补充心跳、连接/无数据/无进展/总时限与 `done.completion`；中断保留部分文本并停止音频。普通 TTS 句子并发合成、按序发送；分众 FAQ 在确定最终结果后输出一致的文字和语音。上传采用有界读取、图片容器尺寸检查及 WAV 时长检查，聊天/ASR/视觉使用可配置的单进程并发上限。实际实现与测试入口见 [功能地图](REPO_MAP.md)；K01 跨分支整合、非 WAV 时长及设备验收见专项记录。
+
+主工作区记录的能力正在与 V01 集成，以下描述须在最终集成后复核。
 功能入口见 [REPO_MAP.md](REPO_MAP.md)，运行条件见 [DEVELOPMENT.md](DEVELOPMENT.md)。
 
 ## 边界
@@ -31,6 +37,8 @@ flowchart LR
 4. [chat.py](../backend/app/api/chat.py) 的 `build_pipeline` 组合 repository、FAQ、RAG、LLM、TTS 与记忆服务。
 5. [QAPipeline.stream_chat](../backend/app/services/qa/pipeline.py) 根据问题、缓存、FAQ/检索证据及所选口径产出事件。具体分支以此函数为准，不能假设每个问题必经所有检索和供应商。
 6. [StreamEvent.to_sse](../backend/app/services/qa/stream_events.py) 生成 UTF-8 `event:`/`data:` 帧；前端解析分块、消费文字/证据/音频，并驱动 [useAudioPlayer](../frontend/src/composables/useAudioPlayer.js) 和数字人。
+
+历史回答重播走独立 `POST /api/chat/replay`：前端提交 `chat_log_id` 和当前 `session_id`；[ChatLogRepository](../backend/app/repositories/chat_log.py) 联合匹配归属后，API 仅把已保存的 `answer` 交给 TTS factory，不构建 QA pipeline。聊天保存时记录 answer SHA-256 与非秘密 TTS profile；[ReplayAudioCache](../backend/app/services/tts/replay_cache.py) 按内容指纹和完整 profile 复用合成结果，TTL 30 分钟、最多 128 项、编码音频总计不超过 16 MiB，缓存仅在单进程内有效。重播优先使用记录的生成音色；旧记录回退请求音色。前端共享播放器应用当前本机语速，TTS 未配置或音频无法解码时可回退浏览器朗读。语速偏好不跨设备同步；等 W01 定义游客身份与授权后再评估。
 
 修改协议至少联读：服务端 `StreamEvent`、`QAPipeline`、前端 `useSSEStream`、`chat store`、[流式契约测试](../backend/app/tests/test_chat_stream_api.py)。新增事件须确认所有消费者，不能只改服务端名称。
 

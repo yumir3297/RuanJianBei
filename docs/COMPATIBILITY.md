@@ -1,6 +1,6 @@
 # 多端能力与验收矩阵
 
-核验于 2026-10-28。这里“源码已核对”表示找到了实现；“待实测”表示尚无本次设备运行证据。
+核验于 2026-10-29。这里“源码已核对”表示找到了实现；“待实测”表示尚无本次设备运行证据。
 建图本身不改变浏览器行为，也不等于把当前应用改造成所有终端均可用。
 
 ## 1. 目标终端与证据
@@ -45,6 +45,7 @@ Windows/Linux 的校验命令已提供，当前仅在 macOS 主机执行；其�
 | 麦克风/录音 | [useRecorder](../frontend/src/composables/useRecorder.js)、[recorder-worklet](../frontend/public/recorder-worklet.js) | getUserMedia、AudioContext、Worklet 加载；ScriptProcessor 降级在主线程高负载下的质量；停止、取消、切后台后 track 释放 |
 | 语音识别 | [useSpeechRecognition](../frontend/src/composables/useSpeechRecognition.js)、[voice API](../frontend/src/api/voice.js) | 浏览器 SpeechRecognition 和录音上传 ASR 分开测；服务失败、超时、无网时可改文字 |
 | 播放和嘴型 | [useAudioPlayer](../frontend/src/composables/useAudioPlayer.js)、[chat store](../frontend/src/stores/chat.js)、[MapView](../frontend/src/views/tourist/MapView.vue) | 聊天和地图讲解共享来源会话与游客语速；验证用户手势解锁、来源接管/停止、迟到音频、蓝牙/扬声器、切后台恢复及嘴型；语音失败时文字继续可读 |
+| 播放和嘴型 | [useAudioPlayer](../frontend/src/composables/useAudioPlayer.js)、[chat store](../frontend/src/stores/chat.js)、[游客语速偏好](../frontend/src/utils/speechRatePreference.js)、[历史回答重播](../frontend/src/utils/chatReplay.js)、[重播缓存](../backend/app/services/tts/replay_cache.py) | 用户点击后解锁音频、打断、再次播放、蓝牙/扬声器、后台恢复；TTS 未配置时可用浏览器朗读；重播使用生成时音色 profile 和本机语速，缓存仅在单进程内有效，未命中时可能调用供应商 TTS；语速、重播、字幕/嘴型同步仍需真机验证 |
 | GPS/模拟 | [useGeolocation](../frontend/src/composables/useGeolocation.js)、[useNarration](../frontend/src/composables/useNarration.js) | HTTPS、权限、真实坐标、低精度/景区外、模拟状态可辨别；原生 coords 字段适配风险见架构，不能用模拟巡游代验真 GPS |
 | 3D 人物 | [ThreeAvatar](../frontend/src/components/ThreeAvatar.vue)、[AvatarDisplay](../frontend/src/components/AvatarDisplay.vue) | WebGL/模型加载失败、低端机温升、切形象和多次开关工具；失败保留 SVG 降级和输入功能 |
 | 图像上传 | [vision API](../frontend/src/api/vision.js)、[vision.py](../backend/app/api/vision.py) | JPEG/PNG/WebP、空文件、超过服务端上限、相册 HEIC；不支持格式应有可恢复提示 |
@@ -52,8 +53,14 @@ Windows/Linux 的校验命令已提供，当前仅在 macOS 主机执行；其�
 | V01 行程编辑与确认 | [RouteView](../frontend/src/views/tourist/RouteView.vue)、[ChatView](../frontend/src/views/tourist/ChatView.vue)、[MapView](../frontend/src/views/tourist/MapView.vue) | 已在桌面内置浏览器 1280×720 验证：V2 升级、目录选点、未保存草稿禁止开始、保存/开始/完成及重载恢复；本地 OpenAI 兼容模拟服务完成提案差异（40→30 分钟）、草稿变化后旧提案过期保护/禁用确认、按当前草稿重生成、确认保存新版本及重载恢复。后端测试覆盖活动游览应用提案后继续完成当前点，以及目录版本变化时拒绝应用且不改变行程/进度；前端覆盖进度刷新及失败时隐藏“开始游览”并提示刷新。provider 未配置时也验证了明确错误回退。真实 provider、320px/手机真机、游览中跨页面完整流程、弱网及重复提交并发仍待验收 |
 | 流式网络 | [useSSEStream](../frontend/src/composables/useSSEStream.js) | 建连超时、分块边界、连接中断、连续重试、停止后晚到消息；不承诺离线问答 |
 
+本轮源码与自动化验证补充：聊天和地图讲解由共享播放器按会话互斥，过期会话不能入队或停止新会话；地图工具被 KeepAlive 隐藏时会停止自己的音频、取消讲解请求、停止 GPS/巡游并清理自动讲解定时器。游客可选择 0.8×、1.0×、1.2×、1.5×；偏好保存在当前浏览器，聊天、PCM、地图和欢迎语共用，内容时间轴保持不变。激活地图只恢复视图，不自动恢复定位或播放。上述行为尚未在 iOS Safari、微信或 Android 真机验证；音质、字幕/嘴型同步和页面切后台的音频策略仍需按设备验收。
+
 安全上下文和媒体策略参考 [MDN getUserMedia](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia)、[Geolocation](https://developer.mozilla.org/en-US/docs/Web/API/Geolocation_API)、[Autoplay](https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Autoplay)。
 远程手机访问开发机 HTTP LAN IP 通常不具备 localhost 的安全上下文条件；不要以禁用浏览器安全保护作为正式验收方案。
+
+ASR 当前游客录音器输出 WAV，WAV 时长由内置读取校验。真实 ASR provider 若接收非 WAV 请求，部署机器需安装 FFmpeg/ffprobe（或通过 `ASR_FFPROBE_PATH` 指定执行路径）；探测超时默认为 3 秒，可用 `ASR_PROBE_TIMEOUT_SECONDS` 调整。探测器缺失、音轨无效或无法确认时请求不会转发给 provider。压缩音频会短暂写入系统私有临时目录以供容器 seek 探测，随后删除。Stub 模式不启用外部探测。
+
+生产部署需设置 `APP_ENV=production`、自定义至少 12 字符的 `ADMIN_PASSWORD` 和至少 32 字符的随机 `ADMIN_TOKEN_SECRET`；不满足时后端启动失败，且 readiness 会报告缺项。模板中的 `admin123` 与固定 token secret 仅供本地开发，不能用于生产。访客接口仍公开服务游客；当前单进程并发限制不提供时间窗口防刷或多 worker 限流。
 
 ## 4. 网络与服务矩阵
 

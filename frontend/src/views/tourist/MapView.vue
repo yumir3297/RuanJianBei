@@ -21,7 +21,7 @@
         :text="narrationText"
         :progress="narrationProgress"
         :loading="narrationLoading"
-        :playing="audio.isPlaying.value"
+        :playing="narrationIsPlaying"
         :degraded="narrationDegraded"
         @replay="playNarration(narration.activeSpot.value)"
         @stop="stopNarration"
@@ -102,7 +102,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from "vue";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import GuideIcon from "../../components/GuideIcon.vue";
@@ -117,13 +117,14 @@ import { fetchSpotNarration } from "../../api/narration";
 import { fetchItineraryCatalog } from "../../api/itinerary";
 import { useTourSessionsStore } from "../../stores/tourSessions";
 import { useInteractionStore } from "../../stores/interaction";
+import { createLatestRequest } from "../../utils/latestRequest";
 
 const props = defineProps({
   busy: { type: Boolean, default: false },
-  speechRate: { type: Number, default: 100 },
   weather: { type: Object, default: null },
   scenicColor: { type: Object, default: null },
   colorLabel: { type: String, default: "" },
+  speechRate: { type: Number, default: 1 },
 });
 const emit = defineEmits(["ask"]);
 const tourStore = useTourSessionsStore();
@@ -330,15 +331,20 @@ const narrationLoading = ref(false);
 const narrationDegraded = ref(false);
 const walking = ref(false);
 let narrateTimer = null;
-let mapPlaybackSession = null;
+let mapToolActive = false;
+let activeNarrationSession = null;
 
 const narration = useNarration({
   getPosition: () => geo.position.value,
   getSpots: () => spots,
   isBusy: () => props.busy || audio.isPlaying.value,
   onTrigger: (spot) => playNarration(spot),
-  // 排队超时：中断卡住的播放以保证讲解不中断；用户正在对话时不打断会话
-  onInterrupt: () => { if (!props.busy) stopNarration(); },
+  // 排队超时只允许中断自己的地图讲解，不能停止聊天或其他媒体源。
+  onInterrupt: () => {
+    if (activeNarrationSession && audio.activePlayback.value?.id === activeNarrationSession.id) {
+      audio.stop(activeNarrationSession.id, "pending-timeout");
+    }
+  },
 });
 
 const modeLabel = computed(() => {
@@ -346,17 +352,40 @@ const modeLabel = computed(() => {
   return map[geo.mode.value] || geo.mode.value;
 });
 
-async function playNarration(spot) {
-  if (!spot) return;
-  const session = audio.claimPlayback("map-narration", () => {
-    if (mapPlaybackSession?.id === session.id) {
-      mapPlaybackSession = null;
-      narration.status.value = "idle";
-      narrationProgress.value = 0;
-    }
+const narrationRequests = createLatestRequest();
+const narrationIsPlaying = computed(() => Boolean(
+  activeNarrationSession
+  && audio.activePlayback.value?.id === activeNarrationSession.id
+  && audio.isPlaying.value,
+));
+
+function claimNarrationSession() {
+  let session;
+  session = audio.claimPlayback("map-narration", () => {
+    if (activeNarrationSession?.id !== session.id) return;
+    activeNarrationSession = null;
     narrationLoading.value = false;
+    narrationProgress.value = 0;
+    narration.status.value = "idle";
   });
-  mapPlaybackSession = session;
+  activeNarrationSession = session;
+  return session;
+}
+
+watch(() => props.busy, (busy) => {
+  if (busy) {
+    narrationRequests.cancel();
+    narrationLoading.value = false;
+    if (activeNarrationSession && audio.activePlayback.value?.id === activeNarrationSession.id) {
+      audio.stop(activeNarrationSession.id, "visitor-input");
+    }
+  }
+});
+
+async function playNarration(spot) {
+  if (!spot || props.busy || !mapToolActive) return;
+  const request = narrationRequests.begin();
+  const playbackSession = claimNarrationSession();
   narrationLoading.value = true;
   narrationDegraded.value = false;
   narrationText.value = spot.desc || "";
@@ -364,39 +393,56 @@ async function playNarration(spot) {
 
   let data = null;
   try {
-    data = await fetchSpotNarration(spot.name);
+    data = await fetchSpotNarration(spot.name, undefined, { signal: request.signal });
   } catch {
     data = null;
   }
 
+  if (!request.isCurrent() || activeNarrationSession?.id !== playbackSession.id) return;
   narrationLoading.value = false;
-  if (!audio.isCurrentPlaybackSession(session.id)) return;
+  if (!audio.isCurrentPlaybackSession(playbackSession.id)) return;
   if (data && data.available) {
     // 卡片展示完整讲解词；浏览器朗读兜底只念开头，避免长时间占用播放通道
     narrationText.value = data.text || spot.desc || "";
     narrationDegraded.value = !data.base64_audio;
-    audio.enqueue(data.base64_audio, data.duration_ms || 60000, () => finishNarration(session.id), speechText(data.text), (p) => { narrationProgress.value = p; }, { allowBrowserSpeech: true, sessionId: session.id, rate: props.speechRate / 100 });
+    audio.enqueue(
+      data.base64_audio,
+      data.duration_ms || 60000,
+      () => { if (request.isCurrent() && activeNarrationSession?.id === playbackSession.id) finishNarration(playbackSession.id); },
+      speechText(data.text),
+      (p) => { if (request.isCurrent() && activeNarrationSession?.id === playbackSession.id) narrationProgress.value = p; },
+      { allowBrowserSpeech: true, sessionId: playbackSession.id, rate: props.speechRate },
+    );
   } else {
     narrationDegraded.value = true;
     const fallback = spot.desc || `${spot.name}`;
     narrationText.value = fallback;
-    audio.enqueue("", Math.max(fallback.length * 180, 1200), () => finishNarration(session.id), speechText(fallback), (p) => { narrationProgress.value = p; }, { allowBrowserSpeech: true, sessionId: session.id, rate: props.speechRate / 100 });
+    audio.enqueue(
+      "",
+      Math.max(fallback.length * 180, 1200),
+      () => { if (request.isCurrent() && activeNarrationSession?.id === playbackSession.id) finishNarration(playbackSession.id); },
+      speechText(fallback),
+      (p) => { if (request.isCurrent() && activeNarrationSession?.id === playbackSession.id) narrationProgress.value = p; },
+      { allowBrowserSpeech: true, sessionId: playbackSession.id, rate: props.speechRate },
+    );
   }
 }
 
 function finishNarration(sessionId) {
-  if (!audio.isCurrentPlaybackSession(sessionId)) return;
+  if (!audio.isCurrentPlaybackSession(sessionId) || activeNarrationSession?.id !== sessionId) return;
+  activeNarrationSession = null;
   narrationProgress.value = 1;
   narration.status.value = "idle";
-  mapPlaybackSession = null;
   audio.stop(sessionId, "completed");
   narration.drainPending();
 }
 
 function stopNarration() {
-  if (mapPlaybackSession) audio.stop(mapPlaybackSession.id);
-  mapPlaybackSession = null;
+  narrationRequests.cancel();
   narrationLoading.value = false;
+  const session = activeNarrationSession;
+  activeNarrationSession = null;
+  if (session) audio.stop(session.id);
   narrationProgress.value = 0;
   narration.status.value = "idle";
 }
@@ -410,8 +456,9 @@ async function toggleNarrate() {
   narrateOn.value = !narrateOn.value;
   if (narrateOn.value) {
     // 用户手势内同步解锁 AudioContext，保证后续自动播放不被拦截
-    try { await audio.unlock(); } catch {}
-    geo.start();
+    await audio.unlock();
+    // KeepAlive deactivation or a second toggle may happen while unlock awaits.
+    if (mapToolActive && narrateOn.value) geo.start();
   } else {
     geo.stop();
     closeNarration();
@@ -440,21 +487,55 @@ function askGuide() {
   emit("ask", { query: `请介绍${route.title}，沿途经过${route.spots.map(cleanName).join("、")}，并给出游览建议` });
 }
 
+function startNarrationTimer() {
+  if (narrateTimer !== null) return;
+  narrateTimer = setInterval(() => {
+    if (!mapToolActive || !narrateOn.value) return;
+    narration.update();
+    narration.drainPending();
+  }, 900);
+}
+
+function stopNarrationTimer() {
+  if (narrateTimer === null) return;
+  clearInterval(narrateTimer);
+  narrateTimer = null;
+}
+
+function activateMapTool() {
+  if (mapToolActive) return;
+  mapToolActive = true;
+  startNarrationTimer();
+  nextTick(() => map?.invalidateSize());
+}
+
+function deactivateMapTool() {
+  if (!mapToolActive && narrateTimer === null) return;
+  mapToolActive = false;
+  stopNarrationTimer();
+  narrationRequests.cancel();
+  narrationLoading.value = false;
+  const session = activeNarrationSession;
+  activeNarrationSession = null;
+  if (session) audio.stop(session.id, "map-hidden");
+  narrateOn.value = false;
+  geo.stopWalk();
+  geo.stop();
+  walking.value = false;
+  narration.reset();
+}
+
 onMounted(() => {
   if (!tourStore.current && tourStore.currentId) tourStore.open(tourStore.currentId);
   fetchItineraryCatalog().then(data => { itineraryCatalog.value = data; }).catch(() => {});
   nextTick(initMap);
-  narrateTimer = setInterval(() => {
-    if (!narrateOn.value) return;
-    narration.update();
-    narration.drainPending();
-  }, 900);
+  activateMapTool();
 });
+onActivated(activateMapTool);
+onDeactivated(deactivateMapTool);
 
 onBeforeUnmount(() => {
-  stopNarration();
-  if (narrateTimer) { clearInterval(narrateTimer); narrateTimer = null; }
-  geo.stop();
+  deactivateMapTool();
   if (resizeObserver) resizeObserver.disconnect();
   if (map) { map.remove(); map = null; }
 });

@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     vision_read_timeout_seconds: float = Field(default=60.0, gt=0.0, le=120.0)
     vision_total_timeout_seconds: float = Field(default=90.0, gt=0.0, le=300.0)
     vision_max_image_bytes: int = Field(default=5 * 1024 * 1024, ge=1024, le=20 * 1024 * 1024)
+    vision_max_image_pixels: int = Field(default=25_000_000, ge=1, le=100_000_000)
     cache_ttl_seconds: int = Field(default=7 * 24 * 60 * 60)
     enable_sample_data: bool = Field(default=True)
     default_avatar_voice: str = Field(default="female_warm")
@@ -75,8 +76,14 @@ class Settings(BaseSettings):
     knowledge_import_max_pages: int = Field(default=500, ge=1, le=5000)
     knowledge_import_parse_timeout_seconds: int = Field(default=120, ge=1, le=900)
     asr_timeout_seconds: float = Field(default=30.0, gt=0.0, le=180.0)
+    asr_ffprobe_path: str = Field(default="ffprobe", min_length=1, max_length=500)
+    asr_probe_timeout_seconds: float = Field(default=3.0, gt=0.0, le=15.0)
     asr_poll_interval_seconds: float = Field(default=0.8, gt=0.0, le=10.0)
     asr_max_audio_bytes: int = Field(default=10 * 1024 * 1024, ge=1024, le=50 * 1024 * 1024)
+    asr_max_audio_seconds: float = Field(default=180.0, gt=0, le=1800)
+    chat_max_active: int = Field(default=8, ge=1, le=1000)
+    asr_max_active: int = Field(default=4, ge=1, le=1000)
+    vision_max_active: int = Field(default=4, ge=1, le=1000)
     asr_hotwords: str = Field(default="")
     """景区专属 ASR 热词（逗号分隔），按景区在 .env 中自行配置。"""
     asr_local_model_dir: str = Field(default="D:/A5ScenicGuideModels/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17")
@@ -121,6 +128,21 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @property
+    def production_security_failures(self) -> tuple[str, ...]:
+        if self.app_env.strip().lower() not in {"production", "prod"}:
+            return ()
+        failures: list[str] = []
+        if self.admin_password == "admin123":
+            failures.append("default_admin_password")
+        if len(self.admin_password) < 12:
+            failures.append("weak_admin_password")
+        if self.admin_token_secret == "a5-scenic-admin-secret-key":
+            failures.append("default_admin_token_secret")
+        if len(self.admin_token_secret) < 32:
+            failures.append("weak_admin_token_secret")
+        return tuple(failures)
 
     @property
     def backend_root(self) -> Path:

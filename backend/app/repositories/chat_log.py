@@ -31,6 +31,7 @@ class ChatLogRepository:
         emotion_conflict: bool = False,
         emotion_modalities: list[str] | None = None,
         response_strategy: str = "neutral",
+        speech_metadata: dict | None = None,
     ) -> ChatLog:
         log = ChatLog(
             session_id=session_id,
@@ -49,6 +50,11 @@ class ChatLogRepository:
             emotion_conflict=emotion_conflict,
             emotion_modalities=json.dumps(emotion_modalities or [], ensure_ascii=False),
             response_strategy=response_strategy,
+            speech_metadata=(
+                json.dumps(speech_metadata, ensure_ascii=False, sort_keys=True)
+                if speech_metadata is not None
+                else None
+            ),
         )
         self.session.add(log)
         await self.session.commit()
@@ -58,3 +64,22 @@ class ChatLogRepository:
     async def count(self) -> int:
         result = await self.session.execute(select(func.count(ChatLog.id)))
         return result.scalar_one_or_none() or 0
+
+    async def get_for_session(self, chat_log_id: int, session_id: str) -> ChatLog | None:
+        result = await self.session.execute(
+            select(ChatLog).where(
+                ChatLog.id == chat_log_id,
+                ChatLog.session_id == session_id,
+            )
+        )
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    def decode_speech_metadata(log: ChatLog) -> dict:
+        if not log.speech_metadata:
+            return {}
+        try:
+            value = json.loads(log.speech_metadata)
+        except (TypeError, json.JSONDecodeError):
+            return {}
+        return value if isinstance(value, dict) else {}

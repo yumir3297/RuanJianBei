@@ -591,7 +591,7 @@ class VolcengineStreamingTTSSession:
 
         if event == Event.TTS_RESPONSE:
             self._queue.put_nowait(
-                StreamingTTSEvent(type="audio_chunk", data=parsed["payload"])
+                StreamingTTSEvent(type="audio_chunk", data=parsed["payload"], sample_rate=self._sample_rate)
             )
             return
 
