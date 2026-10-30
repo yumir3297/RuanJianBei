@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import json
 import logging
 import re
 from asyncio import QueueEmpty
@@ -258,6 +259,7 @@ class QAPipeline:
         # 识别候选尚未经游客确认，也不能用模型自报置信度当成校准概率。
         # 避免将候选、旧选择或历史景点静默视为当前照片的事实。
         vision = request.vision_context
+        confirmed_visual_title = None
         if vision is not None and vision.confirmation is not None:
             confirmation = vision.confirmation
             selected_spot = None
@@ -270,6 +272,7 @@ class QAPipeline:
             if selected_spot is None or not selected_spot.entry_id.isdigit() or int(selected_spot.entry_id) < 1:
                 yield StreamEvent(type="error", data={"message": "景点已下架、更新或不属于当前景区，请重新选择。"})
                 return
+            confirmed_visual_title = selected_spot.title
             resolved = ResolvedInteraction(
                 selection=resolved.selection,
                 scope=RetrievalScope(source_entry_id=int(selected_spot.entry_id)),
@@ -495,8 +498,19 @@ class QAPipeline:
 
         async def produce_llm_events() -> None:
             try:
+                generation_query = request.query
+                if confirmed_visual_title is not None:
+                    # Catalog title is data, not an instruction; JSON escaping
+                    # prevents its content from changing this context's shape.
+                    title_data = json.dumps(confirmed_visual_title, ensure_ascii=False)
+                    generation_query = (
+                        "游客已从已发布目录确认本次讲解的景点名称（JSON字符串）："
+                        f"{title_data}。图片识别线索未经确认，仅用于检索，不得作为事实；"
+                        "回答只能根据参考资料，资料不足时明确说明。\n"
+                        f"游客原始问题：{request.query}"
+                    )
                 async for item in self.llm_service.stream_generate(
-                    self._emotion_aware_query(request.query),
+                    self._emotion_aware_query(generation_query),
                     documents,
                     persona=request.persona,
                     audience=audience,

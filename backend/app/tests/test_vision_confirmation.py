@@ -55,3 +55,22 @@ def test_confirmed_spot_withdrawn_after_selection_is_rejected_with_real_catalog(
         finally:
             await db.close(); await engine.dispose()
     asyncio.run(run())
+
+def test_confirmed_catalog_title_is_passed_to_model_when_visual_hint_conflicts():
+    class Catalog:
+        async def list_for_site(self, site):
+            return CatalogSnapshot('park',(PublishedAttraction('park','B','13','rev1','梵宫'),),'d')
+    class CapturingLLM:
+        def __init__(self): self.query = None
+        async def stream_generate(self, query, docs, **kwargs):
+            self.query = query
+            yield '梵宫[证据1]。'
+    llm=CapturingLLM(); rag=RecordingRAGService()
+    pipeline=QAPipeline(query_rewriter=QueryRewriter(),faq_matcher=FAQMatcher(),qa_cache=QACache(DummyCacheRepo(),ttl_seconds=60),rag_service=rag,llm_service=llm,tts_service=StubTTSService(),avatar_service=StubAvatarService(),chat_log_repository=DummyChatLogRepo(),guided_selector=DummyGuidedSelector(),followup_suggestions=FollowUpSuggestionService(),vision_catalog=Catalog(),vision_site_id='park')
+    query='识别线索：大佛。请介绍照片'
+    req=ChatRequest(query=query,session_id='v',text_only=True,vision_context=VisionContext(retrieval_query='大佛',confirmation={'site_id':'park','spot_code':'B','published_revision_id':'rev1'}))
+    async def run():return [e async for e in pipeline.stream_chat(req)]
+    asyncio.run(run())
+    assert query in llm.query and '梵宫' in llm.query
+    assert '未经确认' in llm.query and '参考资料' in llm.query
+    assert rag.scopes[0].source_entry_id == 13
