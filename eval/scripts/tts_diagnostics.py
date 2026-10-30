@@ -137,7 +137,7 @@ async def main():
     print(f"TTS_PROVIDER: {settings.tts_provider}")
     print(f"TTS_MODEL: {settings.tts_model}")
     print(f"TTS_VOICE: {settings.tts_voice}")
-    print(f"TTS_API_KEY prefix: {settings.tts_api_key[:10]}...")
+    print("TTS_API_KEY: configured")
     print()
 
     results = []
