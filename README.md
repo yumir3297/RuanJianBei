@@ -20,6 +20,8 @@
 
 > 当前仓库的跨系统启动、依赖条件与验证命令见 [开发指南](./docs/DEVELOPMENT.md)。旧版部署说明和作品启动指南未包含在当前 Git 快照中。
 
+行程提案需额外启动独立 worker；配置和命令见[开发指南](./docs/DEVELOPMENT.md#持久行程提案-worker)。API 已启动不代表 worker 正在处理任务。
+
 ### 前置要求
 
 - Python 3.13+

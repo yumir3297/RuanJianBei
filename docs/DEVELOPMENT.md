@@ -50,6 +50,17 @@ Copy-Item .env.example .env
 直接调用 venv 解释器免去 PowerShell 激活脚本策略差异。`main:app` 是当前真实入口；旧计划中的 `app.main:app` 不适用。
 启动会写数据库并加载本地模型；不要用启动来验证地图工具。
 
+### 持久行程提案 worker
+
+行程提案由独立 worker 执行，启动 API 不会自动启动它。完成数据库迁移并配置模型后，在另一个终端、同样以 `backend/` 为工作目录启动：
+
+```sh
+# macOS / Linux
+.venv/bin/python -m app.services.tool_execution.worker
+```
+
+Windows PowerShell 使用 `.\.venv\Scripts\python.exe -m app.services.tool_execution.worker`。worker 与 API 须使用相同数据库和景区配置；工作目录改变可能改变 `.env` 加载。停止 worker 时新提案会停在队列中，API 就绪不代表 worker 在线。SQLite 本地运行按单 worker 验证；PostgreSQL 多 worker 尚未验收。迁移兼容与外部调用不确定性见 [W02 集成记录](development/W02_INTEGRATION.md)。
+
 ## 4. 前端（另开终端，cwd：frontend/）
 
 各系统均可执行：
