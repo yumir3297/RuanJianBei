@@ -27,7 +27,7 @@ def test_confirmed_visual_spot_requires_active_catalog(site,code,rev,valid):
         assert not any(e.type=='error' for e in events)
     else:
         assert not rag.scopes
-        assert any(e.type=='error' for e in events)
+        assert any(e.type=='error' and e.data.get('code')=='vision_confirmation_stale' for e in events)
 
 def test_confirmed_spot_withdrawn_after_selection_is_rejected_with_real_catalog():
     from datetime import UTC, datetime
