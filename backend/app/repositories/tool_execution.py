@@ -549,7 +549,15 @@ class ToolExecutionRepository:
         if step.status == "succeeded":
             await self.session.rollback()
             return False
-        if step.attempt_count >= min(5, step.max_attempts):
+        # A lease can expire after creating an attempt but before the durable
+        # external-call marker. Keep that attempt for audit and sequencing,
+        # without charging it against the provider-attempt budget.
+        consumed_attempts = await self.session.scalar(select(func.count(ToolAttempt.id)).where(
+            ToolAttempt.step_id == step.id,
+            or_(ToolAttempt.outcome.is_(None), ToolAttempt.outcome != "interrupted",
+                ToolAttempt.external_state != "not_started"),
+        ))
+        if int(consumed_attempts or 0) >= min(5, step.max_attempts):
             await self.session.rollback()
             raise JobCommandError("步骤尝试次数已达上限")
         step.attempt_count += 1

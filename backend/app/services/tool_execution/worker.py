@@ -7,7 +7,7 @@ import signal
 import socket
 import uuid
 
-from app.db.session import AsyncSessionLocal
+from app.db.session import AsyncSessionLocal, engine
 from app.repositories.tool_execution import ToolExecutionRepository
 from app.services.tool_execution.handlers import build_registry
 from app.services.tool_execution.runner import ToolRunner
@@ -53,13 +53,22 @@ async def serve(worker_id: str, once: bool = False, poll_seconds: float = 1.0) -
                 pass
 
 
+async def _run_cli(worker_id: str, once: bool, poll_seconds: float) -> None:
+    try:
+        await serve(worker_id, once, poll_seconds)
+    finally:
+        # The CLI owns the global engine. Close pooled connections while the
+        # event loop is still running, including failed startup and shutdown.
+        await engine.dispose()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run a separate durable tool-execution worker")
     parser.add_argument("--worker-id", default=f"{socket.gethostname()}-{uuid.uuid4().hex[:12]}")
     parser.add_argument("--once", action="store_true", help="run one claim cycle and exit")
     parser.add_argument("--poll-seconds", type=float, default=1.0)
     args = parser.parse_args()
-    asyncio.run(serve(args.worker_id, args.once, args.poll_seconds))
+    asyncio.run(_run_cli(args.worker_id, args.once, args.poll_seconds))
 
 
 if __name__ == "__main__":
