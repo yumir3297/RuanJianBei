@@ -11,7 +11,7 @@ import { cloneJson } from "../utils/cloneJson.js";
 import { isProposalDraftStale, stableSnapshotStringify } from "../utils/proposalSnapshot.js";
 import { refreshProgressAfterItineraryApply, refreshProgressAfterPlanSave } from "../utils/progressRefresh.js";
 import { reconcileDraftAfterAsyncApply } from "../utils/proposalApplyState.js";
-import { applyItineraryProposal, createItineraryProposal, fetchItineraryProposal } from "../api/itinerary.js";
+import { applyItineraryProposal, createItineraryProposal, fetchItineraryProposal, fetchItineraryProposals, retryItineraryProposal } from "../api/itinerary.js";
 
 function newKey() {
   return globalThis.crypto?.randomUUID?.() || `tour-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -25,6 +25,7 @@ async function snapshotDigest(value) {
   return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
 const proposalRequests = createRequestGeneration();
+const openRequests = createRequestGeneration();
 
 function waitForProposalPoll(signal, delayMs = 1000) {
   if (signal.aborted) return Promise.reject(new DOMException("Aborted", "AbortError"));
@@ -103,26 +104,54 @@ export const useTourSessionsStore = defineStore("tourSessions", {
       this.trash = await fetchTourTrash();
     },
     async open(id) {
+      const request = openRequests.begin();
+      this.clearProposal();
       this.error = "";
       try {
         await this.prepare();
-        this.current = await fetchTourSession(id);
-        this.currentId = id; writeCurrentId(id);
+        const current = await fetchTourSession(id);
+        if (!openRequests.isCurrent(request)) return null;
+        const [revisions, progress, budget] = await Promise.all([
+          fetchTourRevisions(id).catch(() => []),
+          fetchTourProgress(id).catch(() => null),
+          current.snapshot?.schema_version === 2 ? fetchTourBudget(id).catch(() => null) : null,
+        ]);
+        if (!openRequests.isCurrent(request)) return null;
         this.clearProposal();
-        this.draftSnapshot = cloneJson(this.current.snapshot || {});
-        this.revisions = await fetchTourRevisions(id).catch(() => []);
-        this.progress = await fetchTourProgress(id).catch(() => null);
-        this.progressSyncRequired = !this.progress;
-        this.currentStopRemainingMinutes = null;
-        this.budget = this.current.snapshot?.schema_version === 2 ? await fetchTourBudget(id).catch(() => null) : null;
+        this.current = current;
+        this.currentId = id; writeCurrentId(id);
+        this.draftSnapshot = cloneJson(current.snapshot || {});
+        this.revisions = revisions; this.progress = progress;
+        this.progressSyncRequired = !progress;
+        this.currentStopRemainingMinutes = null; this.budget = budget;
         this.saveState = "saved";
-        return this.current;
+        // Restore independently: opening a tour must not wait for a worker.
+        void this.restoreProposal(id);
+        return current;
       } catch {
-        this.error = "无法打开这条游览，请刷新列表后重试。";
+        if (openRequests.isCurrent(request)) this.error = "无法打开这条游览，请刷新列表后重试。";
         return null;
-      }
+      } finally { openRequests.finish(request); }
+    },
+    async restoreProposal(sessionId = this.current?.id) {
+      if (this.current?.id !== sessionId || this.current.snapshot?.schema_version !== 2) return null;
+      const request = proposalRequests.begin();
+      this.proposalLoading = true;
+      try {
+        const items = await fetchItineraryProposals(sessionId, 10, request.signal);
+        if (!proposalRequests.isCurrent(request) || this.current?.id !== sessionId) return null;
+        const resumable = items.find(item => ["executing", "waiting_user", "ready", "needs_clarification"].includes(item.status));
+        if (!resumable) return null;
+        const detail = await fetchItineraryProposal(sessionId, resumable.id, request.signal);
+        if (!proposalRequests.isCurrent(request) || this.current?.id !== sessionId) return null;
+        return await this.resumeProposal(detail);
+      } catch (error) {
+        if (proposalRequests.isCurrent(request) && !request.signal.aborted) this.error = "游览已打开，但提案状态暂时无法恢复；可重新检查后台提案。";
+        return null;
+      } finally { if (proposalRequests.finish(request)) this.proposalLoading = false; }
     },
     async create(payload) {
+      openRequests.cancel(); this.clearProposal();
       this.error = "";
       this.saveState = "saving";
       this.draftSnapshot = cloneJson(payload.snapshot || {});
@@ -251,43 +280,83 @@ export const useTourSessionsStore = defineStore("tourSessions", {
     },
     async requestProposal(text) {
       if (!this.current || this.draftSnapshot?.schema_version !== 2) { this.error = "请先在路线页升级并打开 V2 游览。"; return null; }
+      const sessionId = this.current.id;
+      const expectedVersion = this.current.version;
+      const progressVersion = this.progress?.progress_version || 0;
       const request = proposalRequests.begin();
       this.proposalLoading = true; this.error = "";
-      const draft = cloneJson(this.draftSnapshot); const canonical = stableSnapshotStringify(draft);
+      const draft = cloneJson(this.draftSnapshot);
       try {
         const digest = await snapshotDigest(draft); await this.prepare();
-        if (!proposalRequests.isCurrent(request)) return null;
-        const payload = { expected_version: this.current.version, progress_version: this.progress?.progress_version || 0,
+        if (!proposalRequests.isCurrent(request) || this.current?.id !== sessionId) return null;
+        const payload = { expected_version: expectedVersion, progress_version: progressVersion,
           draft_digest: digest, draft_snapshot: draft, text };
-        const { fingerprint, key } = this.operationKey(`proposal:${this.current.id}`, payload);
-        let proposal = await createItineraryProposal(this.current.id, payload, this.csrfToken, key, request.signal);
-        for (let attempt = 0; proposal.status === "executing" && attempt < 30; attempt += 1) {
-          await waitForProposalPoll(request.signal);
-          proposal = await fetchItineraryProposal(this.current.id, proposal.id, request.signal);
-        }
-        if (!proposalRequests.isCurrent(request)) return null;
-        if (proposal.status === "executing") throw new Error("提案仍在处理中，可稍后重试查看结果。");
-        if (proposal.status === "failed") {
-          this.clearOperationKey(fingerprint);
-          throw new Error(proposal.validation?.message || "提案未能完成，请重试。");
-        }
-        if (stableSnapshotStringify(this.draftSnapshot) !== canonical) { this.error = "生成期间草稿已修改，请重新提出需求；手动修改已保留。"; return null; }
-        this.proposal = proposal; this.proposalCanonical = canonical; this.proposalBaseSnapshot = draft;
-        this.clearOperationKey(fingerprint); return proposal;
+        const { fingerprint, key } = this.operationKey(`proposal:${sessionId}`, payload);
+        const proposal = await createItineraryProposal(sessionId, payload, this.csrfToken, key, request.signal);
+        if (!proposalRequests.isCurrent(request) || this.current?.id !== sessionId) return null;
+        this.clearOperationKey(fingerprint);
+        return await this.resumeProposal(proposal, draft);
       } catch (error) {
         if (proposalRequests.isCurrent(request) && error?.name !== "AbortError" && !request.signal.aborted) {
           this.error = error?.response?.data?.detail || error?.message || "无法生成提案，当前草稿未改变。";
         }
         return null;
-      } finally {
-        if (proposalRequests.finish(request)) {
-          this.proposalLoading = false;
+      } finally { if (proposalRequests.finish(request)) this.proposalLoading = false; }
+    },
+    async resumeProposal(proposal, fallbackBase = this.draftSnapshot) {
+      const sessionId = this.current?.id;
+      if (!proposal?.id || !sessionId || proposal.session_id !== sessionId) return null;
+      const request = proposalRequests.begin();
+      const isCurrent = () => proposalRequests.isCurrent(request) && this.current?.id === sessionId;
+      this.proposal = proposal;
+      // Recover provenance without overwriting edits made while the worker ran.
+      this.proposalBaseSnapshot = cloneJson(proposal.base_snapshot || fallbackBase);
+      this.proposalCanonical = stableSnapshotStringify(this.proposalBaseSnapshot);
+      this.proposalLoading = proposal.status === "executing";
+      this.error = "";
+      try {
+        let latest = proposal;
+        for (let attempt = 0; latest.status === "executing" && attempt < 60; attempt += 1) {
+          await waitForProposalPoll(request.signal);
+          if (!isCurrent()) return null;
+          latest = await fetchItineraryProposal(sessionId, proposal.id, request.signal);
+          if (!isCurrent() || latest.session_id !== sessionId) return null;
+          this.proposal = latest;
         }
-      }
+        if (!isCurrent()) return null;
+        if (latest.status === "executing") this.error = "提案仍在后台处理中，可稍后重新检查状态。";
+        if (latest.status === "failed") this.error = latest.validation?.message || "提案未能完成，请重新生成。";
+        return latest;
+      } catch (error) {
+        if (isCurrent() && !request.signal.aborted) this.error = "暂时无法恢复提案状态，请检查网络后重新检查。";
+        return null;
+      } finally { if (proposalRequests.finish(request)) this.proposalLoading = false; }
+    },
+    async retryProposal(confirmDuplicateRisk = false) {
+      const proposal = this.proposal;
+      const sessionId = this.current?.id;
+      if (confirmDuplicateRisk !== true) { this.error = "请先确认可能重复调用 AI 并产生费用的风险。"; return null; }
+      if (!proposal?.execution_job_id || proposal.status !== "waiting_user" || !sessionId || proposal.session_id !== sessionId || this.proposalLoading) return null;
+      const request = proposalRequests.begin();
+      const isCurrent = () => proposalRequests.isCurrent(request) && this.current?.id === sessionId && this.proposal?.id === proposal.id;
+      this.proposalLoading = true; this.error = "";
+      try {
+        await this.prepare();
+        if (!isCurrent()) return null;
+        const payload = { job_id: proposal.execution_job_id, confirm_duplicate_risk: true };
+        const { fingerprint, key } = this.operationKey(`proposal-retry:${proposal.execution_job_id}`, payload);
+        await retryItineraryProposal(sessionId, proposal.execution_job_id, this.csrfToken, key, true, request.signal);
+        if (!isCurrent()) return null;
+        this.clearOperationKey(fingerprint);
+        return await this.resumeProposal({ ...proposal, status: "executing" }, this.proposalBaseSnapshot);
+      } catch (error) {
+        if (isCurrent() && !request.signal.aborted) this.error = error?.response?.data?.detail || "暂时无法重试提案，请刷新状态后重试。";
+        return null;
+      } finally { if (proposalRequests.finish(request)) this.proposalLoading = false; }
     },
     async confirmProposal() {
       const proposal = this.proposal;
-      if (!proposal || !this.current) return null;
+      if (!proposal || proposal.status !== "ready" || !this.current || proposal.session_id !== this.current.id) return null;
       if (isProposalDraftStale(this.proposalCanonical, this.draftSnapshot)) { this.error = "草稿已变化，请重新生成提案。"; return null; }
       const submittedDraft = cloneJson(this.draftSnapshot);
       const sessionId = this.current.id;
@@ -352,11 +421,12 @@ export const useTourSessionsStore = defineStore("tourSessions", {
       await this.prepare();
       await removeTourSession(id, item.version, this.csrfToken);
       this.items = this.items.filter(entry => entry.id !== id);
-      if (this.current?.id === id) { this.current = null; this.currentId = ""; writeCurrentId(""); }
+      if (this.current?.id === id) { openRequests.cancel(); this.clearProposal(); this.current = null; this.currentId = ""; writeCurrentId(""); }
       await this.loadTrash();
       return true;
     },
     async restoreDeleted(id) {
+      openRequests.cancel(); this.clearProposal();
       await this.prepare();
       this.current = await restoreTourSession(id, this.csrfToken);
       this.currentId = id; writeCurrentId(id);
@@ -378,6 +448,7 @@ export const useTourSessionsStore = defineStore("tourSessions", {
     },
     clearCurrent() {
       this.current = null;
+      openRequests.cancel();
       this.revisions = [];
       this.currentId = ""; writeCurrentId("");
       this.draftSnapshot = null;

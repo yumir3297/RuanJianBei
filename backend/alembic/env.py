@@ -30,6 +30,7 @@ from app.models import (  # noqa: F401 确保所有模型注册到 Base.metadata
     TourSessionEvent,
     TourArtifactReference,
     TourSessionIdempotency,
+    ToolJob, ToolStep, ToolAttempt, ToolEvent, ToolCommandReceipt,
 )
 
 config = context.config

@@ -15,6 +15,8 @@ from app.repositories.tour_session import TourSessionRepository
 from app.schemas.itinerary import TourSnapshotV2
 from app.services.itinerary.catalog import PublishedAttraction, build_catalog_snapshot
 from app.services.itinerary.intent import snapshot_digest
+from app.services.tool_execution import handlers
+from app.services.tool_execution.runner import ToolRunner
 from app.tests.async_db import open_test_session
 
 
@@ -71,7 +73,11 @@ def test_published_catalog_change_invalidates_ready_proposal_without_mutating_to
             }
 
         monkeypatch.setattr(tour_sessions.PublishedAttractionCatalog, "list_for_site", fake_catalog)
-        monkeypatch.setattr(tour_sessions.ItineraryIntentService, "propose", fake_propose)
+        monkeypatch.setattr(handlers.ItineraryIntentService, "propose", fake_propose)
+        monkeypatch.setattr(handlers, "AsyncSessionLocal", sessions)
+        monkeypatch.setattr(handlers, "get_settings", lambda: Settings(
+            llm_provider="test", llm_api_key="fake", llm_base_url="https://unused.invalid", llm_model="fake",
+        ))
         try:
             async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
                 headers = {"Idempotency-Key": "proposal", "Origin": "http://testserver"}
@@ -86,8 +92,15 @@ def test_published_catalog_change_invalidates_ready_proposal_without_mutating_to
                         "text": "缩短总时长",
                     },
                 )
-                assert proposal_response.status_code == 201, proposal_response.text
-                proposal = proposal_response.json()
+                assert proposal_response.status_code == 202, proposal_response.text
+                queued = proposal_response.json()
+                assert queued["status"] == "executing" and queued["execution_job_id"]
+                assert await ToolRunner(sessions, handlers.build_registry()).run_one("catalog-worker")
+                recovered = await client.get(
+                    f"/api/tour-sessions/{created['id']}/proposals/{queued['id']}"
+                )
+                assert recovered.status_code == 200
+                proposal = recovered.json()
                 assert proposal["status"] == "ready"
                 initial_catalog_digest = proposal["catalog_digest"]
 

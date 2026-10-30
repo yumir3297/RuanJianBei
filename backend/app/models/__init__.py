@@ -34,7 +34,10 @@ from app.models.tour_session import (
     ItineraryProposal,
 )
 
+from app.models.tool_execution import ToolAttempt, ToolCommandReceipt, ToolEvent, ToolJob, ToolStep
+
 __all__ = [
+    "ToolJob", "ToolStep", "ToolAttempt", "ToolEvent", "ToolCommandReceipt",
     "AvatarConfig",
     "BehaviorSummary",
     "ChatLog",

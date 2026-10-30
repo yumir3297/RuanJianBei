@@ -261,6 +261,11 @@ class TourSessionRepository:
                                        version=expected_version + 1, snapshot_json=_encode(payload))
         self.session.add(revision)
         self._add_event(session_id, event_type, expected_version + 1)
+        from app.repositories.tool_execution import ToolExecutionRepository
+
+        await ToolExecutionRepository(self.session).mark_target_revision_changed(
+            session_id, expected_version + 1,
+        )
         item = await self.session.scalar(select(TourSession).where(
             TourSession.id == session_id, TourSession.owner_id == owner_id,
         ))
@@ -353,6 +358,11 @@ class TourSessionRepository:
             stop_id=str(transition.event.stop_id) if transition.event.stop_id else None,
             payload_json="{}", occurred_at=transition.event.occurred_at,
         ))
+        from app.repositories.tool_execution import ToolExecutionRepository
+
+        await ToolExecutionRepository(self.session).mark_target_progress_changed(
+            session_id, transition.progress.progress_version,
+        )
         self._remember(owner_id, "progress_start", idempotency_key, request, result, session_id)
         replay = await self._commit_with_replay(owner_id, "progress_start", idempotency_key, request)
         return replay if replay is not None else result
@@ -404,6 +414,11 @@ class TourSessionRepository:
             id=str(uuid4()), session_id=session_id, version=event.version, event_type=event.event_type,
             stop_id=str(event.stop_id) if event.stop_id else None, payload_json="{}", occurred_at=event.occurred_at,
         ))
+        from app.repositories.tool_execution import ToolExecutionRepository
+
+        await ToolExecutionRepository(self.session).mark_target_progress_changed(
+            session_id, transition.progress.progress_version,
+        )
         result = transition.progress.model_dump(mode="json")
         self._remember(owner_id, "progress_command", idempotency_key, request, result, session_id)
         replay = await self._commit_with_replay(owner_id, "progress_command", idempotency_key, request)
@@ -426,6 +441,7 @@ class TourSessionRepository:
         return {"id": row.id, "session_id": row.session_id, "base_version": row.base_version,
             "progress_version": row.progress_version, "draft_digest": row.draft_digest,
             "catalog_digest": row.catalog_digest, "status": row.status, "request_text": row.request_text,
+            "base_snapshot": _decode(row.base_snapshot_json), "execution_job_id": row.execution_job_id,
             "operations": json.loads(row.operations_json), "candidate": json.loads(row.candidate_json),
             "diff": json.loads(row.diff_json), "validation": json.loads(row.validation_json),
             "clarification": row.clarification, "expires_at": row.expires_at.isoformat(),
@@ -433,31 +449,17 @@ class TourSessionRepository:
 
     async def reserve_proposal(self, owner_id: str, session_id: str, base_version: int, progress_version: int,
             draft_digest: str, catalog_digest: str, text: str, draft_snapshot: dict,
-            idempotency_key: str) -> tuple[dict, bool]:
+            idempotency_key: str, *, commit: bool = True) -> tuple[dict, bool]:
         request = {"session_id": session_id, "base_version": base_version, "progress_version": progress_version,
             "draft_digest": draft_digest, "catalog_digest": catalog_digest, "text": text}
         replay = await self._replay(owner_id, "proposal_create", idempotency_key, request)
         if replay is not None:
-            if replay.get("status") == "executing":
-                row = await self.session.get(ItineraryProposal, replay.get("id"))
-                if row is not None and _aware(row.created_at) <= datetime.now(UTC) - timedelta(minutes=2):
-                    row.status = "failed"
-                    row.validation_json = _encode({"status": "failed", "message": "提案执行超时，可重新发起"})
-                    replay = self._proposal_payload(row)
-                    idem = await self.session.scalar(select(TourSessionIdempotency).where(
-                        TourSessionIdempotency.owner_id == owner_id,
-                        TourSessionIdempotency.endpoint == "proposal_create",
-                        TourSessionIdempotency.key == idempotency_key,
-                    ))
-                    if idem is not None:
-                        idem.response_json = _encode(replay)
-                    await self.session.commit()
-                    return replay, False
             return replay, False
         now = datetime.now(UTC)
         row = ItineraryProposal(id=str(uuid4()), owner_id=owner_id, session_id=session_id,
             base_version=base_version, progress_version=progress_version, draft_digest=draft_digest,
             catalog_digest=catalog_digest, status="executing", request_text=text,
+            base_snapshot_json=_encode(draft_snapshot),
             operations_json="[]", candidate_json=_encode(draft_snapshot), diff_json="[]",
             validation_json=_encode({"status": "executing", "conflicts": []}),
             expires_at=now + timedelta(minutes=30))
@@ -465,11 +467,28 @@ class TourSessionRepository:
         await self.session.flush()
         result = self._proposal_payload(row)
         self._remember(owner_id, "proposal_create", idempotency_key, request, result, session_id)
-        replay = await self._commit_with_replay(owner_id, "proposal_create", idempotency_key, request)
-        return (replay, False) if replay is not None else (result, True)
+        if commit:
+            replay = await self._commit_with_replay(owner_id, "proposal_create", idempotency_key, request)
+            return (replay, False) if replay is not None else (result, True)
+        await self.session.flush()
+        return result, True
+
+    async def find_proposal_replay(
+        self, owner_id: str, session_id: str, base_version: int, progress_version: int,
+        draft_digest: str, catalog_digest: str, text: str, idempotency_key: str,
+    ) -> dict | None:
+        request = {
+            "session_id": session_id, "base_version": base_version,
+            "progress_version": progress_version, "draft_digest": draft_digest,
+            "catalog_digest": catalog_digest, "text": text,
+        }
+        replay = await self._replay(owner_id, "proposal_create", idempotency_key, request)
+        if replay is None:
+            return None
+        return await self.get_proposal(owner_id, session_id, replay["id"])
 
     async def complete_reserved_proposal(self, owner_id: str, session_id: str, proposal_id: str,
-            generated: dict, idempotency_key: str) -> dict:
+            generated: dict, idempotency_key: str, *, commit: bool = True) -> dict:
         row = await self.session.scalar(select(ItineraryProposal).where(
             ItineraryProposal.id == proposal_id, ItineraryProposal.session_id == session_id,
             ItineraryProposal.owner_id == owner_id))
@@ -491,7 +510,10 @@ class TourSessionRepository:
         ))
         if idem is not None:
             idem.response_json = _encode(result)
-        await self.session.commit()
+        if commit:
+            await self.session.commit()
+        else:
+            await self.session.flush()
         return result
 
     async def fail_reserved_proposal(self, owner_id: str, session_id: str, proposal_id: str,
@@ -524,6 +546,7 @@ class TourSessionRepository:
         row = ItineraryProposal(id=str(uuid4()), owner_id=owner_id, session_id=session_id,
             base_version=base_version, progress_version=progress_version, draft_digest=draft_digest,
             catalog_digest=catalog_digest, status=generated["status"], request_text=text,
+            base_snapshot_json=_encode(generated.get("base_snapshot", generated["candidate"])),
             operations_json=_encode(generated["operations"]), candidate_json=_encode(generated["candidate"]),
             diff_json=_encode(generated["diff"]), validation_json=_encode(generated["validation"]),
             clarification=generated.get("clarification"), expires_at=datetime.now(UTC) + timedelta(minutes=30))
@@ -538,7 +561,52 @@ class TourSessionRepository:
         row = await self.session.scalar(select(ItineraryProposal).where(
             ItineraryProposal.id == proposal_id, ItineraryProposal.session_id == session_id,
             ItineraryProposal.owner_id == owner_id))
-        return self._proposal_payload(row) if row else None
+        if row is None:
+            return None
+        result = self._proposal_payload(row)
+        if row.execution_job_id:
+            from app.models.tool_execution import ToolJob
+
+            job = await self.session.get(ToolJob, row.execution_job_id)
+            if job is not None:
+                result["execution_status"] = job.status
+                if job.status in ("queued", "retry_wait", "running"):
+                    result["status"] = "executing"
+                elif job.status == "waiting_user":
+                    result["status"] = "waiting_user"
+                    result["validation"] = {"status": "waiting_user", "message": "外部 AI 调用结果不确定；确认可能重复调用后可重试。"}
+                elif job.status in ("failed", "stale", "cancelled"):
+                    result["status"] = "failed"
+                    messages = {
+                        "failed": "提案未能完成，请重新生成。",
+                        "stale": "游览或进度已更新，请重新生成提案。",
+                        "cancelled": "提案任务已取消。",
+                    }
+                    result["validation"] = {"status": "failed", "message": messages[job.status]}
+        return result
+
+    async def list_proposals(self, owner_id: str, session_id: str, limit: int = 10) -> list[dict] | None:
+        owned = await self.session.scalar(select(TourSession.id).where(
+            TourSession.id == session_id, TourSession.owner_id == owner_id,
+            TourSession.deleted_at.is_(None),
+        ))
+        if owned is None:
+            return None
+        limit = max(1, min(limit, 20))
+        rows = (await self.session.scalars(select(ItineraryProposal).where(
+            ItineraryProposal.owner_id == owner_id, ItineraryProposal.session_id == session_id,
+        ).order_by(ItineraryProposal.created_at.desc(), ItineraryProposal.id.desc()).limit(limit))).all()
+        summaries = []
+        for row in rows:
+            proposal = await self.get_proposal(owner_id, session_id, row.id)
+            if proposal is not None:
+                summaries.append({
+                    "id": proposal["id"], "session_id": proposal["session_id"],
+                    "status": proposal["status"], "execution_status": proposal.get("execution_status"),
+                    "execution_job_id": proposal.get("execution_job_id"),
+                    "created_at": row.created_at.isoformat() if row.created_at else None,
+                })
+        return summaries
 
     async def apply_proposal(self, owner_id: str, session_id: str, proposal_id: str,
             expected_version: int, progress_version: int, draft_digest: str, idempotency_key: str,
@@ -604,6 +672,11 @@ class TourSessionRepository:
         self.session.add(revision)
         proposal.status, proposal.applied_revision_id = "applied", revision.id
         self._add_event(session_id, "proposal_applied", expected_version + 1, {"proposal_id": proposal.id})
+        from app.repositories.tool_execution import ToolExecutionRepository
+
+        await ToolExecutionRepository(self.session).mark_target_revision_changed(
+            session_id, expected_version + 1,
+        )
         updated = await self.session.scalar(select(TourSession).where(
             TourSession.id == session_id, TourSession.owner_id == owner_id))
         response = await self._session_result(updated, revision)
@@ -733,6 +806,11 @@ class TourSessionRepository:
                 snapshot_json=current_revision.snapshot_json,
             ))
         self._add_event(session_id, "deleted", expected_version + 1)
+        from app.repositories.tool_execution import ToolExecutionRepository
+
+        await ToolExecutionRepository(self.session).mark_target_revision_changed(
+            session_id, expected_version + 1, deleted=True,
+        )
         await self.session.commit()
         item = await self.session.scalar(select(TourSession).where(
             TourSession.id == session_id, TourSession.owner_id == owner_id,
@@ -755,6 +833,9 @@ class TourSessionRepository:
             TourSession.deleted_until <= now,
         ))).all())
         for session_id in expired_ids:
+            from app.repositories.tool_execution import ToolExecutionRepository
+
+            await ToolExecutionRepository(self.session).purge_session(session_id)
             await self.session.execute(delete(TourArtifactReference).where(
                 TourArtifactReference.session_id == session_id,
             ))
@@ -809,6 +890,9 @@ class TourSessionRepository:
         ))
         if item is None:
             return False
+        from app.repositories.tool_execution import ToolExecutionRepository
+
+        await ToolExecutionRepository(self.session).purge_session(session_id)
         await self.session.execute(delete(TourArtifactReference).where(
             TourArtifactReference.session_id == session_id,
         ))

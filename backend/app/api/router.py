@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api import admin, auth, chat, display_assets, guide, insights, itinerary, knowledge, knowledge_imports, knowledge_publications, quick_select, recommend, vision, voice, weather
+from app.api import admin, auth, chat, display_assets, guide, insights, itinerary, knowledge, knowledge_imports, knowledge_publications, quick_select, recommend, tool_execution, vision, voice, weather
 from app.api import tour_sessions
 
 
@@ -9,6 +9,7 @@ api_router.include_router(itinerary.router, prefix="/itinerary", tags=["itinerar
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 api_router.include_router(tour_sessions.router, prefix="/tour-sessions", tags=["tour-sessions"])
+api_router.include_router(tool_execution.router, tags=["tool-executions"])
 api_router.include_router(knowledge.router, prefix="/knowledge", tags=["knowledge"])
 api_router.include_router(knowledge_publications.router, prefix="/knowledge-publications", tags=["knowledge-publications"])
 api_router.include_router(knowledge_imports.router, prefix="/knowledge-imports", tags=["knowledge-imports"])

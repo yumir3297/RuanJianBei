@@ -21,6 +21,23 @@ export async function fetchItineraryProposal(id, proposalId, signal) {
   return data;
 }
 
+export async function fetchItineraryProposals(id, limit = 10, signal) {
+  const { data } = await http.get(`/tour-sessions/${encodeURIComponent(id)}/proposals`, {
+    withCredentials: true, params: { limit }, signal,
+  });
+  return data.items || [];
+}
+
+export async function retryItineraryProposal(id, jobId, csrfToken, key, confirmDuplicateRisk, signal) {
+  if (confirmDuplicateRisk !== true) throw new Error("请先确认可能重复调用 AI 并产生费用的风险。");
+  const { data } = await http.post(
+    `/tour-sessions/${encodeURIComponent(id)}/executions/${encodeURIComponent(jobId)}/retry`,
+    { confirm_duplicate_risk: true },
+    { withCredentials: true, headers: { "X-CSRF-Token": csrfToken, "Idempotency-Key": key }, signal },
+  );
+  return data;
+}
+
 export async function applyItineraryProposal(id, proposalId, payload, csrfToken, key) {
   const { data } = await http.post(`/tour-sessions/${encodeURIComponent(id)}/proposals/${encodeURIComponent(proposalId)}/apply`, payload, {
     withCredentials: true, headers: { "X-CSRF-Token": csrfToken, "Idempotency-Key": key },

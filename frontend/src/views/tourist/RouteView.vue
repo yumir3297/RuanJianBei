@@ -11,6 +11,12 @@
         <p v-if="sessionSaving" class="tour-session-status" role="status">正在保存…</p>
         <p v-else-if="tourStore.saveState === 'saved'" class="tour-session-status" role="status">已保存到此浏览器</p>
         <p v-if="tourStore.current" class="tour-session-current"><strong>当前游览：</strong>{{ tourStore.current.title }} · 第 {{ tourStore.current.version }} 版</p>
+        <section v-if="tourStore.current?.snapshot?.schema_version === 2" class="tour-session-status" aria-label="后台行程提案">
+          <p v-if="tourStore.proposalLoading" role="status">正在检查后台提案；停止等待不会取消后台任务。</p>
+          <p v-else-if="tourStore.proposal" role="status">{{ tourStore.proposal.status === 'waiting_user' ? '上次 AI 调用结果不确定，请回到对话查看费用风险并决定是否重试。' : tourStore.proposal.status === 'executing' ? '提案仍在后台生成。' : '已恢复行程提案，请回到对话查看结果。' }}</p>
+          <button v-if="!tourStore.proposalLoading" type="button" class="tour-session-secondary" @click="tourStore.restoreProposal()">检查后台提案</button>
+          <button v-else type="button" class="tour-session-secondary" @click="tourStore.cancelProposal()">停止等待</button>
+        </section>
         <ol v-if="tourStore.current?.snapshot?.stops?.length" class="tour-session-stops"><li v-for="(stop, index) in tourStore.current.snapshot.stops" :key="`${stop.name}-${index}`">{{ stop.name }}</li></ol>
         <p v-else-if="tourStore.current" class="tour-session-empty">这条游览还没有保存景点。</p>
         <section v-if="tourStore.current" class="itinerary-editor">

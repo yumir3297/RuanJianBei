@@ -126,7 +126,7 @@
             <span v-if="message.role === 'assistant' && chatStore.streaming && index === chatStore.messages.length - 1 && message.content.length > 0" class="typing-cursor">|</span>
           </article>
           <div v-if="chatStore.streaming && !chatStore.messages.at(-1)?.content" class="thinking-notice" role="status"><span class="thinking-dots">···</span> 导游正在查阅资料</div>
-          <div v-if="tourStore.proposalLoading" class="itinerary-proposal" role="status"><span>正在生成可验证的改线方案…</span><button type="button" @click="tourStore.cancelProposal()">停止等待</button></div>
+          <div v-if="tourStore.proposalLoading" class="itinerary-proposal" role="status"><span>正在生成可验证的改线方案；停止等待不会取消后台任务。</span><button type="button" @click="tourStore.cancelProposal()">停止等待</button></div>
           <section v-if="pendingIntentQuery" class="itinerary-proposal" aria-label="确认需求类型">
             <p>“{{ pendingIntentQuery }}”可能是在询问，也可能是想调整当前行程。你希望怎么处理？</p>
             <button type="button" @click="continuePendingIntentAsQuestion">普通问答</button>
@@ -137,8 +137,13 @@
             <header><strong>行程修改提案</strong><button type="button" @click="tourStore.cancelProposal()">关闭</button></header>
             <p>“{{ tourStore.proposal.request_text }}”</p>
             <p v-if="tourStore.proposalIsStale" class="itinerary-proposal-error" role="status">当前草稿已修改；这份提案仍基于修改前的行程，不能直接应用。请基于当前草稿重新生成。</p>
+            <p v-if="tourStore.proposal.status === 'waiting_user'" role="status">AI 服务可能已收到上次请求，但结果未能保存。再次尝试可能重复产生调用费用；行程本身仍未改变。</p>
+            <button v-if="tourStore.proposal.status === 'waiting_user'" type="button" :disabled="tourStore.proposalLoading" @click="tourStore.retryProposal(true)">确认可能重复产生调用费用并重试</button>
+            <p v-if="tourStore.proposal.status === 'executing'" role="status">提案正在后台生成；关闭页面或停止等待后，任务仍会继续。</p>
+            <button v-if="!tourStore.proposalLoading && tourStore.proposal.status === 'executing'" type="button" @click="tourStore.resumeProposal(tourStore.proposal)">重新检查状态</button>
+            <p v-if="tourStore.proposal.status === 'failed'" role="status">{{ tourStore.proposal.validation?.message || '提案未能完成，当前行程未改变。' }}</p>
             <p v-if="tourStore.proposal.status === 'needs_clarification'">{{ tourStore.proposal.clarification }} 请补充后重新提交。</p>
-            <template v-else>
+            <template v-else-if="tourStore.proposal.status === 'ready'">
               <ul><li v-for="(change, index) in tourStore.proposal.diff" :key="`${change.kind}-${index}`">{{ itineraryProposalDiffText(change, { beforeSnapshot: tourStore.proposalBaseSnapshot, candidateSnapshot: tourStore.proposal.candidate }) }}</li></ul>
               <p>{{ tourStore.proposal.validation.status === 'unverified' ? '有时长或路段尚未核实，应用前请确认。' : '已通过硬约束检查。' }}</p>
               <button type="button" :disabled="tourStore.proposalIsStale || tourStore.proposalLoading" @click="tourStore.confirmProposal()">确认并保存新版本</button>

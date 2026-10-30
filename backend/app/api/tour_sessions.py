@@ -6,12 +6,17 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.deps import get_app_settings, get_db_session
 from app.models.tour_session import TourIdentity
 from app.repositories.tour_session import IdempotencyConflict, RevisionConflict, TourSessionRepository
+from app.repositories.tool_execution import IdempotencyConflict as ToolIdempotencyConflict, JobCommandError
+from app.schemas.tool_execution import ToolPrincipal, ToolTarget
+from app.services.tool_execution.commands import enqueue_registered_tool
+from app.services.tool_execution.handlers import build_registry
 from app.schemas.itinerary import (
     ApplyItineraryProposalRequest, CreateItineraryProposalRequest,
     SaveItineraryV2Request, StartTourRequest, UpgradeItineraryRequest, StrictModel,
@@ -21,7 +26,7 @@ from app.schemas.tour_session import CreateTourSessionRequest, SaveTourSessionRe
 from app.services.itinerary.catalog import K01PublishedAttractionSource, PublishedAttractionCatalog, ResolvedSpot, parse_spot_reference
 from app.services.itinerary.progress import ProgressCommand, ProgressConflict, TourProgress, validate_remaining_budget
 from app.services.itinerary.provenance import normalize_snapshot_provenance
-from app.services.itinerary.intent import IntentError, IntentUnavailable, ItineraryIntentService, snapshot_digest
+from app.services.itinerary.intent import snapshot_digest
 from app.services.tour_session_identity import ensure_tour_identity, require_tour_write_protection
 
 router = APIRouter()
@@ -332,7 +337,7 @@ async def get_tour_budget(session_id: str,
         current_stop_remaining_minutes=current_stop_remaining_minutes).model_dump(mode="json")
 
 
-@router.post("/{session_id}/proposals", status_code=status.HTTP_201_CREATED)
+@router.post("/{session_id}/proposals", status_code=status.HTTP_202_ACCEPTED)
 async def create_itinerary_proposal(
     session_id: str, payload: CreateItineraryProposalRequest, request: Request,
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=128)],
@@ -340,8 +345,9 @@ async def create_itinerary_proposal(
     settings: Settings = Depends(get_app_settings),
 ):
     _protect_write(request, identity, settings)
+    owner_id = identity.id
     repo = TourSessionRepository(db)
-    current = await repo.get_session(identity.id, session_id)
+    current = await repo.get_session(owner_id, session_id)
     if current is None: raise HTTPException(status_code=404, detail="游览不存在")
     if current["snapshot"].get("schema_version") != 2:
         raise HTTPException(status_code=409, detail="请先升级到 V2 行程后再创建修改提案")
@@ -349,7 +355,7 @@ async def create_itinerary_proposal(
         raise HTTPException(status_code=409, detail={"message": "行程版本已变化", "current_version": current["version"]})
     if payload.draft_snapshot.schema_version != 2 or snapshot_digest(payload.draft_snapshot) != payload.draft_digest:
         raise HTTPException(status_code=422, detail="请提交摘要匹配的 V2 行程草稿")
-    progress_raw = await repo.get_progress(identity.id, session_id)
+    progress_raw = await repo.get_progress(owner_id, session_id)
     progress_version = int((progress_raw or {}).get("progress_version", 0))
     if payload.progress_version != progress_version:
         raise HTTPException(status_code=409, detail="游览进度已变化，请刷新后重试")
@@ -359,25 +365,82 @@ async def create_itinerary_proposal(
     sanitized_draft = normalize_snapshot_provenance(
         payload.draft_snapshot, previous=previous, catalog_entries=entries,
     )
-    reservation, owns_execution = await repo.reserve_proposal(identity.id, session_id,
-        payload.expected_version, payload.progress_version, payload.draft_digest, catalog.digest,
-        payload.text, sanitized_draft.model_dump(mode="json"), idempotency_key)
-    if not owns_execution:
-        if reservation.get("status") == "failed":
-            raise HTTPException(status_code=503, detail=reservation.get("validation", {}).get("message", "行程提案未能完成"))
-        if reservation.get("status") == "executing":
-            return JSONResponse(status_code=202, content=reservation)
-        return reservation
-    await db.commit()  # release the read transaction before awaiting the model
+    draft_json = sanitized_draft.model_dump(mode="json")
     try:
-        generated = await ItineraryIntentService().propose(payload.text, sanitized_draft, catalog, settings)
-    except IntentUnavailable as error:
-        await repo.fail_reserved_proposal(identity.id, session_id, reservation["id"], str(error), idempotency_key)
-        raise HTTPException(status_code=503, detail=str(error)) from error
-    except IntentError as error:
-        await repo.fail_reserved_proposal(identity.id, session_id, reservation["id"], str(error), idempotency_key)
-        raise HTTPException(status_code=422, detail=str(error)) from error
-    return await repo.complete_reserved_proposal(identity.id, session_id, reservation["id"], generated, idempotency_key)
+        reservation, owns_execution = await repo.reserve_proposal(
+            owner_id, session_id, payload.expected_version, payload.progress_version,
+            payload.draft_digest, catalog.digest, payload.text,
+            draft_json, idempotency_key, commit=False,
+        )
+        if not owns_execution:
+            await db.rollback()
+            existing = await repo.get_proposal(owner_id, session_id, reservation["id"])
+            if existing is None:
+                raise HTTPException(status_code=404, detail="行程提案不存在")
+            return JSONResponse(status_code=202, content=existing)
+
+        tool_input = {
+            "proposal_id": reservation["id"],
+            "idempotency_key": idempotency_key,
+            "request_text": payload.text,
+            "draft_digest": payload.draft_digest,
+            "normalized_draft_digest": snapshot_digest(sanitized_draft),
+            "catalog_digest": catalog.digest,
+            "draft_snapshot": draft_json,
+        }
+        job = await enqueue_registered_tool(
+            db, build_registry(), principal=ToolPrincipal(id=owner_id),
+            site_id=settings.site_id,
+            target=ToolTarget(
+                id=session_id, base_revision=payload.expected_version,
+                progress_version=payload.progress_version, content_digest=catalog.digest,
+            ),
+            tool_name="itinerary.proposal", tool_version="1", workflow_schema_version="1",
+            payload=tool_input, idempotency_key=idempotency_key,
+            deadline_seconds=1800, commit=False,
+        )
+        from app.models.tour_session import ItineraryProposal
+
+        proposal_row = await db.get(ItineraryProposal, reservation["id"])
+        if proposal_row is None:
+            raise JobCommandError("行程提案预留记录不存在")
+        proposal_row.execution_job_id = job["id"]
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        try:
+            existing = await repo.find_proposal_replay(
+                owner_id, session_id, payload.expected_version, payload.progress_version,
+                payload.draft_digest, catalog.digest, payload.text, idempotency_key,
+            )
+        except IdempotencyConflict as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+        if existing is None:
+            raise HTTPException(status_code=409, detail="提案已被其他请求创建，请刷新后重试")
+        return JSONResponse(status_code=202, content=existing)
+    except (IdempotencyConflict, ToolIdempotencyConflict) as error:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    except (JobCommandError, ValueError) as error:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    created = await repo.get_proposal(owner_id, session_id, reservation["id"])
+    if created is None:
+        raise HTTPException(status_code=404, detail="行程提案不存在")
+    return JSONResponse(status_code=202, content=created)
+
+
+@router.get("/{session_id}/proposals")
+async def list_itinerary_proposals(
+    session_id: str,
+    limit: Annotated[int, Query(ge=1, le=20)] = 10,
+    identity: TourIdentity = Depends(get_tour_identity),
+    db: AsyncSession = Depends(get_db_session),
+):
+    items = await TourSessionRepository(db).list_proposals(identity.id, session_id, limit)
+    if items is None:
+        raise HTTPException(status_code=404, detail="游览不存在")
+    return {"items": items}
 
 
 @router.get("/{session_id}/proposals/{proposal_id}")
