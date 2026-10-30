@@ -107,6 +107,7 @@
           <article v-for="(message, index) in chatStore.messages" v-show="!message.isWelcome || chatStore.messages.length > 1" :key="`${message.role}-${index}`" :class="['msg-item', message.role, { latest: index === chatStore.messages.length - 1 }]">
             <div v-if="message.role === 'assistant'" class="msg-bubble" v-html="renderAnswer(message, index === chatStore.messages.length - 1)" @click="handleCitationClick($event, message)"></div>
             <div v-else class="msg-bubble">{{ message.content }}</div>
+            <p v-if="message.warning" class="error-notice" role="status">{{ message.warning }}</p>
             <div v-if="message.role === 'assistant' && !message.isWelcome && message.chatLogId && message.completion === 'complete' && !chatStore.streaming" class="answer-replay">
               <button type="button" :disabled="message.replayLoading" :aria-busy="message.replayLoading" @click="replayAnswer(message)">{{ message.replayLoading ? '正在准备语音…' : message.replayPlaying ? '正在重播' : '重播讲解' }}</button>
               <span v-if="message.replayError" class="feedback-error" role="alert">{{ message.replayError }}</span>

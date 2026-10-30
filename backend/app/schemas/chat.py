@@ -17,7 +17,7 @@ class VisionContext(BaseModel):
     candidate_attractions: list[str] = Field(default_factory=list)
     visual_tags: list[str] = Field(default_factory=list)
     retrieval_query: str = ""
-    confidence: float = 0.0
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0, allow_inf_nan=False)
 
 
 class EmotionContext(BaseModel):

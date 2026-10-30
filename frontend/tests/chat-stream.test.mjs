@@ -187,3 +187,10 @@ test('each answer retains its own sources across later turns', async () => {
   assert.equal(first.sources[0].title, 'A');
   assert.equal(store.messages.at(-1).sources[0].title, 'B');
 });
+
+test('unconfirmed photo warning stays attached to its answer after completion', async () => {
+  globalThis.fetch = async () => response('event: context\ndata: {"warnings":["vision_scope_unconfirmed"]}\n\nevent: text\ndata: {"text":"可能是某景点","is_complete":true}\n\nevent: done\ndata: {}\n\n');
+  const store = useChatStore();
+  await store.sendMessage('这是什么');
+  assert.match(store.messages.at(-1).warning, /照片.*未确认.*核对/);
+});

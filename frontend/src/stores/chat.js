@@ -234,6 +234,9 @@ export const useChatStore = defineStore("chat", {
               }
               this.conversationContext = conversationContext || null;
               options.onContext?.(resolvedSelection);
+              if (warnings.includes("vision_scope_unconfirmed")) {
+                assistantMessage.warning = "照片中的景点尚未确认，请核对后再参考讲解。";
+              }
               if (warnings.length) {
                 this.statusText = UPDATED_CONTEXT_STATUS_TEXT;
               }

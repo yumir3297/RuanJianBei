@@ -251,18 +251,17 @@ class QAPipeline:
                 logger.exception("Visitor memory read failed; continuing without memory.")
                 self._memory_prompt = None
 
-        # 视觉识别线索注入：用 Qwen 识别出的候选景点限定 RAG 检索范围
+        # 识别候选尚未经游客确认，也不能用模型自报置信度当成校准概率。
+        # 避免将候选、旧选择或历史景点静默视为当前照片的事实。
         vision = request.vision_context
-        if vision is not None and vision.candidate_attractions and (resolved.scope is None or resolved.scope.is_empty()):
-            vision_attraction = await self.guided_selector.find_attraction_by_candidates(vision.candidate_attractions)
-            if vision_attraction is not None:
-                resolved = ResolvedInteraction(
-                    selection=resolved.selection,
-                    scope=RetrievalScope(source_entry_id=vision_attraction.id),
-                    resolution_source="selection",
-                    active_subject=vision_attraction.title,
-                    warnings=resolved.warnings,
-                )
+        if vision is not None:
+            resolved = ResolvedInteraction(
+                selection=resolved.selection,
+                scope=None,
+                resolution_source=resolved.resolution_source,
+                active_subject=None,
+                warnings=(*resolved.warnings, "vision_scope_unconfirmed"),
+            )
 
         yield StreamEvent(type="context", data=resolved.to_event_data())
         yield StreamEvent(
@@ -274,13 +273,18 @@ class QAPipeline:
             },
         )
 
-        rewrite_context = request.context
+        rewrite_context = None if vision is not None else request.context
         if resolved.active_subject:
             rewrite_context = ConversationContext(
                 last_subject=resolved.active_subject,
                 history_summary=request.context.history_summary if request.context else None,
             )
-        normalized_query = self.query_rewriter.rewrite(request.query, rewrite_context)
+        retrieval_query = request.query
+        if vision is not None:
+            hint = vision.retrieval_query.strip()[:1000]
+            if hint and hint not in retrieval_query:
+                retrieval_query = f"{retrieval_query}\n{hint}"
+        normalized_query = self.query_rewriter.rewrite(retrieval_query, rewrite_context)
         intent_decision = self.intent_router.detect(request.query, resolved.selection)
         yield StreamEvent(
             type="intent",
@@ -291,7 +295,7 @@ class QAPipeline:
             },
         )
 
-        if intent_decision.intent == "static_route":
+        if vision is None and intent_decision.intent == "static_route":
             static_route = await self._build_static_route_answer(request)
             if static_route is not None:
                 answer, route_sources = static_route
@@ -316,10 +320,10 @@ class QAPipeline:
         )
         yield StreamEvent(type="status", data={"text": "正在查找答案..."})
 
-        faq_result = self.faq_matcher.match(normalized_query)
+        faq_result = self.faq_matcher.match(normalized_query) if vision is None else None
         faq_documents: list[RetrievedDocument] | None = None
         faq_sources: list[dict] = []
-        if faq_result.is_hit:
+        if faq_result is not None and faq_result.is_hit:
             faq_sources = [
                 {
                     "evidence_id": f"证据{index}",
@@ -352,7 +356,7 @@ class QAPipeline:
                     yield event
                 return
 
-        cached = await self.qa_cache.get(cache_key, epoch=request_epoch)
+        cached = await self.qa_cache.get(cache_key, epoch=request_epoch) if vision is None else None
         if cached:
             if not await self._epoch_is_current(request_epoch):
                 yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
@@ -383,7 +387,7 @@ class QAPipeline:
         else:
             yield StreamEvent(type="status", data={"text": "正在检索景区知识..."})
             documents = await self.rag_service.retrieve(
-                request.query,
+                retrieval_query,
                 normalized_query=normalized_query,
                 scope=resolved.scope,
             )
@@ -719,7 +723,7 @@ class QAPipeline:
         if not await self._epoch_is_current(request_epoch):
             yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
             return
-        if not degraded_llm and self._active_emotion.label == EmotionLabel.NEUTRAL:
+        if vision is None and not degraded_llm and self._active_emotion.label == EmotionLabel.NEUTRAL:
             await self.qa_cache.set(cache_key, full_answer, sources, epoch=request_epoch)
         latency_ms = int((perf_counter() - start) * 1000)
         chat_log_id = await self._persist_interaction(
