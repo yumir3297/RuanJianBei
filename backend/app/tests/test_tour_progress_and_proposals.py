@@ -1,0 +1,304 @@
+from __future__ import annotations
+
+import asyncio
+import json
+from uuid import uuid4
+
+import pytest
+from sqlalchemy import update
+
+from app.tests.async_db import open_test_session
+
+
+def _run(coro):
+    asyncio.run(coro())
+
+
+def _snapshot():
+    stop_id = str(uuid4())
+    return {"schema_version": 2, "constraints": {"available_minutes": 90},
+        "stops": [{"stop_id": stop_id, "kind": "visit", "spot_code": "LS-01", "name": "梵宫",
+                   "duration_minutes": 20, "duration_basis": "user"}],
+        "legs": [], "source": "manual", "source_references": []}
+
+
+def test_progress_is_persisted_with_independent_version_and_owner_scope():
+    async def scenario():
+        from app.repositories.tour_session import TourSessionRepository
+        from app.services.itinerary.progress import ProgressCommand
+        engine, db = await open_test_session()
+        try:
+            repo = TourSessionRepository(db)
+            created = await repo.create_session("owner-a", "site", "游览", _snapshot(), "create")
+            started = await repo.start_progress("owner-a", created["id"], 1, "start")
+            stop_id = next(iter(started["status_by_stop"]))
+            assert started["progress_version"] == 1 and started["status"] == "active"
+            done = await repo.command_progress("owner-a", created["id"], 1,
+                ProgressCommand(type="complete", stop_id=stop_id), "complete")
+            assert done["status"] == "finished" and done["progress_version"] == 2
+            assert await repo.get_progress("owner-b", created["id"]) is None
+            events = await repo.list_progress_events("owner-a", created["id"])
+            assert [event["event_type"] for event in events] == ["started", "completed"]
+        finally:
+            await db.close(); await engine.dispose()
+    _run(scenario)
+
+
+def test_proposal_apply_creates_exactly_one_revision_and_is_idempotent():
+    async def scenario():
+        from app.repositories.tour_session import TourSessionRepository
+        engine, db = await open_test_session()
+        try:
+            repo = TourSessionRepository(db)
+            snapshot = _snapshot()
+            created = await repo.create_session("owner-a", "site", "游览", snapshot, "create")
+            candidate = json.loads(json.dumps(snapshot))
+            candidate["constraints"]["available_minutes"] = 60
+            generated = {"status": "ready", "operations": [{"type": "update_constraints"}],
+                "candidate": candidate, "diff": [{"kind": "constraints"}],
+                "validation": {"status": "pass", "conflicts": []}, "clarification": None}
+            proposal = await repo.create_proposal("owner-a", created["id"], 1, 0, "a" * 64,
+                "catalog-digest", "shorten the trip", generated, "proposal-create")
+            assert (await repo.get_proposal("owner-b", created["id"], proposal["id"])) is None
+            applied = await repo.apply_proposal("owner-a", created["id"], proposal["id"], 1, 0,
+                "a" * 64, "proposal-apply")
+            replay = await repo.apply_proposal("owner-a", created["id"], proposal["id"], 1, 0,
+                "a" * 64, "proposal-apply")
+            assert applied == replay and applied["version"] == 2
+            assert applied["snapshot"]["constraints"]["available_minutes"] == 60
+            assert len(await repo.list_revisions("owner-a", created["id"])) == 2
+        finally:
+            await db.close(); await engine.dispose()
+    _run(scenario)
+
+
+def test_active_proposal_apply_refreshes_progress_version_for_next_command():
+    async def scenario():
+        from app.repositories.tour_session import TourSessionRepository
+        from app.services.itinerary.progress import ProgressCommand
+        engine, db = await open_test_session()
+        try:
+            repo = TourSessionRepository(db)
+            snapshot = _snapshot()
+            created = await repo.create_session("owner-a", "site", "游览", snapshot, "create")
+            started = await repo.start_progress("owner-a", created["id"], 1, "start")
+            stop_id = next(iter(started["status_by_stop"]))
+
+            candidate = json.loads(json.dumps(snapshot))
+            candidate["constraints"]["available_minutes"] = 75
+            generated = {"status": "ready", "operations": [{"type": "update_constraints"}],
+                "candidate": candidate, "diff": [{"kind": "constraints"}],
+                "validation": {"status": "pass", "conflicts": []}, "clarification": None}
+            proposal = await repo.create_proposal("owner-a", created["id"], 1,
+                started["progress_version"], "c" * 64, "catalog-digest", "缩短总时长",
+                generated, "active-proposal-create")
+
+            applied = await repo.apply_proposal("owner-a", created["id"], proposal["id"], 1,
+                started["progress_version"], "c" * 64, "active-proposal-apply")
+            reconciled = await repo.get_progress("owner-a", created["id"])
+            assert applied["version"] == 2
+            assert reconciled["progress_version"] == started["progress_version"] + 1
+
+            finished = await repo.command_progress("owner-a", created["id"],
+                reconciled["progress_version"], ProgressCommand(type="complete", stop_id=stop_id),
+                "complete-after-proposal")
+            assert finished["status"] == "finished"
+            assert finished["progress_version"] == reconciled["progress_version"] + 1
+        finally:
+            await db.close(); await engine.dispose()
+    _run(scenario)
+
+
+def test_proposal_reservation_prevents_duplicate_provider_execution_and_replays_result():
+    async def scenario():
+        from app.repositories.tour_session import TourSessionRepository, IdempotencyConflict
+        engine, db = await open_test_session()
+        try:
+            repo = TourSessionRepository(db)
+            snapshot = _snapshot()
+            created = await repo.create_session("owner-a", "site", "游览", snapshot, "create")
+            digest = "b" * 64
+            reservation, owns = await repo.reserve_proposal("owner-a", created["id"], 1, 0,
+                digest, "catalog", "增加休息", snapshot, "proposal-key")
+            replay, replay_owns = await repo.reserve_proposal("owner-a", created["id"], 1, 0,
+                digest, "catalog", "增加休息", snapshot, "proposal-key")
+            assert owns and not replay_owns
+            assert replay["id"] == reservation["id"] and replay["status"] == "executing"
+            generated = {"status": "ready", "operations": [{"type": "add_rest"}],
+                "candidate": snapshot, "diff": [], "validation": {"status": "unverified", "conflicts": []}}
+            completed = await repo.complete_reserved_proposal("owner-a", created["id"], reservation["id"],
+                generated, "proposal-key")
+            replay, replay_owns = await repo.reserve_proposal("owner-a", created["id"], 1, 0,
+                digest, "catalog", "增加休息", snapshot, "proposal-key")
+            assert completed["status"] == "ready" and replay == completed and not replay_owns
+            try:
+                await repo.reserve_proposal("owner-a", created["id"], 1, 0,
+                    digest, "catalog", "改为别的请求", snapshot, "proposal-key")
+            except IdempotencyConflict:
+                pass
+            else:
+                raise AssertionError("same key with different request must conflict")
+        finally:
+            await db.close(); await engine.dispose()
+    _run(scenario)
+
+
+def test_legacy_save_cannot_downgrade_v2_snapshot():
+    async def scenario():
+        from app.repositories.tour_session import TourSessionRepository
+        engine, db = await open_test_session()
+        try:
+            repo = TourSessionRepository(db)
+            created = await repo.create_session("owner-a", "site", "游览", _snapshot(), "create")
+            try:
+                await repo.save_revision("owner-a", created["id"], 1, {"stops": []}, "legacy-save")
+            except ValueError as error:
+                assert "V2" in str(error)
+            else:
+                raise AssertionError("legacy save must not erase a V2 itinerary")
+        finally:
+            await db.close(); await engine.dispose()
+    _run(scenario)
+
+
+def test_v2_save_cannot_bypass_a_stop_duration_lock():
+    async def scenario():
+        from app.repositories.tour_session import TourSessionRepository
+        engine, db = await open_test_session()
+        try:
+            repo = TourSessionRepository(db)
+            snapshot = _snapshot()
+            snapshot["stops"][0]["locked_fields"] = ["duration"]
+            created = await repo.create_session("owner-a", "site", "游览", snapshot, "create")
+            changed = json.loads(json.dumps(snapshot))
+            changed["stops"][0]["duration_minutes"] = 35
+            try:
+                await repo.save_revision("owner-a", created["id"], 1, changed, "change-locked-duration")
+            except ValueError as error:
+                assert "locked" in str(error) or "锁定" in str(error)
+            else:
+                raise AssertionError("V2 save must enforce server-side stop locks")
+        finally:
+            await db.close(); await engine.dispose()
+    _run(scenario)
+
+
+def test_v2_save_reconstructs_untrusted_provenance_instead_of_trusting_client_fields():
+    async def scenario():
+        from app.repositories.tour_session import TourSessionRepository
+        engine, db = await open_test_session()
+        try:
+            repo = TourSessionRepository(db)
+            snapshot = _snapshot()
+            created = await repo.create_session("owner-a", "site", "游览", snapshot, "create")
+            forged = json.loads(json.dumps(snapshot))
+            forged["stops"][0]["created_by"] = "ai"
+            forged["stops"][0]["duration_minutes"] = 25
+            forged["stops"][0]["duration_basis"] = "estimate"
+            forged["stops"][0]["evidence"] = [{"evidence_type": "published_content", "reference_id": "forged"}]
+            forged["stops"].append({"stop_id": str(uuid4()), "kind": "rest", "name": "休息",
+                "duration_minutes": 10, "duration_basis": "estimate", "created_by": "ai",
+                "evidence": [{"evidence_type": "estimate", "label": "伪造"}]})
+            saved = await repo.save_revision("owner-a", created["id"], 1, forged, "save-forged-provenance")
+            original, added = saved["snapshot"]["stops"]
+            assert original["created_by"] == "manual"
+            assert original["duration_basis"] == "user"
+            assert original["evidence"][0]["evidence_type"] == "visitor_input"
+            assert added["created_by"] == "manual"
+            assert added["duration_basis"] == "user"
+            assert added["evidence"][0]["evidence_type"] == "visitor_input"
+        finally:
+            await db.close(); await engine.dispose()
+    _run(scenario)
+
+
+def test_active_plan_revision_reconciles_new_pending_stops_and_fences_stale_progress():
+    async def scenario():
+        from app.repositories.tour_session import TourSessionRepository
+        from app.services.itinerary.progress import ProgressCommand, ProgressConflict
+        engine, db = await open_test_session()
+        try:
+            repo = TourSessionRepository(db)
+            snapshot = _snapshot()
+            created = await repo.create_session("owner-a", "site", "游览", snapshot, "create")
+            started = await repo.start_progress("owner-a", created["id"], 1, "start")
+            added_id = str(uuid4())
+            candidate = json.loads(json.dumps(snapshot))
+            candidate["stops"].append({"stop_id": added_id, "kind": "visit", "name": "新增景点",
+                "duration_basis": "unknown"})
+            saved = await repo.save_revision("owner-a", created["id"], 1, candidate, "save-v2")
+            progress = await repo.get_progress("owner-a", created["id"])
+            assert saved["version"] == 2
+            assert progress["progress_version"] == started["progress_version"] + 1
+            assert progress["status_by_stop"][added_id] == "pending"
+            try:
+                await repo.command_progress("owner-a", created["id"], started["progress_version"],
+                    ProgressCommand(type="complete", stop_id=next(iter(started["status_by_stop"]))), "stale")
+            except ProgressConflict:
+                pass
+            else:
+                raise AssertionError("a plan reconciliation must fence stale progress commands")
+        finally:
+            await db.close(); await engine.dispose()
+    _run(scenario)
+
+
+def test_active_plan_revision_rejects_new_pending_stop_before_current_stop():
+    async def scenario():
+        from app.repositories.tour_session import TourSessionRepository
+        engine, db = await open_test_session()
+        try:
+            repo = TourSessionRepository(db)
+            snapshot = _snapshot()
+            snapshot["stops"].append({"stop_id": str(uuid4()), "kind": "rest", "name": "休息",
+                "duration_minutes": 5, "duration_basis": "user"})
+            created = await repo.create_session("owner-a", "site", "游览", snapshot, "create")
+            started = await repo.start_progress("owner-a", created["id"], 1, "start")
+            current_id = started["current_stop_id"]
+            candidate = json.loads(json.dumps(snapshot))
+            inserted_id = str(uuid4())
+            candidate["stops"].insert(0, {"stop_id": inserted_id, "kind": "rest", "name": "新增休息",
+                "duration_minutes": 5, "duration_basis": "user"})
+            try:
+                await repo.save_revision("owner-a", created["id"], 1, candidate, "insert-before-current")
+            except ValueError as error:
+                assert "当前点之前" in str(error)
+            else:
+                raise AssertionError("a new pending stop must not be inserted before the current stop")
+            assert current_id == next(stop for stop, state in started["status_by_stop"].items() if state == "current")
+        finally:
+            await db.close(); await engine.dispose()
+    _run(scenario)
+
+
+def test_save_revision_status_fence_rejects_session_state_change_before_commit(monkeypatch):
+    async def scenario():
+        from app.models.tour_session import TourSession
+        from app.repositories.tour_session import RevisionConflict, TourSessionRepository
+        engine, db = await open_test_session()
+        try:
+            repo = TourSessionRepository(db)
+            snapshot = _snapshot()
+            created = await repo.create_session("owner-a", "site", "游览", snapshot, "create")
+            await repo.start_progress("owner-a", created["id"], 1, "start")
+            original_reconcile = repo._reconcile_progress_for_plan_change
+
+            async def change_status_before_revision(session_id, before, after, row):
+                await original_reconcile(session_id, before, after, row)
+                await db.execute(update(TourSession).where(TourSession.id == session_id).values(status="completed"))
+
+            monkeypatch.setattr(repo, "_reconcile_progress_for_plan_change", change_status_before_revision)
+            candidate = json.loads(json.dumps(snapshot))
+            candidate["constraints"]["available_minutes"] = 80
+            try:
+                await repo.save_revision("owner-a", created["id"], 1, candidate, "racing-save")
+            except RevisionConflict as error:
+                assert error.current_version == 1
+            else:
+                raise AssertionError("revision save must fail if the session status changed after its read")
+            assert len(await repo.list_revisions("owner-a", created["id"])) == 1
+            progress = await repo.get_progress("owner-a", created["id"])
+            assert progress["progress_version"] == 1
+        finally:
+            await db.close(); await engine.dispose()
+    _run(scenario)

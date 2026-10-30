@@ -112,3 +112,60 @@ def test_tour_session_api_scopes_access_and_preserves_conflicts():
         finally:
             await engine.dispose()
     asyncio.run(scenario())
+
+
+def test_v2_upgrade_start_progress_and_legacy_downgrade_protection():
+    async def scenario():
+        engine, first_db = await open_test_session()
+        await first_db.close()
+        sessions = async_sessionmaker(bind=engine, expire_on_commit=False)
+        app = FastAPI()
+        app.include_router(tour_sessions.router, prefix="/api/tour-sessions")
+
+        async def db_dependency():
+            async with sessions() as db:
+                yield db
+
+        app.dependency_overrides[get_db_session] = db_dependency
+        app.dependency_overrides[get_app_settings] = lambda: Settings(
+            site_id="lingshan", admin_token_secret="tour-session-test-secret",
+        )
+        transport = ASGITransport(app=app)
+        try:
+            async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+                csrf = (await client.get("/api/tour-sessions/bootstrap")).json()["csrf_token"]
+                write_headers = {"Origin": "http://testserver", "X-CSRF-Token": csrf}
+                created = await client.post("/api/tour-sessions", headers={**write_headers, "Idempotency-Key": "create-v2"}, json={
+                    "title": "行程", "snapshot": {"stops": [{"name": "未发布地点"}]},
+                })
+                assert created.status_code == 201, created.text
+                session_id = created.json()["id"]
+                legacy_proposal = await client.post(f"/api/tour-sessions/{session_id}/proposals", headers={
+                    **write_headers, "Idempotency-Key": "legacy-proposal",
+                }, json={"expected_version": 1, "progress_version": 0, "draft_digest": "0" * 64,
+                    "draft_snapshot": {"schema_version": 2, "stops": []}, "text": "增加一个景点"})
+                assert legacy_proposal.status_code == 409, legacy_proposal.text
+                upgraded = await client.post(f"/api/tour-sessions/{session_id}/upgrade-v2", headers={
+                    **write_headers, "Idempotency-Key": "upgrade-v2",
+                }, json={"expected_version": 1})
+                assert upgraded.status_code == 200, upgraded.text
+                assert upgraded.json()["snapshot"]["schema_version"] == 2
+                started = await client.post(f"/api/tour-sessions/{session_id}/start", headers={
+                    **write_headers, "Idempotency-Key": "start-v2",
+                }, json={"expected_version": 2})
+                assert started.status_code == 200, started.text
+                stop_id = next(iter(started.json()["status_by_stop"]))
+                completed = await client.post(f"/api/tour-sessions/{session_id}/progress", headers={
+                    **write_headers, "Idempotency-Key": "complete-v2",
+                }, json={"expected_progress_version": 1, "command": {"type": "complete", "stop_id": stop_id}})
+                assert completed.status_code == 200, completed.text
+                assert completed.json()["status"] == "finished"
+                events = (await client.get(f"/api/tour-sessions/{session_id}/progress/events")).json()["items"]
+                assert [item["event_type"] for item in events] == ["started", "completed"]
+                downgrade = await client.put(f"/api/tour-sessions/{session_id}", headers={
+                    **write_headers, "Idempotency-Key": "legacy-downgrade",
+                }, json={"expected_version": 2, "snapshot": {"stops": []}})
+                assert downgrade.status_code == 409
+        finally:
+            await engine.dispose()
+    asyncio.run(scenario())

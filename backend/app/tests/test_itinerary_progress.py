@@ -79,7 +79,8 @@ class ItineraryProgressTests(unittest.TestCase):
         budget = validate_remaining_budget(snapshot, current, now + timedelta(minutes=10))
         self.assertEqual(budget.available_minutes, 50)
         self.assertEqual(budget.known_minutes, 25)
-        self.assertEqual(budget.status, "unverified")  # no evidence-backed leg to the remaining stop
+        self.assertTrue(budget.estimated_current_stop)
+        self.assertEqual(budget.status, "unverified")  # the remaining route leg has no reliable duration
 
     def test_stale_progress_version_is_rejected(self):
         snapshot = _snapshot()
@@ -92,12 +93,104 @@ class ItineraryProgressTests(unittest.TestCase):
         snapshot_data = _snapshot().model_dump(mode="json")
         snapshot_data["stops"].append({
             "stop_id": str(uuid4()), "kind": "visit", "spot_code": "LS-02", "name": "五印坛城",
-            "duration_minutes": 15, "duration_basis": "user",
+            "duration_minutes": 45, "duration_basis": "user",
         })
         snapshot = TourSnapshotV2.model_validate(snapshot_data)
         now = datetime(2026, 10, 29, 8, 0, tzinfo=UTC)
         started = start_tour(snapshot, plan_version=1, expected_plan_version=1, now=now)
         result = validate_remaining_budget(snapshot, started.progress, now + timedelta(minutes=35))
         self.assertEqual(result.available_minutes, 25)
-        self.assertEqual(result.known_minutes, 45)
+        self.assertEqual(result.known_minutes, 75)
         self.assertEqual(result.status, "conflict")
+
+    def test_current_stop_uses_conservative_plan_duration_at_exact_budget_boundary(self):
+        data = _snapshot().model_dump(mode="json")
+        data["stops"] = data["stops"][:1]
+        snapshot = TourSnapshotV2.model_validate(data)
+        now = datetime(2026, 10, 29, 8, 0, tzinfo=UTC)
+        started = start_tour(snapshot, plan_version=1, expected_plan_version=1, now=now)
+
+        result = validate_remaining_budget(snapshot, started.progress, now + timedelta(minutes=40))
+
+        self.assertEqual(result.available_minutes, 20)
+        self.assertEqual(result.known_minutes, 20)
+        self.assertTrue(result.estimated_current_stop)
+        self.assertEqual(result.status, "pass")
+
+    def test_explicit_current_stop_remaining_time_overrides_plan_estimate(self):
+        data = _snapshot().model_dump(mode="json")
+        data["stops"] = data["stops"][:1]
+        snapshot = TourSnapshotV2.model_validate(data)
+        started = start_tour(snapshot, plan_version=1, expected_plan_version=1, now=datetime.now(UTC))
+
+        result = validate_remaining_budget(snapshot, started.progress, datetime.now(UTC),
+            current_stop_remaining_minutes=5)
+
+        self.assertEqual(result.known_minutes, 5)
+        self.assertFalse(result.estimated_current_stop)
+
+    def test_current_stop_without_plan_duration_remains_unverified(self):
+        data = _snapshot().model_dump(mode="json")
+        data["stops"] = data["stops"][:1]
+        data["stops"][0]["duration_minutes"] = None
+        data["stops"][0]["duration_basis"] = "unknown"
+        snapshot = TourSnapshotV2.model_validate(data)
+        started = start_tour(snapshot, plan_version=1, expected_plan_version=1, now=datetime.now(UTC))
+
+        result = validate_remaining_budget(snapshot, started.progress, datetime.now(UTC))
+
+        self.assertEqual(result.status, "unverified")
+        self.assertEqual(result.known_minutes, 0)
+        self.assertFalse(result.estimated_current_stop)
+        self.assertEqual([str(stop_id) for stop_id in result.unknown_stop_ids],
+            [str(snapshot.stops[0].stop_id)])
+
+    def test_unknown_stop_duration_is_reported_as_unverified_not_zero(self):
+        data = _snapshot().model_dump(mode="json")
+        unknown_id = str(uuid4())
+        data["stops"].append({
+            "stop_id": unknown_id, "kind": "visit", "spot_code": "LS-02", "name": "五印坛城",
+            "duration_minutes": None, "duration_basis": "unknown",
+        })
+        snapshot = TourSnapshotV2.model_validate(data)
+
+        result = validate_remaining_budget(snapshot, None, datetime(2026, 10, 29, 8, 0, tzinfo=UTC))
+
+        self.assertEqual(result.status, "unverified")
+        self.assertEqual(result.known_minutes, 30)
+        self.assertEqual([str(stop_id) for stop_id in result.unknown_stop_ids], [unknown_id])
+
+    def test_missing_total_budget_stays_unverified_even_for_a_single_known_stop(self):
+        data = _snapshot().model_dump(mode="json")
+        data["constraints"]["available_minutes"] = None
+        data["stops"] = data["stops"][:1]
+        snapshot = TourSnapshotV2.model_validate(data)
+
+        result = validate_remaining_budget(snapshot, None, datetime(2026, 10, 29, 8, 0, tzinfo=UTC))
+
+        self.assertEqual(result.status, "unverified")
+        self.assertIsNone(result.available_minutes)
+        self.assertEqual(result.known_minutes, 20)
+
+    def test_finished_tour_has_no_remaining_budget(self):
+        snapshot = _snapshot()
+        started = start_tour(snapshot, plan_version=1, expected_plan_version=1, now=datetime.now(UTC))
+        first_id, second_id = [str(stop.stop_id) for stop in snapshot.stops]
+        first_done = apply_progress_command(started.progress, snapshot, expected_progress_version=1,
+            command=ProgressCommand(type="complete", stop_id=first_id))
+        finished = apply_progress_command(first_done.progress, snapshot, expected_progress_version=2,
+            command=ProgressCommand(type="complete", stop_id=second_id))
+
+        result = validate_remaining_budget(snapshot, finished.progress, datetime.now(UTC))
+
+        self.assertEqual(result.status, "pass")
+        self.assertEqual(result.available_minutes, 0)
+        self.assertEqual(result.known_minutes, 0)
+
+    def test_negative_current_stop_remaining_time_is_rejected(self):
+        snapshot = _snapshot()
+        started = start_tour(snapshot, plan_version=1, expected_plan_version=1, now=datetime.now(UTC))
+
+        with self.assertRaisesRegex(ValueError, "不能为负数"):
+            validate_remaining_budget(snapshot, started.progress, datetime.now(UTC),
+                current_stop_remaining_minutes=-1)

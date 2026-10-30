@@ -652,4 +652,11 @@
     padding: 8px; font-size: 12px; letter-spacing: 0;
   }
 }
+@media (min-width: 1000px) {
+  .tourist-page .guide-layout.route-tool-open {
+    grid-template-columns: minmax(360px,420px) minmax(0,1fr) 210px;
+    gap: 16px;
+  }
+  .tourist-page .guide-layout.route-tool-open .feature-rail { padding-inline: 18px; }
+}
 

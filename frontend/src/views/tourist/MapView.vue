@@ -74,6 +74,17 @@
       </template>
     </div>
 
+    <h4 class="map-subtitle">已确认行程</h4>
+    <div v-if="confirmedStops.length" class="confirmed-itinerary">
+      <div v-for="(stop, index) in confirmedStops" :key="stop.stop_id" class="confirmed-itinerary-row">
+        <button type="button" :disabled="!stop.coordinate_evidence_id" @click="focusConfirmedStop(stop)">
+          <strong>{{ index + 1 }}. {{ stop.name }}</strong><small>{{ stop.coordinate_evidence_id ? '已发布坐标依据' : '暂无可验证坐标' }} · {{ progressLabel(stop.stop_id) }}</small>
+        </button>
+        <button v-if="progressLabel(stop.stop_id) === '当前'" type="button" :disabled="busy || !stop.qa_attraction_id" @click="emit('ask', { query: `请介绍${stop.name}`, attractionId: stop.qa_attraction_id })">介绍当前点</button>
+      </div>
+    </div>
+    <p v-else class="map-note">打开已保存的 V2 游览后，这里会显示带坐标依据的停留点。</p>
+
     <h4 class="map-subtitle">分区景点</h4>
     <div class="tool-chips" aria-label="按分区筛选">
       <button v-for="zone in zoneFilters" :key="zone.key" type="button" :class="{ active: zoneFilter === zone.key }" :aria-pressed="zoneFilter === zone.key" @click="zoneFilter = zone.key">{{ zone.label }}</button>
@@ -103,14 +114,33 @@ import { useGeolocation } from "../../composables/useGeolocation";
 import { useNarration } from "../../composables/useNarration";
 import { speechText } from "../../constants/narration";
 import { fetchSpotNarration } from "../../api/narration";
+import { fetchItineraryCatalog } from "../../api/itinerary";
+import { useTourSessionsStore } from "../../stores/tourSessions";
+import { useInteractionStore } from "../../stores/interaction";
 
 const props = defineProps({
   busy: { type: Boolean, default: false },
+  speechRate: { type: Number, default: 100 },
   weather: { type: Object, default: null },
   scenicColor: { type: Object, default: null },
   colorLabel: { type: String, default: "" },
 });
 const emit = defineEmits(["ask"]);
+const tourStore = useTourSessionsStore();
+const interactionStore = useInteractionStore();
+const itineraryCatalog = ref({ items: [] });
+const confirmedStops = computed(() => {
+  const snapshot = tourStore.current?.snapshot;
+  if (snapshot?.schema_version !== 2) return [];
+  const entries = new Map((itineraryCatalog.value.items || []).map(entry => [entry.spot_code, entry]));
+  return (snapshot.stops || []).filter(stop => stop.kind === "visit").map(stop => {
+    const entry = entries.get(stop.spot_code);
+    const current = entry && entry.entry_id === stop.source_entry_id && entry.published_revision_id === stop.source_revision_id;
+    const qaAttraction = current ? interactionStore.bootstrap.attractions.find(item => item.attraction_code === stop.spot_code) : null;
+    return { ...stop, latitude: current ? entry.latitude : null, longitude: current ? entry.longitude : null,
+      coordinate_evidence_id: current ? entry.coordinate_evidence_id : null, qa_attraction_id: qaAttraction?.id || null };
+  });
+});
 
 const colorHex = computed(() => props.scenicColor?.hex || "#2D5A4B");
 const colorText = computed(() => props.colorLabel || props.scenicColor?.label || "暂无数据");
@@ -141,6 +171,7 @@ let vecLayer = null;
 let imgLayer = null;
 let colorOverlay = null;
 let routeLine = null;
+let itineraryLayer = null;
 let resizeObserver = null;
 let meMarker = null;
 const markers = {};
@@ -187,6 +218,8 @@ function initMap() {
     marker.on("click", () => { selectedName.value = spot.name; });
     markers[spot.name] = marker;
   });
+  itineraryLayer = L.layerGroup().addTo(map);
+  renderConfirmedItinerary();
 
   resizeObserver = new ResizeObserver(() => map.invalidateSize());
   resizeObserver.observe(mapEl.value);
@@ -203,6 +236,21 @@ function initMap() {
     }
   });
 }
+
+function renderConfirmedItinerary() {
+  if (!map || !itineraryLayer) return;
+  itineraryLayer.clearLayers();
+  confirmedStops.value.forEach((stop, index) => {
+    if (!stop.coordinate_evidence_id || !Number.isFinite(stop.latitude) || !Number.isFinite(stop.longitude)) return;
+    const tooltip = document.createElement("span");
+    tooltip.textContent = `${index + 1}. ${stop.name}`;
+    L.marker([stop.latitude, stop.longitude], { icon: L.divIcon({ className: "", html: `<div class="itinerary-pin">${index + 1}</div>`, iconSize: [26, 26], iconAnchor: [13, 13] }), zIndexOffset: 900 })
+      .bindTooltip(tooltip, { className: "map-tip" }).addTo(itineraryLayer);
+  });
+}
+function progressLabel(id) { return ({ current: "当前", completed: "已完成", skipped: "已跳过", pending: "待游览" }[tourStore.progress?.status_by_stop?.[id]] || "待游览"); }
+function focusConfirmedStop(stop) { if (map && stop.coordinate_evidence_id) map.flyTo([stop.latitude, stop.longitude], Math.max(map.getZoom(), 16), { duration: 0.6 }); }
+watch(confirmedStops, renderConfirmedItinerary, { deep: true });
 
 function setLayer(next) {
   layer.value = next;
@@ -282,6 +330,7 @@ const narrationLoading = ref(false);
 const narrationDegraded = ref(false);
 const walking = ref(false);
 let narrateTimer = null;
+let mapPlaybackSession = null;
 
 const narration = useNarration({
   getPosition: () => geo.position.value,
@@ -289,7 +338,7 @@ const narration = useNarration({
   isBusy: () => props.busy || audio.isPlaying.value,
   onTrigger: (spot) => playNarration(spot),
   // 排队超时：中断卡住的播放以保证讲解不中断；用户正在对话时不打断会话
-  onInterrupt: () => { if (!props.busy) audio.stop(); },
+  onInterrupt: () => { if (!props.busy) stopNarration(); },
 });
 
 const modeLabel = computed(() => {
@@ -299,6 +348,15 @@ const modeLabel = computed(() => {
 
 async function playNarration(spot) {
   if (!spot) return;
+  const session = audio.claimPlayback("map-narration", () => {
+    if (mapPlaybackSession?.id === session.id) {
+      mapPlaybackSession = null;
+      narration.status.value = "idle";
+      narrationProgress.value = 0;
+    }
+    narrationLoading.value = false;
+  });
+  mapPlaybackSession = session;
   narrationLoading.value = true;
   narrationDegraded.value = false;
   narrationText.value = spot.desc || "";
@@ -312,27 +370,33 @@ async function playNarration(spot) {
   }
 
   narrationLoading.value = false;
+  if (!audio.isCurrentPlaybackSession(session.id)) return;
   if (data && data.available) {
     // 卡片展示完整讲解词；浏览器朗读兜底只念开头，避免长时间占用播放通道
     narrationText.value = data.text || spot.desc || "";
     narrationDegraded.value = !data.base64_audio;
-    audio.enqueue(data.base64_audio, data.duration_ms || 60000, () => finishNarration(), speechText(data.text), (p) => { narrationProgress.value = p; }, { allowBrowserSpeech: true });
+    audio.enqueue(data.base64_audio, data.duration_ms || 60000, () => finishNarration(session.id), speechText(data.text), (p) => { narrationProgress.value = p; }, { allowBrowserSpeech: true, sessionId: session.id, rate: props.speechRate / 100 });
   } else {
     narrationDegraded.value = true;
     const fallback = spot.desc || `${spot.name}`;
     narrationText.value = fallback;
-    audio.enqueue("", Math.max(fallback.length * 180, 1200), () => finishNarration(), speechText(fallback), (p) => { narrationProgress.value = p; }, { allowBrowserSpeech: true });
+    audio.enqueue("", Math.max(fallback.length * 180, 1200), () => finishNarration(session.id), speechText(fallback), (p) => { narrationProgress.value = p; }, { allowBrowserSpeech: true, sessionId: session.id, rate: props.speechRate / 100 });
   }
 }
 
-function finishNarration() {
+function finishNarration(sessionId) {
+  if (!audio.isCurrentPlaybackSession(sessionId)) return;
   narrationProgress.value = 1;
   narration.status.value = "idle";
+  mapPlaybackSession = null;
+  audio.stop(sessionId, "completed");
   narration.drainPending();
 }
 
 function stopNarration() {
-  audio.stop();
+  if (mapPlaybackSession) audio.stop(mapPlaybackSession.id);
+  mapPlaybackSession = null;
+  narrationLoading.value = false;
   narrationProgress.value = 0;
   narration.status.value = "idle";
 }
@@ -346,7 +410,7 @@ async function toggleNarrate() {
   narrateOn.value = !narrateOn.value;
   if (narrateOn.value) {
     // 用户手势内同步解锁 AudioContext，保证后续自动播放不被拦截
-    try { await audio.flush(); audio.stop(); } catch {}
+    try { await audio.unlock(); } catch {}
     geo.start();
   } else {
     geo.stop();
@@ -377,6 +441,8 @@ function askGuide() {
 }
 
 onMounted(() => {
+  if (!tourStore.current && tourStore.currentId) tourStore.open(tourStore.currentId);
+  fetchItineraryCatalog().then(data => { itineraryCatalog.value = data; }).catch(() => {});
   nextTick(initMap);
   narrateTimer = setInterval(() => {
     if (!narrateOn.value) return;
@@ -386,6 +452,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  stopNarration();
   if (narrateTimer) { clearInterval(narrateTimer); narrateTimer = null; }
   geo.stop();
   if (resizeObserver) resizeObserver.disconnect();
@@ -426,6 +493,12 @@ onBeforeUnmount(() => {
 .map-select { width: 100%; padding: 9px 10px; border: 1px solid rgba(45, 90, 75, 0.18); border-radius: 8px; background: #fff; color: #2c3a33; font-size: 13px; margin-bottom: 8px; }
 .map-route-steps { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 12px; color: #2c3a33; margin-bottom: 14px; line-height: 1.9; }
 .map-route-steps .arrow { color: #94a39c; font-size: 11px; }
+.confirmed-itinerary { display: grid; gap: 6px; margin-bottom: 14px; }
+.confirmed-itinerary-row { display: flex; align-items: center; gap: 6px; padding: 7px 8px; border: 1px solid rgba(45, 90, 75, .12); border-radius: 8px; background: #f7f9f3; }
+.confirmed-itinerary-row button:first-child { display: grid; flex: 1; min-width: 0; gap: 2px; padding: 0; border: 0; background: transparent; text-align: left; color: #2c3a33; }
+.confirmed-itinerary-row strong { font-size: 12px; }
+.confirmed-itinerary-row small { font-size: 10px; color: #7e8c82; }
+.confirmed-itinerary-row button:last-child:not(:first-child) { padding: 5px 8px; border: 1px solid #cbd9ce; border-radius: 7px; background: white; color: #315b48; font-size: 11px; }
 
 .map-poi-list { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; margin-bottom: 14px; scrollbar-width: thin; }
 .map-poi { display: flex; gap: 9px; align-items: flex-start; text-align: left; padding: 8px 9px; border: 1px solid rgba(45, 90, 75, 0.08); border-radius: 8px; background: #f7f9f3; }
@@ -452,5 +525,6 @@ onBeforeUnmount(() => {
 .map-pin.zone-houshan { background: #7a5230; }
 .map-pin.zone-huqu { background: #2f7d7d; }
 .map-pin.zone-guangchang { background: #8b6d2b; }
+.itinerary-pin { display: grid; place-items: center; width: 26px; height: 26px; border: 2px solid #fff; border-radius: 50%; background: #b45f35; color: white; font-size: 12px; font-weight: 700; box-shadow: 0 1px 5px #0005; }
 .leaflet-tooltip.map-tip { font-size: 11.5px; padding: 3px 7px; border-radius: 6px; border: 1px solid rgba(45, 90, 75, 0.14); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06); }
 </style>

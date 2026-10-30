@@ -67,6 +67,7 @@ class BudgetValidation(StrictModel):
     status: Literal["pass", "conflict", "unverified"]
     available_minutes: int | None = Field(default=None, ge=0)
     known_minutes: int = Field(default=0, ge=0)
+    estimated_current_stop: bool = False
     unknown_stop_ids: list[UUID] = Field(default_factory=list)
     unknown_legs: list[tuple[UUID, UUID]] = Field(default_factory=list)
     message: str
@@ -201,13 +202,21 @@ def validate_remaining_budget(
         current_id = str(progress.current_stop_id) if progress.current_stop_id else None
 
     known = 0
+    estimated_current_stop = False
     unknown_stop_ids: list[UUID] = []
     unknown_legs: list[tuple[UUID, UUID]] = []
     for stop in remaining:
-        if str(stop.stop_id) == current_id and current_stop_remaining_minutes is not None:
-            if current_stop_remaining_minutes < 0:
+        if str(stop.stop_id) == current_id:
+            if current_stop_remaining_minutes is None:
+                if stop.duration_minutes is None:
+                    unknown_stop_ids.append(stop.stop_id)
+                else:
+                    known += stop.duration_minutes
+                    estimated_current_stop = True
+            elif current_stop_remaining_minutes < 0:
                 raise ValueError("当前停留剩余分钟不能为负数")
-            known += current_stop_remaining_minutes
+            else:
+                known += current_stop_remaining_minutes
         elif stop.duration_minutes is not None:
             known += stop.duration_minutes
         else:
@@ -223,12 +232,13 @@ def validate_remaining_budget(
 
     if available is not None and known > available:
         status: Literal["pass", "conflict", "unverified"] = "conflict"
-        message = "已知剩余游览时长超过截止时间"
+        message = "按当前点完整计划时长估算，已知剩余游览时长超过截止时间" if estimated_current_stop else "已知剩余游览时长超过截止时间"
     elif available is None or unknown_stop_ids or unknown_legs:
         status: Literal["pass", "conflict", "unverified"] = "unverified"
-        message = "剩余预算或部分停留/路段时长缺少可靠依据"
+        message = "当前点按完整计划时长保守估算；剩余预算或部分停留/路段时长缺少可靠依据" if estimated_current_stop else "剩余预算或部分停留/路段时长缺少可靠依据"
     else:
         status = "pass"
-        message = "已知剩余游览时长在截止时间内"
+        message = "按当前点完整计划时长保守估算，剩余游览时长在截止时间内" if estimated_current_stop else "已知剩余游览时长在截止时间内"
     return BudgetValidation(status=status, available_minutes=available, known_minutes=known,
+                            estimated_current_stop=estimated_current_stop,
                             unknown_stop_ids=unknown_stop_ids, unknown_legs=unknown_legs, message=message)

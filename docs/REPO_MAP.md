@@ -1,6 +1,6 @@
 # AI 数字人导览：功能与代码地图
 
-核验日期：2026-10-28（Asia/Shanghai）。源码基线：`540568e`。
+核验日期：2026-10-29（Asia/Shanghai）。源码基线：V01 分支 `098553f`，含未提交实施改动。
 本文件说明定位和验证入口；不代表下列功能均已在真实设备或外部服务上通过验收。
 所有链接相对仓库，适用于 GitHub、本地编辑器及能读取 Markdown 的代码助手。
 
@@ -42,6 +42,7 @@
 | 游客记忆与反馈 | [chat store](../frontend/src/stores/chat.js) `getVisitorId/clearVisitorMemoryEverywhere`、[insights API](../frontend/src/api/insights.js) | `DELETE /api/chat/visitor-memory/{visitor_id}`、`POST /api/insights/feedback`；[记忆画像](../backend/app/services/memory/profile.py)、[记忆 repository](../backend/app/repositories/visitor_memory.py) | [记忆 API](../backend/app/tests/test_visitor_memory_api.py)、[记忆 prompt](../backend/app/tests/test_memory_prompt.py)；跨标签页/清除失败与重试需前端验收 |
 | 天气与景区提醒 | [useWeather](../frontend/src/composables/useWeather.js)、[weather API](../frontend/src/api/weather.js) | `GET /api/weather/current`；[weather.py](../backend/app/api/weather.py)，服务端代理和缓存 | 当前无专门 weather 测试文件；缺配置/网络失败/默认坐标需验证 |
 | 游客游览任务（W01） | [RouteView](../frontend/src/views/tourist/RouteView.vue) 的“我的游览”面板、[tourSessions store](../frontend/src/stores/tourSessions.js)、[tourSessions API](../frontend/src/api/tourSessions.js) | `/api/tour-sessions` bootstrap/list/create/get/save/revisions/restore/events/artifacts/trash/undelete/purge；[tour_sessions.py](../backend/app/api/tour_sessions.py)、[TourSessionRepository](../backend/app/repositories/tour_session.py)、[identity service](../backend/app/services/tour_session_identity.py)、[models](../backend/app/models/tour_session.py) | [repository](../backend/app/tests/test_tour_session_repository.py)、[identity](../backend/app/tests/test_tour_session_identity.py)、[API](../backend/app/tests/test_tour_session_api.py)、[前端幂等键](../frontend/tests/tour-sessions.test.mjs)；刷新/重启/cookie 禁用与回收站 UI 需浏览器验收 |
+| 可编辑行程 V01（实现中） | [RouteView](../frontend/src/views/tourist/RouteView.vue)、[MapView](../frontend/src/views/tourist/MapView.vue)、[ChatView](../frontend/src/views/tourist/ChatView.vue)、[tourSessions store](../frontend/src/stores/tourSessions.js)、[行程 API](../frontend/src/api/itinerary.js) | `/api/tour-sessions/{id}/v2|upgrade-v2|start|progress|budget|proposals`；[tour_sessions.py](../backend/app/api/tour_sessions.py)、[progress](../backend/app/services/itinerary/progress.py)、[intent](../backend/app/services/itinerary/intent.py)、[mutations](../backend/app/services/itinerary/mutations.py)、[provenance](../backend/app/services/itinerary/provenance.py)、[published catalog](../backend/app/services/itinerary/catalog.py)；提案可停止浏览器等待，聊天/地图共享数字人播放会话及本机语速 | [进度与提案](../backend/app/tests/test_tour_progress_and_proposals.py)、[AI 候选与格式纠正](../backend/app/tests/test_itinerary_intent.py)、[证据来源](../backend/app/tests/test_itinerary_provenance.py)、[API](../backend/app/tests/test_tour_session_api.py)；AI provider、浏览器弱网、手机布局与真机播放需验收 |
 
 ## 管理与运营功能
 
