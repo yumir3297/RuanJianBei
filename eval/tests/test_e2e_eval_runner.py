@@ -163,3 +163,113 @@ def test_mock_backend_covers_scoring_paths_and_warm_latency() -> None:
     assert report["metrics"]["accuracy"] == 0.6
     assert report["latency_ms"]["total_all"]["count"] == 5
     assert report["latency_ms"]["total_warm"]["count"] == 4
+
+
+def test_default_selection_preserves_sampled_real_prefix_and_local_limit():
+    from eval.scripts.run_e2e_chat_eval import select_cases
+    cases = load_cases(Path(__file__).resolve().parents[1] / 'testset' / 'e2e_qa_100.json')
+    selected, metadata = select_cases(cases, mode='sampled-real')
+    assert selected == cases[:5]
+    assert metadata['method'] == 'head'
+    assert metadata['seed'] is None
+    selected, _ = select_cases(cases, mode='local-server', limit=3)
+    assert selected == cases[:3]
+    # Legacy dry-run validates the complete input even when --limit is supplied.
+    selected, _ = select_cases(cases, mode='dry-run', limit=3)
+    assert selected == cases
+
+
+def test_stratified_selection_is_reproducible_balanced_and_input_order_independent():
+    from collections import Counter
+    from eval.scripts.run_e2e_chat_eval import select_cases
+    cases = load_cases(Path(__file__).resolve().parents[1] / 'testset' / 'e2e_qa_100.json')
+    selected, metadata = select_cases(cases, mode='sampled-real', limit=16, sampling='stratified', seed=37)
+    repeated, _ = select_cases(list(reversed(cases)), mode='sampled-real', limit=16, sampling='stratified', seed=37)
+    other, _ = select_cases(cases, mode='sampled-real', limit=16, sampling='stratified', seed=38)
+    assert [item.id for item in selected] == [item.id for item in repeated]
+    assert [item.id for item in selected] != [item.id for item in other]
+    assert len({item.id for item in selected}) == 16
+    assert set(Counter(item.category for item in selected).values()) == {2}
+    assert metadata['selected_ids'] == [item.id for item in selected]
+    assert metadata['selected_category_distribution'] == dict(Counter(item.category for item in selected))
+    assert metadata['seed'] == 37
+    assert metadata['method'] == 'category-balanced-round-robin-v1'
+
+
+def test_stratified_small_sample_covers_distinct_categories_and_reports_missing_ones():
+    from eval.scripts.run_e2e_chat_eval import select_cases
+    cases = load_cases(Path(__file__).resolve().parents[1] / 'testset' / 'e2e_qa_100.json')
+    selected, metadata = select_cases(cases, mode='sampled-real', sampling='stratified', seed=37)
+    assert len(selected) == len({case.category for case in selected}) == 5
+    assert len(metadata['omitted_categories']) == 3
+    assert set(metadata['omitted_categories']).isdisjoint(case.category for case in selected)
+
+
+def test_stratified_selection_handles_exhausted_strata_empty_and_zero_budget():
+    from eval.scripts.run_e2e_chat_eval import select_cases
+    cases = mock_cases()
+    selected, metadata = select_cases(cases, mode='local-server', limit=99, sampling='stratified', seed=9)
+    assert {item.id for item in selected} == {item.id for item in cases}
+    assert len(selected) == 5
+    assert metadata['effective_limit'] == 5
+    for data, limit in (([], 10), (cases, 0)):
+        selected, metadata = select_cases(data, mode='local-server', limit=limit, sampling='stratified')
+        assert selected == []
+        assert metadata['selected_ids'] == []
+
+
+def test_stratified_dry_run_reports_exact_sample_without_network(monkeypatch, tmp_path):
+    from eval.scripts import run_e2e_chat_eval as runner
+    import sys
+    output = tmp_path / 'stratified.json'
+    testset = Path(__file__).resolve().parents[1] / 'testset' / 'e2e_qa_100.json'
+    monkeypatch.setattr(sys, 'argv', ['runner', '--mode', 'dry-run', '--testset', str(testset),
+        '--sampling', 'stratified', '--seed', '37', '--limit', '16', '--report', str(output)])
+    def forbidden(*args, **kwargs):
+        raise AssertionError('dry-run must not make HTTP requests')
+    monkeypatch.setattr(runner.httpx, 'AsyncClient', forbidden)
+    assert runner.main() == 0
+    report = json.loads(output.read_text())
+    assert report['case_count'] == 16
+    assert report['selection']['seed'] == 37
+    assert report['selection']['selected_ids'] == [case['id'] for case in report['cases']]
+    assert len(report['selection']['testset_sha256']) == 64
+
+
+def test_mock_remote_executes_exactly_the_ids_reported_by_the_single_selection(monkeypatch, tmp_path):
+    from eval.scripts import run_e2e_chat_eval as runner
+    import sys
+    testset = Path(__file__).resolve().parents[1] / 'testset' / 'e2e_qa_100.json'
+    output = tmp_path / 'remote-mock.json'
+    monkeypatch.setattr(sys, 'argv', ['runner', '--mode', 'sampled-real', '--testset', str(testset),
+        '--sampling', 'stratified', '--seed', '37', '--limit', '16', '--allow-network',
+        '--endpoint', 'http://mock.local/api/chat/stream', '--report', str(output)])
+    requests = []
+    async def handler(request):
+        payload = json.loads(request.content)
+        requests.append(payload['query'])
+        return httpx.Response(200, text=sse(('text', {'text': '仅用于离线模拟', 'is_complete': True}), ('done', {})),
+                              headers={'Content-Type': 'text/event-stream'})
+    client_class = httpx.AsyncClient
+    monkeypatch.setattr(runner.httpx, 'AsyncClient', lambda **kwargs: client_class(transport=httpx.MockTransport(handler), **kwargs))
+    # Mock text intentionally does not satisfy the real knowledge assertions.
+    assert runner.main() == 1
+    report = json.loads(output.read_text())
+    ids = report['selection']['selected_ids']
+    assert len(ids) == len(requests) == 16
+    assert ids == [result['id'] for result in report['results']]
+    by_id = {case.id: case.query for case in load_cases(testset)}
+    assert requests == [by_id[case_id] for case_id in ids]
+    assert report['category_distribution'] == report['selection']['selected_category_distribution']
+
+
+def test_sampling_never_bypasses_explicit_network_permission(monkeypatch, tmp_path):
+    from eval.scripts import run_e2e_chat_eval as runner
+    import sys
+    output = tmp_path / 'denied.json'
+    monkeypatch.setattr(sys, 'argv', ['runner', '--mode', 'sampled-real', '--sampling', 'stratified', '--report', str(output)])
+    def forbidden(*args, **kwargs):
+        raise AssertionError('no HTTP client without --allow-network')
+    monkeypatch.setattr(runner.httpx, 'AsyncClient', forbidden)
+    assert runner.main() == 2
+    assert not output.exists()

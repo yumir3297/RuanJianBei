@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
+import hashlib
 import json
+import random
 import sys
 from pathlib import Path
 
@@ -39,10 +42,16 @@ def parse_args() -> argparse.Namespace:
         default="http://127.0.0.1:8000/api/chat/stream",
     )
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument("--sampling", choices=("head", "stratified"), default="head",
+                        help="head preserves input order; stratified balances categories with seeded random selection")
+    parser.add_argument("--seed", type=int, default=0, help="local random seed for --sampling stratified (default: 0)")
     parser.add_argument("--allow-network", action="store_true")
     parser.add_argument("--timeout-seconds", type=float, default=120.0)
     parser.add_argument("--report", type=Path, default=None)
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.sampling == "stratified" and args.limit is not None and args.limit < 0:
+        parser.error("--limit must be nonnegative for stratified sampling")
+    return args
 
 
 def default_report_path(mode: str) -> Path:
@@ -54,13 +63,52 @@ def default_report_path(mode: str) -> Path:
     return PROJECT_ROOT / "eval" / "reports" / name
 
 
-async def run_remote(args: argparse.Namespace, cases):
-    selected_cases = cases
-    if args.mode == "sampled-real" and args.limit is None:
-        selected_cases = cases[:5]
-    elif args.limit is not None:
-        selected_cases = cases[: args.limit]
+def select_cases(cases, *, mode: str, limit: int | None = None,
+                 sampling: str = "head", seed: int = 0):
+    """Select once for execution and reporting; never mutate the input or global RNG."""
+    requested_limit = 5 if mode == "sampled-real" and limit is None else limit
+    if sampling == "head":
+        # Preserve the existing dry-run contract: validate/report the full set.
+        selected = list(cases if mode == "dry-run" or requested_limit is None else cases[:requested_limit])
+        method = "head"
+    elif sampling == "stratified":
+        if requested_limit is not None and requested_limit < 0:
+            raise ValueError("stratified limit must be nonnegative")
+        count = len(cases) if requested_limit is None else min(requested_limit, len(cases))
+        rng = random.Random(seed)
+        strata = {}
+        for case in sorted(cases, key=lambda case: (case.category, case.id)):
+            strata.setdefault(case.category, []).append(case)
+        categories = sorted(strata)
+        rng.shuffle(categories)
+        for category in categories:
+            rng.shuffle(strata[category])
+        selected = []
+        while len(selected) < count:
+            for category in categories:
+                if strata[category]:
+                    selected.append(strata[category].pop())
+                    if len(selected) == count:
+                        break
+        method = "category-balanced-round-robin-v1"
+    else:
+        raise ValueError(f"unknown sampling method: {sampling}")
+    available = Counter(case.category for case in cases)
+    distribution = Counter(case.category for case in selected)
+    return selected, {
+        "method": method,
+        "seed": seed if sampling == "stratified" else None,
+        "requested_limit": requested_limit,
+        "effective_limit": len(selected),
+        "available_case_count": len(cases),
+        "available_category_distribution": dict(available),
+        "selected_category_distribution": dict(distribution),
+        "omitted_categories": sorted(available.keys() - distribution.keys()),
+        "selected_ids": [case.id for case in selected],
+    }
 
+
+async def run_remote(args: argparse.Namespace, selected_cases):
     timeout = httpx.Timeout(
         connect=5.0,
         read=args.timeout_seconds,
@@ -87,8 +135,14 @@ def main() -> int:
         print(json.dumps({"valid": False, "errors": validation_errors}, ensure_ascii=False, indent=2))
         return 1
 
+    selected_cases, selection = select_cases(
+        cases, mode=args.mode, limit=args.limit, sampling=args.sampling, seed=args.seed,
+    )
+    selection["testset_sha256"] = hashlib.sha256(args.testset.read_bytes()).hexdigest()
+
     if args.mode == "dry-run":
-        report = build_dry_run_report(args.testset, cases)
+        report = build_dry_run_report(args.testset, selected_cases)
+        report["selection"] = selection
         write_report(report, report_path)
         print(
             json.dumps(
@@ -96,6 +150,7 @@ def main() -> int:
                     "mode": args.mode,
                     "valid": report["valid"],
                     "case_count": report["case_count"],
+                    "selection": selection,
                     "report_path": str(report_path),
                 },
                 ensure_ascii=False,
@@ -118,25 +173,21 @@ def main() -> int:
         )
         return 2
 
-    selected_cases = cases
-    if args.mode == "sampled-real" and args.limit is None:
-        selected_cases = cases[:5]
-    elif args.limit is not None:
-        selected_cases = cases[: args.limit]
-
-    results = run_async(run_remote(args, cases))
+    results = run_async(run_remote(args, selected_cases))
     report = build_execution_report(
         mode=args.mode,
         testset_path=args.testset,
         cases=selected_cases,
         results=results,
     )
+    report["selection"] = selection
     write_report(report, report_path)
     print(
         json.dumps(
             {
                 "mode": args.mode,
                 "case_count": report["case_count"],
+                "selection": selection,
                 "metrics": report["metrics"],
                 "failure_count": len(report["failures"]),
                 "report_path": str(report_path),
