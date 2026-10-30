@@ -105,7 +105,7 @@
         <div :class="['side-card-body', { hidden: activeTab !== 'chat' }]" ref="messageListRef" id="chat-log" role="tabpanel" aria-label="对话记录">
           <div v-if="chatStore.messages.length <= 1" class="conversation-welcome"><h3>还没有讲解记录</h3><p>可以语音提问，也可以选择下面的问题。</p></div>
           <article v-for="(message, index) in chatStore.messages" v-show="!message.isWelcome || chatStore.messages.length > 1" :key="`${message.role}-${index}`" :class="['msg-item', message.role, { latest: index === chatStore.messages.length - 1 }]">
-            <div v-if="message.role === 'assistant'" class="msg-bubble" v-html="renderAnswer(message.content, index === chatStore.messages.length - 1)" @click="handleCitationClick"></div>
+            <div v-if="message.role === 'assistant'" class="msg-bubble" v-html="renderAnswer(message, index === chatStore.messages.length - 1)" @click="handleCitationClick($event, message)"></div>
             <div v-else class="msg-bubble">{{ message.content }}</div>
             <div v-if="message.role === 'assistant' && !message.isWelcome && message.chatLogId && message.completion === 'complete' && !chatStore.streaming" class="answer-replay">
               <button type="button" :disabled="message.replayLoading" :aria-busy="message.replayLoading" @click="replayAnswer(message)">{{ message.replayLoading ? '正在准备语音…' : message.replayPlaying ? '正在重播' : '重播讲解' }}</button>
@@ -160,8 +160,8 @@
           <div v-if="chatStore.errorMessage && !chatStore.streaming" class="error-notice" role="alert"><span>{{ chatStore.errorMessage }}</span><button type="button" class="retry-btn" @click="retryLastAnswer">重新尝试</button></div>
         </div>
         <div id="source-log" role="tabpanel" aria-label="参考资料" :class="['side-card-body', { hidden: activeTab !== 'source' }]">
-          <ul class="source-list" v-if="chatStore.sources.length">
-            <li v-for="(item, index) in chatStore.sources" :key="`${item.title}-${index}`" :class="['source-item', { highlight: sourceHighlightIndex === index }]" :data-source-index="index">
+          <ul class="source-list" v-if="displayedSources.length">
+            <li v-for="(item, index) in displayedSources" :key="`${item.title}-${index}`" :class="['source-item', { highlight: sourceHighlightIndex === index }]" :data-source-index="index">
               <h4><span class="source-num">{{ index + 1 }}</span>{{ item.title }}</h4>
               <p>{{ item.snippet }}</p>
               <span class="source-meta">{{ item.source }}</span>
@@ -624,20 +624,25 @@ const visionDisplayHints = computed(() => {
   ]).slice(0, 18);
 });
 
-function renderAnswer(content, isLastMessage) {
+const selectedSources = ref(null);
+const displayedSources = computed(() => selectedSources.value ?? chatStore.sources);
+watch(() => chatStore.sources, () => { selectedSources.value = null; });
+
+function renderAnswer(message, isLastMessage) {
   const isStreaming = chatStore.streaming && isLastMessage;
-  return renderMarkdown(content, chatStore.sources, isStreaming);
+  return renderMarkdown(message.content, message.sources || [], isStreaming);
 }
 
-function handleCitationClick(event) {
+function handleCitationClick(event, message) {
   const cite = event.target.closest(".citation");
   if (!cite) return;
   const evidenceId = cite.dataset.evidenceId;
+  selectedSources.value = message.sources || [];
   highlightSource(evidenceId);
 }
 
 function highlightSource(evidenceId) {
-  const index = chatStore.sources.findIndex(
+  const index = displayedSources.value.findIndex(
     source => source.evidence_id === `证据${evidenceId}`,
   );
   if (index >= 0) {

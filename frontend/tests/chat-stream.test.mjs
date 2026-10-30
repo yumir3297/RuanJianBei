@@ -176,3 +176,14 @@ test('retry uses the latest visitor playback rate while keeping other TTS option
   assert.equal(retried[2].ttsConfig.voiceType, 'calm-female');
   assert.equal(retried[2].ttsConfig.volume, 70);
 });
+
+test('each answer retains its own sources across later turns', async () => {
+  let turn = 0;
+  globalThis.fetch = async () => response(`event: sources\ndata: ${JSON.stringify({docs:[{evidence_id:'证据1',title:++turn === 1 ? 'A' : 'B'}]})}\n\nevent: text\ndata: {"text":"回答[证据1]","is_complete":true}\n\nevent: done\ndata: {}\n\n`);
+  const store = useChatStore();
+  await store.sendMessage('A');
+  const first = store.messages.at(-1);
+  await store.sendMessage('B');
+  assert.equal(first.sources[0].title, 'A');
+  assert.equal(store.messages.at(-1).sources[0].title, 'B');
+});

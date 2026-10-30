@@ -188,7 +188,7 @@ export const useChatStore = defineStore("chat", {
       let receivedDone = false;
 
       this.messages.push({ role: "user", content: options.displayQuery || query });
-      this.messages.push({ role: "assistant", content: "", completion: "streaming" });
+      this.messages.push({ role: "assistant", content: "", completion: "streaming", sources: [] });
       // Mutate the reactive entry, not the original object pushed into Pinia.
       const assistantMessage = this.messages.at(-1);
       let pendingText = "";
@@ -248,7 +248,8 @@ export const useChatStore = defineStore("chat", {
               if (!isCurrentRequest()) {
                 return;
               }
-              this.sources = docs;
+              assistantMessage.sources = Array.isArray(docs) ? JSON.parse(JSON.stringify(docs)) : [];
+              this.sources = assistantMessage.sources;
             },
             text_chunk: ({ token }) => {
               if (!isCurrentRequest()) {
