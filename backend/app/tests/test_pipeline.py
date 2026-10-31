@@ -280,7 +280,7 @@ def test_pipeline_passes_resolved_scope_and_uses_selection_cache_key() -> None:
     source_event = next(event for event in events if event.type == "sources")
     assert source_event.data["docs"][0]["evidence_id"] == "证据1"
     assert len(cache_repository.set_keys) == 1
-    assert cache_repository.set_keys[0].startswith("qa:v6:")
+    assert cache_repository.set_keys[0].startswith("qa:v7:")
     assert events[-2].type == "followups"
     assert 2 <= len(events[-2].data["items"]) <= 4
     assert events[-1].type == "done"
@@ -1091,7 +1091,7 @@ def test_faq_styled_answer_is_cached_under_audience_specific_key() -> None:
     _run_turn(pipeline, query="几点开门", audience="child", selection=None)
 
     assert len(cache_repository.set_keys) == 1
-    assert cache_repository.set_keys[0].startswith("qa:v6:")
+    assert cache_repository.set_keys[0].startswith("qa:v7:")
 
 
 def test_faq_answer_survives_llm_outage_for_non_default_audience() -> None:

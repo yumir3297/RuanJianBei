@@ -52,8 +52,8 @@ def build_selection_cache_key(
         "answer_namespace": answer_namespace,
     }
     serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    # v5 may contain FAQ-styled answers without a verified attraction scope.
-    return f"qa:v6:{hashlib.sha256(serialized.encode('utf-8')).hexdigest()}"
+    # Older caches may contain answers whose retrieved chunks were not verified.
+    return f"qa:v7:{hashlib.sha256(serialized.encode('utf-8')).hexdigest()}"
 
 
 @dataclass(frozen=True, slots=True)

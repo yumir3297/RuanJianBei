@@ -9,6 +9,7 @@ from app.services.rag.query_rewriter import QueryRewriter
 from app.services.rag.reranker import Reranker
 from app.services.rag.vector_store import VectorSearchResult
 from app.models.knowledge import KnowledgeEntry
+from app.models.knowledge_chunk import KnowledgeChunk
 from app.models.knowledge_workspace import KnowledgeRevision, KnowledgeState
 from app.services.data_import.chunker import KnowledgeChunker
 from app.services.knowledge.visibility import VisibilityService
@@ -48,6 +49,10 @@ class FakeVisibility:
     async def filter_published(self, references: list[tuple[int, str]]) -> set[tuple[int, str]]:
         self.checked.append(references)
         return self.visible.intersection(references)
+
+    async def filter_published_chunks(self, references):
+        self.checked.append([(entry, revision) for _, entry, revision in references])
+        return {item for item in references if (item[1], item[2]) in self.visible}
 
 
 class FakeFallback(BaseRAGService):
@@ -202,6 +207,21 @@ def test_visibility_service_reads_durable_epoch_and_only_current_publications(tm
             assert await visibility.filter_published(
                 [(visible_entry.id, "current"), (visible_entry.id, "stale"), (withdrawn_entry.id, "withdrawn")]
             ) == {(visible_entry.id, "current")}
+            session.add(KnowledgeChunk(chunk_id="current-chunk", source_entry_id=visible_entry.id,
+                revision_id="current", chunk_index=1, title="景点", category="景点信息", content="当前", source="手册"))
+            await session.commit()
+            assert await visibility.filter_published_chunks([
+                ("current-chunk", visible_entry.id, "current"),
+                ("missing-chunk", visible_entry.id, "current"),
+                ("current-chunk", withdrawn_entry.id, "withdrawn"),
+            ]) == {("current-chunk", visible_entry.id, "current")}
+            forged = VectorSearchResult("missing-chunk", "不属于该版本的文本", {
+                "title": "伪造", "source_entry_id": visible_entry.id, "revision_id": "current",
+                "chunk_id": "missing-chunk", "source": "不明"}, 0.9)
+            service = VectorBackedRAGService(vector_store=FakeVectorStore([forged]),
+                embedder=FakeEmbedder(), query_rewriter=QueryRewriter(), reranker=Reranker(),
+                fallback=FakeFallback(), visibility=visibility)
+            assert [doc.title for doc in await service.retrieve("景点", top_k=1)] == ["数据库有效版本"]
         finally:
             await session.close()
             await engine.dispose()
