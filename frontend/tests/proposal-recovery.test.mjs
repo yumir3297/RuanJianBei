@@ -138,3 +138,42 @@ test('out-of-order open responses cannot replace the most recently selected tour
   assert.equal(store.current.id, 'b');
   assert.deepEqual(store.draftSnapshot, snapshot('b'));
 });
+
+test('late progress update cannot overwrite the newly selected tour', async () => {
+  const late = deferred();
+  store.progress = { status: 'active', progress_version: 1, current_stop_id: 'old-stop' };
+  route = async config => {
+    if (config.method === 'post') { assert.equal(config.url, '/tour-sessions/a/progress'); return late.promise; }
+    throw new Error(`unexpected ${config.url}`);
+  };
+  const pending = store.applyProgress({ type: 'set_remaining_budget', remaining_minutes: 30 });
+  await tick();
+  store.current = { id: 'b', version: 1 };
+  store.progress = { status: 'active', progress_version: 7, current_stop_id: 'new-stop' };
+  store.budget = { known_minutes: 12 };
+  late.resolve({ status: 'active', progress_version: 2, current_stop_id: 'old-stop' });
+  await pending;
+  assert.equal(store.current.id, 'b');
+  assert.equal(store.progress.current_stop_id, 'new-stop');
+  assert.deepEqual(store.budget, { known_minutes: 12 });
+  assert.equal(store.error, '');
+});
+
+test('late budget refresh after a progress update cannot overwrite another tour', async () => {
+  const late = deferred();
+  store.progress = { status: 'active', progress_version: 1, current_stop_id: 'old-stop' };
+  route = async config => {
+    if (config.method === 'post') return { status: 'active', progress_version: 2, current_stop_id: 'old-stop' };
+    if (config.url === '/tour-sessions/a/budget') return late.promise;
+    throw new Error(config.url);
+  };
+  const pending = store.applyProgress({ type: 'set_remaining_budget', remaining_minutes: 30 });
+  await tick();
+  store.current = { id: 'b', version: 1 };
+  store.progress = { status: 'active', progress_version: 7, current_stop_id: 'new-stop' };
+  store.budget = { known_minutes: 12 };
+  late.resolve({ known_minutes: 999 });
+  await pending;
+  assert.equal(store.progress.current_stop_id, 'new-stop');
+  assert.deepEqual(store.budget, { known_minutes: 12 });
+});

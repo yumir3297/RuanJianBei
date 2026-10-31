@@ -249,19 +249,31 @@ export const useTourSessionsStore = defineStore("tourSessions", {
     },
     async applyProgress(command) {
       if (!this.current || !this.progress) return null;
+      const current = this.current;
+      const originalProgress = this.progress;
       try {
         await this.prepare();
-        const previousCurrentStopId = this.progress.current_stop_id;
-        const payload = { expected_progress_version: this.progress.progress_version, command };
-        const { fingerprint, key } = this.operationKey(`progress:${this.current.id}`, payload);
-        this.progress = await sendTourProgressCommand(this.current.id, this.progress.progress_version, command, this.csrfToken, key);
+        if (this.current !== current || this.progress !== originalProgress) return null;
+        const previousCurrentStopId = originalProgress.current_stop_id;
+        const payload = { expected_progress_version: originalProgress.progress_version, command };
+        const { fingerprint, key } = this.operationKey(`progress:${current.id}`, payload);
+        const updated = await sendTourProgressCommand(current.id, originalProgress.progress_version, command, this.csrfToken, key);
+        this.clearOperationKey(fingerprint);
+        if (this.current !== current || this.progress !== originalProgress) return null;
+        this.progress = updated;
         this.progressSyncRequired = false;
         if (this.progress.current_stop_id !== previousCurrentStopId) this.currentStopRemainingMinutes = null;
-        this.clearOperationKey(fingerprint); this.budget = await fetchTourBudget(
-          this.current.id, this.currentStopRemainingMinutes,
-        ).catch(() => null);
-        return this.progress;
-      } catch (error) { this.error = error?.response?.data?.detail || "进度已更新，请刷新后继续。"; return null; }
+        const appliedProgress = this.progress;
+        const remaining = this.currentStopRemainingMinutes;
+        const budget = await fetchTourBudget(current.id, remaining).catch(() => null);
+        if (this.current !== current || this.progress !== appliedProgress || this.currentStopRemainingMinutes !== remaining) return null;
+        this.budget = budget;
+        return appliedProgress;
+      } catch (error) {
+        if (this.current === current && this.progress === originalProgress)
+          this.error = error?.response?.data?.detail || "进度已更新，请刷新后继续。";
+        return null;
+      }
     },
     async setCurrentStopRemainingMinutes(value) {
       if (!this.current || !this.progress?.current_stop_id) return null;
