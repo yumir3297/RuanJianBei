@@ -1,6 +1,6 @@
 <template>
   <div class="guide-tool-content map-tool">
-    <p class="tool-description">实时地图 × 数字人导览：看天气与客流，选一条路线，让导游陪你出发。</p>
+    <p class="tool-description">地图 × 数字人导览：查看天气与演示客流，选一条路线，让导游陪你出发。</p>
 
     <div class="map-stage">
       <div ref="mapEl" class="map-canvas" aria-label="景区实时地图"></div>
@@ -39,11 +39,11 @@
 
     <div class="map-live">
       <div class="map-live-item">
-        <span class="k">天气 · 实时</span>
+        <span class="k">天气信息</span>
         <span class="v">{{ weather ? `${weather.icon} ${weather.temp}°C ${weather.description}` : '正在获取…' }}</span>
       </div>
       <div class="map-live-item">
-        <span class="k">景区颜色 · 实时</span>
+        <span class="k">景区颜色提示</span>
         <span class="v"><i class="live-dot" :style="{ background: colorHex }"></i>{{ colorText }}</span>
       </div>
       <div class="map-live-item">
@@ -97,7 +97,7 @@
     </div>
 
     <button type="button" class="tool-primary" :disabled="busy" @click="askGuide">{{ askLabel }} <GuideIcon name="mic" /></button>
-    <p class="map-note">天气与景区颜色来自和风天气实时数据（气象预警色带 / 空气质量等级色），密钥由后端代理不出前端；坐标与客流为演示值，正式版接入高德地图 MCP 与腾讯位置大数据。</p>
+    <p class="map-note">客流为演示数据，景点坐标包含演示值；天气信息可能不可用或有延迟，请以当地官方信息为准。</p>
   </div>
 </template>
 
@@ -479,7 +479,7 @@ const askLabel = computed(() => (selectedName.value ? `让导游讲讲${selected
 
 function askGuide() {
   if (selectedName.value) {
-    emit("ask", { query: `请介绍${selectedName.value}，并结合当前客流与天气给出游览建议`, attraction: selectedName.value });
+    emit("ask", { query: `请介绍${selectedName.value}，并根据已发布资料给出游览建议`, attraction: selectedName.value });
     return;
   }
   const route = activeRoute.value;
