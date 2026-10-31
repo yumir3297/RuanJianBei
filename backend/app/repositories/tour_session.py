@@ -115,6 +115,9 @@ class TourSessionRepository:
     ) -> None:
         before, after = TourSnapshotV2.model_validate(before_raw), TourSnapshotV2.model_validate(after_raw)
         progress = V01Progress.model_validate(_decode(row.progress_json))
+        if (progress.status == "active" and
+                before.constraints.available_minutes != after.constraints.available_minutes):
+            raise ValueError("游览进行中暂不支持修改总时长；当前截止时间保持不变")
         states = progress.status_by_stop
         old_stops, new_stops = {str(s.stop_id): s for s in before.stops}, {str(s.stop_id): s for s in after.stops}
         old_order, new_order = [str(s.stop_id) for s in before.stops], [str(s.stop_id) for s in after.stops]

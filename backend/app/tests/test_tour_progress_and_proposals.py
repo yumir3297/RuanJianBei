@@ -85,7 +85,7 @@ def test_active_proposal_apply_refreshes_progress_version_for_next_command():
             stop_id = next(iter(started["status_by_stop"]))
 
             candidate = json.loads(json.dumps(snapshot))
-            candidate["constraints"]["available_minutes"] = 75
+            candidate["constraints"]["interests"] = ["历史"]
             generated = {"status": "ready", "operations": [{"type": "update_constraints"}],
                 "candidate": candidate, "diff": [{"kind": "constraints"}],
                 "validation": {"status": "pass", "conflicts": []}, "clarification": None}
@@ -104,6 +104,38 @@ def test_active_proposal_apply_refreshes_progress_version_for_next_command():
                 "complete-after-proposal")
             assert finished["status"] == "finished"
             assert finished["progress_version"] == reconciled["progress_version"] + 1
+        finally:
+            await db.close(); await engine.dispose()
+    _run(scenario)
+
+
+@pytest.mark.parametrize("via_proposal", [False, True])
+def test_active_tour_rejects_total_budget_change_without_rewriting_deadline(via_proposal):
+    async def scenario():
+        from app.repositories.tour_session import TourSessionRepository
+        engine, db = await open_test_session()
+        try:
+            repo = TourSessionRepository(db)
+            snapshot = _snapshot()
+            created = await repo.create_session("owner-a", "site", "游览", snapshot, "create")
+            started = await repo.start_progress("owner-a", created["id"], 1, "start")
+            candidate = json.loads(json.dumps(snapshot))
+            candidate["constraints"]["available_minutes"] = 60
+            if via_proposal:
+                generated = {"status": "ready", "operations": [], "candidate": candidate,
+                    "diff": [], "validation": {"status": "pass", "conflicts": []}}
+                proposal = await repo.create_proposal("owner-a", created["id"], 1,
+                    started["progress_version"], "d" * 64, "catalog", "缩短时长", generated, "proposal")
+                change = repo.apply_proposal("owner-a", created["id"], proposal["id"], 1,
+                    started["progress_version"], "d" * 64, "apply")
+            else:
+                change = repo.save_revision("owner-a", created["id"], 1, candidate, "save")
+            with pytest.raises(ValueError, match="进行中.*总时长"):
+                await change
+            assert (await repo.get_session("owner-a", created["id"]))["version"] == 1
+            current = await repo.get_progress("owner-a", created["id"])
+            assert current["finish_by"] == started["finish_by"]
+            assert current["progress_version"] == started["progress_version"]
         finally:
             await db.close(); await engine.dispose()
     _run(scenario)
@@ -289,7 +321,7 @@ def test_save_revision_status_fence_rejects_session_state_change_before_commit(m
 
             monkeypatch.setattr(repo, "_reconcile_progress_for_plan_change", change_status_before_revision)
             candidate = json.loads(json.dumps(snapshot))
-            candidate["constraints"]["available_minutes"] = 80
+            candidate["constraints"]["interests"] = ["自然"]
             try:
                 await repo.save_revision("owner-a", created["id"], 1, candidate, "racing-save")
             except RevisionConflict as error:

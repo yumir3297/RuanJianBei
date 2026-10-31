@@ -27,6 +27,7 @@
           </template>
           <template v-else>
             <label>总时长（分钟）<input v-model.number="draft.constraints.available_minutes" type="number" min="1" max="720" placeholder="未设置" :disabled="tourStore.progress?.status === 'active'"></label>
+            <small v-if="tourStore.progress?.status === 'active'">游览进行中暂不能修改总时长；当前截止时间保持不变。</small>
             <label>同行人（逗号分隔）<input :value="(draft.constraints.companions || []).join('，')" placeholder="例如：老人、孩子" :disabled="tourStore.progress?.status === 'active'" @change="setConstraintList('companions', $event.target.value)"></label>
             <label>兴趣（逗号分隔）<input :value="(draft.constraints.interests || []).join('，')" placeholder="例如：历史、自然" :disabled="tourStore.progress?.status === 'active'" @change="setConstraintList('interests', $event.target.value)"></label>
             <label>步行偏好<input v-model="draft.constraints.walking_preference" maxlength="100" placeholder="例如：少走路" :disabled="tourStore.progress?.status === 'active'"></label>
