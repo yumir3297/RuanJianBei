@@ -263,8 +263,9 @@ class ProcessedDataImporter:
 
     async def _sync_knowledge_chunks(self) -> int:
         entries = await self.knowledge_repository.list_all()
-        chunks = KnowledgeChunker().build_chunks(entries)
-        return await self.knowledge_chunk_repository.replace_all(chunks)
+        unpublished = [entry for entry in entries if entry.published_revision_id is None and entry.withdrawn_at is None]
+        chunks = KnowledgeChunker().build_chunks(unpublished)
+        return await self.knowledge_chunk_repository.replace_unpublished(chunks)
 
     async def _sync_faq_entries(self, payload: list[dict]) -> int:
         entries = [

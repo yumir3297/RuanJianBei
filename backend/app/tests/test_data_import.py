@@ -41,6 +41,39 @@ def test_processed_import_waits_for_index_writer_lock(tmp_path):
     asyncio.run(scenario())
 
 
+def test_processed_chunk_refresh_preserves_published_revision_history(tmp_path):
+    from app.models.knowledge_workspace import KnowledgeRevision
+    db_path = tmp_path / "chunk-history.db"
+    settings = Settings(database_url=f"sqlite:///{db_path}", chroma_persist_dir=str(tmp_path / "index"))
+
+    async def scenario():
+        engine, session = await open_test_session(str(db_path))
+        try:
+            entry = KnowledgeEntry(title="景点", category="景点", content="当前内容", source="资料", aliases="")
+            session.add(entry)
+            await session.flush()
+            for revision_id, content in (("old-revision", "原内容"), ("current-revision", "当前内容")):
+                session.add(KnowledgeRevision(id=revision_id, knowledge_entry_id=entry.id,
+                    title="景点", category="景点", content=content, source="资料"))
+            await session.flush()
+            entry.published_revision_id = "current-revision"
+            session.add_all([
+                KnowledgeChunk(chunk_id="old-fragment", source_entry_id=entry.id, revision_id="old-revision",
+                    chunk_index=1, title="景点", category="景点", content="原内容", source="资料"),
+                KnowledgeChunk(chunk_id="current-fragment", source_entry_id=entry.id, revision_id="current-revision",
+                    chunk_index=1, title="景点", category="景点", content="当前内容", source="资料"),
+            ])
+            await session.commit()
+            await ProcessedDataImporter(session, settings).sync()
+            session.expire_all()
+            assert (await session.get(KnowledgeChunk, "old-fragment")).content == "原内容"
+            assert (await session.get(KnowledgeChunk, "current-fragment")).content == "当前内容"
+        finally:
+            await session.close()
+            await engine.dispose()
+    asyncio.run(scenario())
+
+
 def test_processed_data_importer_syncs_all_assets(tmp_path) -> None:
     db_path = tmp_path / "importer.db"
     settings = Settings(database_url=f"sqlite:///{db_path}", enable_sample_data=False)
