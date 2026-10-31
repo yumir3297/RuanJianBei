@@ -102,7 +102,7 @@
           </div>
         </div>
         <div class="module-settings">
-          <div class="module-settings-heading"><strong>服务热线</strong><span>电话号码会显示在游客端服务菜单中</span></div>
+          <div class="module-settings-heading"><strong>服务热线</strong><span>启用前请向景区核实号码；已保存的号码也需定期复核。启用后将显示在游客端。</span></div>
           <div v-for="hotline in touristSettings.hotlines" :key="hotline.id" class="hotline-setting-row">
             <el-switch v-model="hotline.enabled" :aria-label="`启用${hotline.label}`" />
             <el-input v-model="hotline.label" maxlength="24" aria-label="服务名称" />

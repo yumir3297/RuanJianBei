@@ -5,7 +5,7 @@
       <RouterLink class="guide-brand" to="/tourist" :aria-label="`${touristSettings.brand_name}首页`"><GuideIcon name="landmark" /><strong>{{ touristSettings.brand_name }}</strong></RouterLink>
       <div class="header-actions">
         <span v-if="weatherCaption" class="header-weather" :title="weatherColorLabel || undefined"><i class="weather-color-dot" :style="{ background: scenicColor.hex }" aria-hidden="true"></i>{{ weatherCaption }}<template v-if="weatherColorLabel">&nbsp;·&nbsp;{{ weatherColorLabel }}</template></span>
-        <details class="service-menu"><summary><GuideIcon name="headphones" /><span>景区服务</span></summary><div class="service-popover"><button v-for="service in touristSettings.hotlines.filter(item => item.enabled)" :key="service.id" type="button" :disabled="inputBusy" @click="handleHotline(service.id); $event.currentTarget.closest('details').open = false"><strong>{{ service.label }}</strong><small>{{ service.number }}</small></button></div></details>
+        <details class="service-menu"><summary><GuideIcon name="headphones" /><span>景区服务</span></summary><div class="service-popover"><button v-for="service in touristSettings.hotlines.filter(item => item.enabled)" :key="service.id" type="button" :disabled="inputBusy" @click="handleHotline(service.id); $event.currentTarget.closest('details').open = false"><strong>{{ service.label }}</strong><small>{{ service.number }}</small></button><p v-if="!touristSettings.hotlines.some(item => item.enabled)">暂无已配置的服务电话，请咨询景区工作人员。</p></div></details>
         <RouterLink class="admin-entry" to="/admin/dashboard">运营管理</RouterLink>
       </div>
     </header>
