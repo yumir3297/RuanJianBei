@@ -248,3 +248,35 @@ def test_cancel_waiting_user_closes_step_and_preserves_unknown_outcome():
             await db.close()
             await engine.dispose()
     asyncio.run(scenario())
+
+
+def test_cancel_racing_external_marker_preserves_unknown(tmp_path):
+    async def scenario():
+        from sqlalchemy.ext.asyncio import async_sessionmaker
+        from app.repositories.tool_execution import ToolExecutionRepository
+        engine, db = await open_test_session(str(tmp_path / "race.sqlite"))
+        sessions = async_sessionmaker(engine, expire_on_commit=False)
+        try:
+            _, tools, tour, job, _ = await _queued_fixture(db)
+            lease = await tools.claim_next("worker")
+            assert await tools.start_attempt(lease, max_attempts=1)
+            async with sessions() as cancel_db, sessions() as marker_db:
+                seen, resume = asyncio.Event(), asyncio.Event()
+                original = cancel_db.execute
+                async def paused(statement, *args, **kwargs):
+                    if "UPDATE tool_jobs" in str(statement) and not seen.is_set():
+                        seen.set()
+                        await resume.wait()
+                    return await original(statement, *args, **kwargs)
+                cancel_db.execute = paused
+                cancel = asyncio.create_task(ToolExecutionRepository(cancel_db).request_cancel(
+                    "tourist", "owner-a", "site", tour["id"], job["id"], "race-cancel"))
+                await asyncio.wait_for(seen.wait(), 2)
+                assert await ToolExecutionRepository(marker_db).mark_external_call(lease)
+                resume.set()
+                result = await cancel
+                assert result["reason"] == "cancelled_external_outcome_unknown"
+        finally:
+            await db.close()
+            await engine.dispose()
+    asyncio.run(scenario())

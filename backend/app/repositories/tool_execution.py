@@ -890,20 +890,18 @@ class ToolExecutionRepository:
                 ToolJob.id == job.id,
             ).with_for_update().execution_options(populate_existing=True))
         if job.status in ACTIVE_STATES:
-            active_step = await self.session.scalar(select(ToolStep).where(
-                ToolStep.job_id == job.id, ToolStep.status == "running",
-            ))
-            uncertain = (
-                job.reason == "external_outcome_unknown"
-                or bool(active_step and active_step.external_state == "may_have_run")
-            )
+            prior_unknown = job.reason == "external_outcome_unknown"
             result = await self.session.execute(update(ToolJob).where(
                 ToolJob.id == job.id, ToolJob.status.in_(ACTIVE_STATES), ToolJob.fence == job.fence,
-            ).values(status="cancelled", reason="cancelled_external_outcome_unknown" if uncertain else "cancelled_by_user",
+            ).values(status="cancelled", reason="cancelled_by_user",
                      lease_owner=None, lease_until=None, fence=ToolJob.fence + 1,
                      completed_at=now, updated_at=now).execution_options(synchronize_session=False))
             if result.rowcount == 1:
-                await self._close_steps(job.id, "cancelled", "cancelled", now)
+                self.session.expire_all()
+                job = await self.session.get(ToolJob, job_id)
+                uncertain = prior_unknown
+                uncertain = await self._close_steps(job.id, "cancelled", "cancelled", now) or uncertain
+                job.reason = "cancelled_external_outcome_unknown" if uncertain else "cancelled_by_user"
                 await self._event(job.id, "cancelled", "任务已取消", {
                     "external_outcome_unknown": uncertain,
                 })
@@ -911,7 +909,6 @@ class ToolExecutionRepository:
                 job.reason = "cancelled_external_outcome_unknown" if uncertain else "cancelled_by_user"
                 job.lease_owner = None
                 job.lease_until = None
-                job.fence += 1
                 job.completed_at = now
             else:
                 await self.session.refresh(job)
