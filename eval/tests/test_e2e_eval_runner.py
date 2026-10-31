@@ -161,6 +161,8 @@ def test_mock_backend_covers_scoring_paths_and_warm_latency() -> None:
     )
 
     assert report["metrics"]["accuracy"] == 0.6
+    assert report["metric_notes"]["human_review_required"] is True
+    assert "语义" in report["metric_notes"]["evidence_rate"]
     assert report["latency_ms"]["total_all"]["count"] == 5
     assert report["latency_ms"]["total_warm"]["count"] == 4
 

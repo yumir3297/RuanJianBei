@@ -333,6 +333,13 @@ def build_execution_report(
         "category_distribution": dict(Counter(case.category for case in cases)),
         "behavior_distribution": dict(Counter(case.expected_behavior for case in cases)),
         "expected_behavior_rules": EXPECTED_BEHAVIOR_RULES,
+        "metric_notes": {
+            "human_review_required": True,
+            "accuracy": "关键词和规则启发式通过率，不等于事实正确率。",
+            "evidence_rate": "仅统计引用标记出现，未进行证据语义支持核验。",
+            "refusal_pass_rate": "基于固定拒答词与规则，不等于安全性结论。",
+            "latency": "串行单次请求结果；标记为冷/热不保证真实缓存状态。",
+        },
         "metrics": {
             "accuracy": _rate(results, lambda item: item["accuracy_pass"]),
             "evidence_rate": _rate(
