@@ -76,12 +76,12 @@ def test_rag_index_builder_indexes_chunks_with_metadata() -> None:
         assert report.collection_name == "fake_collection"
         assert report.embedding_model_name == "fake-embedder"
 
-        assert [record.id for record in vector_store.records] == ["chunk_001", "ke_8_revision-8_001"]
+        assert [record.id for record in vector_store.records] == ["chunk_001", "chunk_002"]
         assert vector_store.records[0].document.startswith("Big Buddha\nattraction\n")
         assert vector_store.records[0].metadata["source_entry_id"] == 7
         assert vector_store.records[0].metadata["source_title"] == "Big Buddha"
         assert vector_store.records[0].metadata["aliases"] == "[\"Buddha\"]"
-        assert vector_store.records[1].metadata["chunk_id"] == "ke_8_revision-8_001"
+        assert vector_store.records[1].metadata["chunk_id"] == "chunk_002"
         assert vector_store.records[1].metadata["revision_id"] == "revision-8"
 
     asyncio.run(scenario())

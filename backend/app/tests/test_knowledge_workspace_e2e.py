@@ -81,7 +81,8 @@ def test_index_rebuild_uses_only_current_published_nonwithdrawn_revisions(tmp_pa
                 KnowledgeChunkRepository(session), _Embedder(), vector_store
             ).build()
             assert report.total_chunks == 1
-            assert [record.id for record in vector_store.records] == ["ke_1_visible-revision_001"]
+            assert [record.id for record in vector_store.records] == ["visible-chunk"]
+            assert vector_store.records[0].metadata["chunk_id"] == "visible-chunk"
         finally:
             await session.close()
             await engine.dispose()

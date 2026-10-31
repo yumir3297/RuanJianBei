@@ -82,8 +82,8 @@ class RAGIndexBuilder:
 
     @staticmethod
     def _vector_id_for(chunk: KnowledgeChunk) -> str:
-        if chunk.revision_id:
-            return f"ke_{chunk.source_entry_id}_{chunk.revision_id}_{chunk.chunk_index:03d}"
+        # The database primary key is the authoritative fragment identifier.
+        # Reconstructing it can point to a nonexistent row for imported chunks.
         return chunk.chunk_id
 
     def _decode_metadata(self, raw_metadata: str | None) -> dict[str, Any]:
