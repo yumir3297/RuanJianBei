@@ -210,7 +210,7 @@ Worktree 路径与分支：../RuanJianBei-offline / feature/offline-companion
 Playwright E2E PASS/FAIL：16 PASS / 0 FAIL
 实机测试 PASS/FAIL/BLOCKED：BLOCKED（无 iOS/微信/安卓真机）
 主站回归 PASS/FAIL：PASS（构建成功、游客页渲染、无致命控制台错误）
-本地提交 SHA：待追加（见本文档所在功能分支提交历史）
+本地提交 SHA：64b10b9（功能实现与测试；本文件的 SHA 回填为后续文档提交）
 未完成/阻塞项与复现路径：见本文第 6 节
 是否可以正式演示：是（游戏/地图交互/弱网切换/离线缓存闭环均已自动化验证）
 是否可以对游客上线：否（应急电话与离线简图未核验；真机未验收）
