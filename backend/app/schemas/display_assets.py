@@ -47,9 +47,9 @@ class TouristDisplaySettings(BaseModel):
         "附近适合拍照的景点有哪些？",
     ], max_length=8)
     hotlines: list[TouristHotlineSetting] = Field(default_factory=lambda: [
-        TouristHotlineSetting(id="broadcast", label="广播找人", description="寻人广播·游客中心", number="0510-85688631"),
-        TouristHotlineSetting(id="complaint", label="景区投诉", description="服务投诉建议", number="400-168-0303转5"),
-        TouristHotlineSetting(id="emergency", label="医疗急救", description="紧急医疗救助", number="0510-85688120"),
+        TouristHotlineSetting(id="broadcast", label="广播找人", description="寻人广播·游客中心", number="0510-85688631", enabled=False),
+        TouristHotlineSetting(id="complaint", label="景区投诉", description="服务投诉建议", number="400-168-0303转5", enabled=False),
+        TouristHotlineSetting(id="emergency", label="医疗急救", description="紧急医疗救助", number="0510-85688120", enabled=False),
     ])
 
     @field_validator("primary_color", "background_tint")

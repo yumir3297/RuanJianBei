@@ -29,9 +29,9 @@ const DEFAULT_TOURIST_SETTINGS = {
     "附近适合拍照的景点有哪些？",
   ],
   hotlines: [
-    { id: "broadcast", label: "广播找人", description: "寻人广播·游客中心", number: "0510-85688631", enabled: true },
-    { id: "complaint", label: "景区投诉", description: "服务投诉建议", number: "400-168-0303转5", enabled: true },
-    { id: "emergency", label: "医疗急救", description: "紧急医疗救助", number: "0510-85688120", enabled: true },
+    { id: "broadcast", label: "广播找人", description: "寻人广播·游客中心", number: "0510-85688631", enabled: false },
+    { id: "complaint", label: "景区投诉", description: "服务投诉建议", number: "400-168-0303转5", enabled: false },
+    { id: "emergency", label: "医疗急救", description: "紧急医疗救助", number: "0510-85688120", enabled: false },
   ],
 };
 
