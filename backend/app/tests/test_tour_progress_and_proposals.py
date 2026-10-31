@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -39,6 +40,37 @@ def test_progress_is_persisted_with_independent_version_and_owner_scope():
             assert await repo.get_progress("owner-b", created["id"]) is None
             events = await repo.list_progress_events("owner-a", created["id"])
             assert [event["event_type"] for event in events] == ["started", "completed"]
+        finally:
+            await db.close(); await engine.dispose()
+    _run(scenario)
+
+
+def test_confirm_remaining_budget_is_versioned_audited_and_idempotent():
+    async def scenario():
+        from app.repositories.tour_session import TourSessionRepository
+        from app.services.itinerary.progress import ProgressCommand, ProgressConflict
+        engine, db = await open_test_session()
+        try:
+            repo = TourSessionRepository(db)
+            created = await repo.create_session("owner-a", "site", "游览", _snapshot(), "create")
+            now = datetime(2026, 10, 29, 8, 0, tzinfo=UTC)
+            started = await repo.start_progress("owner-a", created["id"], 1, "start", now=now)
+            command = ProgressCommand(type="set_remaining_budget", remaining_minutes=45)
+            updated = await repo.command_progress("owner-a", created["id"], 1, command, "budget",
+                now=now + timedelta(minutes=30))
+            replay = await repo.command_progress("owner-a", created["id"], 1, command, "budget",
+                now=now + timedelta(minutes=35))
+            assert updated == replay
+            assert datetime.fromisoformat(updated["finish_by"]) == now + timedelta(minutes=75)
+            assert updated["progress_version"] == 2
+            assert updated["status_by_stop"] == started["status_by_stop"]
+            events = await repo.list_progress_events("owner-a", created["id"])
+            assert events[-1]["event_type"] == "remaining_budget_set"
+            assert events[-1]["payload"]["old_finish_by"] == started["finish_by"]
+            assert events[-1]["payload"]["new_finish_by"] == updated["finish_by"]
+            with pytest.raises(ProgressConflict):
+                await repo.command_progress("owner-a", created["id"], 1, command, "stale", now=now)
+            assert len(await repo.list_progress_events("owner-a", created["id"])) == 2
         finally:
             await db.close(); await engine.dispose()
     _run(scenario)

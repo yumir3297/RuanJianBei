@@ -413,9 +413,16 @@ class TourSessionRepository:
             await self.session.rollback()
             raise ProgressConflict("游览进度已在其他位置更新")
         event = transition.event
+        event_payload = {}
+        if command.type == "set_remaining_budget":
+            event_payload = {
+                "old_finish_by": progress.model_dump(mode="json")["finish_by"],
+                "new_finish_by": transition.progress.model_dump(mode="json")["finish_by"],
+                "remaining_minutes": command.remaining_minutes,
+            }
         self.session.add(TourProgressEvent(
             id=str(uuid4()), session_id=session_id, version=event.version, event_type=event.event_type,
-            stop_id=str(event.stop_id) if event.stop_id else None, payload_json="{}", occurred_at=event.occurred_at,
+            stop_id=str(event.stop_id) if event.stop_id else None, payload_json=_encode(event_payload), occurred_at=event.occurred_at,
         ))
         from app.repositories.tool_execution import ToolExecutionRepository
 

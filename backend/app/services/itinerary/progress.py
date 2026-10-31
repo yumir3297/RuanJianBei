@@ -11,7 +11,7 @@ from app.schemas.itinerary import StrictModel, TourSnapshotV2
 
 StopProgress = Literal["pending", "current", "completed", "skipped"]
 ProgressStatus = Literal["not_started", "active", "finished"]
-ProgressEventType = Literal["started", "current_set", "completed", "skipped", "finished"]
+ProgressEventType = Literal["started", "current_set", "completed", "skipped", "finished", "remaining_budget_set"]
 
 
 class TourProgress(StrictModel):
@@ -39,11 +39,18 @@ class TourProgress(StrictModel):
 
 
 class ProgressCommand(StrictModel):
-    type: Literal["set_current", "complete", "skip", "finish"]
+    type: Literal["set_current", "complete", "skip", "finish", "set_remaining_budget"]
     stop_id: UUID | None = None
+    remaining_minutes: int | None = Field(default=None, ge=1, le=720, strict=True)
 
     @model_validator(mode="after")
     def validate_target(self) -> ProgressCommand:
+        if self.type == "set_remaining_budget":
+            if self.stop_id is not None or self.remaining_minutes is None:
+                raise ValueError("调整剩余时间需要分钟数，不能指定停留点")
+            return self
+        if self.remaining_minutes is not None:
+            raise ValueError("此进度命令不接收剩余时间")
         if self.type == "finish" and self.stop_id is not None:
             raise ValueError("结束游览命令不接收停留点")
         if self.type != "finish" and self.stop_id is None:
@@ -128,7 +135,10 @@ def apply_progress_command(
     target = str(command.stop_id) if command.stop_id is not None else None
     event_type: ProgressEventType
 
-    if command.type == "finish":
+    if command.type == "set_remaining_budget":
+        candidate.finish_by = when + timedelta(minutes=command.remaining_minutes)
+        event_type = "remaining_budget_set"
+    elif command.type == "finish":
         if any(state in {"pending", "current"} for state in candidate.status_by_stop.values()):
             raise ProgressConflict("仍有未完成停留点；请逐项完成或跳过后再结束")
         candidate.status = "finished"

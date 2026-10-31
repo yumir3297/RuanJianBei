@@ -66,6 +66,11 @@
             <p v-if="isDirty && (!tourStore.progress || tourStore.progress.status === 'not_started')" class="tour-session-status">保存当前修改后才能开始游览。</p>
             <template v-else-if="currentProgressStop">
               <p>当前：{{ currentProgressStop.name }} · {{ progressLabel(currentProgressStop.stop_id) }}</p>
+              <label class="tour-budget-input">从确认时起剩余游览时间（分钟）
+                <input v-model.number="newRemainingBudget" type="number" min="1" max="720" step="1" inputmode="numeric" placeholder="输入 1–720 分钟">
+              </label>
+              <small>当前截止时间：{{ currentDeadline }}。<template v-if="validRemainingBudget">预计调整为 {{ proposedDeadline }}。</template>确认后按服务端收到请求的时间重新计算，不改变已游记录。</small>
+              <button type="button" class="tour-session-secondary" :disabled="budgetSaving || !validRemainingBudget || tourStore.progressSyncRequired" @click="confirmRemainingBudget">确认调整剩余时间</button>
               <label class="tour-budget-input">
                 当前点剩余时间（分钟）
                 <input
@@ -137,6 +142,8 @@ const newStopDuration = ref(null);
 const newRestDuration = ref(null);
 const sessionLoading = ref(false);
 const sessionSaving = ref(false);
+const budgetSaving = ref(false);
+const newRemainingBudget = ref(null);
 const showTrash = ref(false);
 const loading = ref(false);
 const offline = ref(false);
@@ -146,6 +153,17 @@ const draft = computed(() => tourStore.draftSnapshot || { constraints: {}, stops
 const isDirty = computed(() => JSON.stringify(draft.value) !== JSON.stringify(tourStore.current?.snapshot || {}));
 const currentProgressStop = computed(() => draft.value.stops?.find(stop => tourStore.progress?.status_by_stop?.[stop.stop_id] === "current") || null);
 const budgetText = computed(() => tourStore.budget?.message || "待计算");
+const validRemainingBudget = computed(() => Number.isInteger(newRemainingBudget.value) && newRemainingBudget.value >= 1 && newRemainingBudget.value <= 720);
+const currentDeadline = computed(() => tourStore.progress?.finish_by ? new Date(tourStore.progress.finish_by).toLocaleString() : "未设置");
+const proposedDeadline = computed(() => validRemainingBudget.value ? new Date(Date.now() + newRemainingBudget.value * 60000).toLocaleString() : "");
+async function confirmRemainingBudget() {
+  if (!validRemainingBudget.value || budgetSaving.value) return;
+  budgetSaving.value = true;
+  try {
+    const result = await tourStore.applyProgress({ type: "set_remaining_budget", remaining_minutes: newRemainingBudget.value });
+    if (result) newRemainingBudget.value = null;
+  } finally { budgetSaving.value = false; }
+}
 function progressLabel(id) { return ({ current: "当前", completed: "已完成", skipped: "已跳过", pending: "待游览" }[tourStore.progress?.status_by_stop?.[id]] || "待游览"); }
 function moveStop(index, direction) { const target = index + direction; if (target < 0 || target >= draft.value.stops.length) return; [draft.value.stops[index], draft.value.stops[target]] = [draft.value.stops[target], draft.value.stops[index]]; }
 function makeStopId() { return globalThis.crypto?.randomUUID?.() || "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === "x" ? r : (r & 3 | 8)).toString(16); }); }

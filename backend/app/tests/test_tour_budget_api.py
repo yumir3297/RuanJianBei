@@ -74,6 +74,21 @@ def test_budget_endpoint_accepts_explicit_current_stop_remaining_minutes():
                 assert explicit.json()["known_minutes"] == 5
                 assert explicit.json()["estimated_current_stop"] is False
                 assert invalid.status_code == 422
+
+                command = {"expected_progress_version": 1,
+                           "command": {"type": "set_remaining_budget", "remaining_minutes": 45}}
+                headers = {**write_headers, "Idempotency-Key": "remaining-budget"}
+                adjusted = await client.post(f"/api/tour-sessions/{session_id}/progress", headers=headers, json=command)
+                replay = await client.post(f"/api/tour-sessions/{session_id}/progress", headers=headers, json=command)
+                assert adjusted.status_code == 200, adjusted.text
+                assert replay.json() == adjusted.json()
+                assert adjusted.json()["progress_version"] == 2
+                assert adjusted.json()["current_stop_id"] == stop_id
+                invalid_command = {"expected_progress_version": 2,
+                                   "command": {"type": "set_remaining_budget", "remaining_minutes": 0}}
+                invalid_adjustment = await client.post(f"/api/tour-sessions/{session_id}/progress", headers={
+                    **write_headers, "Idempotency-Key": "invalid-budget"}, json=invalid_command)
+                assert invalid_adjustment.status_code == 422
         finally:
             await engine.dispose()
 
