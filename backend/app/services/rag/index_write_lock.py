@@ -9,6 +9,10 @@ from pathlib import Path
 from time import monotonic
 
 
+def index_lock_path(persist_dir: Path, collection_name: str) -> Path:
+    return persist_dir / f"{collection_name}.writer.lock"
+
+
 def _try_lock(handle) -> bool:
     try:
         if os.name == "nt":

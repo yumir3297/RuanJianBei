@@ -85,8 +85,8 @@ class ChromaVectorStore:
         return self.base_collection_name
 
     def write_guard(self):
-        from app.services.rag.index_write_lock import index_write_lock
-        return index_write_lock(self.persist_dir / f"{self.base_collection_name}.writer.lock")
+        from app.services.rag.index_write_lock import index_lock_path, index_write_lock
+        return index_write_lock(index_lock_path(self.persist_dir, self.base_collection_name))
 
     def count(self) -> int:
         if not self._collection_exists():

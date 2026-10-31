@@ -1,6 +1,8 @@
 import asyncio
 import json
 
+import pytest
+
 from sqlalchemy import func, select
 
 from app.core.config import Settings
@@ -15,6 +17,28 @@ from app.services.data_import.importer import ProcessedDataImporter
 from app.services.recommend.engine import RecommendEngine
 from app.repositories.route import RouteRepository
 from app.tests.async_db import open_test_session
+
+
+def test_processed_import_waits_for_index_writer_lock(tmp_path):
+    from app.services.rag.index_write_lock import index_write_lock
+    db_path = tmp_path / "locked-import.db"
+    index_path = tmp_path / "index"
+    settings = Settings(database_url=f"sqlite:///{db_path}", enable_sample_data=False,
+                        chroma_persist_dir=str(index_path), rag_collection_name="test_index")
+
+    async def scenario():
+        engine, session = await open_test_session(str(db_path))
+        try:
+            async with index_write_lock(index_path / "test_index.writer.lock"):
+                task = asyncio.create_task(ProcessedDataImporter(session, settings).sync())
+                with pytest.raises(TimeoutError):
+                    await asyncio.wait_for(asyncio.shield(task), 0.1)
+            report = await asyncio.wait_for(task, 5)
+            assert report.knowledge_imported > 0
+        finally:
+            await session.close()
+            await engine.dispose()
+    asyncio.run(scenario())
 
 
 def test_processed_data_importer_syncs_all_assets(tmp_path) -> None:

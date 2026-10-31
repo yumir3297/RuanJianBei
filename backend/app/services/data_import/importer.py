@@ -57,6 +57,21 @@ class ProcessedDataImporter:
         self.qa_cache_repository = QACacheRepository(session)
 
     async def sync(self) -> DataImportReport:
+        import asyncio
+        from app.services.rag.index_write_lock import index_lock_path, index_write_lock
+
+        path = index_lock_path(self.settings.chroma_persist_root, self.settings.rag_collection_name)
+        async with index_write_lock(path):
+            task = asyncio.create_task(self._sync_locked())
+            try:
+                return await asyncio.shield(task)
+            except asyncio.CancelledError:
+                try:
+                    await task
+                finally:
+                    raise
+
+    async def _sync_locked(self) -> DataImportReport:
         start = perf_counter()
         knowledge_payload = self._read_json(self.settings.knowledge_entries_file)
         guide_sections_payload = self._read_json(self.settings.guide_sections_file)
