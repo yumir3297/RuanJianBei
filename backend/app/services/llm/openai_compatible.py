@@ -81,7 +81,7 @@ class OpenAICompatibleLLMService(BaseLLMService):
             if emitted_content:
                 yield LLMStreamEvent(
                     type="content",
-                    text="\n\n（AI讲解连接中断，请以右侧官方来源为准。）",
+                    text="\n\n（AI讲解连接中断，请以参考资料为准。）",
                 )
                 yield LLMStreamEvent(
                     type="finish",
@@ -178,7 +178,7 @@ class OpenAICompatibleLLMService(BaseLLMService):
         *,
         reason: str,
     ) -> AsyncIterator[LLMStreamEvent]:
-        parts = ["AI讲解服务暂时不可用，先为你展示检索到的官方资料："]
+        parts = ["AI讲解服务暂时不可用，先为你展示检索到的资料："]
         for index, document in enumerate(
             documents[: self.settings.llm_max_evidence_documents],
             start=1,

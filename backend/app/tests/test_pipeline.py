@@ -809,13 +809,13 @@ def test_first_http_tts_audio_is_emitted_while_llm_waits_for_next_sentence() -> 
     asyncio.run(run())
 
 
-def test_direct_answer_appends_inline_citation_when_sources_exist() -> None:
+def test_direct_answer_preserves_text_when_sources_exist() -> None:
     answer = QAPipeline._ensure_inline_citations(
         "灵山大佛高88米。",
         [{"evidence_id": "证据1", "title": "灵山大佛"}],
     )
 
-    assert answer == "灵山大佛高88米。[证据1]"
+    assert answer == "灵山大佛高88米。"
     assert QAPipeline._ensure_inline_citations(answer, [{"evidence_id": "证据1"}]) == answer
 
 

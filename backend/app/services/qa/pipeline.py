@@ -152,16 +152,16 @@ def _resolve_narration_audience(request: ChatRequest) -> str:
 
 
 def _faq_evidence_document(match: FAQMatchResult) -> RetrievedDocument:
-    """把 FAQ 的官方答复包装成一条证据。
+    """把 FAQ 答复包装成一条检索资料。
 
     用途：受众非默认时，让 LLM 基于这条唯一证据换说法（分众化），
     事实仍完全来自 FAQ 原文，不引入任何新资料。
     """
     return RetrievedDocument(
-        title="常见问题（景区官方答复）",
+        title="常见问题资料",
         content=match.answer,
         snippet=match.answer,
-        source="、".join(match.sources) or "景区官方 FAQ",
+        source="、".join(match.sources) or "常见问题资料（未标注来源）",
         score=1.0,
     )
 
@@ -1280,16 +1280,9 @@ class QAPipeline:
 
     @staticmethod
     def _ensure_inline_citations(answer: str, sources: list[dict]) -> str:
-        if "[证据" in answer or "[璇佹嵁" in answer or not sources:
-            return answer
-        evidence_ids = [
-            str(source.get("evidence_id", "")).strip()
-            for source in sources
-            if str(source.get("evidence_id", "")).strip()
-        ]
-        if not evidence_ids:
-            return answer
-        return f"{answer}{''.join(f'[{evidence_id}]' for evidence_id in evidence_ids)}"
+        # Retrieval sources remain available in the sources event and chat log.
+        # Adding citation markers here would assert support that was not checked.
+        return answer
 
     def _followup_event(self, resolved: ResolvedInteraction) -> StreamEvent:
         return StreamEvent(
