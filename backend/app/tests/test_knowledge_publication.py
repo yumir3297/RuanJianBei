@@ -13,6 +13,19 @@ from app.core.deps import get_db_session
 from app.models.knowledge import KnowledgeEntry
 from app.models.knowledge_workspace import KnowledgeRevision, KnowledgeState
 from app.services.knowledge.publication import KnowledgePublicationService
+
+
+def test_publication_metadata_cannot_override_chunk_identity():
+    from app.models.knowledge_chunk import KnowledgeChunk
+    chunk = KnowledgeChunk(chunk_id="real-chunk", source_entry_id=42, revision_id="real-revision",
+        chunk_index=3, title="真实标题", category="景点", content="内容", source="来源",
+        metadata_json='{"chunk_id":"spoofed","source_entry_id":99,"revision_id":"old","title":"伪造标题","extra":"保留"}')
+    metadata = KnowledgePublicationService._metadata_for(chunk)
+    assert metadata["chunk_id"] == "real-chunk"
+    assert metadata["source_entry_id"] == 42
+    assert metadata["revision_id"] == "real-revision"
+    assert metadata["title"] == "真实标题"
+    assert metadata["extra"] == "保留"
 from app.services.knowledge.workspace import KnowledgeWorkspaceService
 from app.schemas.knowledge import KnowledgeUpdate
 from app.tests.async_db import open_test_session

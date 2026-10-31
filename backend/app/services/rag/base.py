@@ -13,6 +13,7 @@ class RetrievedDocument:
     score: float = 0.0
     entry_id: int | None = None
     revision_id: str | None = None
+    chunk_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

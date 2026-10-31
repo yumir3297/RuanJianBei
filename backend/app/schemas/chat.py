@@ -88,6 +88,7 @@ class SourceItem(BaseModel):
     evidence_id: str | None = None
     entry_id: int | None = None
     revision_id: str | None = None
+    chunk_id: str | None = None
     title: str
     snippet: str
     source: str

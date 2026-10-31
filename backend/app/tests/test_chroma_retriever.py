@@ -44,7 +44,7 @@ class FakeVectorStore:
             VectorSearchResult(
                 id=f"chunk_{index:03d}",
                 document=f"Full scenic evidence {index} " + "A" * 220,
-                metadata={"title": f"Scenic Spot {index}", "source": "official.docx"},
+                metadata={"title": f"Scenic Spot {index}", "source": "official.docx", "chunk_id": f"chunk_{index:03d}"},
                 score=0.87 - index * 0.01,
             )
             for index in range(self.result_count)
@@ -109,6 +109,7 @@ def test_vector_rag_maps_full_content_and_uses_candidate_k() -> None:
     assert len(documents[0].snippet) == 200
     assert documents[0].source == "official.docx"
     assert documents[0].score == 0.87
+    assert documents[0].chunk_id == "chunk_000"
     assert embedder.embedded_texts == ["normalized"]
     assert vector_store.last_top_k == 20
     assert fallback.calls == []
@@ -125,9 +126,22 @@ def test_vector_rag_falls_back_when_collection_is_empty() -> None:
     documents = asyncio.run(service.retrieve("question", normalized_query="normalized", top_k=3))
 
     assert documents[0].title == "Fallback"
+    assert documents[0].chunk_id is None
     assert fallback.calls == [("question", "normalized", 3, None)]
     assert embedder.embedded_texts == []
     assert service.last_mode == "fallback:empty_collection"
+
+
+def test_vector_rag_does_not_report_mismatched_chunk_metadata():
+    class MismatchedStore(FakeVectorStore):
+        def query(self, query_embedding, top_k, where=None):
+            results = super().query(query_embedding, top_k, where)
+            results[0].metadata["chunk_id"] = "different-chunk"
+            return results
+
+    service, _ = build_service(MismatchedStore(), FakeFallbackRAG())
+    result = asyncio.run(service.retrieve("query", top_k=1))
+    assert result[0].chunk_id is None
 
 
 def test_vector_rag_falls_back_when_query_fails() -> None:

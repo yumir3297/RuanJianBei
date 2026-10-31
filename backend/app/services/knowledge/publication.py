@@ -364,6 +364,8 @@ class KnowledgePublicationService:
             decoded = {}
         if isinstance(decoded, dict):
             for key, value in decoded.items():
+                if key in metadata:
+                    continue
                 if isinstance(value, (str, int, float, bool)):
                     metadata[key] = value
                 elif value is not None:

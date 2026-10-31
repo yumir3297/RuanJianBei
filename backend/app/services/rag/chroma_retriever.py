@@ -98,6 +98,7 @@ class VectorBackedRAGService(BaseRAGService):
                     score=result.score,
                     entry_id=int(entry_id) if entry_id is not None else None,
                     revision_id=str(revision_id) if revision_id else None,
+                    chunk_id=result.id if meta.get("chunk_id") == result.id else None,
                 )
             )
 

@@ -444,7 +444,7 @@ def test_published_source_identifiers_survive_stream_log_and_cached_answer():
     class PublishedRag:
         async def retrieve(self, *args, **kwargs):
             return [RetrievedDocument(title="景点", content="资料", snippet="资料", source="资料来源",
-                                      score=1.0, entry_id=42, revision_id="revision-123")]
+                                      score=1.0, entry_id=42, revision_id="revision-123", chunk_id="chunk-42")]
 
     async def scenario():
         engine, db = await open_test_session()
@@ -460,9 +460,11 @@ def test_published_source_identifiers_survive_stream_log_and_cached_answer():
                 source = next(event.data["docs"][0] for event in events if event.type == "sources")
                 assert source["entry_id"] == 42
                 assert source["revision_id"] == "revision-123"
+                assert source["chunk_id"] == "chunk-42"
             logs = (await db.scalars(select(ChatLog).order_by(ChatLog.id))).all()
             assert json.loads(logs[0].sources)[0]["entry_id"] == 42
             assert json.loads(logs[1].sources)[0]["revision_id"] == "revision-123"
+            assert json.loads(logs[1].sources)[0]["chunk_id"] == "chunk-42"
             assert logs[1].hit_level == "cache"
         finally:
             await db.close()
