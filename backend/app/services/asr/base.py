@@ -28,7 +28,7 @@ class ASRResult:
     def needs_confirmation(self) -> bool:
         if not self.text.strip():
             return True
-        if self.confidence_source in {"stub", "unavailable"}:
+        if self.confidence_source in {"stub", "unavailable", "heuristic"}:
             return True
         return self.confidence < 0.85
 
