@@ -38,8 +38,17 @@ export function useGeolocation() {
   }
 
   function evaluate(raw) {
-    const fixed = wgs84ToGcj02(raw.lat, raw.lng);
-    const accuracy = Number(raw.accuracy) || 0;
+    const { latitude, longitude, accuracy } = raw || {};
+    if (!Number.isFinite(latitude) || Math.abs(latitude) > 90
+        || !Number.isFinite(longitude) || Math.abs(longitude) > 180
+        || !Number.isFinite(accuracy) || accuracy < 0) {
+      position.value = null;
+      accuracyPoor.value = true;
+      mode.value = "low_accuracy";
+      error.value = "定位数据无效，暂不触发讲解";
+      return;
+    }
+    const fixed = wgs84ToGcj02(latitude, longitude);
     setPosition(fixed.lat, fixed.lng, accuracy);
 
     if (haversineMeters(fixed, CENTER) > OUT_OF_AREA_M) {
@@ -61,7 +70,7 @@ export function useGeolocation() {
 
   function onSuccess(pos) {
     if (mode.value === "sim") return; // 手动切到模拟后忽略真实回调
-    evaluate(pos.coords);
+    evaluate(pos?.coords);
   }
 
   function onError(err) {
