@@ -26,6 +26,7 @@ async function snapshotDigest(value) {
 }
 const proposalRequests = createRequestGeneration();
 const openRequests = createRequestGeneration();
+const currentStopBudgetRequests = createRequestGeneration();
 
 function waitForProposalPoll(signal, delayMs = 1000) {
   if (signal.aborted) return Promise.reject(new DOMException("Aborted", "AbortError"));
@@ -236,16 +237,29 @@ export const useTourSessionsStore = defineStore("tourSessions", {
         this.error = "请先保存当前行程修改，再开始游览。";
         return null;
       }
+      const current = this.current;
+      const originalProgress = this.progress;
       try {
         await this.prepare();
-        const payload = { expected_version: this.current.version };
-        const { fingerprint, key } = this.operationKey(`start:${this.current.id}`, payload);
-        this.progress = await startTourProgress(this.current.id, this.current.version, this.csrfToken, key);
+        if (this.current !== current || this.progress !== originalProgress) return null;
+        const payload = { expected_version: current.version };
+        const { fingerprint, key } = this.operationKey(`start:${current.id}`, payload);
+        const result = await startTourProgress(current.id, current.version, this.csrfToken, key);
+        this.clearOperationKey(fingerprint);
+        if (this.current !== current || this.progress !== originalProgress) return null;
+        this.progress = result;
         this.progressSyncRequired = false;
         this.currentStopRemainingMinutes = null;
-        this.clearOperationKey(fingerprint); this.budget = await fetchTourBudget(this.current.id).catch(() => null);
-        return this.progress;
-      } catch (error) { this.error = error?.response?.data?.detail || "无法开始游览，请刷新后检查行程。"; return null; }
+        const startedProgress = this.progress;
+        const budget = await fetchTourBudget(current.id).catch(() => null);
+        if (this.current !== current || this.progress !== startedProgress || this.currentStopRemainingMinutes !== null) return null;
+        this.budget = budget;
+        return startedProgress;
+      } catch (error) {
+        if (this.current === current && this.progress === originalProgress)
+          this.error = error?.response?.data?.detail || "无法开始游览，请刷新后检查行程。";
+        return null;
+      }
     },
     async applyProgress(command) {
       if (!this.current || !this.progress) return null;
@@ -277,6 +291,7 @@ export const useTourSessionsStore = defineStore("tourSessions", {
     },
     async setCurrentStopRemainingMinutes(value) {
       if (!this.current || !this.progress?.current_stop_id) return null;
+      currentStopBudgetRequests.cancel();
       const minutes = value === "" || value == null ? null : Number(value);
       if (minutes != null && (!Number.isInteger(minutes) || minutes < 0 || minutes > 720)) {
         this.error = "当前点剩余时间需为 0 到 720 分钟。";
@@ -284,11 +299,18 @@ export const useTourSessionsStore = defineStore("tourSessions", {
       }
       this.currentStopRemainingMinutes = minutes;
       this.error = "";
-      this.budget = await fetchTourBudget(this.current.id, minutes).catch(error => {
-        this.error = error?.response?.data?.detail || "无法更新剩余预算，请检查网络后重试。";
+      const current = this.current, progress = this.progress;
+      const request = currentStopBudgetRequests.begin();
+      try {
+        const budget = await fetchTourBudget(current.id, minutes);
+        if (!currentStopBudgetRequests.isCurrent(request) || this.current !== current || this.progress !== progress) return null;
+        this.budget = budget;
+        return budget;
+      } catch (error) {
+        if (currentStopBudgetRequests.isCurrent(request) && this.current === current && this.progress === progress)
+          this.error = error?.response?.data?.detail || "无法更新剩余预算，请检查网络后重试。";
         return null;
-      });
-      return this.budget;
+      } finally { currentStopBudgetRequests.finish(request); }
     },
     async requestProposal(text) {
       if (!this.current || this.draftSnapshot?.schema_version !== 2) { this.error = "请先在路线页升级并打开 V2 游览。"; return null; }

@@ -177,3 +177,36 @@ test('late budget refresh after a progress update cannot overwrite another tour'
   assert.equal(store.progress.current_stop_id, 'new-stop');
   assert.deepEqual(store.budget, { known_minutes: 12 });
 });
+
+test('late start response does not update another selected tour', async () => {
+  const late = deferred();
+  store.progress = { status: 'not_started', progress_version: 0 };
+  route = async config => {
+    assert.equal(config.url, '/tour-sessions/a/start');
+    return late.promise;
+  };
+  const pending = store.start(); await tick();
+  store.current = { id: 'b', version: 1 };
+  store.progress = { status: 'active', progress_version: 7, current_stop_id: 'new-stop' };
+  store.budget = { known_minutes: 12 };
+  late.resolve({ status: 'active', progress_version: 1, current_stop_id: 'old-stop' });
+  await pending;
+  assert.equal(store.progress.current_stop_id, 'new-stop');
+  assert.deepEqual(store.budget, { known_minutes: 12 });
+  assert.equal(store.error, '');
+});
+
+test('only the latest current-stop budget query can update the result, even when values repeat', async () => {
+  const first = deferred(), second = deferred(), third = deferred();
+  let calls = 0;
+  store.progress = { status: 'active', progress_version: 1, current_stop_id: 'old-stop' };
+  route = async () => [first, second, third][calls++].promise;
+  const a = store.setCurrentStopRemainingMinutes(5); await tick();
+  const b = store.setCurrentStopRemainingMinutes(10); await tick();
+  const c = store.setCurrentStopRemainingMinutes(5); await tick();
+  third.resolve({ known_minutes: 5 }); await c;
+  second.resolve({ known_minutes: 10 }); await b;
+  first.resolve({ known_minutes: 999 }); await a;
+  assert.equal(store.currentStopRemainingMinutes, 5);
+  assert.equal(store.budget.known_minutes, 5);
+});
