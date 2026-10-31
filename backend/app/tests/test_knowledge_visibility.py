@@ -133,6 +133,18 @@ def test_mismatched_vector_fragment_identifier_falls_back_to_database():
     assert [document.title for document in documents] == ["数据库有效版本"]
 
 
+def test_malformed_vector_entry_id_falls_back_to_database():
+    corrupt = VectorSearchResult("chunk", "旧索引内容", {
+        "source_entry_id": "not-an-integer", "revision_id": "current", "chunk_id": "chunk"}, 0.9)
+    service = VectorBackedRAGService(
+        vector_store=FakeVectorStore([corrupt]), embedder=FakeEmbedder(),
+        query_rewriter=QueryRewriter(), reranker=Reranker(), fallback=FakeFallback(),
+        visibility=FakeVisibility({(7, "current")}),
+    )
+    documents = asyncio.run(service.retrieve("景点", top_k=1))
+    assert [document.title for document in documents] == ["数据库有效版本"]
+
+
 class MemoryDBCache:
     def __init__(self) -> None:
         self.values = {}

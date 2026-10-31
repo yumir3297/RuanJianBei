@@ -73,17 +73,27 @@ class VectorBackedRAGService(BaseRAGService):
         if not candidates:
             return await self._fallback_or_empty(query, normalized, top_k, scope, "no_candidates")
 
+        parsed_candidates = []
+        for result in candidates:
+            raw_id = result.metadata.get("source_entry_id")
+            if raw_id is not None and (isinstance(raw_id, bool) or not isinstance(raw_id, (int, str))):
+                continue
+            try:
+                entry_id = int(raw_id) if raw_id is not None else None
+            except (ValueError, TypeError, OverflowError):
+                continue
+            if entry_id is not None and entry_id < 1:
+                continue
+            parsed_candidates.append((result, entry_id))
         references = [
-            (result.id, int(result.metadata["source_entry_id"]), str(result.metadata["revision_id"]))
-            for result in candidates
-            if result.metadata.get("source_entry_id") is not None
-            and result.metadata.get("revision_id")
+            (result.id, entry_id, str(result.metadata["revision_id"]))
+            for result, entry_id in parsed_candidates
+            if entry_id is not None and result.metadata.get("revision_id")
         ]
         visible = await self.visibility.get_published_chunks(references) if self.visibility is not None else {}
         documents: list[RetrievedDocument] = []
-        for result in candidates:
+        for result, entry_id in parsed_candidates:
             meta = result.metadata
-            entry_id = meta.get("source_entry_id")
             revision_id = meta.get("revision_id")
             if meta.get("chunk_id") and meta["chunk_id"] != result.id:
                 continue
