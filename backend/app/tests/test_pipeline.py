@@ -500,6 +500,23 @@ def test_personal_memory_neither_reads_nor_writes_shared_answer_cache():
     asyncio.run(scenario())
 
 
+def test_different_personas_do_not_share_generated_answers():
+    class PersonaLLM:
+        async def stream_generate(self, query, documents, *, persona=None, audience=None, memory=None):
+            yield f"角色内容：{persona}"
+
+    async def scenario():
+        cache = QACache(DummyCacheRepo(), ttl_seconds=60)
+        async def ask(persona):
+            pipeline = _build_test_pipeline(qa_cache=cache, llm_service=PersonaLLM())
+            events = [event async for event in pipeline.stream_chat(
+                ChatRequest(query="介绍景点", session_id="persona-test", persona=persona, text_only=True))]
+            return "".join(event.data.get("text", "") for event in events if event.type == "text")
+        assert "角色内容：hanfu" in await ask("hanfu")
+        assert "角色内容：monk" in await ask("monk")
+    asyncio.run(scenario())
+
+
 def _run_turn(pipeline, **request_overrides):
     request_kwargs = {
         "query": "有什么特色",

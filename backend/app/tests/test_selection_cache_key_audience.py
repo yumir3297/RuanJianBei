@@ -19,6 +19,12 @@ def test_cache_key_differs_by_audience():
     assert base != expert
 
 
+def test_cache_key_differs_when_model_persona_changes():
+    hanfu = build_selection_cache_key("介绍景点", _sel(), persona="hanfu")
+    monk = build_selection_cache_key("介绍景点", _sel(), persona="monk")
+    assert hanfu != monk
+
+
 def test_cache_key_is_stable_for_same_inputs():
     first = build_selection_cache_key(
         "灵山大佛有多高", _sel(), answer_namespace="ns", audience="child"

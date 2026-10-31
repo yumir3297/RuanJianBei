@@ -32,10 +32,11 @@ def build_selection_cache_key(
     *,
     answer_namespace: str = "default",
     audience: str | None = None,
+    persona: str | None = None,
 ) -> str:
     """问答缓存键。
 
-    audience 必须入键：分众化风格是烘进 LLM 产出的，不能像 persona 那样在取缓存后再润色。
+    audience 与 persona 都会影响模型生成，必须共同入键。
     未指定与 adult 视为同一档（adult 不加风格块），避免同义键分叉。
     """
     payload = {
@@ -45,6 +46,7 @@ def build_selection_cache_key(
         "topic_key": selection.topic_key,
         "route_id": selection.route_id,
         "audience": audience or "adult",
+        "persona": persona,
         "answer_namespace": answer_namespace,
     }
     serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))

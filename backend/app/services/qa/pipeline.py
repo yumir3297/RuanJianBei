@@ -343,6 +343,7 @@ class QAPipeline:
             resolved.selection,
             answer_namespace=self.answer_cache_namespace,
             audience=audience,
+            persona=request.persona,
         )
         yield StreamEvent(type="status", data={"text": "正在查找答案..."})
 
