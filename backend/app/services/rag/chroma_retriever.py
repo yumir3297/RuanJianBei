@@ -79,7 +79,7 @@ class VectorBackedRAGService(BaseRAGService):
             if result.metadata.get("source_entry_id") is not None
             and result.metadata.get("revision_id")
         ]
-        visible = await self.visibility.filter_published_chunks(references) if self.visibility is not None else set(references)
+        visible = await self.visibility.get_published_chunks(references) if self.visibility is not None else {}
         documents: list[RetrievedDocument] = []
         for result in candidates:
             meta = result.metadata
@@ -91,12 +91,14 @@ class VectorBackedRAGService(BaseRAGService):
                 entry_id is None or not revision_id or (result.id, int(entry_id), str(revision_id)) not in visible
             ):
                 continue
+            chunk = visible.get((result.id, int(entry_id), str(revision_id))) if self.visibility is not None else None
+            content = "\n".join([chunk.title, chunk.category, chunk.content]) if chunk is not None else result.document
             documents.append(
                 RetrievedDocument(
-                    title=meta.get("title", ""),
-                    content=result.document,
-                    snippet=result.document[:200],
-                    source=meta.get("source", ""),
+                    title=chunk.title if chunk is not None else meta.get("title", ""),
+                    content=content,
+                    snippet=content[:200],
+                    source=chunk.source if chunk is not None else meta.get("source", ""),
                     score=result.score,
                     entry_id=int(entry_id) if entry_id is not None else None,
                     revision_id=str(revision_id) if revision_id else None,

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
+from types import SimpleNamespace
 
 from app.services.rag.base import BaseRAGService, RetrievedDocument
 from app.services.rag.chroma_retriever import VectorBackedRAGService
@@ -53,6 +54,10 @@ class FakeVisibility:
     async def filter_published_chunks(self, references):
         self.checked.append([(entry, revision) for _, entry, revision in references])
         return {item for item in references if (item[1], item[2]) in self.visible}
+
+    async def get_published_chunks(self, references):
+        allowed = await self.filter_published_chunks(references)
+        return {item: SimpleNamespace(title="有效", category="景点", content="有效", source="manual") for item in allowed}
 
 
 class FakeFallback(BaseRAGService):
@@ -222,6 +227,12 @@ def test_visibility_service_reads_durable_epoch_and_only_current_publications(tm
                 embedder=FakeEmbedder(), query_rewriter=QueryRewriter(), reranker=Reranker(),
                 fallback=FakeFallback(), visibility=visibility)
             assert [doc.title for doc in await service.retrieve("景点", top_k=1)] == ["数据库有效版本"]
+            forged.id = "current-chunk"
+            forged.metadata["chunk_id"] = "current-chunk"
+            documents = await service.retrieve("景点", top_k=1)
+            assert documents[0].content == "景点\n景点信息\n当前"
+            assert documents[0].title == "景点"
+            assert documents[0].source == "手册"
         finally:
             await session.close()
             await engine.dispose()

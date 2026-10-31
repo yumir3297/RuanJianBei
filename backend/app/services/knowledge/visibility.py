@@ -20,18 +20,23 @@ class VisibilityService:
         return epoch if epoch is not None else 1
 
     async def filter_published_chunks(self, references: list[tuple[str, int, str]]) -> set[tuple[str, int, str]]:
+        return set(await self.get_published_chunks(references))
+
+    async def get_published_chunks(self, references: list[tuple[str, int, str]]) -> dict[tuple[str, int, str], KnowledgeChunk]:
         if not references:
-            return set()
-        result = await self.session.execute(
-            select(KnowledgeChunk.chunk_id, KnowledgeChunk.source_entry_id, KnowledgeChunk.revision_id)
+            return {}
+        result = await self.session.scalars(
+            select(KnowledgeChunk)
             .join(KnowledgeEntry, KnowledgeEntry.id == KnowledgeChunk.source_entry_id)
             .where(KnowledgeChunk.chunk_id.in_({item[0] for item in references}),
                    KnowledgeEntry.withdrawn_at.is_(None),
                    KnowledgeChunk.revision_id == KnowledgeEntry.published_revision_id,
                    KnowledgeChunk.revision_id.is_not(None))
         )
-        current = {(chunk_id, int(entry_id), revision_id) for chunk_id, entry_id, revision_id in result.all()}
-        return current.intersection(references)
+        wanted = set(references)
+        return {(chunk.chunk_id, int(chunk.source_entry_id), chunk.revision_id): chunk
+                for chunk in result.all()
+                if (chunk.chunk_id, int(chunk.source_entry_id), chunk.revision_id) in wanted}
 
     async def filter_published(self, references: list[tuple[int, str]]) -> set[tuple[int, str]]:
         if not references:
