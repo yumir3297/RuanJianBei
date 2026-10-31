@@ -133,23 +133,23 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  width: min(680px, calc(100vw - 24px));
+  width: min(640px, calc(100vw - 24px));
   padding: 12px 14px;
-  border-radius: 14px;
-  box-shadow: 0 12px 30px rgba(23, 44, 34, 0.28);
+  border-radius: 12px;
   font-size: 13px;
   line-height: 1.5;
+  background: #fbf6ea;
+  border: 1px solid rgba(36, 43, 38, 0.16);
+  box-shadow: 0 2px 0 rgba(227, 215, 190, 0.95), 0 16px 34px rgba(58, 50, 36, 0.22);
 }
 
 .offline-entry-prompt--urgent {
-  background: #fff4e8;
-  border: 1px solid #dc9457;
-  color: #6d3a11;
+  border-left: 4px solid #b4462f;
+  color: #3a2f27;
 }
 
 .offline-entry-prompt--calm {
-  background: #eef4ef;
-  border: 1px solid #b9cdbd;
+  border-left: 4px solid #6f8a72;
   color: #2c4a3b;
 }
 
@@ -162,11 +162,14 @@ onBeforeUnmount(() => {
 }
 
 .offline-entry-copy strong {
-  font-size: 14px;
+  font-family: "Songti SC", "Noto Serif SC", "STSong", serif;
+  font-size: 15px;
+  letter-spacing: 0.08em;
 }
 
 .offline-entry-copy span {
-  opacity: 0.82;
+  color: #6f7d6d;
+  font-size: 12px;
 }
 
 .offline-entry-actions {
@@ -178,7 +181,7 @@ onBeforeUnmount(() => {
 .offline-entry-actions button {
   min-height: 40px;
   padding: 0 14px;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid transparent;
   font-size: 13px;
   font-weight: 600;
@@ -186,24 +189,29 @@ onBeforeUnmount(() => {
 }
 
 .offline-entry-primary {
-  background: #b8542f;
-  color: #fff8f1;
+  background: #b4462f;
+  border-color: #8e3323 !important;
+  color: #fdf6ec;
+  font-family: "Songti SC", "Noto Serif SC", "STSong", serif;
+  letter-spacing: 0.1em;
+  box-shadow: 0 2px 0 #8e3323;
 }
 
-.offline-entry-primary:hover {
-  background: #9c4526;
+.offline-entry-primary:active {
+  transform: translateY(1px);
+  box-shadow: none;
 }
 
 .offline-entry-secondary {
-  background: #fff;
-  border-color: #dc9457 !important;
-  color: #8a4718;
+  background: #fbf6ea;
+  border-color: rgba(36, 43, 38, 0.2) !important;
+  color: #4c5a50;
 }
 
 .offline-entry-dismiss {
   background: transparent;
-  color: inherit;
-  opacity: 0.75;
+  color: #7a867a;
+  font-size: 12px;
 }
 
 @media (max-width: 480px) {

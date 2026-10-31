@@ -12,8 +12,8 @@ export const GAME_STATES = Object.freeze({
 
 export const WORLD = Object.freeze({
   width: 640,
-  height: 240,
-  groundY: 198,
+  height: 280,
+  groundY: 236,
   gravity: 2200,
   jumpVelocity: -760,
   baseSpeed: 240,
@@ -26,9 +26,9 @@ export const WORLD = Object.freeze({
 });
 
 const OBSTACLE_KINDS = Object.freeze({
-  rock: { width: 28, height: 26, hitInsetX: 4, hitInsetY: 3 },
-  sign: { width: 22, height: 46, hitInsetX: 3, hitInsetY: 4 },
-  crate: { width: 30, height: 30, hitInsetX: 4, hitInsetY: 3 },
+  rock: { width: 30, height: 28, hitInsetX: 4, hitInsetY: 3 },
+  sign: { width: 24, height: 50, hitInsetX: 3, hitInsetY: 4 },
+  crate: { width: 32, height: 34, hitInsetX: 4, hitInsetY: 3 },
 });
 
 export const OBSTACLE_TYPES = Object.freeze(Object.keys(OBSTACLE_KINDS));

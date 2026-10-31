@@ -56,7 +56,7 @@ npm run dev
 
 ## 离线伴游与应急页
 
-弱网/断网时可进入独立的轻量页面 `/offline.html`：Q 版跑酷、可缩放的静态景区示意图、应急联系电话。该页不加载 Vue、Element Plus、Three/VRM、Leaflet 或在线瓦片。
+弱网/断网时可进入独立的轻量页面 `/offline.html`：Q 版跑酷、可缩放的静态景区示意图、应急联系电话。该页不加载 Vue、Element Plus、Three/VRM、Leaflet 或在线瓦片。页面采用纸雕山水画风（参考 Tengami 的纸片层次与 Alto's Odyssey 的剪影视差 + 极简 HUD）。
 
 - **入口**：游客页右下角在持续不可达（≥3 次探针失败且 ≥15 s）时出现“进入离线伴游”横幅；用户点击后才跳转，不会自动切页。
 - **离线包**：主站首次在线访问时后台注册 Service Worker，并校验 `/offline.html`、入口 JS/CSS、地图、通讯录是否全部进入 Cache Storage，全部成功才显示“已就绪”。预缓存清单由 `scripts/offline-sw-plugin.mjs` 在构建期按真实产物图生成。

@@ -82,7 +82,7 @@ async function main() {
   );
 
   // ---------------- 场景 1：首次在线访问主站，后台准备离线包 ----------------
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
   const mainPage = await context.newPage();
   const consoleErrors = [];
   mainPage.on("console", (message) => {
@@ -114,7 +114,7 @@ async function main() {
     assert.equal(await offlinePage.isVisible("#game-canvas"), true);
     assert.equal(await offlinePage.isVisible("#open-map"), true);
     assert.equal(await offlinePage.isVisible("#open-help"), true);
-    await offlinePage.screenshot({ path: path.join(evidenceDir, "offline-home.png") });
+    await offlinePage.screenshot({ path: path.join(evidenceDir, "offline-home.jpg"), type: "jpeg", quality: 82 });
   });
 
   await step("SAFE-02 断网打开地图，可缩放且无在线瓦片请求", async () => {
@@ -132,7 +132,7 @@ async function main() {
     const after = await offlinePage.evaluate(() => document.getElementById("map-image").style.transform);
     assert.notEqual(before, after, "缩放没有生效");
     assert.match(await offlinePage.textContent("#map-warning"), /未核验/);
-    await offlinePage.screenshot({ path: path.join(evidenceDir, "offline-map.png") });
+    await offlinePage.screenshot({ path: path.join(evidenceDir, "offline-map.jpg"), type: "jpeg", quality: 82 });
   });
 
   await step("SAFE-08 打开地图时游戏自动暂停，关闭后恢复", async () => {
@@ -154,7 +154,7 @@ async function main() {
     const dialButtons = await offlinePage.locator(".contact-dial").count();
     assert.equal(dialButtons, 0, "未核验号码不应出现 tel: 拨号按钮");
     assert.match(await offlinePage.textContent("#contacts"), /未核验/);
-    await offlinePage.screenshot({ path: path.join(evidenceDir, "offline-help.png") });
+    await offlinePage.screenshot({ path: path.join(evidenceDir, "offline-help.jpg"), type: "jpeg", quality: 82 });
     await offlinePage.click("[data-close-help]");
   });
 
@@ -163,6 +163,7 @@ async function main() {
     await offlinePage.waitForTimeout(1400);
     const score = Number(await offlinePage.textContent("#score"));
     assert.ok(score > 0, `分数没有增长：${score}`);
+    await offlinePage.screenshot({ path: path.join(evidenceDir, "offline-game.jpg"), type: "jpeg", quality: 82 });
   });
 
   await step("OFF-07 离线时 /health 不会读到 Service Worker 伪造的缓存", async () => {
@@ -233,13 +234,13 @@ async function main() {
 
   // ---------------- 场景 5：主站弱网横幅（后端不可达但网络已连接） ----------------
   await step("NET-02/03 主站持续不可达 15s 后出现进入离线伴游横幅，不自动跳转", async () => {
-    const degradedContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const degradedContext = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
     const page = await degradedContext.newPage();
     await page.route("**/health", (route) => route.abort("connectionrefused"));
     await page.goto(`${origin}/tourist`, { waitUntil: "domcontentloaded" });
     await page.waitForSelector(".offline-entry-prompt--urgent", { timeout: 45000 });
     const text = await page.textContent(".offline-entry-prompt--urgent");
-    await page.screenshot({ path: path.join(evidenceDir, "main-offline-banner.png") });
+    await page.screenshot({ path: path.join(evidenceDir, "main-offline-banner.jpg"), type: "jpeg", quality: 82 });
     assert.match(text, /网络暂时不可达/);
     assert.match(page.url(), /\/tourist/, "横幅出现时不得自动跳转");
     const enter = page.locator(".offline-entry-primary");

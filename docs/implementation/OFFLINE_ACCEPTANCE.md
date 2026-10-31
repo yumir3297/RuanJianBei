@@ -44,25 +44,25 @@
 
 ## 3. 离线预缓存清单与体积（实测）
 
-构建命令：`cd frontend && npm run build`（buildId `998a1a6ea7d2`，10 项）。
+构建命令：`cd frontend && npm run build`（buildId `5b353529797c`，10 项）。
 
 | 文件 | gzip 传输 | 原始 |
 |---|---:|---:|
-| `/assets/offline-CBAHzheK.js`（入口+游戏+存储） | 8,752 B | 22,885 B |
+| `/assets/offline-BWWAPZp-.js`（入口+游戏+存储） | 10,674 B | 29,552 B |
 | `/assets/offline-registration-9U6C3C84.js`（与主站共享 chunk） | 3,896 B | 10,059 B |
-| `/assets/offline-DD1MwGmM.css` | 2,667 B | 9,633 B |
+| `/assets/offline-DrqKr3iX.css` | 3,817 B | 15,001 B |
 | `/assets/modulepreload-polyfill-B5Qt9EMX.js` | 399 B | 711 B |
-| `/offline.html` | 2,264 B | 6,503 B |
+| `/offline.html` | 2,528 B | 7,514 B |
 | `/offline/help/contacts.json` | 510 B | 1,095 B |
 | `/offline/map/map-meta.json` | 377 B | 457 B |
-| `/offline/map/placeholder-scenic-map.svg` | 1,320 B | 2,998 B |
+| `/offline/map/placeholder-scenic-map.svg` | 1,084 B | 2,676 B |
 | `/favicon.svg` | 179 B | 201 B |
-| `/offline-precache-manifest.json` | 319 B | 534 B |
-| **合计** | **20,683 B ≈ 20.2 KB** | **55,076 B ≈ 53.8 KB** |
+| `/offline-precache-manifest.json` | 320 B | 534 B |
+| **合计** | **23,784 B ≈ 23.2 KB** | **67,800 B ≈ 66.2 KB** |
 | `sw.js`（首次注册额外下载） | 1,660 B | 3,039 B |
-| **离线包首次下载合计** | **≈ 22.1 KB** | ≈ 56.8 KB |
+| **离线包首次下载合计** | **≈ 25.4 KB** | ≈ 70.8 KB |
 
-对照预算：≤1.0 MB 合格 / ≤500 KB 推荐 → **PASS（约为上限的 2.2%）**。
+对照预算：≤1.0 MB 合格 / ≤500 KB 推荐 → **PASS（约为上限的 2.5%）**。
 清单中**不含** `models/*.vrm`、`motions/*`、Element Plus/ECharts/Leaflet/Three 主站包与任何 API 响应（E2E 断言）。
 
 ---
@@ -103,11 +103,12 @@ PASS    201ms  REG-01 主站页面在离线组件接入后仍可渲染游客界�
 
 ### 4.3 证据文件
 
-- `docs/implementation/evidence/offline-home.png`（断网首屏：地图/求助大按钮、跑酷、缓存状态）
-- `docs/implementation/evidence/offline-map.png`（断网打开地图、放大后、未核验警示）
-- `docs/implementation/evidence/offline-help.png`（求助面板：未核验徽标、复制号码、无拨号按钮）
-- `docs/implementation/evidence/main-offline-banner.png`（主站持续不可达后的“进入离线伴游”横幅，未遮挡导览）
-- 构建日志：`[offline-sw] buildId=998a1a6ea7d2 预缓存 10 项`（`/tmp/offline-build.log`，本文第 3 节为最终 dist 实测）
+- `docs/implementation/evidence/offline-home.jpg`（断网首屏：地图/求助大按钮、纸雕跑酷、离线使用提示）
+- `docs/implementation/evidence/offline-game.jpg`（断网跑酷进行中：朱砂印章计分、墨线小人、石灯障碍）
+- `docs/implementation/evidence/offline-map.jpg`（断网打开手卷式地图、放大后、未核验警示）
+- `docs/implementation/evidence/offline-help.jpg`（求助面板：未核验徽标、复制号码、无拨号按钮）
+- `docs/implementation/evidence/main-offline-banner.jpg`（主站持续不可达后的“进入离线伴游”纸卡横幅，未遮挡导览）
+- 以上截图均为 390×844 @2x JPEG（quality 82）；构建日志：`[offline-sw] buildId=5b353529797c 预缓存 10 项`（`/tmp/offline-build.log`，本文第 3 节为最终 dist 实测）
 
 ---
 
@@ -203,7 +204,7 @@ PASS    201ms  REG-01 主站页面在离线组件接入后仍可渲染游客界�
 Worktree 路径与分支：../RuanJianBei-offline / feature/offline-companion
 新增/修改文件：见本文第 1 节与第 7 节
 网络状态机实现摘要：见本文第 2 节
-离线预缓存清单与总下载体积（实测）：10 项，gzip 20,683 B + sw.js 1,660 B ≈ 22.1 KB
+离线预缓存清单与总下载体积（实测）：10 项，gzip 23,784 B + sw.js 1,660 B ≈ 25.4 KB
 地图来源、许可、核验记录：无（BLOCKED）；仅提供明确标注的未核验占位示意图
 求助电话来源、核验记录：无官方核验记录（BLOCKED）；来自景区后台默认配置，标记 unverified
 单元测试 PASS/FAIL：26 PASS / 0 FAIL
@@ -224,3 +225,32 @@ Playwright E2E PASS/FAIL：16 PASS / 0 FAIL
 2. 合入后需 **重新执行 `npm run build`**（离线清单含构建哈希，必须与线上产物一致）。
 3. 上线前必须完成应急电话与离线地图的人工核验；在此之前页面会如实显示“未核验”，**不得对外宣传为官方救援入口**。
 4. 主工作树存在与本需求无关的未提交改动（`.gitignore`、`README.md`、`evaluation/` 等），合并前请先确认基线。
+
+---
+
+## 10. 视觉重设计记录（v1.1）
+
+### 10.1 参考与调研结论
+
+| 参考 | 借鉴点 |
+|---|---|
+| **Tengami**（Nyamyam，纸片立体书） | 分层纸片山峦、纸边高光、低饱和的自然色阶（赭/黛/松/金） |
+| **Alto's Odyssey**（Snowman） | 剪影视差层次、极简 HUD、“每一帧都是一张壁纸”的构图 |
+| 移动端 HUD 设计通识 | 计分固定在左上、按钮锚定四角、扁平矢量+高对比在移动端最易读、避免装饰字体影响读分 |
+
+### 10.2 设计决策
+
+- **色板**：宣纸 `#F4EDDC`、纸卡 `#FBF6EA`、墨 `#242B26`、黛青 `#55685C`、松绿 `#6F8A72`、远山 `#C2CFBE`、朱砂 `#B4462F`（只用于求助、计分印章与警示）。
+- **字体**：标题/数字用宋体（Songti SC / Noto Serif SC），正文与按钮用系统无衬线；数字统一 `tabular-nums`。
+- **版式**：整页作为一张“纸卷”，顶部品牌印章 + 状态胶囊，安全入口为两枚 64px 纸签，跑酷装在纸卡里，追加“离线使用提示”填补长屏空白，桌面端收为居中纸页（不再拉伸留白）。
+- **画布**：三层撕纸山脊（高斯峰 + 首尾等高无缝拼接 + 纸边高光/浅影）、朱砂日轮、纸云、归鸟、近景灌木、草簇与碎石；Q 版墨线小人（发髻/发簪/衣襟/腰带/双飘带 + 跑动摆臂）；障碍改为山石 / 石灯 / 枯松三种剪影。
+- **浮层**：地图改成“手卷”（上下卷轴杆），求助改成“信笺”，未核验信息用朱砂左规线标注。
+- **主站横幅**：同步改为纸卡 + 朱砂主按钮。
+
+### 10.3 自检与迭代
+
+- 用 Playwright 以 390×844 @2x、360×740、1280×960 三种视口渲染截图，共迭代 3 轮（初版 → 加高山脊/放大角色 → 纸云/草地/叠纸阴影）。
+- 检查项：首屏地图/求助可见且 ≥44px、无横向溢出、计分可读、`prefers-reduced-motion` 下停止视差与落叶、遮罩不拦截点击。
+- 仅动视觉层：`ConnectivityMonitor`、存储、Service Worker、URL/电话白名单、测试契约均未改；`WORLD.height` 240→280 与障碍尺寸微调后，26 项单测与 16 项 E2E 全部通过。
+- 体积影响：预缓存 gzip 由 22.4 KB 增至 25.4 KB（仍为 1 MB 上限的 2.5%）。
+
