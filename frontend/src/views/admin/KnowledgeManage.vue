@@ -112,7 +112,7 @@
         </div>
 
         <el-skeleton v-if="loading" :rows="6" animated />
-        <el-empty v-else-if="!entries.length" description="暂无知识条目，可先同步官方资料或手动新增" />
+        <el-empty v-else-if="!entries.length" description="暂无知识条目，可先导入资料或手动新增" />
         <el-empty v-else-if="!filteredEntries.length" description="当前筛选条件下暂无符合条目" />
         <div v-else class="table-shell">
           <el-table :data="pagedEntries" stripe class="knowledge-table" row-key="id" @selection-change="selectedRows = $event">
@@ -201,7 +201,7 @@
           <div class="action-list">
             <div class="action-item">
               <div class="action-copy">
-                <strong>官方资料导入草稿</strong>
+                <strong>资料导入草稿</strong>
                 <p>将资料更新写入草稿区，逐条检查并确认后再发布给游客。</p>
               </div>
               <el-button :icon="UploadFilled" :loading="syncing" @click="handleSync">导入至草稿</el-button>
@@ -496,7 +496,7 @@ const statusDescription = computed(() => {
     return "正在读取当前知识资产快照，请稍候。";
   }
   if (syncing.value) {
-    return "官方资料正在回流至知识池，完成后会自动刷新当前快照。";
+    return "资料正在导入知识池，完成后会自动刷新当前快照。";
   }
   if (rebuilding.value) {
     return "检索索引正在更新，完成后可提升问答与引用定位效果。";
@@ -504,7 +504,7 @@ const statusDescription = computed(() => {
   if (entries.value.length) {
     return "当前页面可直接进行筛选、补录、同步与索引维护。";
   }
-  return "当前尚无知识条目，建议先同步官方资料或手动新增。";
+  return "当前尚无知识条目，建议先导入资料或手动新增。";
 });
 
 const statusToneClass = computed(() => {
