@@ -129,6 +129,21 @@ class ItineraryProgressTests(unittest.TestCase):
         self.assertEqual(result.known_minutes, 5)
         self.assertFalse(result.estimated_current_stop)
 
+    def test_past_deadline_conflicts_even_if_current_remaining_is_zero(self):
+        data = _snapshot().model_dump(mode="json")
+        data["stops"] = data["stops"][:1]
+        snapshot = TourSnapshotV2.model_validate(data)
+        now = datetime(2026, 10, 29, 8, 0, tzinfo=UTC)
+        started = start_tour(snapshot, plan_version=1, expected_plan_version=1, now=now)
+
+        result = validate_remaining_budget(snapshot, started.progress, now + timedelta(minutes=61),
+            current_stop_remaining_minutes=0)
+
+        self.assertEqual(result.available_minutes, 0)
+        self.assertEqual(result.known_minutes, 0)
+        self.assertEqual(result.status, "conflict")
+        self.assertIn("已超过截止时间", result.message)
+
     def test_current_stop_without_plan_duration_remains_unverified(self):
         data = _snapshot().model_dump(mode="json")
         data["stops"] = data["stops"][:1]

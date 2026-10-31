@@ -188,6 +188,7 @@ def validate_remaining_budget(
     current_stop_remaining_minutes: int | None = None,
 ) -> BudgetValidation:
     when = _utc(now)
+    deadline_passed = False
     if progress is None or progress.status == "not_started":
         remaining = list(snapshot.stops)
         available = snapshot.constraints.available_minutes
@@ -195,7 +196,9 @@ def validate_remaining_budget(
     elif progress.status == "finished":
         return BudgetValidation(status="pass", available_minutes=0, known_minutes=0, message="游览已结束")
     else:
-        available = None if progress.finish_by is None else max(0, int((progress.finish_by - when).total_seconds() // 60))
+        finish_by = _utc(progress.finish_by) if progress.finish_by is not None else None
+        deadline_passed = finish_by is not None and when > finish_by
+        available = None if finish_by is None else max(0, int((finish_by - when).total_seconds() // 60))
         remaining_ids = {stop_id for stop_id, state in progress.status_by_stop.items()
                          if state in {"current", "pending"}}
         remaining = [stop for stop in snapshot.stops if str(stop.stop_id) in remaining_ids]
@@ -230,11 +233,14 @@ def validate_remaining_budget(
         else:
             known += leg.duration_minutes
 
-    if available is not None and known > available:
+    if deadline_passed:
         status: Literal["pass", "conflict", "unverified"] = "conflict"
+        message = "游览尚未结束，已超过截止时间"
+    elif available is not None and known > available:
+        status = "conflict"
         message = "按当前点完整计划时长估算，已知剩余游览时长超过截止时间" if estimated_current_stop else "已知剩余游览时长超过截止时间"
     elif available is None or unknown_stop_ids or unknown_legs:
-        status: Literal["pass", "conflict", "unverified"] = "unverified"
+        status = "unverified"
         message = "当前点按完整计划时长保守估算；剩余预算或部分停留/路段时长缺少可靠依据" if estimated_current_stop else "剩余预算或部分停留/路段时长缺少可靠依据"
     else:
         status = "pass"

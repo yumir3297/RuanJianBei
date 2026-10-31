@@ -144,7 +144,7 @@ const routes = computed(() => recommendations.value.length ? recommendations.val
 const draft = computed(() => tourStore.draftSnapshot || { constraints: {}, stops: [] });
 const isDirty = computed(() => JSON.stringify(draft.value) !== JSON.stringify(tourStore.current?.snapshot || {}));
 const currentProgressStop = computed(() => draft.value.stops?.find(stop => tourStore.progress?.status_by_stop?.[stop.stop_id] === "current") || null);
-const budgetText = computed(() => ({ pass: "符合已知预算", conflict: "已超出已知预算", unverified: "部分时长未核实" }[tourStore.budget?.status] || "待计算"));
+const budgetText = computed(() => tourStore.budget?.message || "待计算");
 function progressLabel(id) { return ({ current: "当前", completed: "已完成", skipped: "已跳过", pending: "待游览" }[tourStore.progress?.status_by_stop?.[id]] || "待游览"); }
 function moveStop(index, direction) { const target = index + direction; if (target < 0 || target >= draft.value.stops.length) return; [draft.value.stops[index], draft.value.stops[target]] = [draft.value.stops[target], draft.value.stops[index]]; }
 function makeStopId() { return globalThis.crypto?.randomUUID?.() || "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === "x" ? r : (r & 3 | 8)).toString(16); }); }
