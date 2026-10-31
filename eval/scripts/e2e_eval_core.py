@@ -333,6 +333,8 @@ def build_execution_report(
         result for result in results if result["expected_behavior"] == "refuse_without_evidence"
     ]
     warm_results = [result for result in results if not result["is_cold_start"]]
+    completed_results = [result for result in results if result["checks"]["stream_completed"] and not result["error_type"]]
+    failed_results = [result for result in results if not result["checks"]["stream_completed"] or result["error_type"]]
 
     return {
         "mode": mode,
@@ -346,7 +348,7 @@ def build_execution_report(
             "accuracy": "关键词和规则启发式通过率，不等于事实正确率。",
             "evidence_rate": "仅统计引用标记出现，未进行证据语义支持核验。",
             "refusal_pass_rate": "基于固定拒答词与规则，不等于安全性结论。",
-            "latency": "串行单次请求结果；标记为冷/热不保证真实缓存状态。",
+            "latency": "串行单次请求；all 包含失败，completed 仅指流完整结束，不代表回答正确；冷/热不保证真实缓存状态。",
         },
         "metrics": {
             "accuracy": _rate(results, lambda item: item["accuracy_pass"]),
@@ -377,6 +379,11 @@ def build_execution_report(
             ),
             "total_all": summarize_latency([item["total_ms"] for item in results]),
             "total_warm": summarize_latency([item["total_ms"] for item in warm_results]),
+            "total_completed": summarize_latency([item["total_ms"] for item in completed_results]),
+            "total_failed": summarize_latency([item["total_ms"] for item in failed_results]),
+            "first_text_completed": summarize_latency([
+                item["first_text_ms"] for item in completed_results if item["first_text_ms"] is not None
+            ]),
         },
         "failures": [item for item in results if not item["accuracy_pass"]],
         "results": results,

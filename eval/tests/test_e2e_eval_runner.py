@@ -186,6 +186,26 @@ def test_incomplete_or_error_stream_cannot_pass_even_when_content_matches(termin
     assert not result["accuracy_pass"]
 
 
+def test_latency_report_separates_complete_from_failed_streams():
+    async def scenario():
+        calls = 0
+        async def handler(_request):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                return httpx.Response(503, text="unavailable")
+            return httpx.Response(200, text=response_for("只有最终文本"), headers={"Content-Type": "text/event-stream"})
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            return await evaluate_remote_cases(mock_cases()[:2], endpoint="http://mock.local/stream", client=client)
+    results = asyncio.run(scenario())
+    report = build_execution_report(mode="local-server", testset_path=Path("mock.json"),
+                                    cases=mock_cases()[:2], results=results)
+    assert report["latency_ms"]["total_all"]["count"] == 2
+    assert report["latency_ms"]["total_completed"]["count"] == 1
+    assert report["latency_ms"]["total_failed"]["count"] == 1
+    assert report["latency_ms"]["first_text_completed"]["count"] == 1
+
+
 def test_default_selection_preserves_sampled_real_prefix_and_local_limit():
     from eval.scripts.run_e2e_chat_eval import select_cases
     cases = load_cases(Path(__file__).resolve().parents[1] / 'testset' / 'e2e_qa_100.json')
