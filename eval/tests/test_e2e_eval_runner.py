@@ -206,6 +206,25 @@ def test_latency_report_separates_complete_from_failed_streams():
     assert report["latency_ms"]["first_text_completed"]["count"] == 1
 
 
+def test_report_retains_backend_route_and_degraded_status():
+    async def scenario():
+        async def handler(_request):
+            body = sse(("text", {"text": "回答"}), ("done", {
+                "completion": "complete", "provider": "evidence_fallback",
+                "hit_level": "rag_llm_fallback", "degraded": True}))
+            return httpx.Response(200, text=body, headers={"Content-Type": "text/event-stream"})
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            return await evaluate_remote_cases([mock_cases()[0]], endpoint="http://mock.local/stream", client=client)
+    results = asyncio.run(scenario())
+    assert results[0]["provider"] == "evidence_fallback"
+    assert results[0]["hit_level"] == "rag_llm_fallback"
+    assert results[0]["degraded"] is True
+    report = build_execution_report(mode="local-server", testset_path=Path("mock.json"),
+                                    cases=mock_cases()[:1], results=results)
+    assert report["route_summary"]["providers"]["evidence_fallback"] == 1
+    assert report["route_summary"]["degraded"] == 1
+
+
 def test_default_selection_preserves_sampled_real_prefix_and_local_limit():
     from eval.scripts.run_e2e_chat_eval import select_cases
     cases = load_cases(Path(__file__).resolve().parents[1] / 'testset' / 'e2e_qa_100.json')

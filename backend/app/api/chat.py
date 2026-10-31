@@ -248,6 +248,7 @@ async def build_pipeline(
         followup_suggestions=FollowUpSuggestionService(),
         blind_spot_tracker=BlindSpotTracker(KnowledgeBlindSpotRepository(session)),
         answer_cache_namespace=build_answer_cache_namespace(settings),
+        llm_provider_name=settings.llm_provider,
         intent_router=IntentRouter(),
         knowledge_repository=knowledge_repository,
         route_repository=route_repository,

@@ -85,6 +85,9 @@ class ChatEvalResponse:
     error_type: str | None = None
     error_message: str | None = None
     completion: str | None = None
+    provider: str | None = None
+    hit_level: str | None = None
+    degraded: bool | None = None
 
 
 def load_cases(testset_path: Path) -> list[E2ECase]:
@@ -192,6 +195,9 @@ async def request_case(
     sources: list[dict[str, Any]] = []
     event_types: list[str] = []
     completion: str | None = None
+    provider: str | None = None
+    hit_level: str | None = None
+    degraded: bool | None = None
 
     payload: dict[str, Any] = {
         "query": case.query,
@@ -211,6 +217,9 @@ async def request_case(
                 event_types.append(event_type)
                 if event_type == "done":
                     completion = event_payload.get("completion")
+                    provider = event_payload.get("provider") if isinstance(event_payload.get("provider"), str) else None
+                    hit_level = event_payload.get("hit_level") if isinstance(event_payload.get("hit_level"), str) else None
+                    degraded = event_payload.get("degraded") if isinstance(event_payload.get("degraded"), bool) else None
                 if event_type == "sources":
                     docs = event_payload.get("docs", [])
                     if isinstance(docs, list):
@@ -237,6 +246,7 @@ async def request_case(
             error_type=type(exc).__name__,
             error_message=str(exc)[:200],
             completion=completion,
+            provider=provider, hit_level=hit_level, degraded=degraded,
         )
 
     return ChatEvalResponse(
@@ -249,6 +259,7 @@ async def request_case(
         total_ms=(perf_counter() - started_at) * 1000,
         is_cold_start=is_cold_start,
         completion=completion,
+        provider=provider, hit_level=hit_level, degraded=degraded,
     )
 
 
@@ -286,6 +297,9 @@ def score_case(case: E2ECase, response: ChatEvalResponse) -> dict[str, Any]:
         "sources": response.sources,
         "event_types": response.event_types,
         "completion": response.completion,
+        "provider": response.provider,
+        "hit_level": response.hit_level,
+        "degraded": response.degraded,
         "first_text_ms": response.first_text_ms,
         "total_ms": response.total_ms,
         "is_cold_start": response.is_cold_start,
@@ -342,6 +356,12 @@ def build_execution_report(
         "case_count": len(cases),
         "category_distribution": dict(Counter(case.category for case in cases)),
         "behavior_distribution": dict(Counter(case.expected_behavior for case in cases)),
+        "route_summary": {
+            "providers": dict(Counter(item.get("provider") or "unknown" for item in results)),
+            "hit_levels": dict(Counter(item.get("hit_level") or "unknown" for item in results)),
+            "degraded": sum(item.get("degraded") is True for item in results),
+            "degraded_unknown": sum(item.get("degraded") is None for item in results),
+        },
         "expected_behavior_rules": EXPECTED_BEHAVIOR_RULES,
         "metric_notes": {
             "human_review_required": True,

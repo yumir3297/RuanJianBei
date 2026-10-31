@@ -433,6 +433,16 @@ def _build_test_pipeline(**overrides):
     return QAPipeline(**kwargs)
 
 
+def test_done_event_uses_configured_llm_provider_not_hardcoded_name():
+    async def scenario():
+        pipeline = _build_test_pipeline(llm_provider_name="custom-compatible")
+        events = [event async for event in pipeline.stream_chat(
+            ChatRequest(query="介绍景点", session_id="provider-test", text_only=True))]
+        done = next(event for event in events if event.type == "done")
+        assert done.data["provider"] == "custom-compatible"
+    asyncio.run(scenario())
+
+
 def test_attraction_scoped_query_does_not_use_unscoped_faq():
     matcher = FAQMatcher()
     matcher.add([FAQEntry(id="general-hours", category="实用信息", aliases=["开放时间"],

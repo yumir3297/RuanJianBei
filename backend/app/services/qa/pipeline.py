@@ -185,6 +185,7 @@ class QAPipeline:
         followup_suggestions: FollowUpSuggestionService,
         blind_spot_tracker: BlindSpotTracker | None = None,
         answer_cache_namespace: str = "default",
+        llm_provider_name: str = "unknown",
         intent_router: IntentRouter | None = None,
         knowledge_repository: KnowledgeRepository | None = None,
         route_repository: RouteRepository | None = None,
@@ -208,6 +209,7 @@ class QAPipeline:
         self.followup_suggestions = followup_suggestions
         self.blind_spot_tracker = blind_spot_tracker
         self.answer_cache_namespace = answer_cache_namespace
+        self.llm_provider_name = llm_provider_name or "unknown"
         self.intent_router = intent_router or IntentRouter()
         self.knowledge_repository = knowledge_repository
         self.route_repository = route_repository
@@ -807,7 +809,7 @@ class QAPipeline:
             hit_level=llm_fallback_hit_level if degraded_llm else llm_hit_level,
             total_ms=latency_ms,
             degraded=degraded_llm,
-            provider="deepseek" if not degraded_llm else "evidence_fallback",
+            provider=self.llm_provider_name if not degraded_llm else "evidence_fallback",
             completion="incomplete" if incomplete else "complete",
         )
 
