@@ -433,6 +433,43 @@ def _build_test_pipeline(**overrides):
     return QAPipeline(**kwargs)
 
 
+def test_published_source_identifiers_survive_stream_log_and_cached_answer():
+    import json
+    from sqlalchemy import select
+    from app.models.chat_log import ChatLog
+    from app.repositories.chat_log import ChatLogRepository
+    from app.repositories.qa_cache import QACacheRepository
+    from app.tests.async_db import open_test_session
+
+    class PublishedRag:
+        async def retrieve(self, *args, **kwargs):
+            return [RetrievedDocument(title="景点", content="资料", snippet="资料", source="资料来源",
+                                      score=1.0, entry_id=42, revision_id="revision-123")]
+
+    async def scenario():
+        engine, db = await open_test_session()
+        try:
+            def new_pipeline():
+                return _build_test_pipeline(rag_service=PublishedRag(),
+                    chat_log_repository=ChatLogRepository(db),
+                    qa_cache=QACache(QACacheRepository(db), ttl_seconds=60))
+            request = ChatRequest(query="介绍景点", session_id="trace-test", text_only=True)
+            first = [event async for event in new_pipeline().stream_chat(request)]
+            second = [event async for event in new_pipeline().stream_chat(request)]
+            for events in (first, second):
+                source = next(event.data["docs"][0] for event in events if event.type == "sources")
+                assert source["entry_id"] == 42
+                assert source["revision_id"] == "revision-123"
+            logs = (await db.scalars(select(ChatLog).order_by(ChatLog.id))).all()
+            assert json.loads(logs[0].sources)[0]["entry_id"] == 42
+            assert json.loads(logs[1].sources)[0]["revision_id"] == "revision-123"
+            assert logs[1].hit_level == "cache"
+        finally:
+            await db.close()
+            await engine.dispose()
+    asyncio.run(scenario())
+
+
 def _run_turn(pipeline, **request_overrides):
     request_kwargs = {
         "query": "有什么特色",

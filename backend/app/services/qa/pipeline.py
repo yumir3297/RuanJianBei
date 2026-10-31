@@ -1270,6 +1270,8 @@ class QAPipeline:
             "snippet": document.snippet,
             "source": document.source,
             "score": document.score,
+            "entry_id": document.entry_id,
+            "revision_id": document.revision_id,
         }
 
     @staticmethod
