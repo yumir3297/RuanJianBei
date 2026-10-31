@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 import httpx
+import pytest
 
 from eval.scripts.e2e_eval_core import (
     E2ECase,
@@ -29,33 +30,33 @@ def response_for(query: str) -> str:
         return sse(
             ("sources", {"docs": [{"evidence_id": "证据1", "title": "灵山大佛"}]}),
             ("text", {"text": "灵山大佛高88米。[证据1]", "is_complete": True}),
-            ("done", {}),
+            ("done", {"completion": "complete"}),
         )
     if "缺少引用" in query:
         return sse(
             ("sources", {"docs": [{"evidence_id": "证据1", "title": "灵山大佛"}]}),
             ("text_chunk", {"token": "灵山大佛高88米"}),
             ("text", {"text": "灵山大佛高88米。", "is_complete": True}),
-            ("done", {}),
+            ("done", {"completion": "complete"}),
         )
     if "天气" in query:
         return sse(
             ("text_chunk", {"token": "根据现有景区资料，暂时无法确定实时天气。"}),
             ("text", {"text": "根据现有景区资料，暂时无法确定实时天气。", "is_complete": True}),
-            ("done", {}),
+            ("done", {"completion": "complete"}),
         )
     if "禁用事实" in query:
         return sse(
             ("sources", {"docs": [{"evidence_id": "证据1", "title": "灵山大佛"}]}),
             ("text_chunk", {"token": "灵山大佛高88米，免费入园。[证据1]"}),
             ("text", {"text": "灵山大佛高88米，免费入园。[证据1]", "is_complete": True}),
-            ("done", {}),
+            ("done", {"completion": "complete"}),
         )
     return sse(
         ("sources", {"docs": [{"evidence_id": "证据1", "title": "灵山大佛"}]}),
         ("text_chunk", {"token": "灵山大佛高88米"}),
         ("text", {"text": "灵山大佛高88米。[证据1]", "is_complete": True}),
-        ("done", {}),
+        ("done", {"completion": "complete"}),
     )
 
 
@@ -167,6 +168,24 @@ def test_mock_backend_covers_scoring_paths_and_warm_latency() -> None:
     assert report["latency_ms"]["total_warm"]["count"] == 4
 
 
+@pytest.mark.parametrize("terminal", [
+    (("done", {"completion": "incomplete"}),),
+    (("error", {"message": "服务中断"}), ("done", {"completion": "complete"})),
+    (("done", {}),),
+])
+def test_incomplete_or_error_stream_cannot_pass_even_when_content_matches(terminal):
+    async def scenario():
+        async def handler(_request):
+            body = sse(("sources", {"docs": [{"evidence_id": "证据1", "title": "灵山大佛"}]}),
+                ("text", {"text": "灵山大佛高88米。[证据1]"}), *terminal)
+            return httpx.Response(200, text=body, headers={"Content-Type": "text/event-stream"})
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            return await evaluate_remote_cases([mock_cases()[0]], endpoint="http://mock.local/stream", client=client)
+    result = asyncio.run(scenario())[0]
+    assert not result["checks"]["stream_completed"]
+    assert not result["accuracy_pass"]
+
+
 def test_default_selection_preserves_sampled_real_prefix_and_local_limit():
     from eval.scripts.run_e2e_chat_eval import select_cases
     cases = load_cases(Path(__file__).resolve().parents[1] / 'testset' / 'e2e_qa_100.json')
@@ -250,7 +269,7 @@ def test_mock_remote_executes_exactly_the_ids_reported_by_the_single_selection(m
     async def handler(request):
         payload = json.loads(request.content)
         requests.append(payload['query'])
-        return httpx.Response(200, text=sse(('text', {'text': '仅用于离线模拟', 'is_complete': True}), ('done', {})),
+        return httpx.Response(200, text=sse(('text', {'text': '仅用于离线模拟', 'is_complete': True}), ('done', {'completion': 'complete'})),
                               headers={'Content-Type': 'text/event-stream'})
     client_class = httpx.AsyncClient
     monkeypatch.setattr(runner.httpx, 'AsyncClient', lambda **kwargs: client_class(transport=httpx.MockTransport(handler), **kwargs))

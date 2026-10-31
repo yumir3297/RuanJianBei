@@ -84,6 +84,7 @@ class ChatEvalResponse:
     is_cold_start: bool
     error_type: str | None = None
     error_message: str | None = None
+    completion: str | None = None
 
 
 def load_cases(testset_path: Path) -> list[E2ECase]:
@@ -190,6 +191,7 @@ async def request_case(
     chunks: list[str] = []
     sources: list[dict[str, Any]] = []
     event_types: list[str] = []
+    completion: str | None = None
 
     payload: dict[str, Any] = {
         "query": case.query,
@@ -207,6 +209,8 @@ async def request_case(
             response.raise_for_status()
             async for event_type, event_payload in iter_sse_events(response.aiter_lines()):
                 event_types.append(event_type)
+                if event_type == "done":
+                    completion = event_payload.get("completion")
                 if event_type == "sources":
                     docs = event_payload.get("docs", [])
                     if isinstance(docs, list):
@@ -232,6 +236,7 @@ async def request_case(
             is_cold_start=is_cold_start,
             error_type=type(exc).__name__,
             error_message=str(exc)[:200],
+            completion=completion,
         )
 
     return ChatEvalResponse(
@@ -243,6 +248,7 @@ async def request_case(
         first_text_ms=first_text_ms,
         total_ms=(perf_counter() - started_at) * 1000,
         is_cold_start=is_cold_start,
+        completion=completion,
     )
 
 
@@ -279,6 +285,7 @@ def score_case(case: E2ECase, response: ChatEvalResponse) -> dict[str, Any]:
         "answer": response.answer,
         "sources": response.sources,
         "event_types": response.event_types,
+        "completion": response.completion,
         "first_text_ms": response.first_text_ms,
         "total_ms": response.total_ms,
         "is_cold_start": response.is_cold_start,
@@ -302,7 +309,8 @@ def build_checks(case: E2ECase, response: ChatEvalResponse) -> dict[str, bool]:
         for source in response.sources
     )
     return {
-        "stream_completed": "done" in response.event_types and response.status_code == 200,
+        "stream_completed": ("done" in response.event_types and "error" not in response.event_types
+                             and response.status_code == 200 and response.completion == "complete"),
         "source_hit": _all_terms_present(source_text, case.expected_sources),
         "required_fact_hit": _all_terms_present(answer, case.required_facts),
         "forbidden_fact_absent": not _any_term_present(answer, case.forbidden_facts),
