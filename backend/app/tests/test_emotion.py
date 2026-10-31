@@ -28,6 +28,15 @@ def test_urgent_text_overrides_audio_emotion() -> None:
     assert result.conflict is False
 
 
+def test_supported_audio_labels_are_preserved_without_inflating_confidence():
+    assert audio_emotion_signal("confused", 0.7).label == EmotionLabel.CONFUSED
+    urgent = audio_emotion_signal("urgent", 0.2)
+    assert urgent.label == EmotionLabel.URGENT
+    result = MultimodalEmotionFusion().fuse(None, urgent)
+    assert result.label == EmotionLabel.URGENT
+    assert result.confidence == 0.2
+
+
 def test_audio_can_refine_neutral_text_and_conflicts_are_marked() -> None:
     analyzer = TextEmotionAnalyzer()
     fusion = MultimodalEmotionFusion()

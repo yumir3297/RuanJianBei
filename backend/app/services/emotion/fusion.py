@@ -12,6 +12,8 @@ _AUDIO_LABELS = {
     "anxious": EmotionLabel.ANXIOUS,
     "angry": EmotionLabel.DISSATISFIED,
     "dissatisfied": EmotionLabel.DISSATISFIED,
+    "confused": EmotionLabel.CONFUSED,
+    "urgent": EmotionLabel.URGENT,
     "neutral": EmotionLabel.NEUTRAL,
 }
 
@@ -59,7 +61,7 @@ class MultimodalEmotionFusion:
         if urgent is not None:
             return FusedEmotion(
                 label=EmotionLabel.URGENT,
-                confidence=max(urgent.confidence, 0.95),
+                confidence=urgent.confidence,
                 intensity=max(urgent.intensity, 0.9),
                 modalities=tuple(self._modality(signal) for signal in signals),
                 conflict=False,
