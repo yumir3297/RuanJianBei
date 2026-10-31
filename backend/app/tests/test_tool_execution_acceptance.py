@@ -280,3 +280,80 @@ def test_cancel_racing_external_marker_preserves_unknown(tmp_path):
             await db.close()
             await engine.dispose()
     asyncio.run(scenario())
+
+
+def test_cancel_cas_conflict_can_retry_same_key_after_unknown(tmp_path):
+    async def scenario():
+        import pytest
+        from sqlalchemy.ext.asyncio import async_sessionmaker
+        from app.repositories.tool_execution import ToolExecutionRepository, IdempotencyConflict
+        engine, db = await open_test_session(str(tmp_path / "cancel-cas.sqlite"))
+        sessions = async_sessionmaker(engine, expire_on_commit=False)
+        try:
+            _, tools, tour, job, _ = await _queued_fixture(db)
+            lease = await tools.claim_next("worker")
+            assert await tools.start_attempt(lease, max_attempts=1)
+            assert await tools.mark_external_call(lease)
+            async with sessions() as a, sessions() as b:
+                seen, resume = asyncio.Event(), asyncio.Event()
+                original = a.execute
+                async def pause(stmt, *args, **kwargs):
+                    if "UPDATE tool_jobs" in str(stmt) and not seen.is_set():
+                        seen.set()
+                        await resume.wait()
+                    return await original(stmt, *args, **kwargs)
+                a.execute = pause
+                repo = ToolExecutionRepository(a)
+                task = asyncio.create_task(repo.request_cancel("tourist", "owner-a", "site", tour["id"], job["id"], "same-key"))
+                await asyncio.wait_for(seen.wait(), 2)
+                assert await ToolExecutionRepository(b).fail_step(lease, "timeout", retryable=False, external_outcome="unknown")
+                resume.set()
+                with pytest.raises(IdempotencyConflict):
+                    await task
+                result = await repo.request_cancel("tourist", "owner-a", "site", tour["id"], job["id"], "same-key")
+                assert result["status"] == "cancelled"
+                assert result["reason"] == "cancelled_external_outcome_unknown"
+                assert result["steps"][0]["status"] == "cancelled"
+                replay = await repo.request_cancel("tourist", "owner-a", "site", tour["id"], job["id"], "same-key")
+                assert replay["status"] == "cancelled" and replay["reason"] == result["reason"]
+        finally:
+            await db.close()
+            await engine.dispose()
+    asyncio.run(scenario())
+
+
+def test_cancel_cas_conflict_with_completion_can_retry_same_key(tmp_path):
+    async def scenario():
+        import pytest
+        from sqlalchemy.ext.asyncio import async_sessionmaker
+        from app.repositories.tool_execution import ToolExecutionRepository, IdempotencyConflict
+        engine, db = await open_test_session(str(tmp_path / "terminal-cas.sqlite"))
+        sessions = async_sessionmaker(engine, expire_on_commit=False)
+        try:
+            _, tools, tour, job, _ = await _queued_fixture(db)
+            lease = await tools.claim_next("worker")
+            assert await tools.start_attempt(lease, max_attempts=1)
+            async with sessions() as a, sessions() as b:
+                seen, resume = asyncio.Event(), asyncio.Event()
+                original = a.execute
+                async def pause(stmt, *args, **kwargs):
+                    if "UPDATE tool_jobs" in str(stmt) and not seen.is_set():
+                        seen.set()
+                        await resume.wait()
+                    return await original(stmt, *args, **kwargs)
+                a.execute = pause
+                repo = ToolExecutionRepository(a)
+                task = asyncio.create_task(repo.request_cancel("tourist", "owner-a", "site", tour["id"], job["id"], "terminal-key"))
+                await asyncio.wait_for(seen.wait(), 2)
+                assert await ToolExecutionRepository(b).complete_execution(lease, {"value": 42})
+                resume.set()
+                with pytest.raises(IdempotencyConflict):
+                    await task
+                result = await repo.request_cancel("tourist", "owner-a", "site", tour["id"], job["id"], "terminal-key")
+                assert result["status"] == "succeeded"
+                replay = await repo.request_cancel("tourist", "owner-a", "site", tour["id"], job["id"], "terminal-key")
+                assert replay["status"] == "succeeded"
+        finally:
+            await db.close()
+            await engine.dispose()
+    asyncio.run(scenario())

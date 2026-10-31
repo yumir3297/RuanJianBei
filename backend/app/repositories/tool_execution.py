@@ -911,7 +911,13 @@ class ToolExecutionRepository:
                 job.lease_until = None
                 job.completed_at = now
             else:
-                await self.session.refresh(job)
+                await self.session.rollback()
+                receipt = await self._receipt(principal_type, principal_id, "cancel", idempotency_key, digest)
+                replay = await self._replay_view(receipt)
+                if replay is not None:
+                    return replay
+                await self.session.rollback()
+                raise IdempotencyConflict("任务状态已变化，请使用相同幂等键重试取消")
         await self._record_command_receipt(job, "cancel", idempotency_key, digest, now)
         try:
             await self.session.commit()
