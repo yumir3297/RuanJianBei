@@ -1,5 +1,7 @@
 # 开发进度
 
+2026-10-31 当前代码基线 `2d09492`：最新后端全套 430 passed、1 skipped；前端 105 passed、构建成功。真实浏览器、外部供应商、PostgreSQL 并发、移动设备及官方赛题原文仍未完成验收。独立工作目录为 `integration-work/v01`，原有 worktree 和快照保留；已有保存的服务电话未被默认配置变更，须管理员核实。
+
 2026-10-30，集成分支 `codex/competition-integration`，基线 `ec3f7a6`。这是独立本地副本；原 worktree 及四份快照仍保留。`frontend/node_modules` 是本机依赖软链接，不属于源码交付。
 
 已整合 K01、W01、V01、主工作区稳定性/语音和 W02 初版。后端 389 通过、1 跳过；前端 94 通过、构建通过；隔离 SQLite 迁移升级/回退通过。W02 真实浏览器与 worker、真实供应商、PostgreSQL 多 worker、移动设备和弱网仍未验证。真实旧 W02 数据库的迁移兼容尚未确认。
