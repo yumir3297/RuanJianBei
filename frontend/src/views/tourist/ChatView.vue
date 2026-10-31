@@ -231,6 +231,7 @@
         </div>
       </div>
     </dialog>
+    <OfflineEntryPrompt />
   </section>
 </template>
 
@@ -241,6 +242,7 @@ import { useRoute, useRouter } from "vue-router";
 import ThreeAvatar from "../../components/ThreeAvatar.vue";
 import AvatarDisplay from "../../components/AvatarDisplay.vue";
 import GuideIcon from "../../components/GuideIcon.vue";
+import OfflineEntryPrompt from "../../components/OfflineEntryPrompt.vue";
 import ExploreView from "./ExploreView.vue";
 import MapView from "./MapView.vue";
 import RouteView from "./RouteView.vue";

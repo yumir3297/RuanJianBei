@@ -1,0 +1,41 @@
+{
+  "siteId": "lingshan-shengjing-demo",
+  "regionName": "灵山胜境（示例配置）",
+  "contactsVersion": "2026-10-31.0",
+  "verifiedAt": null,
+  "source": null,
+  "status": "unverified",
+  "note": "号码取自后台“服务热线”默认配置，尚未完成景区运营方核验，不作为官方救援电话。",
+  "entries": [
+    {
+      "id": "emergency",
+      "group": "emergency",
+      "label": "医疗急救",
+      "phoneDisplay": "0510-85688120",
+      "phoneUri": "tel:051085688120",
+      "verifiedAt": null,
+      "source": null,
+      "status": "unverified"
+    },
+    {
+      "id": "broadcast",
+      "group": "service",
+      "label": "广播找人",
+      "phoneDisplay": "0510-85688631",
+      "phoneUri": "tel:051085688631",
+      "verifiedAt": null,
+      "source": null,
+      "status": "unverified"
+    },
+    {
+      "id": "complaint",
+      "group": "service",
+      "label": "景区投诉",
+      "phoneDisplay": "400-168-0303转5",
+      "phoneUri": "tel:4001680303",
+      "verifiedAt": null,
+      "source": null,
+      "status": "unverified"
+    }
+  ]
+}

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#1f3a2d" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>离线伴游 · 景区应急页</title>
+  </head>
+  <body>
+    <div class="offline-app">
+      <header class="offline-header">
+        <div class="offline-brand">
+          <span class="brand-mark" aria-hidden="true">伴</span>
+          <div>
+            <h1>离线伴游</h1>
+            <p id="site-name">景区离线应急页</p>
+          </div>
+        </div>
+        <div class="offline-status">
+          <span id="net-chip" class="chip chip--unknown" role="status" aria-live="polite">连接检测中</span>
+          <span id="cache-chip" class="chip chip--warn">离线包检查中</span>
+        </div>
+      </header>
+
+      <main class="offline-main">
+        <section class="safety-row" aria-label="安全入口">
+          <button id="open-map" class="safety-button safety-button--map" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M9 3.5 3.5 5.8v14.7L9 18.2l6 2.3 5.5-2.3V3.5L15 5.8 9 3.5Z" />
+              <path d="M9 3.5v14.7M15 5.8v14.7" />
+            </svg>
+            <span>景区地图</span>
+          </button>
+          <button id="open-help" class="safety-button safety-button--help" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M6.6 3.5h3l1.6 4-2 1.4a12 12 0 0 0 5.9 5.9l1.4-2 4 1.6v3a2 2 0 0 1-2.1 2A17 17 0 0 1 4.6 5.6a2 2 0 0 1 2-2.1Z" />
+            </svg>
+            <span>紧急求助</span>
+          </button>
+        </section>
+
+        <section class="game-panel" aria-label="Q 版跑酷">
+          <div class="game-head">
+            <span class="game-hint-text">点击画面或按空格跳跃</span>
+            <span class="game-score">当前 <output id="score" aria-live="off">0</output></span>
+            <span class="game-best">最佳 <output id="best-score">0</output></span>
+          </div>
+          <div id="game-stage" class="game-stage">
+            <canvas id="game-canvas" role="img" aria-label="Q 版小人跑酷游戏画面"></canvas>
+            <div id="game-overlay" class="game-overlay">
+              <p id="overlay-text">点击画面开始</p>
+            </div>
+          </div>
+          <div class="game-controls">
+            <button id="btn-start" type="button">开始游戏</button>
+            <button id="btn-pause" type="button">暂停</button>
+            <button id="btn-restart" type="button">重新开始</button>
+            <button id="btn-jump" type="button">跳跃</button>
+          </div>
+          <p id="game-status" class="game-status" role="status" aria-live="polite"></p>
+        </section>
+
+        <section id="recover-banner" class="recover-banner" aria-live="polite" hidden>
+          <p>网页服务已恢复，可以返回数字人导游。</p>
+          <button id="btn-return-recovered" type="button" class="primary-button">返回数字人导游</button>
+        </section>
+
+        <footer class="offline-footer">
+          <p id="cache-detail" class="cache-detail">离线资源：检查中…</p>
+          <div class="footer-actions">
+            <button id="btn-prepare" type="button" hidden>重试准备离线包</button>
+            <button id="btn-return" type="button" class="link-button">返回数字人导游</button>
+          </div>
+          <p class="offline-disclaimer">
+            本页用于网络不可达时查看景区信息与求助。地图与电话以现场指示及工作人员为准。
+          </p>
+        </footer>
+      </main>
+
+      <div id="map-dialog" class="sheet sheet--full" role="dialog" aria-modal="true" aria-labelledby="map-title" hidden>
+        <header class="sheet-head">
+          <h2 id="map-title">景区离线地图</h2>
+          <button type="button" class="sheet-close" data-close-map aria-label="关闭地图">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+          </button>
+        </header>
+        <p id="map-warning" class="map-warning" role="note"></p>
+        <div id="map-body" class="map-body">
+          <div id="map-empty" class="map-empty" hidden>
+            <strong>景区离线地图暂不可用</strong>
+            <p id="map-empty-detail">尚未获得经核验的可离线地图资源。</p>
+            <p>请以现场指示牌与工作人员指引为准，也可打开“紧急求助”联系景区。</p>
+          </div>
+          <div id="map-viewport" class="map-viewport" tabindex="0" aria-label="地图缩放与拖动区域，可双指缩放或用加减键缩放" hidden>
+            <img id="map-image" alt="景区示意图，尚未核验，不可用于救援导航" draggable="false" />
+          </div>
+        </div>
+        <footer class="map-controls">
+          <button id="map-zoom-in" type="button" aria-label="放大地图">放大</button>
+          <button id="map-zoom-out" type="button" aria-label="缩小地图">缩小</button>
+          <button id="map-reset" type="button">复位</button>
+        </footer>
+      </div>
+
+      <div id="help-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
+        <header class="sheet-head">
+          <h2 id="help-title">紧急求助</h2>
+          <button type="button" class="sheet-close" data-close-help aria-label="关闭求助面板">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+          </button>
+        </header>
+        <div id="contacts" class="contacts"></div>
+        <p class="help-foot">如无法拨通，请向附近工作人员求助。网页不会确认电话是否接通。</p>
+      </div>
+
+      <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    </div>
+    <noscript>本页需要启用 JavaScript 才能显示跑酷游戏与求助信息。</noscript>
+    <script type="module" src="/src/offline/main.js"></script>
+  </body>
+</html>

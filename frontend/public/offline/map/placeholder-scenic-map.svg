@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1400" width="1000" height="1400" role="img" aria-label="景区离线示意图占位：未经核验，不可用于救援导航">
+  <title>景区离线示意图（未核验占位）</title>
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f7f3e7" />
+      <stop offset="1" stop-color="#e9e1cf" />
+    </linearGradient>
+    <linearGradient id="hill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#cddccb" />
+      <stop offset="1" stop-color="#b8cbb6" />
+    </linearGradient>
+    <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+      <path d="M50 0H0V50" fill="none" stroke="#d8cfbb" stroke-width="1" />
+    </pattern>
+  </defs>
+
+  <rect width="1000" height="1400" fill="url(#paper)" />
+  <rect width="1000" height="1400" fill="url(#grid)" opacity="0.65" />
+  <rect x="28" y="28" width="944" height="1344" rx="18" fill="none" stroke="#8a9c86" stroke-width="3" />
+
+  <!-- 装饰性抽象山形，仅作视觉底纹，不代表任何真实地物 -->
+  <path d="M60 1080 L260 820 L420 1010 L560 780 L760 1040 L940 860 L940 1160 L60 1160 Z" fill="url(#hill)" opacity="0.55" />
+  <path d="M60 1180 C 260 1120 380 1240 560 1180 C 720 1128 840 1210 940 1160 L940 1250 L60 1250 Z" fill="#c7d9d2" opacity="0.7" />
+
+  <g font-family="-apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif">
+    <text x="500" y="130" text-anchor="middle" font-size="54" font-weight="700" fill="#1f3a2d" letter-spacing="6">灵山胜境</text>
+    <text x="500" y="180" text-anchor="middle" font-size="24" fill="#5a6f5f" letter-spacing="4">离线示意图 · 未核验占位</text>
+
+    <g transform="translate(120 250)" fill="none" stroke="#5f7a63" stroke-width="3">
+      <circle cx="0" cy="0" r="42" />
+      <path d="M0 -34 L10 0 L0 34 L-10 0 Z" fill="#c25b3a" stroke="none" />
+      <text x="0" y="-54" text-anchor="middle" font-size="22" fill="#1f3a2d" stroke="none">N</text>
+    </g>
+
+    <g fill="#8a3a26" opacity="0.18" font-size="46" font-weight="700" letter-spacing="8">
+      <text x="500" y="470" text-anchor="middle">未核验示意图</text>
+      <text x="500" y="560" text-anchor="middle">不可用于救援导航</text>
+    </g>
+
+    <rect x="140" y="640" width="720" height="250" rx="16" fill="#fffaf0" stroke="#c9ae7a" stroke-width="2" stroke-dasharray="10 8" />
+    <text x="500" y="712" text-anchor="middle" font-size="30" font-weight="700" fill="#7a5310">本图不含经核验的景点与设施点位</text>
+    <text x="500" y="768" text-anchor="middle" font-size="24" fill="#4a6152">尚未获得可合法离线分发的景区简图</text>
+    <text x="500" y="820" text-anchor="middle" font-size="24" fill="#4a6152">出入口、服务台、卫生间、医疗点均为空缺</text>
+
+    <text x="500" y="1300" text-anchor="middle" font-size="22" fill="#5a6f5f">景区示意图，实际以现场指示及工作人员为准</text>
+  </g>
+</svg>

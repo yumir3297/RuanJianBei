@@ -1,0 +1,11 @@
+{
+  "mapVersion": "placeholder-2026-10-31.0",
+  "regionName": "灵山胜境（示例配置）",
+  "file": "/offline/map/placeholder-scenic-map.svg",
+  "status": "unverified",
+  "source": null,
+  "license": null,
+  "verifiedAt": null,
+  "usableForEmergency": false,
+  "note": "占位示意图，仅用于展示离线地图的缩放与拖动交互；未经测绘核验，不含经核验的出入口、服务点与救援路线，不可用于救援导航。"
+}
