@@ -1,5 +1,6 @@
 import { marked } from "marked";
 import DOMPurify from "dompurify";
+import { resolveEvidence } from "../utils/messageSources.js";
 
 let markdownEnabled = true;
 
@@ -11,8 +12,9 @@ function createEvidenceRenderer(sources) {
     const processed = html.replace(
       /\[证据(\d+)\]/g,
       (_, id) => {
-        const source = sources.find(s => s.evidence_id === `证据${id}`);
-        const title = source?.title || "未知来源";
+        const source = resolveEvidence(id, sources);
+        if (!source) return `[证据${id}（未匹配来源）]`;
+        const title = source.title || "未命名来源";
         const snippet = source?.snippet || "";
         return `<cite class="citation" data-evidence-id="${id}" title="${escapeAttr(title)}: ${escapeAttr(snippet)}">[${id}]</cite>`;
       }
