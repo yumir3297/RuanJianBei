@@ -1166,6 +1166,7 @@ function dismissConfirmBar() {
   showConfirmBar.value = false;
   recorderError.value = "";
   transcriptionCandidates.value = [];
+  pendingVoiceContext.value = null;
   textInputExpanded.value = true;
   nextTick(() => queryInputRef.value?.focus());
 }
