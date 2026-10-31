@@ -534,6 +534,29 @@ def test_queries_with_same_retrieval_normalization_do_not_share_generated_answer
     asyncio.run(scenario())
 
 
+def test_non_neutral_audio_context_does_not_reuse_neutral_cached_generation():
+    from app.schemas.chat import EmotionContext
+    class RecordingLLM:
+        def __init__(self): self.queries = []
+        async def stream_generate(self, query, documents, *, persona=None, audience=None, memory=None):
+            self.queries.append(query)
+            yield "景点介绍。"
+
+    async def scenario():
+        cache = QACache(DummyCacheRepo(), ttl_seconds=60)
+        llm = RecordingLLM()
+        async def ask(emotion=None):
+            pipeline = _build_test_pipeline(qa_cache=cache, llm_service=llm)
+            return [event async for event in pipeline.stream_chat(ChatRequest(
+                query="介绍景点", session_id="emotion-cache", text_only=True, emotion_context=emotion))]
+        await ask()
+        events = await ask(EmotionContext(audio_emotion="anxious", audio_confidence=1, audio_source="audio"))
+        assert next(event for event in events if event.type == "emotion").data["label"] == "anxious"
+        assert len(llm.queries) == 2
+        assert "服务表达要求" in llm.queries[-1]
+    asyncio.run(scenario())
+
+
 def _run_turn(pipeline, **request_overrides):
     request_kwargs = {
         "query": "有什么特色",
