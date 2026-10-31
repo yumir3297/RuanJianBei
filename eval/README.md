@@ -16,6 +16,15 @@
 - 重排逻辑
 - 模型接入方案
 
+## 当前离线工具检查
+
+2026-10-31 在集成提交 `deed34a` 的本机 Python 环境运行：
+
+- `python -m pytest -q -p no:cacheprovider eval/tests`：16 passed。
+- `python eval/scripts/check_e2e_testset.py --testset eval/testset/e2e_qa_100.json --report /private/tmp/guide-eval-validation-current.json`：100 题，格式错误 0；题集 SHA-256 为 `243992e2474a0cb5452e8c0e63a852c880724411a86bc397f90d7a73a30978fb`。
+
+以上仅验证评测工具与题集格式，没有运行真实模型、测量回答正确率或确认题目资料权威性。题集依据、人工标注和真实服务的测量程序见 [人工核验](HUMAN_REVIEW.md)。报告写在临时目录，不覆盖仓库中的历史报告。
+
 
 ## 可重复的端到端抽样
 
