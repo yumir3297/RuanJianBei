@@ -57,6 +57,31 @@ def test_postgres_job_foreign_keys_claim_and_fencing():
             assert new is not None and new.fence > old.fence
             async with sessions() as session:
                 assert not await ToolExecutionRepository(session).complete_execution(old, {"value": 0})
+                repo = ToolExecutionRepository(session)
+                assert await repo.start_attempt(new, max_attempts=1)
+                assert await repo.mark_external_call(new)
+
+            async def cancel():
+                async with sessions() as session:
+                    return await ToolExecutionRepository(session).request_cancel(
+                        "tourist", owner, "pg-test-site", tour["id"], job["id"], "cancel-job")
+
+            async def complete():
+                async with sessions() as session:
+                    return await ToolExecutionRepository(session).complete_execution(new, {"value": 42})
+
+            cancelled_view, completed = await asyncio.wait_for(
+                asyncio.gather(cancel(), complete()), timeout=10)
+            async with sessions() as session:
+                final = await ToolExecutionRepository(session).get_job(
+                    "tourist", owner, "pg-test-site", tour["id"], job["id"])
+            assert final["status"] in ("cancelled", "succeeded")
+            assert cancelled_view["status"] == final["status"]
+            assert completed == (final["status"] == "succeeded")
+            assert final["steps"][0]["status"] == final["status"]
+            if final["status"] == "cancelled":
+                assert final["reason"] == "cancelled_external_outcome_unknown"
+                assert final["result"] is None
         finally:
             await engine.dispose()
 

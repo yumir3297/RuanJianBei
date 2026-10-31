@@ -1,5 +1,7 @@
 # 开发进度
 
+2026-10-31 补充至 `7b6ce0a`：PostgreSQL 17 隔离数据库从空库迁移至当前 head，发现并修复任务父子记录写入顺序；两数据库会话竞争领取、租约过期及旧 fence 拒绝已验证。后端全套 430 passed、2 skipped（包括默认跳过的 PostgreSQL 专项），专项在真实隔离 PostgreSQL 上通过。随后取消与完成的会话竞争回归连续 6 次通过；不代表真实供应商、多进程压力或崩溃恢复验收。隔离数据库服务已停止。
+
 2026-10-31 当前代码基线 `2d09492`：最新后端全套 430 passed、1 skipped；前端 105 passed、构建成功。真实浏览器、外部供应商、PostgreSQL 并发、移动设备及官方赛题原文仍未完成验收。独立工作目录为 `integration-work/v01`，原有 worktree 和快照保留；已有保存的服务电话未被默认配置变更，须管理员核实。
 
 2026-10-30，集成分支 `codex/competition-integration`，基线 `ec3f7a6`。这是独立本地副本；原 worktree 及四份快照仍保留。`frontend/node_modules` 是本机依赖软链接，不属于源码交付。
