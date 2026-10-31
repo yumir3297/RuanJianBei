@@ -82,6 +82,12 @@ class ItineraryMutationTests(unittest.TestCase):
         self.assertEqual(result.validation, "unverified")
         self.assertEqual(result.known_minutes, 50)
 
+    def test_missing_total_budget_is_unverified_even_when_stop_duration_is_known(self):
+        snapshot = _snapshot(constraints={"required_spots": ["LS-01"]})
+        result = apply_manual_operations(snapshot, [], catalog_spot_codes={"LS-01"})
+        self.assertEqual(result.validation, "unverified")
+        self.assertEqual(result.known_minutes, 30)
+
     def test_constraint_changes_appear_in_the_structured_diff(self):
         snapshot = _snapshot()
         changed = operation_adapter.validate_python({

@@ -150,7 +150,9 @@ def _validate(snapshot: TourSnapshotV2) -> tuple[Validation, tuple[str, ...], in
 
     known_minutes = sum(stop.duration_minutes or 0 for stop in snapshot.stops)
     leg_by_pair = {(leg.from_stop_id, leg.to_stop_id): leg for leg in snapshot.legs}
-    unverified = bool(snapshot.constraints.unresolved_required_names or snapshot.constraints.unresolved_excluded_names)
+    unverified = bool(snapshot.constraints.available_minutes is None or
+                      snapshot.constraints.unresolved_required_names or
+                      snapshot.constraints.unresolved_excluded_names)
     for stop in snapshot.stops:
         if stop.duration_minutes is None or (stop.kind == "visit" and stop.spot_code is None):
             unverified = True

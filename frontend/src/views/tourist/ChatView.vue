@@ -147,7 +147,7 @@
             <p v-if="tourStore.proposal.status === 'needs_clarification'">{{ tourStore.proposal.clarification }} 请补充后重新提交。</p>
             <template v-else-if="tourStore.proposal.status === 'ready'">
               <ul><li v-for="(change, index) in tourStore.proposal.diff" :key="`${change.kind}-${index}`">{{ itineraryProposalDiffText(change, { beforeSnapshot: tourStore.proposalBaseSnapshot, candidateSnapshot: tourStore.proposal.candidate }) }}</li></ul>
-              <p>{{ tourStore.proposal.validation.status === 'unverified' ? '有时长或路段尚未核实，应用前请确认。' : '已通过硬约束检查。' }}</p>
+              <p>{{ tourStore.proposal.validation.status === 'unverified' ? '游览预算、停留或路段时长、景点约束可能尚未核实，应用前请确认。' : '已通过硬约束检查。' }}</p>
               <button type="button" :disabled="tourStore.proposalIsStale || tourStore.proposalLoading" @click="tourStore.confirmProposal()">确认并保存新版本</button>
               <button v-if="tourStore.proposalIsStale" type="button" :disabled="tourStore.proposalLoading" @click="tourStore.requestProposal(tourStore.proposal.request_text)">按当前草稿重新生成</button>
               <button type="button" @click="tourStore.cancelProposal()">放弃</button>
