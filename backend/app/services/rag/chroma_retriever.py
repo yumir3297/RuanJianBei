@@ -85,6 +85,8 @@ class VectorBackedRAGService(BaseRAGService):
             meta = result.metadata
             entry_id = meta.get("source_entry_id")
             revision_id = meta.get("revision_id")
+            if meta.get("chunk_id") and meta["chunk_id"] != result.id:
+                continue
             if self.visibility is not None and (
                 entry_id is None or not revision_id or (int(entry_id), str(revision_id)) not in visible
             ):
@@ -102,7 +104,7 @@ class VectorBackedRAGService(BaseRAGService):
                 )
             )
 
-        if self.visibility is not None and not documents:
+        if not documents:
             return await self._fallback_or_empty(query, normalized, top_k, scope, "no_published_vectors")
         if self.visibility is not None and len(documents) < top_k and self.fallback is not None:
             fallback_documents = await self.fallback.retrieve(

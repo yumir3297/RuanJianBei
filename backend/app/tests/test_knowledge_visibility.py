@@ -111,6 +111,18 @@ def test_vectors_without_revision_metadata_are_never_returned() -> None:
     assert [document.title for document in documents] == ["数据库有效版本"]
 
 
+def test_mismatched_vector_fragment_identifier_falls_back_to_database():
+    forged = _result(7, "current", "错误片段")
+    forged.metadata["chunk_id"] = "other-chunk"
+    service = VectorBackedRAGService(
+        vector_store=FakeVectorStore([forged]), embedder=FakeEmbedder(),
+        query_rewriter=QueryRewriter(), reranker=Reranker(), fallback=FakeFallback(),
+        visibility=FakeVisibility({(7, "current")}),
+    )
+    documents = asyncio.run(service.retrieve("景点", top_k=1))
+    assert [document.title for document in documents] == ["数据库有效版本"]
+
+
 class MemoryDBCache:
     def __init__(self) -> None:
         self.values = {}

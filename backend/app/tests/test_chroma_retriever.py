@@ -141,7 +141,7 @@ def test_vector_rag_does_not_report_mismatched_chunk_metadata():
 
     service, _ = build_service(MismatchedStore(), FakeFallbackRAG())
     result = asyncio.run(service.retrieve("query", top_k=1))
-    assert result[0].chunk_id is None
+    assert result[0].title == "Fallback"
 
 
 def test_vector_rag_falls_back_when_query_fails() -> None:
