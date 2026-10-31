@@ -3,6 +3,7 @@ import json
 import sys
 from types import SimpleNamespace
 
+import pytest
 from app.models.knowledge_chunk import KnowledgeChunk
 from app.services.rag.index_builder import RAGIndexBuilder
 from app.services.rag.vector_store import ChromaVectorStore, VectorStoreRecord
@@ -83,6 +84,31 @@ def test_rag_index_builder_indexes_chunks_with_metadata() -> None:
         assert vector_store.records[0].metadata["aliases"] == "[\"Buddha\"]"
         assert vector_store.records[1].metadata["chunk_id"] == "chunk_002"
         assert vector_store.records[1].metadata["revision_id"] == "revision-8"
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.xfail(strict=True, reason="rebuild can replace a publication committed during its snapshot build")
+def test_rebuild_preserves_publication_that_occurs_after_snapshot():
+    """Deterministic interleaving; this is not a real Chroma concurrency test."""
+    class InterleavedStore(FakeVectorStore):
+        def upsert(self, records):
+            self.records.extend(records)
+
+    store = InterleavedStore()
+    original = KnowledgeChunk(chunk_id="old", source_entry_id=1, revision_id="r1", chunk_index=1,
+        title="旧条目", category="景点", content="内容", source="资料")
+    published = VectorStoreRecord(id="new", document="新发布", metadata={}, embedding=[1.0, 0.0])
+
+    class PublishingEmbedder(FakeEmbedder):
+        def embed_texts(self, texts):
+            # Another publication lands after list_all, before replace_all switches the index.
+            store.upsert([published])
+            return super().embed_texts(texts)
+
+    async def scenario():
+        await RAGIndexBuilder(FakeChunkRepository([original]), PublishingEmbedder(), store).build()
+        assert "new" in {record.id for record in store.records}
 
     asyncio.run(scenario())
 
