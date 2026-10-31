@@ -39,18 +39,17 @@ copy .env.example .env          # 编辑 .env 填入 API Key
 python -m uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
-### 2. 数据初始化（首次）
+### 2. 数据与知识发布
 
-```powershell
-curl -X POST http://127.0.0.1:8000/api/admin/sync-processed-data
-curl -X POST http://127.0.0.1:8000/api/admin/build-rag-index
-```
+首次启动会执行数据库初始化；是否加载示例数据由 `ENABLE_SAMPLE_DATA` 控制，示例数据不能作为真实景区事实。请先确认数据库、景区资料来源和模型缓存路径，使用隔离环境验收。知识导入、审核、发布和索引恢复的具体步骤见[知识工作区操作指南](./docs/knowledge-workspace-operations.md)。
+
+管理员接口需要认证。旧的 `sync-processed-data` 与 `build-rag-index` 是会写入数据库或索引的管理操作，并非无认证的首次启动步骤；不要直接对已有数据执行。知识导入草稿与面向游客的已发布版本是不同状态。
 
 ### 3. 前端
 
 ```powershell
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
