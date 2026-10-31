@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -20,7 +21,8 @@ from app.services.tool_execution.runner import ToolRunner
 from app.tests.async_db import open_test_session
 
 
-def test_published_catalog_change_invalidates_ready_proposal_without_mutating_tour(monkeypatch):
+@pytest.mark.parametrize("withdraw_catalog", [True, False])
+def test_worker_proposal_apply_with_catalog_change_or_stable_catalog(monkeypatch, withdraw_catalog):
     async def scenario():
         engine, db = await open_test_session()
         owner = TourIdentity(id="owner-a", credential_digest="a" * 64,
@@ -62,12 +64,12 @@ def test_published_catalog_change_invalidates_ready_proposal_without_mutating_to
 
         async def fake_propose(_service, _text, draft, _catalog, _settings):
             candidate = draft.model_copy(deep=True)
-            candidate.constraints.available_minutes = 60
+            candidate.stops[0].duration_minutes = 15
             return {
                 "status": "ready",
-                "operations": [{"type": "update_constraints"}],
+                "operations": [{"type": "set_duration", "stop_id": str(candidate.stops[0].stop_id), "duration_minutes": 15}],
                 "candidate": candidate.model_dump(mode="json"),
-                "diff": [{"kind": "constraints"}],
+                "diff": [{"kind": "changed"}],
                 "validation": {"status": "pass", "conflicts": []},
                 "clarification": None,
             }
@@ -89,7 +91,7 @@ def test_published_catalog_change_invalidates_ready_proposal_without_mutating_to
                         "progress_version": started["progress_version"],
                         "draft_digest": digest,
                         "draft_snapshot": payload_snapshot,
-                        "text": "缩短总时长",
+                        "text": "休息 15 分钟",
                     },
                 )
                 assert proposal_response.status_code == 202, proposal_response.text
@@ -103,6 +105,27 @@ def test_published_catalog_change_invalidates_ready_proposal_without_mutating_to
                 proposal = recovered.json()
                 assert proposal["status"] == "ready"
                 initial_catalog_digest = proposal["catalog_digest"]
+
+                if not withdraw_catalog:
+                    apply_path = f"/api/tour-sessions/{created['id']}/proposals/{proposal['id']}/apply"
+                    apply_headers = {"Idempotency-Key": "apply", "Origin": "http://testserver"}
+                    apply_payload = {"expected_version": created["version"],
+                                     "progress_version": started["progress_version"], "draft_digest": digest}
+                    applied = await client.post(apply_path, headers=apply_headers, json=apply_payload)
+                    replay = await client.post(apply_path, headers=apply_headers, json=apply_payload)
+                    assert applied.status_code == 200, applied.text
+                    assert replay.status_code == 200, replay.text
+                    assert replay.json() == applied.json()
+                    assert applied.json()["version"] == created["version"] + 1
+                    assert applied.json()["snapshot"]["stops"][0]["duration_minutes"] == 15
+                    async with sessions() as check_db:
+                        check_repo = TourSessionRepository(check_db)
+                        revisions = await check_repo.list_revisions(owner.id, created["id"])
+                        progress = await check_repo.get_progress(owner.id, created["id"])
+                    assert len(revisions) == 2
+                    assert progress["progress_version"] == started["progress_version"] + 1
+                    assert progress["status_by_stop"] == started["status_by_stop"]
+                    return
 
                 # A published entry is withdrawn; the catalog digest is derived from
                 # the actual remaining published rows rather than hand-edited.
