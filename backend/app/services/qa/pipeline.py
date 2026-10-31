@@ -382,7 +382,10 @@ class QAPipeline:
                     yield event
                 return
 
-        cached = await self.qa_cache.get(cache_key, epoch=request_epoch) if vision is None else None
+        # Visitor memory influences generated wording and must never cross the
+        # shared cache boundary or be bypassed by a generic cached answer.
+        shared_cache_allowed = vision is None and self._memory_prompt is None
+        cached = await self.qa_cache.get(cache_key, epoch=request_epoch) if shared_cache_allowed else None
         if cached:
             if not await self._epoch_is_current(request_epoch):
                 yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
@@ -760,7 +763,7 @@ class QAPipeline:
         if not await self._epoch_is_current(request_epoch):
             yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
             return
-        if vision is None and not degraded_llm and self._active_emotion.label == EmotionLabel.NEUTRAL:
+        if shared_cache_allowed and not degraded_llm and self._active_emotion.label == EmotionLabel.NEUTRAL:
             await self.qa_cache.set(cache_key, full_answer, sources, epoch=request_epoch)
         latency_ms = int((perf_counter() - start) * 1000)
         chat_log_id = await self._persist_interaction(

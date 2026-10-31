@@ -280,7 +280,7 @@ def test_pipeline_passes_resolved_scope_and_uses_selection_cache_key() -> None:
     source_event = next(event for event in events if event.type == "sources")
     assert source_event.data["docs"][0]["evidence_id"] == "证据1"
     assert len(cache_repository.set_keys) == 1
-    assert cache_repository.set_keys[0].startswith("qa:v4:")
+    assert cache_repository.set_keys[0].startswith("qa:v5:")
     assert events[-2].type == "followups"
     assert 2 <= len(events[-2].data["items"]) <= 4
     assert events[-1].type == "done"
@@ -469,6 +469,34 @@ def test_published_source_identifiers_survive_stream_log_and_cached_answer():
         finally:
             await db.close()
             await engine.dispose()
+    asyncio.run(scenario())
+
+
+def test_personal_memory_neither_reads_nor_writes_shared_answer_cache():
+    class MemoryRepository:
+        async def get(self, visitor_id):
+            return SimpleNamespace(visitor_id=visitor_id, site_id="default", visit_count=2,
+                visited_attractions='["私有偏好景点"]', preference_tags="[]", narration_audience="adult",
+                first_seen_at=None, last_seen_at=None)
+        async def record_visit(self, **kwargs): pass
+
+    class MemoryLLM:
+        async def stream_generate(self, query, documents, *, persona=None, audience=None, memory=None):
+            yield "私人偏好内容" if memory else "通用回答"
+
+    async def scenario():
+        cache = QACache(DummyCacheRepo(), ttl_seconds=60)
+        def pipeline():
+            return _build_test_pipeline(qa_cache=cache, visitor_memory_repository=MemoryRepository(), llm_service=MemoryLLM())
+        async def ask(query, visitor=None):
+            events = [event async for event in pipeline().stream_chat(
+                ChatRequest(query=query, session_id="cache-isolation", visitor_id=visitor, text_only=True))]
+            return "".join(event.data.get("text", "") for event in events if event.type == "text")
+
+        assert "通用回答" in await ask("介绍景点一")
+        assert "私人偏好内容" in await ask("介绍景点一", "visitor-a")
+        assert "私人偏好内容" in await ask("介绍景点二", "visitor-a")
+        assert "私人偏好内容" not in await ask("介绍景点二")
     asyncio.run(scenario())
 
 
@@ -990,7 +1018,7 @@ def test_faq_styled_answer_is_cached_under_audience_specific_key() -> None:
     _run_turn(pipeline, query="几点开门", audience="child")
 
     assert len(cache_repository.set_keys) == 1
-    assert cache_repository.set_keys[0].startswith("qa:v4:")
+    assert cache_repository.set_keys[0].startswith("qa:v5:")
 
 
 def test_faq_answer_survives_llm_outage_for_non_default_audience() -> None:

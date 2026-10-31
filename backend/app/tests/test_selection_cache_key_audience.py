@@ -29,9 +29,9 @@ def test_cache_key_is_stable_for_same_inputs():
     assert first == second
 
 
-def test_cache_key_prefix_bumped_to_v4():
+def test_cache_key_prefix_bumped_to_v5():
     key = build_selection_cache_key("灵山大佛有多高", _sel(), answer_namespace="ns")
-    assert key.startswith("qa:v4:")
+    assert key.startswith("qa:v5:")
 
 
 def test_cache_key_unchanged_when_audience_absent_vs_adult():
