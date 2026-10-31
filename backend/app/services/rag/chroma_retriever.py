@@ -102,6 +102,11 @@ class VectorBackedRAGService(BaseRAGService):
             ):
                 continue
             chunk = visible.get((result.id, int(entry_id), str(revision_id))) if self.visibility is not None else None
+            if chunk is not None and scope is not None:
+                if scope.source_entry_id is not None and chunk.source_entry_id != scope.source_entry_id:
+                    continue
+                if scope.category is not None and chunk.category != scope.category:
+                    continue
             content = "\n".join([chunk.title, chunk.category, chunk.content]) if chunk is not None else result.document
             documents.append(
                 RetrievedDocument(

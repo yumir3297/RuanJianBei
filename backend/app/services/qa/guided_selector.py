@@ -52,8 +52,8 @@ def build_selection_cache_key(
         "answer_namespace": answer_namespace,
     }
     serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    # Older caches may contain answers based on vector-supplied text or metadata.
-    return f"qa:v8:{hashlib.sha256(serialized.encode('utf-8')).hexdigest()}"
+    # Older caches may contain answers based on a vector outside the requested scope.
+    return f"qa:v9:{hashlib.sha256(serialized.encode('utf-8')).hexdigest()}"
 
 
 @dataclass(frozen=True, slots=True)

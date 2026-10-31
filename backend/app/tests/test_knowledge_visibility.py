@@ -4,7 +4,7 @@ import asyncio
 from datetime import datetime
 from types import SimpleNamespace
 
-from app.services.rag.base import BaseRAGService, RetrievedDocument
+from app.services.rag.base import BaseRAGService, RetrievalScope, RetrievedDocument
 from app.services.rag.chroma_retriever import VectorBackedRAGService
 from app.services.rag.query_rewriter import QueryRewriter
 from app.services.rag.reranker import Reranker
@@ -245,6 +245,12 @@ def test_visibility_service_reads_durable_epoch_and_only_current_publications(tm
             assert documents[0].content == "景点\n景点信息\n当前"
             assert documents[0].title == "景点"
             assert documents[0].source == "手册"
+            other_attraction = await service.retrieve("景点", top_k=1,
+                scope=RetrievalScope(source_entry_id=withdrawn_entry.id))
+            other_category = await service.retrieve("景点", top_k=1,
+                scope=RetrievalScope(category="餐饮"))
+            assert [doc.title for doc in other_attraction] == ["数据库有效版本"]
+            assert [doc.title for doc in other_category] == ["数据库有效版本"]
         finally:
             await session.close()
             await engine.dispose()
