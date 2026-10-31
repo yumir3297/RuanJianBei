@@ -316,20 +316,28 @@ class ToolExecutionRepository:
             job_id=job_id, response_json=_json({"job_id": job_id}),
             expires_at=now + RECEIPT_TTL, created_at=now,
         )
-        self.session.add_all([job, step, receipt])
-        await self._event(job_id, "queued", "任务已进入执行队列")
-        if commit:
-            try:
+        try:
+            # Explicitly flush the parent before dependent rows: without ORM
+            # relationships SQLAlchemy may insert the receipt first, which
+            # PostgreSQL rejects under its immediate foreign-key constraint.
+            self.session.add(job)
+            await self.session.flush()
+            self.session.add_all([step, receipt])
+            await self._event(job_id, "queued", "任务已进入执行队列")
+            if commit:
                 await self.session.commit()
-            except IntegrityError:
+            else:
+                await self.session.flush()
+        except IntegrityError:
+            if commit:
                 await self.session.rollback()
                 receipt = await self._receipt(principal_type, principal_id, "create", idempotency_key, payload_digest)
                 replay_result = await self._replay_view(receipt)
                 if replay_result:
                     return replay_result
-                raise
+            raise
+        if commit:
             return await self.get_job(principal_type, principal_id, site_id, target_id, job_id) or {}
-        await self.session.flush()
         return await self._view(job)
 
     async def _expire_deadlines(self, now: datetime) -> int:
