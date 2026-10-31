@@ -517,6 +517,23 @@ def test_different_personas_do_not_share_generated_answers():
     asyncio.run(scenario())
 
 
+def test_queries_with_same_retrieval_normalization_do_not_share_generated_answers():
+    class EchoLLM:
+        async def stream_generate(self, query, documents, *, persona=None, audience=None, memory=None):
+            yield f"原始问题：{query}"
+
+    async def scenario():
+        cache = QACache(DummyCacheRepo(), ttl_seconds=60)
+        async def ask(query):
+            pipeline = _build_test_pipeline(qa_cache=cache, llm_service=EchoLLM())
+            events = [event async for event in pipeline.stream_chat(
+                ChatRequest(query=query, session_id="query-test", text_only=True))]
+            return "".join(event.data.get("text", "") for event in events if event.type == "text")
+        assert "请问介绍景点" in await ask("请问介绍景点")
+        assert "请问介绍景点" not in await ask("介绍景点")
+    asyncio.run(scenario())
+
+
 def _run_turn(pipeline, **request_overrides):
     request_kwargs = {
         "query": "有什么特色",

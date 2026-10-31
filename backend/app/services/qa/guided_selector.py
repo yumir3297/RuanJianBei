@@ -33,6 +33,7 @@ def build_selection_cache_key(
     answer_namespace: str = "default",
     audience: str | None = None,
     persona: str | None = None,
+    original_query: str | None = None,
 ) -> str:
     """问答缓存键。
 
@@ -41,6 +42,7 @@ def build_selection_cache_key(
     """
     payload = {
         "query": normalized_query,
+        "original_query": original_query,
         "mode": selection.mode,
         "attraction_id": selection.attraction_id,
         "topic_key": selection.topic_key,
