@@ -1,9 +1,9 @@
 import asyncio
 import json
 import sys
+from contextlib import asynccontextmanager
 from types import SimpleNamespace
 
-import pytest
 from app.models.knowledge_chunk import KnowledgeChunk
 from app.services.rag.index_builder import RAGIndexBuilder
 from app.services.rag.vector_store import ChromaVectorStore, VectorStoreRecord
@@ -32,6 +32,10 @@ class FakeVectorStore:
 
     def __init__(self) -> None:
         self.records: list[VectorStoreRecord] = []
+
+    def write_guard(self):
+        from contextlib import nullcontext
+        return nullcontext()
 
     def replace_all(self, records: list[VectorStoreRecord]) -> int:
         self.records = list(records)
@@ -88,10 +92,36 @@ def test_rag_index_builder_indexes_chunks_with_metadata() -> None:
     asyncio.run(scenario())
 
 
-@pytest.mark.xfail(strict=True, reason="rebuild can replace a publication committed during its snapshot build")
-def test_rebuild_preserves_publication_that_occurs_after_snapshot():
-    """Deterministic interleaving; this is not a real Chroma concurrency test."""
+def test_rebuild_holds_writer_guard_from_snapshot_through_swap():
+    class GuardedStore(FakeVectorStore):
+        locked = False
+        @asynccontextmanager
+        async def write_guard(self):
+            self.locked = True
+            try: yield
+            finally: self.locked = False
+        def replace_all(self, records):
+            assert self.locked
+            return super().replace_all(records)
+
+    store = GuardedStore()
+    class GuardedRepo(FakeChunkRepository):
+        async def list_all(self):
+            assert store.locked
+            return await super().list_all()
+
+    chunk = KnowledgeChunk(chunk_id="c", source_entry_id=1, revision_id="r", chunk_index=1,
+                           title="标题", category="景点", content="内容", source="资料")
+    asyncio.run(RAGIndexBuilder(GuardedRepo([chunk]), FakeEmbedder(), store).build())
+    assert not store.locked
+
+
+def test_rebuild_serializes_publication_after_snapshot(tmp_path):
+    """Shared local file lock and fake vector writes; not a real Chroma test."""
+    from app.services.rag.index_write_lock import index_write_lock
     class InterleavedStore(FakeVectorStore):
+        def write_guard(self):
+            return index_write_lock(tmp_path / "index.lock", timeout=2)
         def upsert(self, records):
             self.records.extend(records)
 
@@ -100,14 +130,27 @@ def test_rebuild_preserves_publication_that_occurs_after_snapshot():
         title="旧条目", category="景点", content="内容", source="资料")
     published = VectorStoreRecord(id="new", document="新发布", metadata={}, embedding=[1.0, 0.0])
 
-    class PublishingEmbedder(FakeEmbedder):
-        def embed_texts(self, texts):
-            # Another publication lands after list_all, before replace_all switches the index.
-            store.upsert([published])
-            return super().embed_texts(texts)
-
     async def scenario():
-        await RAGIndexBuilder(FakeChunkRepository([original]), PublishingEmbedder(), store).build()
+        snapshot_taken, release_snapshot = asyncio.Event(), asyncio.Event()
+        attempting, published_done = asyncio.Event(), asyncio.Event()
+        class PausedRepo(FakeChunkRepository):
+            async def list_all(self):
+                snapshot_taken.set()
+                await release_snapshot.wait()
+                return await super().list_all()
+        async def publish():
+            attempting.set()
+            async with store.write_guard():
+                store.upsert([published])
+                published_done.set()
+        rebuild = asyncio.create_task(RAGIndexBuilder(PausedRepo([original]), FakeEmbedder(), store).build())
+        await snapshot_taken.wait()
+        publication = asyncio.create_task(publish())
+        await attempting.wait()
+        await asyncio.sleep(0.1)
+        assert not published_done.is_set()
+        release_snapshot.set()
+        await asyncio.gather(rebuild, publication)
         assert "new" in {record.id for record in store.records}
 
     asyncio.run(scenario())

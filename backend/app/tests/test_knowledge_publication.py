@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import threading
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 
 from fastapi import FastAPI
@@ -54,6 +56,10 @@ class FakeVectorStore:
     def __init__(self) -> None:
         self.records = {}
 
+    def write_guard(self):
+        from contextlib import nullcontext
+        return nullcontext()
+
     def upsert(self, records):
         self.records.update({record.id: record for record in records})
         return len(records)
@@ -61,6 +67,86 @@ class FakeVectorStore:
     def delete_ids(self, ids):
         for item_id in ids:
             self.records.pop(item_id, None)
+
+
+def test_publication_holds_writer_guard_through_database_commit(tmp_path, monkeypatch):
+    path = str(tmp_path / "guard-publication.db")
+    selected = _seed_drafts(path)
+
+    class GuardedStore(FakeVectorStore):
+        locked = False
+        @asynccontextmanager
+        async def write_guard(self):
+            self.locked = True
+            try: yield
+            finally: self.locked = False
+        def upsert(self, records):
+            assert self.locked
+            return super().upsert(records)
+
+    async def scenario():
+        engine, session = await open_test_session(path)
+        try:
+            store = GuardedStore()
+            service = KnowledgePublicationService(session, FakeEmbedder(), store)
+            original_commit = service._commit_publication
+            async def checked_commit(*args):
+                assert store.locked
+                await original_commit(*args)
+            monkeypatch.setattr(service, "_commit_publication", checked_commit)
+            job = await service.create_publication(
+                [{"entry_id": entry, "revision_id": revision, "expected_version": 1} for entry, revision in selected],
+                idempotency_key="guard-test")
+            await service.run_publication(job.id)
+            assert (await service.get_publication(job.id)).state == "succeeded"
+            assert not store.locked
+        finally:
+            await session.close(); await engine.dispose()
+    asyncio.run(scenario())
+
+
+def test_cancelled_publication_keeps_guard_until_vector_write_finishes(tmp_path):
+    path = str(tmp_path / "cancel-guard-publication.db")
+    selected = _seed_drafts(path)
+    started, release = threading.Event(), threading.Event()
+
+    class BlockingStore(FakeVectorStore):
+        locked = False
+        @asynccontextmanager
+        async def write_guard(self):
+            self.locked = True
+            try: yield
+            finally: self.locked = False
+        def upsert(self, records):
+            started.set()
+            assert release.wait(3)
+            assert self.locked
+            return super().upsert(records)
+
+    async def scenario():
+        engine, session = await open_test_session(path)
+        store = BlockingStore()
+        try:
+            service = KnowledgePublicationService(session, FakeEmbedder(), store)
+            job = await service.create_publication(
+                [{"entry_id": entry, "revision_id": revision, "expected_version": 1} for entry, revision in selected],
+                idempotency_key="cancel-guard-test")
+            task = asyncio.create_task(service.run_publication(job.id))
+            assert await asyncio.to_thread(started.wait, 2)
+            task.cancel()
+            await asyncio.sleep(0.05)
+            assert store.locked and not task.done()
+            release.set()
+            try:
+                await task
+                raise AssertionError("cancellation must propagate")
+            except asyncio.CancelledError:
+                pass
+            assert not store.locked
+        finally:
+            release.set()
+            await session.close(); await engine.dispose()
+    asyncio.run(scenario())
 
 
 def _seed_drafts(path: str) -> list[tuple[int, str]]:

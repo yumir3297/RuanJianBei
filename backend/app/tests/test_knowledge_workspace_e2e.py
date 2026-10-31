@@ -24,6 +24,10 @@ class _VectorStore:
     def __init__(self):
         self.records = []
 
+    def write_guard(self):
+        from contextlib import nullcontext
+        return nullcontext()
+
     def replace_all(self, records):
         self.records = list(records)
         return len(self.records)

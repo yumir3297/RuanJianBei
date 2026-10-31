@@ -32,6 +32,9 @@ class VectorSearchResult:
 class BaseVectorStore(Protocol):
     collection_name: str
 
+    def write_guard(self):
+        """Serialize publication and index replacement for the shared store."""
+
     def count(self) -> int:
         """Return the number of records in the current collection."""
 
@@ -80,6 +83,10 @@ class ChromaVectorStore:
         if active and all(char.isalnum() or char in "._-" for char in active) and len(active) <= 63:
             return active
         return self.base_collection_name
+
+    def write_guard(self):
+        from app.services.rag.index_write_lock import index_write_lock
+        return index_write_lock(self.persist_dir / f"{self.base_collection_name}.writer.lock")
 
     def count(self) -> int:
         if not self._collection_exists():

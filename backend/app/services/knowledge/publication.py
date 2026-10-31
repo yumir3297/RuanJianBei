@@ -137,12 +137,27 @@ class KnowledgePublicationService:
                 (item.id, item.knowledge_entry_id, item.revision_id, item.expected_lock_version)
                 for item, _, _ in items
             ]
-            if records:
-                await asyncio.to_thread(self.vector_store.upsert, records)
-
-            # Drop the preparation read transaction before the short commit transaction.
+            # Drop the preparation read transaction before waiting for the writer.
             await self.session.rollback()
-            await self._commit_publication(job_id, owner, commit_items, chunks)
+            async with self.vector_store.write_guard():
+                if records:
+                    # Cancellation must not release the lock while the thread is still writing.
+                    write = asyncio.create_task(asyncio.to_thread(self.vector_store.upsert, records))
+                    try:
+                        await asyncio.shield(write)
+                    except asyncio.CancelledError:
+                        try:
+                            await write
+                        finally:
+                            raise
+                commit = asyncio.create_task(self._commit_publication(job_id, owner, commit_items, chunks))
+                try:
+                    await asyncio.shield(commit)
+                except asyncio.CancelledError:
+                    try:
+                        await commit
+                    finally:
+                        raise
         except Exception as exc:
             await self.session.rollback()
             await self._mark_failed(job_id, owner, exc)
