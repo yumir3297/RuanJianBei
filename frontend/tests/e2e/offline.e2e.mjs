@@ -82,7 +82,12 @@ async function main() {
   );
 
   // ---------------- 场景 1：首次在线访问主站，后台准备离线包 ----------------
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 2,
+    isMobile: true,
+    hasTouch: true,
+  });
   const mainPage = await context.newPage();
   const consoleErrors = [];
   mainPage.on("console", (message) => {
@@ -137,7 +142,7 @@ async function main() {
 
   await step("SAFE-08 打开地图时游戏自动暂停，关闭后恢复", async () => {
     await offlinePage.click("[data-close-map]");
-    await offlinePage.click("#game-canvas");
+    await offlinePage.click("#btn-start");
     await offlinePage.waitForTimeout(600);
     await offlinePage.click("#open-map");
     await offlinePage.waitForTimeout(200);
@@ -159,10 +164,11 @@ async function main() {
   });
 
   await step("GAME-01 断网下点击画面开始并计分", async () => {
-    await offlinePage.click("#game-canvas");
+    await offlinePage.click("#btn-start");
     await offlinePage.waitForTimeout(1400);
     const score = Number(await offlinePage.textContent("#score"));
     assert.ok(score > 0, `分数没有增长：${score}`);
+    await offlinePage.click("#game-canvas");
     await offlinePage.screenshot({ path: path.join(evidenceDir, "offline-game.jpg"), type: "jpeg", quality: 82 });
   });
 
@@ -195,7 +201,7 @@ async function main() {
 
   // ---------------- 场景 3：恢复网络后提示返回 ----------------
   await step("NET-05/06 连续两次探针成功后出现返回提示，跑酷不被中断也不自动跳转", async () => {
-    await offlinePage.click("#game-canvas");
+    await offlinePage.click("#btn-start");
     await offlinePage.waitForTimeout(900);
     const scoreBefore = Number(await offlinePage.textContent("#score"));
     await context.setOffline(false);

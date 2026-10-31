@@ -58,6 +58,7 @@ npm run dev
 
 弱网/断网时可进入独立的轻量页面 `/offline.html`：Q 版跑酷、可缩放的静态景区示意图、应急联系电话。该页不加载 Vue、Element Plus、Three/VRM、Leaflet 或在线瓦片。页面采用纸雕山水画风（参考 Tengami 的纸片层次与 Alto's Odyssey 的剪影视差 + 极简 HUD）。
 
+- **玩法与操控**：手机点击画面任意位置或右下“跳”键起跳；桌面 `空格 / ↑ / W` 跳跃、`P` 暂停、`R` 重开。主按钮为画面中央的播放/重玩键，暂停与重开图标在画面右上。
 - **入口**：游客页右下角在持续不可达（≥3 次探针失败且 ≥15 s）时出现“进入离线伴游”横幅；用户点击后才跳转，不会自动切页。
 - **离线包**：主站首次在线访问时后台注册 Service Worker，并校验 `/offline.html`、入口 JS/CSS、地图、通讯录是否全部进入 Cache Storage，全部成功才显示“已就绪”。预缓存清单由 `scripts/offline-sw-plugin.mjs` 在构建期按真实产物图生成。
 - **连通性**：同源 `GET /health`（`no-store` + `redirect:'error'` + 2.5 s 超时 + JSON `status==='ok'` 校验），不使用 `navigator.onLine` 作为结论；Vite 开发与预览均已代理 `/health`。

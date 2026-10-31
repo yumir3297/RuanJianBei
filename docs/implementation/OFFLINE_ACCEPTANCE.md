@@ -44,25 +44,25 @@
 
 ## 3. 离线预缓存清单与体积（实测）
 
-构建命令：`cd frontend && npm run build`（buildId `5b353529797c`，10 项）。
+构建命令：`cd frontend && npm run build`（buildId `2c75d6e0281b`，10 项）。
 
 | 文件 | gzip 传输 | 原始 |
 |---|---:|---:|
-| `/assets/offline-BWWAPZp-.js`（入口+游戏+存储） | 10,674 B | 29,552 B |
+| `/assets/offline-DpUdszlD.js`（入口+游戏+存储） | 11,087 B | 30,726 B |
+| `/assets/offline-CeWFqxwZ.css` | 4,406 B | 17,644 B |
 | `/assets/offline-registration-9U6C3C84.js`（与主站共享 chunk） | 3,896 B | 10,059 B |
-| `/assets/offline-DrqKr3iX.css` | 3,817 B | 15,001 B |
-| `/assets/modulepreload-polyfill-B5Qt9EMX.js` | 399 B | 711 B |
-| `/offline.html` | 2,528 B | 7,514 B |
-| `/offline/help/contacts.json` | 510 B | 1,095 B |
-| `/offline/map/map-meta.json` | 377 B | 457 B |
+| `/offline.html` | 2,706 B | 8,338 B |
 | `/offline/map/placeholder-scenic-map.svg` | 1,084 B | 2,676 B |
+| `/offline/help/contacts.json` | 510 B | 1,095 B |
+| `/assets/modulepreload-polyfill-B5Qt9EMX.js` | 399 B | 711 B |
+| `/offline/map/map-meta.json` | 377 B | 457 B |
+| `/offline-precache-manifest.json` | 318 B | 534 B |
 | `/favicon.svg` | 179 B | 201 B |
-| `/offline-precache-manifest.json` | 320 B | 534 B |
-| **合计** | **23,784 B ≈ 23.2 KB** | **67,800 B ≈ 66.2 KB** |
-| `sw.js`（首次注册额外下载） | 1,660 B | 3,039 B |
-| **离线包首次下载合计** | **≈ 25.4 KB** | ≈ 70.8 KB |
+| **合计** | **24,962 B ≈ 24.4 KB** | **72,441 B ≈ 70.7 KB** |
+| `sw.js`（首次注册额外下载） | 1,657 B | 3,039 B |
+| **离线包首次下载合计** | **≈ 26.6 KB** | ≈ 75.5 KB |
 
-对照预算：≤1.0 MB 合格 / ≤500 KB 推荐 → **PASS（约为上限的 2.5%）**。
+对照预算：≤1.0 MB 合格 / ≤500 KB 推荐 → **PASS（约为上限的 2.6%）**。
 清单中**不含** `models/*.vrm`、`motions/*`、Element Plus/ECharts/Leaflet/Three 主站包与任何 API 响应（E2E 断言）。
 
 ---
@@ -108,7 +108,7 @@ PASS    201ms  REG-01 主站页面在离线组件接入后仍可渲染游客界�
 - `docs/implementation/evidence/offline-map.jpg`（断网打开手卷式地图、放大后、未核验警示）
 - `docs/implementation/evidence/offline-help.jpg`（求助面板：未核验徽标、复制号码、无拨号按钮）
 - `docs/implementation/evidence/main-offline-banner.jpg`（主站持续不可达后的“进入离线伴游”纸卡横幅，未遮挡导览）
-- 以上截图均为 390×844 @2x JPEG（quality 82）；构建日志：`[offline-sw] buildId=5b353529797c 预缓存 10 项`（`/tmp/offline-build.log`，本文第 3 节为最终 dist 实测）
+- 以上截图均为 390×844 @2x JPEG（quality 82）；构建日志：`[offline-sw] buildId=2c75d6e0281b 预缓存 10 项`（`/tmp/offline-build.log`，本文第 3 节为最终 dist 实测）
 
 ---
 
@@ -204,7 +204,7 @@ PASS    201ms  REG-01 主站页面在离线组件接入后仍可渲染游客界�
 Worktree 路径与分支：../RuanJianBei-offline / feature/offline-companion
 新增/修改文件：见本文第 1 节与第 7 节
 网络状态机实现摘要：见本文第 2 节
-离线预缓存清单与总下载体积（实测）：10 项，gzip 23,784 B + sw.js 1,660 B ≈ 25.4 KB
+离线预缓存清单与总下载体积（实测）：10 项，gzip 24,962 B + sw.js 1,657 B ≈ 26.6 KB
 地图来源、许可、核验记录：无（BLOCKED）；仅提供明确标注的未核验占位示意图
 求助电话来源、核验记录：无官方核验记录（BLOCKED）；来自景区后台默认配置，标记 unverified
 单元测试 PASS/FAIL：26 PASS / 0 FAIL
@@ -249,8 +249,40 @@ Playwright E2E PASS/FAIL：16 PASS / 0 FAIL
 
 ### 10.3 自检与迭代
 
-- 用 Playwright 以 390×844 @2x、360×740、1280×960 三种视口渲染截图，共迭代 3 轮（初版 → 加高山脊/放大角色 → 纸云/草地/叠纸阴影）。
+- 用 Playwright 以 390×844 @2x、360×740、768×900、844×390（横屏）、1280×960 多种视口渲染截图，共迭代 5 轮（初版 → 加高山脊/放大角色 → 纸云/草地/叠纸阴影 → 游戏化布局与拇指区 → 模型放大与横屏双栏）。
 - 检查项：首屏地图/求助可见且 ≥44px、无横向溢出、计分可读、`prefers-reduced-motion` 下停止视差与落叶、遮罩不拦截点击。
-- 仅动视觉层：`ConnectivityMonitor`、存储、Service Worker、URL/电话白名单、测试契约均未改；`WORLD.height` 240→280 与障碍尺寸微调后，26 项单测与 16 项 E2E 全部通过。
-- 体积影响：预缓存 gzip 由 22.4 KB 增至 25.4 KB（仍为 1 MB 上限的 2.5%）。
+- 仅动视觉与交互层：`ConnectivityMonitor`、存储、Service Worker、URL/电话白名单、测试契约均未改；`WORLD` 尺寸/障碍尺寸调整后，26 项单测与 16 项 E2E 全部通过。
+- 体积影响：预缓存 gzip 由 22.4 KB 增至 26.6 KB（仍为 1 MB 上限的 2.6%）。
+
+### 10.4 v1.2 游戏化布局、模型放大与多端适配
+
+**布局（依据“拇指区”研究结论重排）**
+
+- 上方为信息区：品牌 + 网络/离线状态；游戏画面成为首屏主体（`clamp(190px, 38dvh, 320px)` 高，等比缩放、底部对齐，容器变高只增加天空，不拉伸地物）。
+- 计分印章、最佳分、暂停/重开收进画面右上，HUD 不再占用独立一行。
+- 主 CTA 只有一个：画面中央的圆形播放键（READY）/重玩键（GAME_OVER）/继续键（PAUSED）。
+- 跳跃键固定在画面下方右侧的拇指区（64px），点击画面任意位置同样可跳；桌面端显示 `空格 / ↑ / W 跳跃 · P 暂停 · R 重开`。
+- 景区地图与紧急求助移到游戏下方的拇指区，两枚 64px 纸签始终可见；离线提示改为可折叠 `<details>`，减少首屏噪音。
+- 横屏（高度 ≤560px）切换为双栏：左侧游戏 + 跳跃键，右侧竖排地图/求助、提示与页脚。
+
+**模型与障碍整体放大**
+
+| 元素 | v1.1 | v1.2 | 变化 |
+|---|---|---|---|
+| 角色可视高度 | ≈58 世界像素 | ≈85（1.45× 绘制） | +46% |
+| 山石 `rock` | 30×28 | 54×44 | +93% / +57% |
+| 石灯 `sign` | 24×50 | 40×78 | +67% / +56% |
+| 枯松 `crate` | 32×34 | 52×58 | +63% / +71% |
+| 跳跃初速 / 重力 | -760 / 2200 | -790 / 2300 | 保证可跨越 78px 石灯 |
+| 生成间隔 | 0.72–1.18s | 0.82–1.32s | 适配更大障碍的通过时间 |
+
+碰撞盒随角色/障碍同步调整（角色 24×48），未出现“看着没碰到却判定碰撞”的偏差。
+
+**多端与输入**
+
+- 断点：≤380（小屏）、381–759（手机）、≥760（平板/桌面 640px 纸页）、≥1080（720px）、横屏双栏。
+- 触控：画面 `touch-action: none`、`-webkit-tap-highlight-color: transparent`、跳跃键与播放键均为真实 `<button>`、点击/触摸均可跳跃、支持 `navigator.vibrate(8)` 轻震（不支持则静默）。
+- 键盘与读屏：空格/↑/W 跳跃、P 暂停、R 重开；按钮均有 `aria-label`，状态文案通过 `aria-live` 播报。
+- 安全区：页面与浮层使用 `env(safe-area-inset-*)`，避开 iPhone 底部手势条与灵动岛。
+- `prefers-reduced-motion`：停止山体视差、飘叶与跑动摆动外的装饰运动。
 

@@ -12,23 +12,23 @@ export const GAME_STATES = Object.freeze({
 
 export const WORLD = Object.freeze({
   width: 640,
-  height: 280,
-  groundY: 236,
-  gravity: 2200,
-  jumpVelocity: -760,
-  baseSpeed: 240,
-  maxSpeedBonus: 330,
-  speedRampPerPixel: 0.028,
+  height: 360,
+  groundY: 300,
+  gravity: 2300,
+  jumpVelocity: -790,
+  baseSpeed: 250,
+  maxSpeedBonus: 340,
+  speedRampPerPixel: 0.026,
   playerX: 96,
-  playerWidth: 34,
-  playerHeight: 44,
+  playerWidth: 38,
+  playerHeight: 54,
   scorePerPixel: 1 / 16,
 });
 
 const OBSTACLE_KINDS = Object.freeze({
-  rock: { width: 30, height: 28, hitInsetX: 4, hitInsetY: 3 },
-  sign: { width: 24, height: 50, hitInsetX: 3, hitInsetY: 4 },
-  crate: { width: 32, height: 34, hitInsetX: 4, hitInsetY: 3 },
+  rock: { width: 54, height: 44, hitInsetX: 7, hitInsetY: 5 },
+  sign: { width: 40, height: 78, hitInsetX: 5, hitInsetY: 6 },
+  crate: { width: 52, height: 58, hitInsetX: 7, hitInsetY: 5 },
 });
 
 export const OBSTACLE_TYPES = Object.freeze(Object.keys(OBSTACLE_KINDS));
@@ -56,7 +56,7 @@ export function createGameState(options = {}) {
     grounded: true,
     obstacles: [],
     nextObstacleId: 1,
-    spawnCooldown: 1.1,
+    spawnCooldown: 1.3,
     rngState,
     lastRunScore: 0,
     reason: "",
@@ -87,8 +87,8 @@ export function jump(state) {
 }
 
 export function playerHitbox(state) {
-  const x = WORLD.playerX + 6;
-  const width = WORLD.playerWidth - 12;
+  const x = WORLD.playerX + 7;
+  const width = WORLD.playerWidth - 14;
   const height = WORLD.playerHeight - 6;
   return { x, y: state.playerY - height, width, height };
 }
@@ -168,8 +168,8 @@ export function updateGame(state, deltaMs) {
   state.spawnCooldown -= dt;
   if (state.spawnCooldown <= 0) {
     spawnObstacle(state);
-    const quickest = Math.max(0.72, 1.18 - state.distance * 0.00004);
-    const spread = Math.max(0.28, 0.62 - state.distance * 0.00003);
+    const quickest = Math.max(0.82, 1.32 - state.distance * 0.00004);
+    const spread = Math.max(0.34, 0.72 - state.distance * 0.00003);
     state.spawnCooldown = quickest + nextRandom(state) * spread;
   }
 

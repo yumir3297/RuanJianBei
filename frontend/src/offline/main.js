@@ -75,22 +75,43 @@ function setChip(element, tone, text) {
 
 /* ---------------------------------- 游戏 ---------------------------------- */
 
+const coarsePointer = Boolean(window.matchMedia?.("(pointer: coarse)").matches);
+
+function haptic() {
+  try {
+    navigator.vibrate?.(8);
+  } catch {
+    // 不支持震动时静默忽略
+  }
+}
+
 function updateOverlayForStatus(status, state) {
   if (!dom.overlay) return;
-  if (status === "RUNNING") {
-    dom.overlay.hidden = true;
-    dom.btnPause.disabled = false;
+  const running = status === "RUNNING";
+  dom.overlay.hidden = running;
+
+  if (running) {
+    dom.btnPause.setAttribute("aria-label", "暂停游戏");
+    dom.btnPause.title = "暂停（P）";
     return;
   }
-  dom.overlay.hidden = false;
+
+  dom.btnPause.setAttribute("aria-label", status === "PAUSED" ? "继续游戏" : "暂停游戏");
+  dom.btnPause.title = status === "PAUSED" ? "继续（P）" : "暂停（P）";
+
   if (status === "READY") {
-    dom.overlayText.textContent = "点击画面开始";
+    dom.overlayText.textContent = "点击开始";
+    dom.btnStart.dataset.mode = "play";
+    dom.btnStart.setAttribute("aria-label", "开始游戏");
   } else if (status === "PAUSED") {
-    dom.overlayText.textContent = "已暂停 · 点击画面继续";
+    dom.overlayText.textContent = "已暂停";
+    dom.btnStart.dataset.mode = "play";
+    dom.btnStart.setAttribute("aria-label", "继续游戏");
   } else if (status === "GAME_OVER") {
-    dom.overlayText.textContent = `本局 ${state.lastRunScore} 分 · 点击画面重开`;
+    dom.overlayText.textContent = `本局 ${state.lastRunScore} 分`;
+    dom.btnStart.dataset.mode = "replay";
+    dom.btnStart.setAttribute("aria-label", "再来一次");
   }
-  dom.btnPause.disabled = status !== "RUNNING";
 }
 
 function initGame(initialBestScore) {
@@ -100,14 +121,16 @@ function initGame(initialBestScore) {
     reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
     onStatusChange: (status, state) => {
       updateOverlayForStatus(status, state);
-      dom.btnPause.textContent = status === "PAUSED" ? "继续" : "暂停";
-      dom.btnStart.disabled = status === "RUNNING";
       dom.gameStatus.textContent =
-        status === "GAME_OVER"
-          ? `已结束，本局 ${state.lastRunScore} 分`
-          : status === "PAUSED"
-            ? "游戏已暂停，地图与求助仍可使用"
-            : "";
+        status === "RUNNING"
+          ? coarsePointer
+            ? "点击画面或按右下角按钮跳跃"
+            : "空格 / ↑ 跳跃 · P 暂停 · R 重开"
+          : status === "GAME_OVER"
+            ? `已结束，本局 ${state.lastRunScore} 分`
+            : status === "PAUSED"
+              ? "游戏已暂停，地图与求助仍可使用"
+              : "点击画面或按空格跳跃";
     },
     onScore: (score, best) => {
       dom.score.textContent = String(score);
@@ -119,28 +142,67 @@ function initGame(initialBestScore) {
     },
   });
 
+  const startOrResume = () => {
+    const status = game.getState().status;
+    if (status === "PAUSED") game.resume();
+    else if (status === "GAME_OVER") game.restart();
+    else if (status === "READY") game.start();
+  };
+
   dom.stage.addEventListener("click", () => {
     const status = game.getState().status;
-    if (status === "PAUSED") game.resume();
-    else game.jump();
+    if (status === "RUNNING") {
+      haptic();
+      game.jump();
+    } else if (status === "PAUSED") {
+      game.resume();
+    } else {
+      startOrResume();
+    }
   });
 
-  dom.btnStart.addEventListener("click", () => game.start());
-  dom.btnPause.addEventListener("click", () => {
-    const status = game.getState().status;
-    if (status === "PAUSED") game.resume();
-    else game.pause();
+  dom.btnStart.addEventListener("click", (event) => {
+    event.stopPropagation();
+    startOrResume();
   });
-  dom.btnRestart.addEventListener("click", () => game.restart());
-  dom.btnJump.addEventListener("click", () => game.jump());
+
+  dom.btnPause.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const status = game.getState().status;
+    if (status === "RUNNING") game.pause();
+    else if (status === "PAUSED") game.resume();
+  });
+
+  dom.btnRestart.addEventListener("click", (event) => {
+    event.stopPropagation();
+    game.restart();
+  });
+
+  dom.btnJump.addEventListener("click", (event) => {
+    event.stopPropagation();
+    haptic();
+    game.jump();
+  });
 
   document.addEventListener("keydown", (event) => {
-    if (event.key !== " " && event.key !== "Spacebar" && event.key !== "ArrowUp") return;
     const active = document.activeElement;
-    if (active && (active.tagName === "BUTTON" || active.tagName === "INPUT" || active.tagName === "TEXTAREA")) {
+    const inForm = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA");
+    if (inForm) return;
+
+    if (event.key === "p" || event.key === "P") {
+      const status = game.getState().status;
+      if (status === "RUNNING") game.pause();
+      else if (status === "PAUSED") game.resume();
       return;
     }
+    if (event.key === "r" || event.key === "R") {
+      game.restart();
+      return;
+    }
+    if (event.key !== " " && event.key !== "Spacebar" && event.key !== "ArrowUp" && event.key !== "w") return;
+    if (active && active.tagName === "BUTTON") return;
     event.preventDefault();
+    haptic();
     game.jump();
   });
 

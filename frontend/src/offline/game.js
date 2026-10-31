@@ -75,16 +75,16 @@ function createRidge(seed, samples = 19) {
 }
 
 const RIDGES = [
-  { ridge: createRidge(11), period: 720, height: 148, baseY: 206, depth: 0.1, fill: PALETTE.far, edge: "rgba(251,246,234,0.85)" },
-  { ridge: createRidge(29), period: 540, height: 118, baseY: 224, depth: 0.28, fill: PALETTE.mid, edge: "rgba(251,246,234,0.8)" },
-  { ridge: createRidge(47), period: 400, height: 86, baseY: 240, depth: 0.52, fill: PALETTE.near, edge: "rgba(251,246,234,0.72)" },
+  { ridge: createRidge(11), period: 760, height: 224, baseY: 270, depth: 0.1, fill: PALETTE.far, edge: "rgba(251,246,234,0.85)" },
+  { ridge: createRidge(29), period: 560, height: 182, baseY: 290, depth: 0.28, fill: PALETTE.mid, edge: "rgba(251,246,234,0.8)" },
+  { ridge: createRidge(47), period: 420, height: 132, baseY: 304, depth: 0.52, fill: PALETTE.near, edge: "rgba(251,246,234,0.72)" },
 ];
 
 const CLOUDS = [
-  { x: 56, y: 58, width: 66, drift: 0.02 },
-  { x: 214, y: 38, width: 48, drift: 0.032 },
-  { x: 356, y: 78, width: 58, drift: 0.015 },
-  { x: 500, y: 46, width: 40, drift: 0.026 },
+  { x: 0.04, y: 0.12, width: 0.2, drift: 0.4 },
+  { x: 0.3, y: 0.08, width: 0.14, drift: 0.66 },
+  { x: 0.52, y: 0.15, width: 0.17, drift: 0.3 },
+  { x: 0.72, y: 0.07, width: 0.12, drift: 0.52 },
 ];
 
 function drawRoundRect(ctx, x, y, width, height, radius) {
@@ -116,64 +116,70 @@ function createGrainPattern(ctx) {
 }
 
 function drawCloud(ctx, x, y, width) {
+  const height = width * 0.34;
   ctx.fillStyle = "rgba(251,246,234,0.92)";
   ctx.strokeStyle = "rgba(36,43,38,0.1)";
-  ctx.lineWidth = 1.2;
+  ctx.lineWidth = Math.max(1, width * 0.015);
   ctx.beginPath();
-  ctx.moveTo(x, y + 9);
-  ctx.quadraticCurveTo(x + 5, y - 4, x + width * 0.3, y + 2);
-  ctx.quadraticCurveTo(x + width * 0.44, y - 8, x + width * 0.62, y + 1);
-  ctx.quadraticCurveTo(x + width * 0.82, y - 5, x + width, y + 8);
-  ctx.quadraticCurveTo(x + width * 0.58, y + 13, x, y + 9);
+  ctx.moveTo(x, y + height * 0.5);
+  ctx.quadraticCurveTo(x + width * 0.07, y - height * 0.2, x + width * 0.3, y + height * 0.12);
+  ctx.quadraticCurveTo(x + width * 0.44, y - height * 0.45, x + width * 0.62, y + height * 0.06);
+  ctx.quadraticCurveTo(x + width * 0.82, y - height * 0.28, x + width, y + height * 0.45);
+  ctx.quadraticCurveTo(x + width * 0.58, y + height * 0.8, x, y + height * 0.5);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
 }
 
-function drawSky(ctx, distance, motion) {
+function drawBackground(ctx, width, height) {
   ctx.fillStyle = PALETTE.paper;
-  ctx.fillRect(0, 0, WORLD.width, WORLD.height);
+  ctx.fillRect(0, 0, width, height);
+}
 
-  // 朱砂日轮 + 淡淡纸晕
+function drawSkyDecor(ctx, width, height, distance, motion) {
+  const sunX = width * 0.85;
+  const sunY = height * 0.36;
+  const sunR = Math.max(16, Math.min(width, height) * 0.055);
+
   ctx.save();
-  ctx.globalAlpha = 0.16;
+  ctx.globalAlpha = 0.15;
   ctx.fillStyle = PALETTE.zhu;
   ctx.beginPath();
-  ctx.arc(508, 76, 52, 0, Math.PI * 2);
+  ctx.arc(sunX, sunY, sunR * 1.36, 0, Math.PI * 2);
   ctx.fill();
   ctx.globalAlpha = 0.88;
   ctx.beginPath();
-  ctx.arc(508, 76, 38, 0, Math.PI * 2);
+  ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
   ctx.fill();
   ctx.globalAlpha = 0.3;
   ctx.strokeStyle = PALETTE.zhuDark;
-  ctx.lineWidth = 1.4;
+  ctx.lineWidth = Math.max(1, sunR * 0.05);
   ctx.beginPath();
-  ctx.arc(508, 76, 44, 0, Math.PI * 2);
+  ctx.arc(sunX, sunY, sunR * 1.16, 0, Math.PI * 2);
   ctx.stroke();
   ctx.restore();
 
-  // 纸云
-  ctx.save();
-  const drift = motion ? distance * 0.02 : 0;
+  const drift = motion ? distance * 0.03 : 0;
   for (const cloud of CLOUDS) {
-    const x = ((cloud.x - drift * cloud.drift * 10) % (WORLD.width + 140) + WORLD.width + 140) % (WORLD.width + 140) - 70;
-    drawCloud(ctx, x, cloud.y, cloud.width);
+    const cloudWidth = cloud.width * width;
+    const x =
+      ((cloud.x * width - drift * cloud.drift) % (width + 160) + width + 160) % (width + 160) - 80;
+    drawCloud(ctx, x, cloud.y * height, cloudWidth);
   }
-  ctx.restore();
 
-  // 归鸟
+  const birdScale = Math.max(0.8, width / 900);
+  const birdX =
+    ((width * 0.34 - (motion ? distance * 0.06 : 0)) % (width + 100) + width + 100) % (width + 100) - 50;
   ctx.save();
   ctx.strokeStyle = "rgba(36,43,38,0.36)";
-  ctx.lineWidth = 1.6;
+  ctx.lineWidth = 1.6 * birdScale;
   ctx.lineCap = "round";
-  const birdX = ((WORLD.width * 0.42 - distance * 0.05) % (WORLD.width + 80) + WORLD.width + 80) % (WORLD.width + 80) - 40;
   for (let index = 0; index < 3; index += 1) {
-    const x = birdX + index * 16;
-    const y = 56 + index * 7;
+    const x = birdX + index * 18 * birdScale;
+    const y = height * 0.24 + index * 9 * birdScale;
     ctx.beginPath();
-    ctx.moveTo(x - 5, y);
-    ctx.quadraticCurveTo(x, y - 4, x + 5, y);
+    ctx.moveTo(x - 6 * birdScale, y);
+    ctx.quadraticCurveTo(x, y - 5 * birdScale, x + 6 * birdScale, y);
     ctx.stroke();
   }
   ctx.restore();
@@ -296,10 +302,10 @@ function drawBushes(ctx, distance, motion) {
     const x =
       ((index * period - offset) % (WORLD.width + period) + WORLD.width + period) % (WORLD.width + period) -
       period / 2;
-    const scale = 0.8 + (index % 2) * 0.28;
+    const scale = 1.05 + (index % 2) * 0.36;
     const baseY = WORLD.groundY + 2;
-    const height = 26 * scale;
-    const width = 30 * scale;
+    const height = 34 * scale;
+    const width = 40 * scale;
     ctx.save();
     ctx.fillStyle = PALETTE.pineDeep;
     ctx.globalAlpha = 0.55;
@@ -333,6 +339,10 @@ function drawPlayer(ctx, state, runPhase) {
   ctx.save();
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
+  // 以脚底为原点整体放大，保持 Q 版比例，同时不让碰撞盒跟着变大
+  ctx.translate(centerX, feetY);
+  ctx.scale(1.45, 1.45);
+  ctx.translate(-centerX, -feetY);
 
   // 纸面投影
   const shadowScale = Math.max(0.5, 1 - (WORLD.groundY - feetY) / 160);
@@ -491,7 +501,7 @@ function drawRock(ctx, obstacle) {
   ctx.save();
   ctx.fillStyle = PALETTE.stone;
   ctx.strokeStyle = PALETTE.stoneDeep;
-  ctx.lineWidth = 1.8;
+  ctx.lineWidth = 2.4;
   ctx.lineJoin = "round";
   ctx.beginPath();
   ctx.moveTo(x, baseY);
@@ -520,7 +530,7 @@ function drawLantern(ctx, obstacle) {
   const centerX = x + width / 2;
   ctx.save();
   ctx.strokeStyle = PALETTE.lanternDeep;
-  ctx.lineWidth = 1.6;
+  ctx.lineWidth = 2.2;
   ctx.lineJoin = "round";
   ctx.fillStyle = PALETTE.lantern;
 
@@ -572,7 +582,7 @@ function drawPine(ctx, obstacle) {
   const centerX = x + width / 2;
   ctx.save();
   ctx.strokeStyle = PALETTE.pineDeep;
-  ctx.lineWidth = 1.6;
+  ctx.lineWidth = 2.2;
   ctx.lineJoin = "round";
   ctx.fillStyle = PALETTE.lanternDeep;
   ctx.beginPath();
@@ -659,13 +669,17 @@ export function createRunnerGame(options) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, width, height);
 
-    const scaleX = width / WORLD.width;
-    const scaleY = height / WORLD.height;
-    ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
-
     const motion = !motionReduced;
 
-    drawSky(ctx, state.distance, motion);
+    // 天空装饰按画布比例绘制，画布高度变化时始终保持“贴在可见区域顶部”
+    drawBackground(ctx, width, height);
+    drawSkyDecor(ctx, width, height, state.distance, motion);
+
+    // 场景按宽度等比缩放并底部对齐：容器更高时增加天空，不拉伸地物
+    const scale = width / WORLD.width;
+    const offsetY = height - WORLD.height * scale;
+    ctx.setTransform(scale, 0, 0, scale, 0, offsetY);
+
     drawRidge(ctx, RIDGES[0], state.distance, motion);
     drawRidge(ctx, RIDGES[1], state.distance, motion);
     drawRidge(ctx, RIDGES[2], state.distance, motion);
