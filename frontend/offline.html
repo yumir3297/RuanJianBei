@@ -8,96 +8,86 @@
     <title>离线伴游 · 景区应急页</title>
   </head>
   <body>
-    <div class="scroll">
-      <header class="app-bar">
-        <div class="brand">
-          <span class="brand-seal" aria-hidden="true">伴</span>
-          <div class="brand-text">
-            <h1>离线伴游</h1>
-            <p id="site-name">景区离线应急页</p>
-          </div>
+    <div class="app">
+      <div id="game-stage" class="stage">
+        <canvas id="game-canvas" role="img" aria-label="Q 版小人跑酷游戏画面"></canvas>
+
+        <div id="game-overlay" class="game-overlay">
+          <button id="btn-start" class="play-button" type="button" aria-label="开始游戏">
+            <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 5.5 18 12l-9.5 6.5Z" /></svg>
+            <svg class="icon-replay" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12a8 8 0 1 0 2.6-5.9M4 4v4.5h4.5" /></svg>
+          </button>
+          <p id="overlay-text">点击开始</p>
         </div>
-        <div class="status-row">
-          <span id="net-chip" class="chip chip--unknown" role="status" aria-live="polite">连接检测中</span>
-          <span id="cache-chip" class="chip chip--warn">离线包检查中</span>
-        </div>
-      </header>
+      </div>
 
-      <main class="app-main">
-        <section class="game-shell" aria-label="Q 版跑酷">
-          <div id="game-stage" class="game-stage">
-            <canvas id="game-canvas" role="img" aria-label="Q 版小人跑酷游戏画面"></canvas>
-
-            <div class="stage-hud">
-              <div class="seal-score" aria-label="当前得分">
-                <output id="score">0</output>
-                <span>分</span>
-              </div>
-              <p class="best-chip">最佳 <output id="best-score">0</output></p>
-              <div class="stage-tools">
-                <button id="btn-pause" class="icon-button" type="button" aria-label="暂停游戏" title="暂停（P）">
-                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5v14M15 5v14" /></svg>
-                </button>
-                <button id="btn-restart" class="icon-button" type="button" aria-label="重新开始" title="重新开始（R）">
-                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12a8 8 0 1 0 2.6-5.9M4 4v4.5h4.5" /></svg>
-                </button>
-              </div>
-            </div>
-
-            <div id="game-overlay" class="game-overlay">
-              <button id="btn-start" class="play-button" type="button" aria-label="开始游戏">
-                <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 5.5 18 12l-9.5 6.5Z" /></svg>
-                <svg class="icon-replay" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12a8 8 0 1 0 2.6-5.9M4 4v4.5h4.5" /></svg>
-              </button>
-              <p id="overlay-text">点击开始</p>
+      <div class="hud-layer">
+        <header class="hud hud--nw">
+          <div class="brand-row">
+            <button id="btn-return" class="back-button" type="button" aria-label="返回数字人导游" title="返回数字人导游">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14 5.5 7.5 12l6.5 6.5" /><path d="M8 12h9.5" /></svg>
+            </button>
+            <div class="brand-text">
+              <h1>离线伴游</h1>
+              <p id="site-name">景区离线应急页</p>
             </div>
           </div>
-
-          <div class="stage-bar">
-            <p id="game-status" class="game-status" role="status" aria-live="polite">点击画面或按空格跳跃</p>
-            <button id="btn-jump" class="jump-button" type="button" aria-label="跳跃">跳</button>
+          <div class="chip-row">
+            <span id="net-chip" class="chip chip--unknown" role="status" aria-live="polite">连接检测中</span>
+            <span id="cache-chip" class="chip chip--warn">离线包检查中</span>
+            <button id="open-info" class="chip chip--info" type="button">离线说明</button>
           </div>
-        </section>
+          <p id="game-status" class="game-status" role="status" aria-live="polite">点击画面或按空格跳跃</p>
+        </header>
 
-        <section class="safety-row" aria-label="安全入口">
-          <button id="open-map" class="paper-tab paper-tab--map" type="button">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M9 3.5 3.5 5.8v14.7L9 18.2l6 2.3 5.5-2.3V3.5L15 5.8 9 3.5Z" />
-              <path d="M9 3.5v14.7M15 5.8v14.7" />
-            </svg>
-            <span class="paper-tab-text"><strong>景区地图</strong><small>离线可看</small></span>
-          </button>
-          <button id="open-help" class="paper-tab paper-tab--help" type="button">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M6.6 3.5h3l1.6 4-2 1.4a12 12 0 0 0 5.9 5.9l1.4-2 4 1.6v3a2 2 0 0 1-2.1 2A17 17 0 0 1 4.6 5.6a2 2 0 0 1 2-2.1Z" />
-            </svg>
-            <span class="paper-tab-text"><strong>紧急求助</strong><small>电话与指引</small></span>
-          </button>
-        </section>
+        <div class="hud hud--ne">
+          <div class="stage-tools">
+            <button id="btn-pause" class="icon-button" type="button" aria-label="暂停游戏" title="暂停（P）">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5v14M15 5v14" /></svg>
+            </button>
+            <button id="btn-restart" class="icon-button" type="button" aria-label="重新开始" title="重新开始（R）">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12a8 8 0 1 0 2.6-5.9M4 4v4.5h4.5" /></svg>
+            </button>
+          </div>
+          <div class="score-cluster">
+            <div class="seal-score" aria-label="当前得分">
+              <output id="score">0</output>
+              <span>分</span>
+            </div>
+            <p class="best-chip">最佳 <output id="best-score">0</output></p>
+          </div>
+        </div>
 
-        <details class="notice">
-          <summary>离线使用提示</summary>
-          <ul>
-            <li><span aria-hidden="true">一</span><p>断网时仍可查看地图、查询电话、玩小游戏。</p></li>
-            <li><span aria-hidden="true">二</span><p>恢复联网后，页面会提示返回数字人导游。</p></li>
-            <li><span aria-hidden="true">三</span><p>地图与电话仅供辅助，请以现场指示为准。</p></li>
-          </ul>
-        </details>
+        <nav class="hud hud--sw" aria-label="安全入口">
+          <button id="open-map" class="dock dock--map" type="button">
+            <span class="dock-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <path d="M9 3.5 3.5 5.8v14.7L9 18.2l6 2.3 5.5-2.3V3.5L15 5.8 9 3.5Z" />
+                <path d="M9 3.5v14.7M15 5.8v14.7" />
+              </svg>
+            </span>
+            <span class="dock-text"><strong>景区地图</strong><small>离线可看</small></span>
+          </button>
+          <button id="open-help" class="dock dock--help" type="button">
+            <span class="dock-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <path d="M6.6 3.5h3l1.6 4-2 1.4a12 12 0 0 0 5.9 5.9l1.4-2 4 1.6v3a2 2 0 0 1-2.1 2A17 17 0 0 1 4.6 5.6a2 2 0 0 1 2-2.1Z" />
+              </svg>
+            </span>
+            <span class="dock-text"><strong>紧急求助</strong><small>电话与指引</small></span>
+          </button>
+        </nav>
+
+        <button id="btn-jump" class="jump-button" type="button" aria-label="跳跃">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19V6M6.5 11.5 12 5.5l5.5 6" /></svg>
+          <span>跳</span>
+        </button>
 
         <section id="recover-banner" class="recover-banner" aria-live="polite" hidden>
           <p>网页服务已恢复，可以返回数字人导游。</p>
           <button id="btn-return-recovered" type="button" class="seal-button">返回导游</button>
         </section>
-
-        <footer class="scroll-foot">
-          <p id="cache-detail" class="cache-detail">离线资源：检查中…</p>
-          <div class="footer-actions">
-            <button id="btn-prepare" type="button" hidden>重试准备离线包</button>
-            <button id="btn-return" type="button" class="link-button">返回数字人导游</button>
-          </div>
-          <p class="offline-disclaimer">本页用于网络不可达时查看景区信息与求助。地图与电话以现场指示及工作人员为准。</p>
-        </footer>
-      </main>
+      </div>
 
       <div id="map-dialog" class="sheet sheet--scroll" role="dialog" aria-modal="true" aria-labelledby="map-title" hidden>
         <div class="scroll-rod" aria-hidden="true"></div>
@@ -141,6 +131,31 @@
         </header>
         <div id="contacts" class="contacts"></div>
         <p class="help-foot">如无法拨通，请向附近工作人员求助。网页不会确认电话是否接通。</p>
+      </div>
+
+      <div id="info-sheet" class="sheet sheet--letter" role="dialog" aria-modal="true" aria-labelledby="info-title" hidden>
+        <header class="sheet-head">
+          <div class="sheet-title">
+            <span class="sheet-seal" aria-hidden="true">知</span>
+            <h2 id="info-title">离线说明</h2>
+          </div>
+          <button type="button" class="sheet-close" data-close-info aria-label="关闭离线说明">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" /></svg>
+          </button>
+        </header>
+        <ul class="info-list">
+          <li><span aria-hidden="true">一</span><p>断网时仍可查看地图、查询电话、玩小游戏。</p></li>
+          <li><span aria-hidden="true">二</span><p>恢复联网后，页面会提示返回数字人导游。</p></li>
+          <li><span aria-hidden="true">三</span><p>地图与电话仅供辅助，请以现场指示为准。</p></li>
+        </ul>
+        <div class="info-foot">
+          <p id="cache-detail" class="cache-detail">离线资源：检查中…</p>
+          <div class="info-actions">
+            <button id="btn-prepare" type="button" hidden>重试准备离线包</button>
+            <button id="btn-return-info" type="button" class="link-button">返回数字人导游</button>
+          </div>
+          <p class="offline-disclaimer">本页用于网络不可达时查看景区信息与求助。地图与电话以现场指示及工作人员为准。</p>
+        </div>
       </div>
 
       <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>

@@ -81,10 +81,12 @@ const RIDGES = [
 ];
 
 const CLOUDS = [
-  { x: 0.04, y: 0.12, width: 0.2, drift: 0.4 },
-  { x: 0.3, y: 0.08, width: 0.14, drift: 0.66 },
-  { x: 0.52, y: 0.15, width: 0.17, drift: 0.3 },
-  { x: 0.72, y: 0.07, width: 0.12, drift: 0.52 },
+  { x: 0.03, y: 0.12, width: 0.2, drift: 0.4 },
+  { x: 0.28, y: 0.3, width: 0.14, drift: 0.66 },
+  { x: 0.5, y: 0.16, width: 0.17, drift: 0.3 },
+  { x: 0.7, y: 0.4, width: 0.12, drift: 0.52 },
+  { x: 0.08, y: 0.7, width: 0.13, drift: 0.24 },
+  { x: 0.58, y: 0.56, width: 0.16, drift: 0.44 },
 ];
 
 function drawRoundRect(ctx, x, y, width, height, radius) {
@@ -136,47 +138,65 @@ function drawBackground(ctx, width, height) {
   ctx.fillRect(0, 0, width, height);
 }
 
-function drawSkyDecor(ctx, width, height, distance, motion) {
-  const sunX = width * 0.85;
-  const sunY = height * 0.36;
-  const sunR = Math.max(16, Math.min(width, height) * 0.055);
+function drawSkyDecor(ctx, width, height, skyTop, distance, motion) {
+  const isLandscape = width > height * 1.2;
+  const sunR = Math.max(22, Math.min(width * 0.075, 54));
+  // 日轮放在右上计分区下方，避开左侧品牌与状态文字
+  const sunX = width * 0.72;
+  const sunY = Math.max(sunR * 1.5, skyTop * 0.55);
 
-  ctx.save();
-  ctx.globalAlpha = 0.15;
-  ctx.fillStyle = PALETTE.zhu;
-  ctx.beginPath();
-  ctx.arc(sunX, sunY, sunR * 1.36, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalAlpha = 0.88;
-  ctx.beginPath();
-  ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalAlpha = 0.3;
-  ctx.strokeStyle = PALETTE.zhuDark;
-  ctx.lineWidth = Math.max(1, sunR * 0.05);
-  ctx.beginPath();
-  ctx.arc(sunX, sunY, sunR * 1.16, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.restore();
+  // 天空太窄（横屏手机）时不画日轮，避免只露出一角
+  if (skyTop > sunR) {
+    ctx.save();
+    const glow = ctx.createRadialGradient(sunX, sunY, sunR * 0.55, sunX, sunY, sunR * 2.4);
+    glow.addColorStop(0, "rgba(180,70,47,0.26)");
+    glow.addColorStop(0.55, "rgba(180,70,47,0.1)");
+    glow.addColorStop(1, "rgba(180,70,47,0)");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, sunR * 2.4, 0, Math.PI * 2);
+    ctx.fill();
 
-  const drift = motion ? distance * 0.03 : 0;
+    // 朱砂日轮
+    ctx.globalAlpha = 0.92;
+    ctx.fillStyle = PALETTE.zhu;
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 纸边高光，避免大面积纯色发闷
+    ctx.globalAlpha = 0.3;
+    ctx.strokeStyle = PALETTE.paperLight;
+    ctx.lineWidth = Math.max(1, sunR * 0.09);
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, sunR * 0.88, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // 纸云只铺在地上的天空区域内
+  const skyBand = Math.max(skyTop, height * (isLandscape ? 0.5 : 0.45));
+  const drift = motion ? distance * 0.03 * (width / 640) : 0;
   for (const cloud of CLOUDS) {
     const cloudWidth = cloud.width * width;
     const x =
       ((cloud.x * width - drift * cloud.drift) % (width + 160) + width + 160) % (width + 160) - 80;
-    drawCloud(ctx, x, cloud.y * height, cloudWidth);
+    drawCloud(ctx, x, cloud.y * skyBand, cloudWidth);
   }
 
-  const birdScale = Math.max(0.8, width / 900);
+  // 归鸟只在宽屏绘制，窄屏顶部被 HUD 占满，画上去会压字
+  if (width <= 700 || skyTop <= 40) return;
+
+  const birdScale = Math.max(0.9, width / 900);
   const birdX =
-    ((width * 0.34 - (motion ? distance * 0.06 : 0)) % (width + 100) + width + 100) % (width + 100) - 50;
+    ((width * 0.34 - (motion ? drift * 2 : 0)) % (width + 100) + width + 100) % (width + 100) - 50;
   ctx.save();
   ctx.strokeStyle = "rgba(36,43,38,0.36)";
   ctx.lineWidth = 1.6 * birdScale;
   ctx.lineCap = "round";
   for (let index = 0; index < 3; index += 1) {
     const x = birdX + index * 18 * birdScale;
-    const y = height * 0.24 + index * 9 * birdScale;
+    const y = skyTop * 0.34 + index * 9 * birdScale;
     ctx.beginPath();
     ctx.moveTo(x - 6 * birdScale, y);
     ctx.quadraticCurveTo(x, y - 5 * birdScale, x + 6 * birdScale, y);
@@ -185,7 +205,7 @@ function drawSkyDecor(ctx, width, height, distance, motion) {
   ctx.restore();
 }
 
-function drawRidge(ctx, layer, distance, motion) {
+function drawRidge(ctx, layer, distance, motion, stretch = 1) {
   const offset = motion ? distance * layer.depth : 0;
   const start = -(offset % layer.period);
   const bottom = WORLD.height + 20;
@@ -196,7 +216,7 @@ function drawRidge(ctx, layer, distance, motion) {
   for (let pass = 0; pass < 2; pass += 1) {
     for (const point of layer.ridge) {
       const x = start + pass * layer.period + point.x * layer.period;
-      const y = layer.baseY - point.y * layer.height;
+      const y = layer.baseY - point.y * layer.height * stretch;
       ctx.lineTo(x, y);
       topPoints.push([x, y]);
     }
@@ -666,23 +686,44 @@ export function createRunnerGame(options) {
   function render() {
     const width = canvas.width || 1;
     const height = canvas.height || 1;
+    const cssWidth = canvas.clientWidth || width;
+    const cssHeight = canvas.clientHeight || height;
+    const dpr = width / cssWidth;
+
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, width, height);
 
     const motion = !motionReduced;
 
-    // 天空装饰按画布比例绘制，画布高度变化时始终保持“贴在可见区域顶部”
-    drawBackground(ctx, width, height);
-    drawSkyDecor(ctx, width, height, state.distance, motion);
+    // 场景按宽度等比缩放，并在底部为 HUD 留出一条“路面”余量
+    const portrait = cssHeight > cssWidth * 1.3;
+    const scale = (cssWidth / WORLD.width) * (portrait ? 1.55 : 1);
+    const lift = Math.min(cssHeight * 0.16, 132);
+    const offsetY = cssHeight - WORLD.height * scale - lift;
+    const worldBottom = offsetY + WORLD.height * scale;
 
-    // 场景按宽度等比缩放并底部对齐：容器更高时增加天空，不拉伸地物
-    const scale = width / WORLD.width;
-    const offsetY = height - WORLD.height * scale;
-    ctx.setTransform(scale, 0, 0, scale, 0, offsetY);
+    // 竖屏长画布：山脊按可见高度加高，避免山体挤在底部、上方大片留白
+    const visibleWorldHeight = cssHeight / scale;
+    const ridgeStretch = Math.min(1.9, Math.max(1, (visibleWorldHeight / WORLD.height) * 0.62));
+    const farRidge = RIDGES[0];
+    const skyTop = Math.max(0, offsetY + (farRidge.baseY - 0.96 * farRidge.height * ridgeStretch) * scale);
 
-    drawRidge(ctx, RIDGES[0], state.distance, motion);
-    drawRidge(ctx, RIDGES[1], state.distance, motion);
-    drawRidge(ctx, RIDGES[2], state.distance, motion);
+    // 天空装饰（日轮、纸云、归鸟）铺满地上方可见区域，长屏顶部不至于空旷
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawBackground(ctx, cssWidth, cssHeight);
+    drawSkyDecor(ctx, cssWidth, cssHeight, skyTop, state.distance, motion);
+
+    // 地面继续向下铺到屏幕底部，让底部 HUD 落在“路面”上而不是压在角色身上
+    if (worldBottom < cssHeight) {
+      ctx.fillStyle = PALETTE.ground;
+      ctx.fillRect(0, worldBottom - 1, cssWidth, cssHeight - worldBottom + 1);
+    }
+
+    ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, dpr * offsetY);
+
+    drawRidge(ctx, RIDGES[0], state.distance, motion, ridgeStretch);
+    drawRidge(ctx, RIDGES[1], state.distance, motion, ridgeStretch);
+    drawRidge(ctx, RIDGES[2], state.distance, motion, ridgeStretch);
     drawBushes(ctx, state.distance, motion);
     drawGround(ctx, state.distance, motion);
     if (motion) drawLeaves(ctx, state.distance);

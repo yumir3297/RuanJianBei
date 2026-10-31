@@ -33,8 +33,10 @@ const dom = {
   btnJump: $("btn-jump"),
   btnOpenMap: $("open-map"),
   btnOpenHelp: $("open-help"),
+  btnOpenInfo: $("open-info"),
   btnReturn: $("btn-return"),
   btnReturnRecovered: $("btn-return-recovered"),
+  btnReturnInfo: $("btn-return-info"),
   btnPrepare: $("btn-prepare"),
   recoverBanner: $("recover-banner"),
   mapDialog: $("map-dialog"),
@@ -44,6 +46,7 @@ const dom = {
   mapViewport: $("map-viewport"),
   mapImage: $("map-image"),
   helpSheet: $("help-sheet"),
+  infoSheet: $("info-sheet"),
   contacts: $("contacts"),
   toast: $("toast"),
 };
@@ -327,6 +330,10 @@ function openHelp() {
   openSheet(dom.helpSheet);
 }
 
+function openInfo() {
+  openSheet(dom.infoSheet);
+}
+
 /* ------------------------------- 连通性 -------------------------------- */
 
 const NET_CHIP_TONE = {
@@ -353,7 +360,9 @@ function initConnectivity() {
       dom.recoverBanner.hidden = false;
       dom.gameStatus.textContent = "网页服务已恢复，可随时返回数字人导游";
     }
-    dom.btnReturn.textContent = state === "ONLINE" ? "返回数字人导游" : "返回数字人导游（可能无法加载）";
+    dom.btnReturn.title =
+      state === "ONLINE" ? "返回数字人导游" : "返回数字人导游（可能无法加载）";
+    dom.btnReturn.setAttribute("aria-label", dom.btnReturn.title);
   });
   window.addEventListener("online", () => renderNetChip(netState));
   window.addEventListener("offline", () => renderNetChip(netState));
@@ -415,13 +424,18 @@ function goBackToGuide() {
 function wireStaticControls() {
   dom.btnOpenMap.addEventListener("click", openMap);
   dom.btnOpenHelp.addEventListener("click", openHelp);
+  dom.btnOpenInfo.addEventListener("click", openInfo);
   document.querySelectorAll("[data-close-map]").forEach((button) =>
     button.addEventListener("click", () => closeSheet(dom.mapDialog)),
   );
   document.querySelectorAll("[data-close-help]").forEach((button) =>
     button.addEventListener("click", () => closeSheet(dom.helpSheet)),
   );
+  document.querySelectorAll("[data-close-info]").forEach((button) =>
+    button.addEventListener("click", () => closeSheet(dom.infoSheet)),
+  );
   dom.btnReturn.addEventListener("click", goBackToGuide);
+  dom.btnReturnInfo.addEventListener("click", goBackToGuide);
   dom.btnReturnRecovered.addEventListener("click", goBackToGuide);
   dom.btnPrepare.addEventListener("click", () => void checkOfflinePackage());
   document.addEventListener("keydown", (event) => {
