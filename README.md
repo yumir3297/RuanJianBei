@@ -4,7 +4,7 @@
 
 ## 项目简介
 
-面向各类景区的通用 AI 数字人导览平台：景区名称、导游形象、欢迎语、语音热词等均按景区自设置，无需修改业务代码。默认内置"灵山胜境"示例景区数据用于演示。支持景点讲解、路线推荐、知识问答，集成 Three.js/VRM 数字人、语音交互、多模态图片识别、管理后台数据看板等功能。
+面向景区游客的 AI 数字人导览平台，提供景点讲解、路线编辑、知识问答、Three.js/VRM 数字人、语音和图片交互，以及管理后台。项目包含灵山相关示例资料；实际景区配置、资料来源和使用许可需在部署前核实。模型服务需要独立配置，默认配置不能作为真实 AI 服务已接通的证据。
 
 ## 技术栈
 
@@ -12,9 +12,9 @@
 |------|------|
 | 前端 | Vue 3 + Vite + Element Plus + ECharts + Three.js/VRM |
 | 后端 | Python FastAPI + Uvicorn |
-| AI | DeepSeek V4 Pro（LLM）/ Qwen3.7-Plus（视觉）/ BGE（嵌入&精排） |
+| AI | 可配置的 OpenAI 兼容模型、视觉模型和 BGE 检索组件；实际供应商以环境配置为准 |
 | 检索 | ChromaDB 向量库 + BM25 + Reranker |
-| TTS | 阿里云百炼 CosyVoice |
+| TTS | 可配置语音服务，具体可用性取决于供应商和环境 |
 
 ## 快速启动
 
@@ -35,7 +35,7 @@ python -m venv .venv
 .\.venv\Scripts\activate
 pip install torch --index-url https://download.pytorch.org/whl/cpu
 pip install -r requirements.txt
-copy .env.example .env          # 编辑 .env 填入 API Key
+copy .env.example .env          # 配置数据库及需要的供应商；不要提交密钥
 python -m uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
@@ -103,12 +103,4 @@ npm run dev
 
 ## 后续改进方向
 
-产品演进方向为“游客智能伴游 + 景区 AI 运营工作台”：让游客规划、修改、执行并保存游览，让运营人员导入资料、生产讲解、审核发布并处理反馈。以下均为规划，不代表已实现。
-
-- [阶段路线图](./docs/plans/2026-10-27-feature-roadmap.md)：双端闭环、阶段依赖与交付门槛。
-- [待开发清单](./docs/plans/2026-10-28-ai-workbench-backlog.md)：工作包、状态、验收与原 14 项需求追溯。
-- [已确认的知识工作区设计](./docs/superpowers/specs/2026-10-27-knowledge-workspace-design.md)：永久草稿、批量上传、版本发布与下架，待实施。
-
-建议先完成运营知识发布和游客可编辑行程两个闭环，再接入识景、统一播放、讲解生产、成果导出和运营待办。定位、客流、求助与扩展体验按依赖推进；弱网、多端和性能持续验收。
-
-继续使用现有 Vue 3 + FastAPI，逐步重构职责与任务协作。更换语言或技术框架仍暂缓。原有总结导出、美图、社区、OCR、情绪与容量需求均保留在待开发清单中。
+当前已整合知识发布、可编辑行程及持久提案执行；真实模型、手机、弱网和完整浏览器链路尚待验收。当前功能、证据与缺口见[开发进度](./docs/development/PROGRESS.md)、[评分矩阵](./docs/competition/SCORE_MATRIX.md)和[架构选择](./docs/architecture/TARGET.md)。历史路线图和方案仅供追溯，不作为当前需求清单。

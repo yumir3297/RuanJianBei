@@ -91,7 +91,7 @@ npm run dev
 `<venv-python>` 替换为该系统虚拟环境 Python 的完整路径；`python` 是所选 Python 3，macOS/Linux 没有该命令时用 `python3`。
 backend 测试通常依赖 `backend/` 在模块搜索路径中，优先从 backend/ 执行。
 现有 [competition_check.ps1](../scripts/competition_check.ps1) 是 Windows 专用：依赖 Scripts/python.exe 和 cmd，不作为 macOS/Linux 入口。
-前端 package.json 没有 test/lint 脚本，不能报告运行了 `npm test` 或 `npm run lint`。
+前端提供 `npm test`（Node 测试运行器）；当前没有 lint 脚本，不能报告运行了 `npm run lint`。
 
 ## 6. 手机、平板访问开发机
 
