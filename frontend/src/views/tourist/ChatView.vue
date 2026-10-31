@@ -294,6 +294,7 @@ import "../../assets/guide-tools.css";
 import { analyzeImage, getVisionErrorMessage } from "../../api/vision";
 import { fetchItineraryCatalog } from "../../api/itinerary.js";
 import { visionConfirmation, createVisionAsyncGuard } from "../../utils/visionConfirmation.js";
+import { displayableASRConfidence } from "../../utils/asrConfidence.js";
 import { createLatestRequest } from "../../utils/latestRequest";
 import { createIdempotencyKey } from "../../utils/idempotencyKey";
 import { getTranscriptionErrorMessage, transcribeAudio } from "../../api/voice";
@@ -1065,7 +1066,7 @@ async function toggleRecording() {
         return;
       }
 
-      transcriptionConfidence.value = typeof result.confidence === "number" ? result.confidence : -1;
+      transcriptionConfidence.value = displayableASRConfidence(result);
       transcriptionCandidates.value = Array.isArray(result.candidates) ? result.candidates : [];
 
       if (result.confidence >= 0.7 && !result.needs_confirmation) {
