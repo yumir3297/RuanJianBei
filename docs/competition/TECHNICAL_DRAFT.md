@@ -20,7 +20,7 @@
 
 知识问答结合 FAQ 和检索结果生成回答；知识发布及可见性由后端知识服务管理，问答链路对发布版本变化进行检查。模型服务由配置决定，未配置真实供应商时存在 stub 或降级路径；检索结果及来源展示不自动证明回答真实，仍需逐条核对。见 `backend/app/services/qa/pipeline.py`、`backend/app/services/knowledge/`、`backend/app/core/config.py`。
 
-视觉识别与最终问答是独立阶段。游客可以从已发布目录选择景点，后端校验站点、景点代码和发布版本后限定检索；未经确认时开放检索并提示。模型线索和用户选择不证明照片识别正确，已发布资料也不自动等同官方资料。提供浏览器语音识别与录音转写：部分转写可确认或修正，浏览器识别和符合自动发送条件的转写会直接提交。语音可通过服务端合成与前端播放。支持与体验受供应商、模型、浏览器权限和设备影响；不得依据接口存在推断真实环境成功。见 `backend/app/api/vision.py`、`backend/app/api/voice.py`、`frontend/src/composables/useRecorder.js`、`frontend/src/composables/useAudioPlayer.js`。
+视觉识别与最终问答是独立阶段。游客可以从已发布目录选择景点，后端校验站点、景点代码和发布版本后限定检索；未经确认时开放检索并提示。模型线索和用户选择不证明照片识别正确，已发布资料也不自动等同官方资料。提供浏览器语音识别与录音转写：启发式置信度的转写需要游客确认或修正，浏览器识别及其他符合自动发送条件的转写可能直接提交。语音可通过服务端合成与前端播放。支持与体验受供应商、模型、浏览器权限和设备影响；不得依据接口存在推断真实环境成功。见 `backend/app/api/vision.py`、`backend/app/api/voice.py`、`frontend/src/composables/useRecorder.js`、`frontend/src/composables/useAudioPlayer.js`。
 
 ## 五、行程功能实现
 
