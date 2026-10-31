@@ -280,7 +280,7 @@ def test_pipeline_passes_resolved_scope_and_uses_selection_cache_key() -> None:
     source_event = next(event for event in events if event.type == "sources")
     assert source_event.data["docs"][0]["evidence_id"] == "证据1"
     assert len(cache_repository.set_keys) == 1
-    assert cache_repository.set_keys[0].startswith("qa:v5:")
+    assert cache_repository.set_keys[0].startswith("qa:v6:")
     assert events[-2].type == "followups"
     assert 2 <= len(events[-2].data["items"]) <= 4
     assert events[-1].type == "done"
@@ -431,6 +431,22 @@ def _build_test_pipeline(**overrides):
     )
     kwargs.update(overrides)
     return QAPipeline(**kwargs)
+
+
+def test_attraction_scoped_query_does_not_use_unscoped_faq():
+    matcher = FAQMatcher()
+    matcher.add([FAQEntry(id="general-hours", category="实用信息", aliases=["开放时间"],
+                          answer="通用开放时间", sources=["通用资料"])])
+    rag = RecordingRAGService()
+    pipeline = _build_test_pipeline(faq_matcher=matcher, rag_service=rag)
+    async def scenario():
+        events = [event async for event in pipeline.stream_chat(ChatRequest(
+            query="开放时间", session_id="scoped-faq", text_only=True,
+            selection=SelectionContext(mode="attraction", attraction_id=13)))]
+        text = "".join(event.data.get("text", "") for event in events if event.type == "text")
+        assert "通用开放时间" not in text
+        assert rag.scopes == [RetrievalScope(source_entry_id=13)]
+    asyncio.run(scenario())
 
 
 def test_published_source_identifiers_survive_stream_log_and_cached_answer():
@@ -1023,7 +1039,7 @@ def test_faq_fast_path_stays_llm_free_for_default_audience() -> None:
         rag_service=rag_service,
     )
 
-    events = _run_turn(pipeline, query="几点开门")
+    events = _run_turn(pipeline, query="几点开门", selection=None)
 
     assert llm_service.received == [], "默认受众下 FAQ 快路径不应调用 LLM"
     assert rag_service.scopes == [], "FAQ 命中不应触发 RAG 检索"
@@ -1041,7 +1057,7 @@ def test_faq_path_restyles_through_llm_for_child_audience() -> None:
         rag_service=rag_service,
     )
 
-    events = _run_turn(pipeline, query="几点开门", audience="child")
+    events = _run_turn(pipeline, query="几点开门", audience="child", selection=None)
 
     assert len(llm_service.received) == 1, "非默认受众下 FAQ 必须走 LLM 改写"
     assert llm_service.received[-1]["audience"] == "child"
@@ -1058,7 +1074,7 @@ def test_faq_path_keeps_adult_on_fast_path_when_audience_is_adult() -> None:
     llm_service = DummyLLMService()
     pipeline = _build_test_pipeline(faq_matcher=_faq_matcher(), llm_service=llm_service)
 
-    events = _run_turn(pipeline, query="几点开门", audience="adult")
+    events = _run_turn(pipeline, query="几点开门", audience="adult", selection=None)
 
     assert llm_service.received == [], "adult 与未指定等价，不应触发 LLM"
     assert events[-1].data["hit_level"] == "faq_exact"
@@ -1072,10 +1088,10 @@ def test_faq_styled_answer_is_cached_under_audience_specific_key() -> None:
         llm_service=DummyLLMService(),
     )
 
-    _run_turn(pipeline, query="几点开门", audience="child")
+    _run_turn(pipeline, query="几点开门", audience="child", selection=None)
 
     assert len(cache_repository.set_keys) == 1
-    assert cache_repository.set_keys[0].startswith("qa:v5:")
+    assert cache_repository.set_keys[0].startswith("qa:v6:")
 
 
 def test_faq_answer_survives_llm_outage_for_non_default_audience() -> None:
@@ -1087,7 +1103,7 @@ def test_faq_answer_survives_llm_outage_for_non_default_audience() -> None:
         llm_service=FallbackLLMService(),
     )
 
-    events = _run_turn(pipeline, query="几点开门", audience="child")
+    events = _run_turn(pipeline, query="几点开门", audience="child", selection=None)
 
     text_event = next(event for event in events if event.type == "text")
     assert "8:00" in text_event.data["text"], "应回落 FAQ 原文"
@@ -1111,7 +1127,7 @@ def test_interrupted_faq_restyle_never_speaks_discarded_partial_answer() -> None
         faq_matcher=_faq_matcher(), llm_service=InterruptedFAQ(),
         streaming_tts_service=FakeStreamingTTSService(),
     )
-    events = _run_turn(pipeline, query="几点开门", audience="child", text_only=False)
+    events = _run_turn(pipeline, query="几点开门", audience="child", text_only=False, selection=None)
     final_text = next(event.data["text"] for event in events if event.type == "text")
     spoken = [event.data["text"] for event in events if event.type == "audio"]
     assert "8:00" in final_text

@@ -348,7 +348,10 @@ class QAPipeline:
         )
         yield StreamEvent(type="status", data={"text": "正在查找答案..."})
 
-        faq_result = self.faq_matcher.match(normalized_query) if vision is None else None
+        # FAQ records do not carry a verifiable attraction binding. A scoped
+        # question must use scoped retrieval rather than a potentially general FAQ.
+        scoped_attraction = resolved.scope is not None and resolved.scope.source_entry_id is not None
+        faq_result = self.faq_matcher.match(normalized_query) if vision is None and not scoped_attraction else None
         faq_documents: list[RetrievedDocument] | None = None
         faq_sources: list[dict] = []
         if faq_result is not None and faq_result.is_hit:
