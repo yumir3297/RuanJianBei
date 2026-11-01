@@ -1155,6 +1155,11 @@ def test_conflicting_route_budgets_request_clarification():
         assert "确认" in answer
         assert "重新选择" in answer
         assert sources == []
+        events = [event async for event in pipeline.stream_chat(ChatRequest(
+            query="我有三个小时，推荐路线", session_id="route-conflict-stream", text_only=True,
+            selection=SelectionContext(mode="route", available_hours=2)))]
+        assert events[-1].data["hit_level"] == "route_clarification"
+        assert events[-1].data["provider"] == "local"
         updated, _ = await pipeline._build_static_route_answer(ChatRequest(
             query="推荐三小时路线", session_id="route-conflict",
             selection=SelectionContext(mode="route", available_hours=3)))

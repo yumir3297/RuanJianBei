@@ -374,7 +374,7 @@ class QAPipeline:
                     normalized_query=normalized_query,
                     answer=answer,
                     sources=route_sources,
-                    hit_level="static_route",
+                    hit_level="static_route" if route_sources else "route_clarification",
                     start=start,
                     resolved=resolved,
                     expected_epoch=request_epoch,
@@ -1068,7 +1068,7 @@ class QAPipeline:
             hit_level=hit_level,
             total_ms=latency_ms,
             degraded=hit_level in {"rag_insufficient", "rag_llm_fallback", "schedule_unverified", "ticket_unverified"},
-            provider="local" if hit_level.startswith("faq_") or hit_level in {"cache", "schedule_unverified", "ticket_unverified"} else "rag",
+            provider="local" if hit_level.startswith("faq_") or hit_level in {"cache", "schedule_unverified", "ticket_unverified", "static_route", "route_clarification"} else "rag",
         )
 
     async def _epoch_is_current(self, expected_epoch: int | None) -> bool:
