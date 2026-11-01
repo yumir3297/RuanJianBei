@@ -866,7 +866,7 @@ class QAPipeline:
         budget = request.selection.available_hours if request.selection else None
         query_budget = _explicit_route_hours(request.query)
         if budget is not None and query_budget is not None and budget != query_budget:
-            return (f"当前选择的时间是{budget}小时，问题中是{query_budget}小时；请确认希望使用哪个时间预算。", [])
+            return (f"当前选择的时间是{budget}小时，问题中是{query_budget}小时；请确认时间预算，重新选择或清除之前的时间设置后再提问。", [])
         if budget is None:
             budget = query_budget
         no_known_fit = False

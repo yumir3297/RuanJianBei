@@ -1153,7 +1153,12 @@ def test_conflicting_route_budgets_request_clarification():
             selection=SelectionContext(mode="route", available_hours=2)))
         assert "2小时" in answer and "3小时" in answer
         assert "确认" in answer
+        assert "重新选择" in answer
         assert sources == []
+        updated, _ = await pipeline._build_static_route_answer(ChatRequest(
+            query="推荐三小时路线", session_id="route-conflict",
+            selection=SelectionContext(mode="route", available_hours=3)))
+        assert "请确认" not in updated
     asyncio.run(scenario())
 
 
