@@ -73,9 +73,21 @@ export function useNarration({ getPosition, getSpots, isBusy, onTrigger, onInter
     activeSpot.value = spot;
     if (!completed.value.includes(spot.name)) completed.value = [...completed.value, spot.name];
     status.value = "playing";
-    Promise.resolve(onTrigger && onTrigger(spot)).finally(() => {
-      if (currentGeneration === generation && status.value === "playing") status.value = "idle";
-    });
+    const failed = () => {
+      if (currentGeneration !== generation) return;
+      insideNames.delete(`${spot.name}__done`);
+      lastTriggeredAt.value = 0;
+      completed.value = completed.value.filter(name => name !== spot.name);
+      activeSpot.value = null;
+      status.value = "idle";
+    };
+    try {
+      Promise.resolve(onTrigger && onTrigger(spot)).then(() => {
+        if (currentGeneration === generation && status.value === "playing") status.value = "idle";
+      }, failed);
+    } catch {
+      failed();
+    }
   }
 
   /** 由外部在「忙 -> 空闲」时驱动。 */

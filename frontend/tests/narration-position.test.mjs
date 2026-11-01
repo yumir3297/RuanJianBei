@@ -81,3 +81,35 @@ test('an older narration request cannot reset a newer playing state', async () =
     resolvers[1]();
   } finally { await vite.close(); }
 });
+
+test('synchronous narration failure leaves state recoverable', async () => {
+  const vite = await createServer({ configFile: false, cacheDir: '/private/tmp/guide-vite-narration-failure', server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
+  try {
+    const { useNarration } = await vite.ssrLoadModule('/src/composables/useNarration.js');
+    const spot = { name: '景点', lat: 31, lng: 120 };
+    let fail = true, calls = 0;
+    const narration = useNarration({ getPosition: () => spot, getSpots: () => [spot], isBusy: () => false,
+      onTrigger: () => { if (fail) throw new Error('failed'); calls++; } });
+    narration.update();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(narration.status.value, 'idle');
+    fail = false;
+    narration.update();
+    assert.equal(calls, 1);
+  } finally { await vite.close(); }
+});
+
+test('asynchronous narration rejection clears its unfinished state', async () => {
+  const vite = await createServer({ configFile: false, cacheDir: '/private/tmp/guide-vite-narration-rejection', server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
+  try {
+    const { useNarration } = await vite.ssrLoadModule('/src/composables/useNarration.js');
+    const spot = { name: '景点', lat: 31, lng: 120 };
+    const narration = useNarration({ getPosition: () => spot, getSpots: () => [spot], isBusy: () => false,
+      onTrigger: () => Promise.reject(new Error('failed')) });
+    narration.update();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(narration.status.value, 'idle');
+    assert.deepEqual(narration.completed.value, []);
+    assert.equal(narration.activeSpot.value, null);
+  } finally { await vite.close(); }
+});
