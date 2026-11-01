@@ -7,6 +7,24 @@ from app.schemas.itinerary import TourSnapshotV2
 from app.services.itinerary.provenance import normalize_snapshot_provenance
 
 
+def test_ai_proposed_durations_are_not_attributed_to_visitor_input():
+    stop_id = str(uuid4())
+    previous = TourSnapshotV2.model_validate({"stops": [{
+        "stop_id": stop_id, "kind": "visit", "name": "甲", "duration_minutes": 30,
+        "duration_basis": "user",
+    }]})
+    raw = previous.model_dump(mode="json")
+    raw["stops"][0]["duration_minutes"] = 40
+    raw["stops"].append({"stop_id": str(uuid4()), "kind": "rest", "name": "休息",
+                         "duration_minutes": 15, "duration_basis": "user"})
+    result = normalize_snapshot_provenance(TourSnapshotV2.model_validate(raw),
+                                           previous=previous, new_stop_created_by="ai")
+    for stop in result.stops:
+        assert stop.duration_basis == "estimate"
+        assert stop.evidence[0].evidence_type == "estimate"
+        assert "AI" in stop.evidence[0].label
+
+
 def test_untrusted_draft_provenance_is_normalized_from_server_facts():
     stop_id = str(uuid4())
     previous = TourSnapshotV2.model_validate({

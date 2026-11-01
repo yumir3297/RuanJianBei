@@ -123,6 +123,8 @@ def test_intent_service_selects_candidate_after_shared_reducer_validation(monkey
     assert result["operations"] == [required]
     assert result["validation"]["selection"]["candidate_count"] == 2
     assert result["candidate"]["stops"][1]["duration_minutes"] == 45
+    assert result["candidate"]["stops"][1]["duration_basis"] == "estimate"
+    assert result["candidate"]["stops"][1]["evidence"][0]["evidence_type"] == "estimate"
 
 
 def test_intent_service_retries_one_invalid_format_then_accepts_valid_response(monkeypatch):

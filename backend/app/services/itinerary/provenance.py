@@ -16,8 +16,8 @@ def normalize_snapshot_provenance(
     """Replace client claims about sources/evidence with facts derived by the server.
 
     Unchanged stops and legs inherit their previously persisted provenance. New or
-    changed durations are treated as visitor supplied; newly submitted stops are
-    manual. Route legs have no authoritative source in V01, so changed legs become
+    changed durations are attributed to the submission path; newly submitted stops
+    are manual unless the server is applying an AI proposal. Route legs have no authoritative source in V01, so changed legs become
     unknown until a server backed route source exists.
     """
     result = snapshot.model_copy(deep=True)
@@ -58,14 +58,10 @@ def normalize_snapshot_provenance(
                 stop.duration_basis = old.duration_basis
                 stop.evidence = old.evidence
             else:
-                stop.duration_basis = "user" if stop.duration_minutes is not None else "unknown"
-                stop.evidence = ([EvidenceReference(evidence_type="visitor_input", label="游客填写的停留时长")]
-                                 if stop.duration_minutes is not None else [])
+                _set_submitted_duration_provenance(stop, new_stop_created_by)
         else:
             stop.created_by = new_stop_created_by
-            stop.duration_basis = "user" if stop.duration_minutes is not None else "unknown"
-            stop.evidence = ([EvidenceReference(evidence_type="visitor_input", label="游客填写的停留时长")]
-                             if stop.duration_minutes is not None else [])
+            _set_submitted_duration_provenance(stop, new_stop_created_by)
 
     old_legs = {
         (str(leg.from_stop_id), str(leg.to_stop_id)): leg
@@ -88,3 +84,15 @@ def normalize_snapshot_provenance(
         result.source = previous.source
         result.source_references = previous.source_references
     return result
+
+
+def _set_submitted_duration_provenance(stop, actor: str) -> None:
+    if stop.duration_minutes is None:
+        stop.duration_basis = "unknown"
+        stop.evidence = []
+    elif actor == "ai":
+        stop.duration_basis = "estimate"
+        stop.evidence = [EvidenceReference(evidence_type="estimate", label="AI 建议的停留时长，需游客确认")]
+    else:
+        stop.duration_basis = "user"
+        stop.evidence = [EvidenceReference(evidence_type="visitor_input", label="游客填写的停留时长")]
