@@ -848,12 +848,15 @@ class QAPipeline:
             return None
 
         budget = request.selection.available_hours if request.selection else None
+        no_known_fit = False
         if budget is not None:
             fitting = [route for route in routes
                        if (hours := RecommendEngine._duration_hours(route.duration_label, budget)) is not None
                        and hours <= budget]
             if fitting:
                 routes = fitting
+            else:
+                no_known_fit = True
 
         def pick(*keywords: str):
             return next(
@@ -916,6 +919,8 @@ class QAPipeline:
             else:
                 answer = f"推荐{selected.title}（{selected.duration_label}）：{route_plan}。"
 
+        if no_known_fit:
+            answer = f"暂无标注时长符合{budget}小时预算的预设路线。以下仅供调整参考：{answer}"
         answer += " 这是预设路线，未结合实时路况或客流，实际时长和开放情况请以现场信息为准。"
         sources = [{
             "evidence_id": "路线1",

@@ -1087,6 +1087,16 @@ def test_chat_route_respects_explicit_budget_before_keyword_preference():
     asyncio.run(scenario())
 
 
+def test_chat_route_discloses_when_no_known_template_fits_budget():
+    async def scenario():
+        pipeline = _build_test_pipeline(route_repository=DummyRouteRepository())
+        answer, _ = await pipeline._build_static_route_answer(ChatRequest(
+            query="亲子路线", session_id="route-no-fit", selection=SelectionContext(mode="route", available_hours=1)))
+        assert "暂无" in answer and "符合" in answer
+        assert "1小时" in answer
+    asyncio.run(scenario())
+
+
 def _faq_matcher():
     matcher = FAQMatcher()
     matcher.add(
