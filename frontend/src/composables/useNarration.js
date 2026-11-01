@@ -91,7 +91,7 @@ export function useNarration({ getPosition, getSpots, isBusy, onTrigger, onInter
     if (isBusy && isBusy()) {
       // 排队过久说明当前播放卡住或过长，中断后补播，避免功能被永久阻塞
       if (Date.now() - pendingSince < maxPendingWaitMs) return;
-      if (onInterrupt) onInterrupt();
+      if (!onInterrupt || onInterrupt() !== true) return;
     }
     const spot = pendingSpot;
     pendingSpot = null;

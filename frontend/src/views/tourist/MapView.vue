@@ -345,9 +345,11 @@ const narration = useNarration({
   onTrigger: (spot) => playNarration(spot),
   // 排队超时只允许中断自己的地图讲解，不能停止聊天或其他媒体源。
   onInterrupt: () => {
-    if (activeNarrationSession && audio.activePlayback.value?.id === activeNarrationSession.id) {
+    if (!props.busy && activeNarrationSession && audio.activePlayback.value?.id === activeNarrationSession.id) {
       audio.stop(activeNarrationSession.id, "pending-timeout");
+      return true;
     }
+    return false;
   },
 });
 

@@ -16,6 +16,24 @@ test('invalid position drops pending narration without interrupting audio', asyn
   } finally { await vite.close(); }
 });
 
+test('timed out narration does not take over unrelated busy audio', async () => {
+  const vite = await createServer({ configFile: false, cacheDir: '/private/tmp/guide-vite-narration-owner', server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
+  try {
+    const { useNarration } = await vite.ssrLoadModule('/src/composables/useNarration.js');
+    const spot = { name: '景点', lat: 31, lng: 120 };
+    let triggered = 0, busyAllowed = false;
+    const narration = useNarration({ getPosition: () => spot, getSpots: () => [spot], isBusy: () => true,
+      onInterrupt: () => busyAllowed, onTrigger: () => triggered++, maxPendingWaitMs: 0 });
+    narration.trigger(spot);
+    narration.drainPending();
+    assert.equal(triggered, 0);
+    assert.equal(narration.status.value, 'pending');
+    busyAllowed = true;
+    narration.drainPending();
+    assert.equal(triggered, 1);
+  } finally { await vite.close(); }
+});
+
 test('a discarded pending narration can trigger after location recovers', async () => {
   const vite = await createServer({ configFile: false, cacheDir: '/private/tmp/guide-vite-narration-recovery', server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
   try {
