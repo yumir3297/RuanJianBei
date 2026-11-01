@@ -110,6 +110,8 @@
     <template v-else>
       <button type="button" class="tool-back" @click="selectedRoute = null"><GuideIcon name="back" /> 返回路线列表</button>
       <h4 class="route-detail-title">{{ selectedRoute.title }}</h4><p class="tool-description">{{ selectedRoute.duration_label }}</p>
+      <p class="tool-data-note">路线和时长仅供参考，未结合实时路况或客流，请以现场信息为准。</p>
+      <p v-if="selectedRoute.reason" class="tool-data-note">{{ selectedRoute.reason }}</p>
       <ol class="route-stops"><li v-for="(spot, index) in selectedRoute.spots" :key="index">{{ spot }}</li></ol>
       <details class="route-detail"><summary>沿途讲解与特色体验</summary><p>{{ selectedRoute.guide }}</p><p>{{ selectedRoute.features }}</p></details>
       <button type="button" class="tour-session-primary" :disabled="sessionSaving" @click="saveSelectedRoute">{{ sessionSaving ? '正在保存…' : '保存为我的游览' }}</button>
@@ -219,9 +221,9 @@ async function loadRecommendations() {
     recommendations.value = (Array.isArray(data?.routes) ? data.routes : []).map(item => ({
       id: "recommended-" + item.route_id, routeId: item.route_id, title: String(item.title || "游览路线").replace(/^推荐[：:]/, ""),
       duration_label: item.duration_label || (item.duration_hours != null ? item.duration_hours + "小时" : "时长待确认"),
-      tags: [...(item.comfort_tags || []), "景区资料"],
+      tags: [...(item.comfort_tags || []), "预设路线"],
       spots: String(item.route_plan || "").split(/\s*(?:→|->|—|－)\s*/).map(spot => spot.trim()).filter(Boolean),
-      guide: [item.reason, ...(item.guide_points || [])].filter(Boolean).join("\n"), features: (item.experiences || []).join("；"),
+      reason: item.reason || "", guide: (item.guide_points || []).filter(Boolean).join("\n"), features: (item.experiences || []).join("；"),
     })).filter(item => item.spots.length);
     offline.value = !recommendations.value.length;
   } catch { if (token === requestId) offline.value = true; }
