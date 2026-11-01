@@ -61,6 +61,24 @@ def test_alternative_is_not_described_as_low_crowd_without_data():
     assert "低拥挤" not in reason
 
 
+def test_recommend_prefers_templates_within_known_time_budget():
+    async def scenario():
+        response = await RecommendEngine(DummyRouteRepository()).generate(
+            RecommendRequest(session_id="time", interests=["文化"], available_hours=5))
+        assert response.routes[0].route_id == "route_002"
+        assert response.routes[0].duration_hours <= 5
+    asyncio.run(scenario())
+
+
+def test_recommend_no_known_fit_requires_visitor_check():
+    async def scenario():
+        response = await RecommendEngine(DummyRouteRepository()).generate(
+            RecommendRequest(session_id="short", available_hours=1))
+        assert response.routes[0].duration_hours > 1
+        assert "自行核对" in response.routes[0].reason
+    asyncio.run(scenario())
+
+
 def test_rain_is_inferred_from_weather_condition() -> None:
     async def scenario():
         engine = RecommendEngine(DummyRouteRepository())

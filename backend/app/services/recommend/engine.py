@@ -17,11 +17,17 @@ class RecommendEngine:
         if not routes:
             return RecommendResponse(routes=[])
 
-        primary_route = self._select_primary_route(routes, request)
+        within_budget = [route for route in routes
+                         if (hours := self._duration_hours(route.duration_label, request.available_hours)) is not None
+                         and hours <= request.available_hours]
+        # When no template has a known fit, keep a suggestion but explicitly
+        # require the visitor to verify its duration in the explanation.
+        candidates = within_budget or routes
+        primary_route = self._select_primary_route(candidates, request)
         items = [self._build_item(primary_route, request, alternative=False)]
 
         if request.avoid_crowded:
-            alternative_route = self._select_alternative_route(routes, primary_route.id)
+            alternative_route = self._select_alternative_route(candidates, primary_route.id)
             if alternative_route is not None:
                 items.append(self._build_item(alternative_route, request, alternative=True))
 
