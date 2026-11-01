@@ -443,18 +443,42 @@ def test_done_event_uses_configured_llm_provider_not_hardcoded_name():
     asyncio.run(scenario())
 
 
+def test_opening_hours_do_not_return_unverified_faq_as_current():
+    matcher = FAQMatcher()
+    matcher.add([FAQEntry(id="hours", category="开放信息", aliases=["大照壁开放时间"],
+                          answer="全天开放，无时间限制", sources=["旧资料"])])
+    async def scenario():
+        pipeline = _build_test_pipeline(faq_matcher=matcher)
+        events = [event async for event in pipeline.stream_chat(
+            ChatRequest(query="大照壁开放时间", session_id="hours", text_only=True))]
+        text = "".join(str(event.data.get("text", "")) for event in events if event.type == "text")
+        assert "全天开放" not in text
+        assert "官方" in text
+    asyncio.run(scenario())
+
+
+def test_schedule_guard_speaks_only_the_unverified_notice():
+    pipeline = _build_test_pipeline(streaming_tts_service=FakeStreamingTTSService())
+    events = _run_turn(pipeline, query="九龙灌浴演出时间", text_only=False, selection=None)
+    final_text = next(event.data["text"] for event in events if event.type == "text")
+    spoken = [event.data["text"] for event in events if event.type == "audio"]
+    assert "官方" in final_text
+    assert spoken == [final_text]
+    assert events[-1].data["hit_level"] == "schedule_unverified"
+
+
 def test_attraction_scoped_query_does_not_use_unscoped_faq():
     matcher = FAQMatcher()
-    matcher.add([FAQEntry(id="general-hours", category="实用信息", aliases=["开放时间"],
-                          answer="通用开放时间", sources=["通用资料"])])
+    matcher.add([FAQEntry(id="general-location", category="实用信息", aliases=["景区位置"],
+                          answer="通用景区位置", sources=["通用资料"])])
     rag = RecordingRAGService()
     pipeline = _build_test_pipeline(faq_matcher=matcher, rag_service=rag)
     async def scenario():
         events = [event async for event in pipeline.stream_chat(ChatRequest(
-            query="开放时间", session_id="scoped-faq", text_only=True,
+            query="景区位置", session_id="scoped-faq", text_only=True,
             selection=SelectionContext(mode="attraction", attraction_id=13)))]
         text = "".join(event.data.get("text", "") for event in events if event.type == "text")
-        assert "通用开放时间" not in text
+        assert "通用景区位置" not in text
         assert rag.scopes == [RetrievalScope(source_entry_id=13)]
     asyncio.run(scenario())
 
@@ -1029,10 +1053,10 @@ def _faq_matcher():
     matcher.add(
         [
             FAQEntry(
-                id="faq-opening",
+                id="faq-location",
                 category="practical",
-                aliases=["几点开门"],
-                answer="灵山胜境每日 8:00 开门，17:00 停止入园。",
+                aliases=["景区在哪里"],
+                answer="灵山胜境位于无锡马山。",
                 sources=["景区官方公告"],
             )
         ]
@@ -1049,12 +1073,12 @@ def test_faq_fast_path_stays_llm_free_for_default_audience() -> None:
         rag_service=rag_service,
     )
 
-    events = _run_turn(pipeline, query="几点开门", selection=None)
+    events = _run_turn(pipeline, query="景区在哪里", selection=None)
 
     assert llm_service.received == [], "默认受众下 FAQ 快路径不应调用 LLM"
     assert rag_service.scopes == [], "FAQ 命中不应触发 RAG 检索"
     text_event = next(event for event in events if event.type == "text")
-    assert "8:00" in text_event.data["text"]
+    assert "无锡马山" in text_event.data["text"]
     assert events[-1].data["hit_level"] == "faq_exact"
 
 
@@ -1067,7 +1091,7 @@ def test_faq_path_restyles_through_llm_for_child_audience() -> None:
         rag_service=rag_service,
     )
 
-    events = _run_turn(pipeline, query="几点开门", audience="child", selection=None)
+    events = _run_turn(pipeline, query="景区在哪里", audience="child", selection=None)
 
     assert len(llm_service.received) == 1, "非默认受众下 FAQ 必须走 LLM 改写"
     assert llm_service.received[-1]["audience"] == "child"
@@ -1075,7 +1099,7 @@ def test_faq_path_restyles_through_llm_for_child_audience() -> None:
 
     documents = llm_service.received[-1]["documents"]
     assert len(documents) == 1, "FAQ 原文应作为唯一证据交给 LLM"
-    assert "8:00" in documents[0].content
+    assert "无锡马山" in documents[0].content
 
     assert events[-1].data["hit_level"] == "faq_exact_styled"
 
@@ -1084,7 +1108,7 @@ def test_faq_path_keeps_adult_on_fast_path_when_audience_is_adult() -> None:
     llm_service = DummyLLMService()
     pipeline = _build_test_pipeline(faq_matcher=_faq_matcher(), llm_service=llm_service)
 
-    events = _run_turn(pipeline, query="几点开门", audience="adult", selection=None)
+    events = _run_turn(pipeline, query="景区在哪里", audience="adult", selection=None)
 
     assert llm_service.received == [], "adult 与未指定等价，不应触发 LLM"
     assert events[-1].data["hit_level"] == "faq_exact"
@@ -1098,7 +1122,7 @@ def test_faq_styled_answer_is_cached_under_audience_specific_key() -> None:
         llm_service=DummyLLMService(),
     )
 
-    _run_turn(pipeline, query="几点开门", audience="child", selection=None)
+    _run_turn(pipeline, query="景区在哪里", audience="child", selection=None)
 
     assert len(cache_repository.set_keys) == 1
     assert cache_repository.set_keys[0].startswith("qa:v9:")
@@ -1113,10 +1137,10 @@ def test_faq_answer_survives_llm_outage_for_non_default_audience() -> None:
         llm_service=FallbackLLMService(),
     )
 
-    events = _run_turn(pipeline, query="几点开门", audience="child", selection=None)
+    events = _run_turn(pipeline, query="景区在哪里", audience="child", selection=None)
 
     text_event = next(event for event in events if event.type == "text")
-    assert "8:00" in text_event.data["text"], "应回落 FAQ 原文"
+    assert "无锡马山" in text_event.data["text"], "应回落 FAQ 原文"
     assert "证据降级回答" not in text_event.data["text"]
 
     assert events[-1].data["degraded"] is True
@@ -1129,7 +1153,7 @@ def test_interrupted_faq_restyle_never_speaks_discarded_partial_answer() -> None
 
     class InterruptedFAQ:
         async def stream_generate(self, *args, **kwargs):
-            yield LLMStreamEvent(type="content", text="景区晚上十点开门。")
+            yield LLMStreamEvent(type="content", text="景区位于虚构地点。")
             await asyncio.sleep(0.01)
             yield LLMStreamEvent(type="finish", finish_reason="interrupted_network")
 
@@ -1137,12 +1161,12 @@ def test_interrupted_faq_restyle_never_speaks_discarded_partial_answer() -> None
         faq_matcher=_faq_matcher(), llm_service=InterruptedFAQ(),
         streaming_tts_service=FakeStreamingTTSService(),
     )
-    events = _run_turn(pipeline, query="几点开门", audience="child", text_only=False, selection=None)
+    events = _run_turn(pipeline, query="景区在哪里", audience="child", text_only=False, selection=None)
     final_text = next(event.data["text"] for event in events if event.type == "text")
     spoken = [event.data["text"] for event in events if event.type == "audio"]
-    assert "8:00" in final_text
+    assert "无锡马山" in final_text
     assert spoken == [final_text]
-    assert not any(event.type == "text_chunk" and "晚上十点" in event.data.get("token", "") for event in events)
+    assert not any(event.type == "text_chunk" and "虚构地点" in event.data.get("token", "") for event in events)
     assert not any(event.type == "audio_chunk" for event in events)
     assert next(i for i, event in enumerate(events) if event.type == "text") < next(i for i, event in enumerate(events) if event.type == "audio")
     assert events[-1].data["completion"] == "complete"

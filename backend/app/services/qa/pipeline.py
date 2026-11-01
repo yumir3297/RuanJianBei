@@ -323,6 +323,19 @@ class QAPipeline:
             },
         )
 
+        # No verified live schedule is connected. Do not present static FAQ,
+        # cached answers, or retrieved schedules as current opening hours.
+        schedule_terms = ("开放时间", "营业时间", "演出时间", "什么时候开放", "几点开放", "几点开门", "几点关门")
+        if any(term in request.query for term in schedule_terms):
+            async for event in self._emit_final_answer(
+                request=request, normalized_query=normalized_query,
+                answer="目前无法核实最新开放或演出时间，请以景区当日官方公告或现场咨询为准。",
+                sources=[], hit_level="schedule_unverified", start=start,
+                resolved=resolved, expected_epoch=request_epoch,
+            ):
+                yield event
+            return
+
         if vision is None and intent_decision.intent == "static_route":
             static_route = await self._build_static_route_answer(request)
             if static_route is not None:
