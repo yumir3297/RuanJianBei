@@ -1,7 +1,7 @@
 <template>
   <div class="guide-tool-content">
     <template v-if="!selectedRoute">
-      <p class="tool-description">按时间与兴趣挑选路线，让导游陪你出发。</p>
+      <p class="tool-description">按时间与兴趣挑选路线。路线和时长仅供参考，未结合实时路况或客流，请以现场信息为准。</p>
       <div class="tool-chips" aria-label="路线分类"><button v-for="item in categories" :key="item" type="button" :class="{ active: category === item }" :aria-pressed="category === item" @click="category = item">{{ item }}</button></div>
       <div class="tool-chips tool-chips--secondary" aria-label="游览偏好"><span class="tool-filter-label">偏好</span><button v-for="option in preferenceOptions" :key="option.value" type="button" :class="{ active: preferences.includes(option.value) }" :aria-pressed="preferences.includes(option.value)" @click="togglePreference(option.value)">{{ option.label }}</button></div>
       <section class="tour-session-panel" aria-labelledby="my-tours-title">
@@ -124,6 +124,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useTourSessionsStore } from "../../stores/tourSessions";
 import GuideIcon from "../../components/GuideIcon.vue";
 import { PRESET_ROUTES } from "../../constants/touristCatalog";
+import { routeDurationMinutes } from "../../utils/routeDuration";
 import { fetchRecommendations } from "../../api/recommend";
 import { getSessionId } from "../../stores/chat";
 import { fetchItineraryCatalog } from "../../api/itinerary";
@@ -191,9 +192,9 @@ async function saveSelectedRoute() {
 }
 function routeSnapshot(route) {
   const routeId = route.routeId || route.id;
-  const hours = Number.parseInt(String(route.duration_label || "").match(/\d+/)?.[0] || "2", 10);
+  const minutes = routeDurationMinutes(route.duration_label);
   return {
-    constraints: { available_minutes: Math.max(1, Math.min(720, hours * 60)), interests: [], companions: [], required_spots: [], excluded_spots: [], walking_preference: null },
+    constraints: { available_minutes: minutes, interests: [], companions: [], required_spots: [], excluded_spots: [], walking_preference: null },
     stops: (route.spots || []).slice(0, 50).map(name => ({ name, spot_id: null, resolved: false })),
     source: route.routeId ? "recommendation" : "preset",
     source_references: routeId ? [{ source_type: route.routeId ? "recommendation" : "preset_route", source_id: String(routeId), label: route.title || "" }] : [],
