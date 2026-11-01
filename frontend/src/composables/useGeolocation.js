@@ -8,12 +8,18 @@ import {
   SIM_TICK_MS,
   SIM_WALK_SPEED_MPS,
   SIM_WALK_ON_ARRIVE,
+  EXIT_RADIUS_M,
 } from "../constants/narration";
 
 const CENTER = { lat: LINGSHAN_CENTER[0], lng: LINGSHAN_CENTER[1] };
 
 export function narrationPosition(mode, position) {
   return mode === "real" || mode === "sim" ? position : null;
+}
+
+export function canFinishNarration(mode, position, spot) {
+  const current = narrationPosition(mode, position);
+  return Boolean(current && spot && haversineMeters(current, spot) <= EXIT_RADIUS_M);
 }
 
 /**

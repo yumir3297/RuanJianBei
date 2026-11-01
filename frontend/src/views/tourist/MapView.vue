@@ -110,7 +110,7 @@ import SpotNarrationCard from "../../components/SpotNarrationCard.vue";
 import { scenicSpots, PRESET_ROUTES } from "../../constants/touristCatalog";
 import { LINGSHAN_CENTER, MAP_ZONES, SPOT_COORDS, ROUTE_ALIASES } from "../../constants/mapSpots";
 import { useAudioPlayer } from "../../composables/useAudioPlayer";
-import { useGeolocation, narrationPosition } from "../../composables/useGeolocation";
+import { useGeolocation, narrationPosition, canFinishNarration } from "../../composables/useGeolocation";
 import { useNarration } from "../../composables/useNarration";
 import { speechText } from "../../constants/narration";
 import { fetchSpotNarration } from "../../api/narration";
@@ -342,7 +342,7 @@ const narration = useNarration({
   getPosition: () => narrationPosition(geo.mode.value, geo.position.value),
   getSpots: () => spots,
   isBusy: () => props.busy || audio.isPlaying.value,
-  onTrigger: (spot) => playNarration(spot),
+  onTrigger: (spot) => playNarration(spot, { automatic: true }),
   // 排队超时只允许中断自己的地图讲解，不能停止聊天或其他媒体源。
   onInterrupt: () => {
     if (!props.busy && activeNarrationSession && audio.activePlayback.value?.id === activeNarrationSession.id) {
@@ -388,7 +388,7 @@ watch(() => props.busy, (busy) => {
   }
 });
 
-async function playNarration(spot) {
+async function playNarration(spot, { automatic = false } = {}) {
   if (!spot || props.busy || !mapToolActive) return;
   const request = narrationRequests.begin();
   const playbackSession = claimNarrationSession();
@@ -405,6 +405,10 @@ async function playNarration(spot) {
   }
 
   if (!request.isCurrent() || activeNarrationSession?.id !== playbackSession.id) return;
+  if (automatic && !canFinishNarration(geo.mode.value, geo.position.value, spot)) {
+    stopNarration();
+    throw new Error("自动讲解位置已失效");
+  }
   narrationLoading.value = false;
   if (!audio.isCurrentPlaybackSession(playbackSession.id)) return;
   if (data && data.available) {
