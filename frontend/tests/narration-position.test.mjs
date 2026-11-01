@@ -32,3 +32,19 @@ test('a discarded pending narration can trigger after location recovers', async 
     assert.equal(triggers, 1);
   } finally { await vite.close(); }
 });
+
+test('replaced pending spot can be narrated when revisited', async () => {
+  const vite = await createServer({ configFile: false, cacheDir: '/private/tmp/guide-vite-narration-replaced', server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
+  try {
+    const { useNarration } = await vite.ssrLoadModule('/src/composables/useNarration.js');
+    const first = { name: '甲', lat: 31, lng: 120 }, second = { name: '乙', lat: 31.01, lng: 120 };
+    let position = first, busy = true, triggered = [];
+    const narration = useNarration({ getPosition: () => position, getSpots: () => [first, second], isBusy: () => busy,
+      onTrigger: spot => triggered.push(spot.name), maxPendingWaitMs: 0 });
+    narration.trigger(first); narration.trigger(second);
+    narration.drainPending();
+    busy = false;
+    narration.update();
+    assert.deepEqual(triggered, ['甲']);
+  } finally { await vite.close(); }
+});

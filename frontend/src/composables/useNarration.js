@@ -58,6 +58,7 @@ export function useNarration({ getPosition, getSpots, isBusy, onTrigger, onInter
     insideNames.add(`${spot.name}__done`);
     lastTriggeredAt.value = Date.now();
     if (isBusy && isBusy()) {
+      if (pendingSpot && pendingSpot.name !== spot.name) insideNames.delete(`${pendingSpot.name}__done`);
       pendingSpot = spot;
       pendingSince = Date.now();
       status.value = "pending";
