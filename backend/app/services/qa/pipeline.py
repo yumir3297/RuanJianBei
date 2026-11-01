@@ -242,6 +242,9 @@ class QAPipeline:
         self._active_text_emotion = text_emotion
         self._active_audio_emotion = audio_emotion
         resolved = await self.guided_selector.resolve(request.query, request.selection, request.context)
+        if request.selection and request.selection.attraction_id is not None and "invalid_attraction_id" in resolved.warnings:
+            yield StreamEvent(type="error", data={"code": "attraction_selection_stale", "message": "所选景点已不可用或更新，请重新选择。"})
+            return
         audience = _resolve_narration_audience(request)
 
         # 跨会话记忆：仅当带了稳定 visitor_id 且仓储可用时读取。

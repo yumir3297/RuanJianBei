@@ -457,6 +457,22 @@ def test_opening_hours_do_not_return_unverified_faq_as_current():
     asyncio.run(scenario())
 
 
+def test_stale_explicit_attraction_does_not_fall_back_to_other_subject():
+    class StaleSelector:
+        async def resolve(self, query, selection, context):
+            return ResolvedInteraction(selection=SelectionContext(), scope=RetrievalScope(source_entry_id=99),
+                resolution_source="history", active_subject="旧景点", warnings=("invalid_attraction_id",))
+    async def scenario():
+        rag = RecordingRAGService()
+        pipeline = _build_test_pipeline(guided_selector=StaleSelector(), rag_service=rag)
+        events = [event async for event in pipeline.stream_chat(ChatRequest(query="介绍当前景点", session_id="stale",
+            text_only=True, selection=SelectionContext(mode="attraction", attraction_id=13)))]
+        assert any(event.type == "error" and event.data.get("code") == "attraction_selection_stale" for event in events)
+        assert not any(event.type == "text" for event in events)
+        assert rag.scopes == []
+    asyncio.run(scenario())
+
+
 def test_schedule_guard_speaks_only_the_unverified_notice():
     pipeline = _build_test_pipeline(streaming_tts_service=FakeStreamingTTSService())
     events = _run_turn(pipeline, query="九龙灌浴演出时间", text_only=False, selection=None)
