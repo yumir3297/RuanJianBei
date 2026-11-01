@@ -86,7 +86,8 @@ async def lifespan(app: FastAPI):
 
     # 预加载模型，避免首次请求冷启动
     from app.api.chat import get_cached_embedder, get_cached_reranker
-    from app.services.qa.runtime import get_runtime_faq_matcher
+    from app.services.qa.runtime import get_runtime_faq_matcher, set_faq_semantic_index_failed
+    set_faq_semantic_index_failed(False)
     # 预加载 embedder（~512MB）
     embedder = None
     try:
@@ -114,6 +115,7 @@ async def lifespan(app: FastAPI):
                 app.state.faq_semantic_index_available = True
             except Exception:
                 app.state.faq_semantic_index_available = False
+                set_faq_semantic_index_failed(True)
                 logging.getLogger(__name__).exception("FAQ semantic index unavailable; using exact and fuzzy matching.")
 
     publication_worker = asyncio.create_task(run_publication_worker(settings))
@@ -151,7 +153,8 @@ def create_app() -> FastAPI:
         failures: list[str] = []
         if getattr(app.state, "embedding_model_available", None) is False:
             failures.append("embedding_model_unavailable")
-        if getattr(app.state, "faq_semantic_index_available", None) is False:
+        from app.services.qa.runtime import faq_semantic_index_failed
+        if faq_semantic_index_failed():
             failures.append("faq_semantic_index_unavailable")
         async with AsyncSessionLocal() as session:
             try:

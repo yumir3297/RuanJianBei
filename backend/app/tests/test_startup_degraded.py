@@ -58,4 +58,7 @@ def test_missing_model_or_semantic_index_allows_startup_but_is_not_ready(monkeyp
                 ready = await client.get("/ready")
                 assert ready.status_code == 503
                 assert failure in ready.json()["failures"]
+                if failure == "faq_semantic_index_unavailable":
+                    runtime.set_faq_semantic_index_failed(False)
+                    assert failure not in (await client.get("/ready")).json()["failures"]
     asyncio.run(scenario())
