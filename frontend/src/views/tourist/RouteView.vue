@@ -22,7 +22,7 @@
           <button v-else type="button" class="tour-session-secondary" @click="tourStore.cancelProposal()">停止等待</button>
         </section>
         <ol v-if="tourStore.current?.snapshot?.stops?.length" class="tour-session-stops"><li v-for="(stop, index) in tourStore.current.snapshot.stops" :key="`${stop.name}-${index}`">{{ stop.name }}</li></ol>
-        <p v-else-if="tourStore.current" class="tour-session-empty">这条游览还没有保存景点。</p>
+        <p v-else-if="tourStore.current" class="tour-session-empty">这条游览还没有保存停留点。</p>
         <section v-if="tourStore.current" class="itinerary-editor">
           <h5>可编辑行程</h5>
           <template v-if="tourStore.current.snapshot?.schema_version !== 2">
@@ -97,7 +97,7 @@
         </section>
         <ul v-if="tourStore.items.length" class="tour-session-list">
           <li v-for="item in tourStore.items" :key="item.id">
-            <button type="button" class="tour-session-open" @click="openTour(item.id)"><strong>{{ item.title }}</strong><small>{{ item.snapshot?.stops?.length || 0 }} 个景点 · 第 {{ item.version }} 版</small></button>
+            <button type="button" class="tour-session-open" @click="openTour(item.id)"><strong>{{ item.title }}</strong><small>{{ item.snapshot?.stops?.length || 0 }} 个停留点 · 第 {{ item.version }} 版</small></button>
             <button type="button" class="tour-session-secondary" @click="deleteTour(item)">移入回收站</button>
           </li>
         </ul>
