@@ -134,6 +134,39 @@ def test_restored_proposal_diff_is_rebuilt_from_recorded_snapshots():
     _run(scenario)
 
 
+def test_apply_proposal_preserves_manual_duration_from_unsaved_base_draft():
+    async def scenario():
+        from app.repositories.tour_session import TourSessionRepository
+        engine, db = await open_test_session()
+        try:
+            repo = TourSessionRepository(db)
+            snapshot = _snapshot()
+            created = await repo.create_session("owner-a", "site", "游览", snapshot, "create")
+            draft = json.loads(json.dumps(snapshot))
+            draft["stops"][0]["duration_minutes"] = 40
+            draft["stops"][0]["evidence"] = [{"evidence_type": "visitor_input", "label": "游客填写的停留时长"}]
+            candidate = json.loads(json.dumps(draft))
+            candidate["constraints"]["available_minutes"] = 60
+            candidate["stops"].append({"stop_id": str(uuid4()), "kind": "rest", "name": "休息",
+                                       "duration_minutes": 10, "duration_basis": "user"})
+            generated = {"status": "ready", "base_snapshot": draft, "operations": [], "candidate": candidate,
+                         "diff": [], "validation": {"status": "pass", "conflicts": []}, "clarification": None}
+            proposal = await repo.create_proposal("owner-a", created["id"], 1, 0, "a" * 64,
+                "catalog", "调整时间预算", generated, "proposal")
+            applied = await repo.apply_proposal("owner-a", created["id"], proposal["id"], 1, 0,
+                                                "a" * 64, "apply")
+            stop = applied["snapshot"]["stops"][0]
+            assert stop["duration_minutes"] == 40
+            assert stop["duration_basis"] == "user"
+            assert stop["evidence"][0]["evidence_type"] == "visitor_input"
+            added = applied["snapshot"]["stops"][1]
+            assert added["duration_basis"] == "estimate"
+            assert added["evidence"][0]["evidence_type"] == "estimate"
+        finally:
+            await db.close(); await engine.dispose()
+    _run(scenario)
+
+
 def test_active_proposal_apply_refreshes_progress_version_for_next_command():
     async def scenario():
         from app.repositories.tour_session import TourSessionRepository

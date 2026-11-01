@@ -662,7 +662,7 @@ class TourSessionRepository:
         if current_raw.get("schema_version") == 2 and candidate.get("schema_version") == 2:
             candidate = normalize_snapshot_provenance(
                 TourSnapshotV2.model_validate(candidate),
-                previous=TourSnapshotV2.model_validate(current_raw),
+                previous=TourSnapshotV2.model_validate(_decode(proposal.base_snapshot_json)),
                 catalog_entries=catalog_entries,
                 new_stop_created_by="ai",
             ).model_dump(mode="json")
