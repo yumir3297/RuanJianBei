@@ -24,6 +24,14 @@ def _snapshot(**overrides) -> TourSnapshotV2:
 
 
 class ItineraryMutationTests(unittest.TestCase):
+    def test_ai_proposed_duration_is_not_reported_as_verified(self):
+        snapshot = _snapshot()
+        operation = operation_adapter.validate_python({"type": "set_duration", "stop_id": str(snapshot.stops[0].stop_id),
+                                                       "duration_minutes": 45})
+        result = apply_manual_operations(snapshot, [operation], catalog_spot_codes={"LS-01"}, actor="ai")
+        self.assertEqual(result.snapshot.stops[0].duration_basis, "estimate")
+        self.assertEqual(result.validation, "unverified")
+
     def test_add_visit_is_resolved_through_the_provided_catalog(self):
         snapshot = _snapshot()
         operation = operation_adapter.validate_python({

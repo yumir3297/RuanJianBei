@@ -71,7 +71,7 @@ def _apply(snapshot: TourSnapshotV2, operation: ItineraryOperation,
         stops.insert(index, ItineraryStop.model_validate({
             "stop_id": str(created_stop_id), "kind": "visit", "spot_code": operation.spot_code,
             "name": operation.name, "duration_minutes": operation.duration_minutes,
-            "duration_basis": "user" if operation.duration_minutes is not None else "unknown",
+            "duration_basis": ("estimate" if actor == "ai" else "user") if operation.duration_minutes is not None else "unknown",
             "created_by": actor,
         }))
         return
@@ -79,7 +79,7 @@ def _apply(snapshot: TourSnapshotV2, operation: ItineraryOperation,
         index = _insert_position(stops, operation.before_stop_id)
         stops.insert(index, ItineraryStop.model_validate({
             "stop_id": str(created_stop_id), "kind": "rest", "name": operation.name,
-            "duration_minutes": operation.duration_minutes, "duration_basis": "user",
+            "duration_minutes": operation.duration_minutes, "duration_basis": "estimate" if actor == "ai" else "user",
             "created_by": actor,
         }))
         return
@@ -130,7 +130,7 @@ def _apply(snapshot: TourSnapshotV2, operation: ItineraryOperation,
             if _lock(stop, "duration"):
                 raise _RejectedOperation("停留时长已锁定，不能修改")
             stop.duration_minutes = operation.duration_minutes
-            stop.duration_basis = "user" if operation.duration_minutes is not None else "unknown"
+            stop.duration_basis = ("estimate" if actor == "ai" else "user") if operation.duration_minutes is not None else "unknown"
             stop.created_by = actor
             return
     raise _RejectedOperation("不支持的行程操作")
@@ -154,7 +154,7 @@ def _validate(snapshot: TourSnapshotV2) -> tuple[Validation, tuple[str, ...], in
                       snapshot.constraints.unresolved_required_names or
                       snapshot.constraints.unresolved_excluded_names)
     for stop in snapshot.stops:
-        if stop.duration_minutes is None or (stop.kind == "visit" and stop.spot_code is None):
+        if stop.duration_minutes is None or stop.duration_basis == "estimate" or (stop.kind == "visit" and stop.spot_code is None):
             unverified = True
     for left, right in zip(snapshot.stops, snapshot.stops[1:]):
         leg = leg_by_pair.get((left.stop_id, right.stop_id))
@@ -162,10 +162,12 @@ def _validate(snapshot: TourSnapshotV2) -> tuple[Validation, tuple[str, ...], in
             unverified = True
         elif leg.duration_basis != "unknown":
             known_minutes += leg.duration_minutes
+            if leg.duration_basis == "estimate":
+                unverified = True
 
     budget = snapshot.constraints.available_minutes
     if budget is not None and known_minutes > budget:
-        conflicts.append("已知停留与路段时长超过游览预算")
+        conflicts.append("计划停留与路段时长超过游览预算")
     if conflicts:
         return "conflict", tuple(conflicts), known_minutes
     if unverified:
