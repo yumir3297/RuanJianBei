@@ -101,12 +101,12 @@
             <button type="button" class="tour-session-secondary" @click="deleteTour(item)">移入回收站</button>
           </li>
         </ul>
-        <p v-else class="tour-session-empty">还没有保存的游览。</p>
+        <p v-else-if="!sessionLoading && !tourStore.error" class="tour-session-empty">还没有保存的游览。</p>
         <button type="button" class="tour-session-link" @click="toggleTrash">{{ showTrash ? '收起回收站' : '查看回收站' }}</button>
         <ul v-if="showTrash && tourStore.trash.length" class="tour-session-list tour-session-list--trash">
           <li v-for="item in tourStore.trash" :key="item.id"><span><strong>{{ item.title }}</strong><small>可恢复至 {{ formatExpiry(item.deleted_until) }}</small></span><button type="button" class="tour-session-secondary" @click="recoverTour(item.id)">恢复</button><button type="button" class="tour-session-danger" @click="purgeTour(item)">永久删除</button></li>
         </ul>
-        <p v-else-if="showTrash" class="tour-session-empty">回收站为空。</p>
+        <p v-else-if="showTrash && !tourStore.error" class="tour-session-empty">回收站为空。</p>
       </section>
       <p class="tool-data-note" role="status">{{ loading ? '正在获取推荐，先显示景区预设路线。' : offline ? '推荐服务暂不可用，以下为离线预设路线。' : '结合游览偏好与可用天气信息推荐。' }}</p>
       <div class="route-list" :aria-busy="loading"><button v-for="item in routes" :key="item.id" type="button" class="route-choice" @click="selectedRoute = item"><span class="route-choice-top"><strong>{{ item.title }}</strong><span>{{ item.duration_label }}</span></span><span class="route-tags"><small v-for="tag in item.tags" :key="tag">{{ tag }}</small></span><span class="route-preview">{{ item.spots.slice(0, 4).join(' → ') }}{{ item.spots.length > 4 ? ' …' : '' }}</span></button></div>
