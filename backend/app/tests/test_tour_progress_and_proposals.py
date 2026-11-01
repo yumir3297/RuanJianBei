@@ -169,6 +169,53 @@ def test_apply_proposal_preserves_manual_duration_from_unsaved_base_draft():
     _run(scenario)
 
 
+def test_legacy_proposal_cannot_add_an_unpublished_free_text_visit():
+    async def scenario():
+        from app.repositories.tour_session import TourSessionRepository
+        engine, db = await open_test_session()
+        try:
+            repo = TourSessionRepository(db)
+            snapshot = _snapshot()
+            created = await repo.create_session("owner-a", "site", "游览", snapshot, "create")
+            candidate = json.loads(json.dumps(snapshot))
+            candidate["stops"].append({"stop_id": str(uuid4()), "kind": "visit", "name": "未核实景点"})
+            generated = {"status": "ready", "base_snapshot": snapshot, "operations": [], "candidate": candidate,
+                         "diff": [], "validation": {"status": "unverified", "conflicts": []}, "clarification": None}
+            proposal = await repo.create_proposal("owner-a", created["id"], 1, 0, "a" * 64,
+                "catalog", "添加景点", generated, "proposal")
+            with pytest.raises(ValueError, match="已发布"):
+                await repo.apply_proposal("owner-a", created["id"], proposal["id"], 1, 0,
+                                          "a" * 64, "apply", catalog_entries={})
+            assert (await repo.get_session("owner-a", created["id"]))["version"] == 1
+        finally:
+            await db.close(); await engine.dispose()
+    _run(scenario)
+
+
+def test_proposal_keeps_unchanged_manually_entered_visit():
+    async def scenario():
+        from app.repositories.tour_session import TourSessionRepository
+        engine, db = await open_test_session()
+        try:
+            repo = TourSessionRepository(db)
+            snapshot = _snapshot()
+            snapshot["stops"][0]["spot_code"] = None
+            snapshot["stops"][0]["name"] = "游客自填地点"
+            created = await repo.create_session("owner-a", "site", "游览", snapshot, "create")
+            candidate = json.loads(json.dumps(snapshot))
+            candidate["constraints"]["available_minutes"] = 60
+            generated = {"status": "ready", "base_snapshot": snapshot, "operations": [], "candidate": candidate,
+                         "diff": [], "validation": {"status": "unverified", "conflicts": []}, "clarification": None}
+            proposal = await repo.create_proposal("owner-a", created["id"], 1, 0, "a" * 64,
+                "catalog", "调整预算", generated, "proposal")
+            applied = await repo.apply_proposal("owner-a", created["id"], proposal["id"], 1, 0,
+                                                "a" * 64, "apply", catalog_entries={})
+            assert applied["snapshot"]["stops"][0]["name"] == "游客自填地点"
+        finally:
+            await db.close(); await engine.dispose()
+    _run(scenario)
+
+
 def test_active_proposal_apply_refreshes_progress_version_for_next_command():
     async def scenario():
         from app.repositories.tour_session import TourSessionRepository

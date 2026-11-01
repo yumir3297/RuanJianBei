@@ -671,9 +671,19 @@ class TourSessionRepository:
         current_raw = _decode(current_revision.snapshot_json) if current_revision else {}
         candidate = json.loads(proposal.candidate_json)
         if current_raw.get("schema_version") == 2 and candidate.get("schema_version") == 2:
+            base_snapshot = TourSnapshotV2.model_validate(_decode(proposal.base_snapshot_json))
+            candidate_snapshot = TourSnapshotV2.model_validate(candidate)
+            old_stops = {stop.stop_id: stop for stop in base_snapshot.stops}
+            for stop in candidate_snapshot.stops:
+                old = old_stops.get(stop.stop_id)
+                changed_visit = stop.kind == "visit" and (old is None or old.kind != "visit" or
+                    old.spot_code != stop.spot_code or (not stop.spot_code and old.name != stop.name))
+                if changed_visit and (not stop.spot_code or
+                        (catalog_entries is not None and stop.spot_code not in catalog_entries)):
+                    raise ValueError("提案新增或替换的景点不在已发布目录中，请重新生成")
             candidate = normalize_snapshot_provenance(
-                TourSnapshotV2.model_validate(candidate),
-                previous=TourSnapshotV2.model_validate(_decode(proposal.base_snapshot_json)),
+                candidate_snapshot,
+                previous=base_snapshot,
                 catalog_entries=catalog_entries,
                 new_stop_created_by="ai",
             ).model_dump(mode="json")
