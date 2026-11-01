@@ -5,5 +5,6 @@ export function findPublishedAttraction(name, attractions) {
 
 export async function resolvePublishedAttraction(name, store) {
   if (!store.loaded && !store.loading) await store.loadBootstrap();
+  if (!store.loaded) return null;
   return findPublishedAttraction(name, store.bootstrap.attractions);
 }

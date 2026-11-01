@@ -13,3 +13,9 @@ test('retry loads the published catalog after an earlier failure', async () => {
     async loadBootstrap() { this.loaded = true; this.bootstrap.attractions = [{ id: 7, title: '梵宫' }]; } };
   assert.equal(await resolvePublishedAttraction('梵宫', store), 7);
 });
+
+test('a failed catalog refresh cannot reuse an old cached attraction', async () => {
+  const store = { loaded: false, loading: false, bootstrap: { attractions: [{ id: 7, title: '梵宫' }] },
+    async loadBootstrap() {} };
+  assert.equal(await resolvePublishedAttraction('梵宫', store), null);
+});
