@@ -1,6 +1,8 @@
 """Opt-in integration check against a disposable, migrated local PostgreSQL DB."""
 import asyncio
 import os
+import subprocess
+import sys
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
@@ -13,6 +15,67 @@ from app.repositories.tool_execution import ToolExecutionRepository
 from app.repositories.tour_session import TourSessionRepository
 from app.schemas.itinerary import TourSnapshotV2
 from app.tests.test_w02_runtime_review import expire_lease
+
+
+@pytest.mark.skipif(not os.getenv("GUIDE_TEST_POSTGRES_URL"), reason="requires disposable PostgreSQL")
+def test_two_worker_processes_do_not_claim_the_same_job():
+    url = make_url(os.environ["GUIDE_TEST_POSTGRES_URL"])
+    assert url.drivername == "postgresql+asyncpg"
+    assert (url.database or "").startswith("guide_test_")
+    assert not url.host and url.query.get("host", "").startswith("/private/tmp/")
+
+    async def setup():
+        engine = create_async_engine(url)
+        sessions = async_sessionmaker(engine, expire_on_commit=False)
+        owner = str(uuid4())
+        try:
+            async with sessions() as session:
+                session.add(TourIdentity(id=owner, credential_digest=uuid4().hex,
+                                         expires_at=datetime.now(UTC) + timedelta(days=1)))
+                await session.commit()
+                tour = await TourSessionRepository(session).create_session(
+                    owner, "pg-test-site", "process claim", TourSnapshotV2().model_dump(mode="json"), "create")
+                job = await ToolExecutionRepository(session).create_job(
+                    principal_type="tourist", principal_id=owner, site_id="pg-test-site",
+                    tool_name="test.fake", tool_version="1", workflow_schema_version="1",
+                    retry_safe=False, max_attempts=1, recovery_mode="manual_retry",
+                    target={"type": "tour_session", "id": tour["id"], "base_revision": 1, "progress_version": 0},
+                    payload={}, idempotency_key="create-job", deadline_seconds=300)
+                return job["id"]
+        finally:
+            await engine.dispose()
+
+    job_id = asyncio.run(setup())
+    script = '''
+import asyncio, os, sys
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from app.repositories.tool_execution import ToolExecutionRepository
+async def main():
+    engine = create_async_engine(os.environ["GUIDE_TEST_POSTGRES_URL"])
+    try:
+        sys.stdin.readline()
+        async with async_sessionmaker(engine, expire_on_commit=False)() as session:
+            lease = await ToolExecutionRepository(session).claim_next(sys.argv[1])
+            print(lease.job_id if lease else "none", flush=True)
+    finally:
+        await engine.dispose()
+asyncio.run(main())
+'''
+    workers = [subprocess.Popen([sys.executable, "-c", script, f"process-{index}"],
+                               stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+               for index in range(2)]
+    try:
+        for worker in workers:
+            worker.stdin.write("start\n")
+            worker.stdin.flush()
+        results = [worker.communicate(timeout=15) for worker in workers]
+        assert all(worker.returncode == 0 for worker in workers), results
+        assert sorted(stdout.strip() for stdout, _ in results) == sorted([job_id, "none"])
+    finally:
+        for worker in workers:
+            if worker.poll() is None:
+                worker.kill()
+                worker.communicate()
 
 
 @pytest.mark.skipif(not os.getenv("GUIDE_TEST_POSTGRES_URL"), reason="requires disposable PostgreSQL")
