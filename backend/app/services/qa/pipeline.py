@@ -1018,8 +1018,8 @@ class QAPipeline:
             chat_log_id=chat_log_id,
             hit_level=hit_level,
             total_ms=latency_ms,
-            degraded=hit_level in {"rag_insufficient", "rag_llm_fallback"},
-            provider="local" if hit_level.startswith("faq_") or hit_level == "cache" else "rag",
+            degraded=hit_level in {"rag_insufficient", "rag_llm_fallback", "schedule_unverified"},
+            provider="local" if hit_level.startswith("faq_") or hit_level in {"cache", "schedule_unverified"} else "rag",
         )
 
     async def _epoch_is_current(self, expected_epoch: int | None) -> bool:

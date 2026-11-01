@@ -465,6 +465,8 @@ def test_schedule_guard_speaks_only_the_unverified_notice():
     assert "官方" in final_text
     assert spoken == [final_text]
     assert events[-1].data["hit_level"] == "schedule_unverified"
+    assert events[-1].data["provider"] == "local"
+    assert events[-1].data["degraded"] is True
 
 
 def test_attraction_scoped_query_does_not_use_unscoped_faq():
