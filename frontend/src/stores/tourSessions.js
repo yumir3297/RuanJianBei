@@ -143,7 +143,7 @@ export const useTourSessionsStore = defineStore("tourSessions", {
         if (!proposalRequests.isCurrent(request) || this.current?.id !== sessionId) return null;
         if (items.length > 1 && items[0].created_at && items[0].created_at === items[1].created_at) {
           this.clearProposal();
-          this.error = "多个提案创建时间相同，无法确定最新结果；请根据当前行程重新生成提案。";
+          this.error = "多个提案创建时间相同，无法确定最新结果。请先等待后台任务结束并联系管理员核查，避免重复调用 AI 产生费用。";
           return null;
         }
         // The API returns newest first. Never resurrect an older proposal

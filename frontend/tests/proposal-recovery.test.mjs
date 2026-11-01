@@ -59,6 +59,7 @@ test('equal proposal timestamps do not silently choose a random latest task', as
   await store.restoreProposal();
   assert.equal(store.proposal, null);
   assert.match(store.error, /无法确定|无法判断/);
+  assert.match(store.error, /避免重复调用/);
 });
 
 test('opening a tour restores a ready proposal and its base without changing the saved draft', async () => {
