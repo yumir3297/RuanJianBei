@@ -117,7 +117,7 @@
       <p class="tool-data-note">路线和时长仅供参考，未结合实时路况或客流，请以现场信息为准。</p>
       <p v-if="selectedRoute.reason" class="tool-data-note">{{ selectedRoute.reason }}</p>
       <ol class="route-stops"><li v-for="(spot, index) in selectedRoute.spots" :key="index">{{ spot }}</li></ol>
-      <details class="route-detail"><summary>沿途讲解与特色体验</summary><p>{{ selectedRoute.guide }}</p><p>{{ selectedRoute.features }}</p></details>
+      <details class="route-detail"><summary>沿途讲解与特色体验</summary><p class="tool-data-note">以下介绍尚未逐项核验，演出和体验是否开放请以景区当日公告为准。</p><p>{{ selectedRoute.guide }}</p><p>{{ selectedRoute.features }}</p></details>
       <button type="button" class="tour-session-primary" :disabled="sessionSaving" @click="saveSelectedRoute">{{ sessionSaving ? '正在保存…' : '保存为我的游览' }}</button>
       <button v-if="tourStore.current && tourStore.current.snapshot?.schema_version !== 2" type="button" class="tour-session-secondary" :disabled="sessionSaving" @click="updateCurrentTour">更新当前游览</button>
       <p v-if="tourStore.error" class="tour-session-error" role="alert">{{ tourStore.error }}</p>
