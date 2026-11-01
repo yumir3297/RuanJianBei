@@ -94,7 +94,11 @@ class FAQMatcher:
         self.clear()
         await self.load_from_db(session)
         if self.semantic_index is not None:
-            self.semantic_index.build(self.entries)
+            try:
+                self.semantic_index.build(self.entries)
+            except Exception:
+                self.semantic_index = None
+                raise
         return (perf_counter() - start) * 1000
 
     def ensure_semantic_index(self, embedder: BaseEmbedder, threshold: float) -> float:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import pytest
 from app.services.qa.faq_matcher import FAQEntry, FAQMatcher
 
@@ -48,6 +49,22 @@ def test_failed_semantic_build_does_not_install_partial_index():
         matcher.ensure_semantic_index(BrokenEmbedder(), threshold=0.8)
     assert matcher.semantic_index is None
     assert matcher.match("灵山大佛在哪里").entry.id == "location"
+
+
+def test_faq_reload_drops_failed_semantic_index_but_keeps_new_exact_data(monkeypatch):
+    matcher = FAQMatcher()
+    matcher.add(entries())
+    embedder = FakeEmbedder()
+    matcher.ensure_semantic_index(embedder, threshold=0.8)
+
+    async def new_faq(_session):
+        matcher.add([FAQEntry("new", "test", ["新问题"], "新答案", [])])
+    monkeypatch.setattr(matcher, "load_from_db", new_faq)
+    monkeypatch.setattr(embedder, "embed_texts", lambda _items: (_ for _ in ()).throw(RuntimeError("model failed")))
+    with pytest.raises(RuntimeError, match="model failed"):
+        asyncio.run(matcher.reload(None))
+    assert matcher.semantic_index is None
+    assert matcher.match("新问题").answer == "新答案"
 
 
 def test_semantic_index_precomputes_aliases_and_embeds_query_once() -> None:
