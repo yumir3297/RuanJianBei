@@ -48,6 +48,19 @@ test('latest applied proposal does not resurrect an older ready proposal', async
   assert.equal(store.proposal, null);
 });
 
+test('equal proposal timestamps do not silently choose a random latest task', async () => {
+  route = async config => {
+    if (config.url.endsWith('/proposals')) return { items: [
+      { ...proposal('a', 'ready'), id: 'first', created_at: '2026-11-01T10:00:00' },
+      { ...proposal('a', 'failed'), id: 'second', created_at: '2026-11-01T10:00:00' },
+    ] };
+    return proposal();
+  };
+  await store.restoreProposal();
+  assert.equal(store.proposal, null);
+  assert.match(store.error, /无法确定|无法判断/);
+});
+
 test('opening a tour restores a ready proposal and its base without changing the saved draft', async () => {
   route = async config => {
     if (config.url === '/tour-sessions/a') return { id: 'a', version: 1, snapshot: snapshot('saved') };

@@ -141,6 +141,11 @@ export const useTourSessionsStore = defineStore("tourSessions", {
       try {
         const items = await fetchItineraryProposals(sessionId, 10, request.signal);
         if (!proposalRequests.isCurrent(request) || this.current?.id !== sessionId) return null;
+        if (items.length > 1 && items[0].created_at && items[0].created_at === items[1].created_at) {
+          this.clearProposal();
+          this.error = "多个提案创建时间相同，无法确定最新结果；请根据当前行程重新生成提案。";
+          return null;
+        }
         // The API returns newest first. Never resurrect an older proposal
         // merely because the latest one has reached a terminal state.
         const latest = items[0];
