@@ -1103,6 +1103,12 @@ def test_chat_route_respects_explicit_budget_before_keyword_preference():
         natural, _ = await pipeline._build_static_route_answer(ChatRequest(
             query="两个小时的亲子路线", session_id="route-natural"))
         assert "短线" in natural
+        events = [event async for event in pipeline.stream_chat(ChatRequest(
+            query="两个小时的亲子路线", session_id="route-natural-stream", text_only=True))]
+        assert next(event for event in events if event.type == "intent").data["intent"] == "static_route"
+        answer = next(event.data["text"] for event in events if event.type == "text")
+        assert "短线" in answer and "亲子长线" not in answer
+        assert events[-1].data["hit_level"] == "static_route"
     asyncio.run(scenario())
 
 
