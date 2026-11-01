@@ -1,14 +1,14 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'vite';
-let vite, useGeolocation, correct, callback, savedNavigator;
+let vite, useGeolocation, narrationPosition, correct, callback, savedNavigator;
 before(async () => {
  savedNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { geolocation: {
  watchPosition(success) { callback = success; return 17; }, clearWatch() {},
  } } });
  vite = await createServer({ configFile: false, cacheDir: '/private/tmp/guide-vite-geo-coordinate-tests', server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
- ({ useGeolocation } = await vite.ssrLoadModule('/src/composables/useGeolocation.js'));
+ ({ useGeolocation, narrationPosition } = await vite.ssrLoadModule('/src/composables/useGeolocation.js'));
  ({ wgs84ToGcj02: correct } = await vite.ssrLoadModule('/src/constants/narration.js'));
 });
 after(async () => {
@@ -17,6 +17,12 @@ after(async () => {
  else delete globalThis.navigator;
 });
 const good = { latitude: 31.4285, longitude: 120.0998, accuracy: 8 };
+test('automatic narration accepts only valid real or simulated position modes', () => {
+ const position = { lat: 31, lng: 120 };
+ assert.equal(narrationPosition('real', position), position);
+ assert.equal(narrationPosition('sim', position), position);
+ for (const mode of ['low_accuracy', 'out_of_area', 'idle', 'denied']) assert.equal(narrationPosition(mode, position), null);
+});
 test('standard browser coordinates are converted and classified real inside scenic area', () => {
  const geo = useGeolocation(); geo.start();
  try {

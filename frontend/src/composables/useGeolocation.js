@@ -12,6 +12,10 @@ import {
 
 const CENTER = { lat: LINGSHAN_CENTER[0], lng: LINGSHAN_CENTER[1] };
 
+export function narrationPosition(mode, position) {
+  return mode === "real" || mode === "sim" ? position : null;
+}
+
 /**
  * 定位层：真实浏览器定位（WGS84 自动纠偏为 GCJ-02）+ 模拟巡游兜底。
  * mode: idle | real | sim | denied | unsupported | out_of_area | low_accuracy
@@ -159,6 +163,7 @@ export function useGeolocation() {
       watchId = null;
     }
     stopWalk();
+    position.value = null;
     mode.value = "idle";
   }
 

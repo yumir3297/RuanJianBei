@@ -110,7 +110,7 @@ import SpotNarrationCard from "../../components/SpotNarrationCard.vue";
 import { scenicSpots, PRESET_ROUTES } from "../../constants/touristCatalog";
 import { LINGSHAN_CENTER, MAP_ZONES, SPOT_COORDS, ROUTE_ALIASES } from "../../constants/mapSpots";
 import { useAudioPlayer } from "../../composables/useAudioPlayer";
-import { useGeolocation } from "../../composables/useGeolocation";
+import { useGeolocation, narrationPosition } from "../../composables/useGeolocation";
 import { useNarration } from "../../composables/useNarration";
 import { speechText } from "../../constants/narration";
 import { fetchSpotNarration } from "../../api/narration";
@@ -228,7 +228,11 @@ function initMap() {
   renderColorOverlay();
 
   watch(() => geo.position.value, (pos) => {
-    if (!map || !pos) return;
+    if (!map) return;
+    if (!pos) {
+      if (meMarker) { map.removeLayer(meMarker); meMarker = null; }
+      return;
+    }
     const latlng = [pos.lat, pos.lng];
     if (!meMarker) {
       meMarker = L.circleMarker(latlng, { radius: 7, color: "#fff", weight: 2, fillColor: "#2f7d7d", fillOpacity: 0.95 }).addTo(map);
@@ -335,7 +339,7 @@ let mapToolActive = false;
 let activeNarrationSession = null;
 
 const narration = useNarration({
-  getPosition: () => geo.position.value,
+  getPosition: () => narrationPosition(geo.mode.value, geo.position.value),
   getSpots: () => spots,
   isBusy: () => props.busy || audio.isPlaying.value,
   onTrigger: (spot) => playNarration(spot),
