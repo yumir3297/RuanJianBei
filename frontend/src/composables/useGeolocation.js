@@ -54,7 +54,7 @@ export function useGeolocation() {
     if (haversineMeters(fixed, CENTER) > OUT_OF_AREA_M) {
       accuracyPoor.value = false;
       mode.value = "out_of_area";
-      error.value = "检测到你不在景区范围，已切换模拟巡游";
+      error.value = "检测到你不在景区范围，暂不触发自动讲解";
       return;
     }
     if (accuracy > LOW_ACCURACY_M) {
@@ -76,15 +76,16 @@ export function useGeolocation() {
   function onError(err) {
     if (mode.value === "sim") return;
     mode.value = err && err.code === 1 ? "denied" : "unsupported";
-    error.value = mode.value === "denied" ? "定位权限被拒绝，已切换模拟巡游" : "当前环境不支持定位，已切换模拟巡游";
+    const notice = mode.value === "denied" ? "定位权限被拒绝，已切换模拟位置" : "定位不可用，已切换模拟位置";
     startSimulated();
+    error.value = notice;
   }
 
   function startReal() {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       mode.value = "unsupported";
-      error.value = "当前环境不支持定位，已切换模拟巡游";
       startSimulated();
+      error.value = "当前环境不支持定位，已切换模拟位置";
       return;
     }
     stopWalk();
@@ -105,7 +106,7 @@ export function useGeolocation() {
     error.value = "";
     accuracyPoor.value = false;
     if (Number.isFinite(lat) && Number.isFinite(lng)) setSimulated(lat, lng);
-    else if (!position.value) setSimulated(CENTER.lat, CENTER.lng);
+    else setSimulated(CENTER.lat, CENTER.lng);
   }
 
   function startWalk(spots) {

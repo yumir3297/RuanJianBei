@@ -3,7 +3,7 @@
     <p class="tool-description">地图 × 数字人导览：查看天气与演示客流，选一条路线，让导游陪你出发。</p>
 
     <div class="map-stage">
-      <div ref="mapEl" class="map-canvas" aria-label="景区实时地图"></div>
+      <div ref="mapEl" class="map-canvas" aria-label="景区示意地图"></div>
       <div class="map-layer-switch" role="group" aria-label="底图切换">
         <button type="button" :class="{ active: layer === 'vec' }" @click="setLayer('vec')">矢量</button>
         <button type="button" :class="{ active: layer === 'img' }" @click="setLayer('img')">影像</button>
@@ -348,7 +348,7 @@ const narration = useNarration({
 });
 
 const modeLabel = computed(() => {
-  const map = { real: "真实定位", sim: "模拟巡游", denied: "模拟（无权限）", unsupported: "模拟（不支持）", out_of_area: "模拟（不在景区）", low_accuracy: "精度不足", idle: "未定位" };
+  const map = { real: "真实定位", sim: "模拟巡游", denied: "定位无权限", unsupported: "定位不可用", out_of_area: "不在景区范围", low_accuracy: "精度不足", idle: "未定位" };
   return map[geo.mode.value] || geo.mode.value;
 });
 

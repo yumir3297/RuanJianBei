@@ -35,6 +35,17 @@ test('valid browser coordinates outside scenic area are not labelled real', () =
  assert.equal(geo.mode.value, 'out_of_area');
  assert.ok(Number.isFinite(geo.position.value.lat));
  assert.match(geo.error.value, /不在景区/);
+  assert.doesNotMatch(geo.error.value, /已切换模拟/);
+ } finally { geo.stop(); }
+});
+test('switching to simulation does not reuse a previous real position', () => {
+ const geo = useGeolocation(); geo.start();
+ try {
+  callback({ coords: good });
+  const real = { ...geo.position.value };
+  geo.startSimulated();
+  assert.equal(geo.mode.value, 'sim');
+  assert.notDeepEqual({ lat: geo.position.value.lat, lng: geo.position.value.lng }, { lat: real.lat, lng: real.lng });
  } finally { geo.stop(); }
 });
 test('invalid coordinates or accuracy clear previous position and prevent real narration', () => {
