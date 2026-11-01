@@ -456,7 +456,10 @@ export const useChatStore = defineStore("chat", {
         this.streaming = false;
         this.statusText = INCOMPLETE_STATUS_TEXT;
         this.errorMessage = error?.message || "导览服务暂时不可用，请稍后重试。";
-        if (error?.code === "vision_confirmation_stale" && options.visionContext?.confirmation) {
+        if (error?.code === "attraction_selection_stale") {
+          lastFailedRequest = null;
+          options.onAttractionSelectionStale?.();
+        } else if (error?.code === "vision_confirmation_stale" && options.visionContext?.confirmation) {
           lastFailedRequest = null;
           options.onVisionConfirmationStale?.();
         } else {

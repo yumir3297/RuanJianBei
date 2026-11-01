@@ -205,3 +205,15 @@ test('stale vision confirmation is not retried and notifies its originating hand
   await store.retryLastMessage();
   assert.equal(calls, 1);
 });
+
+test('stale attraction selection cannot retry the same invalid ID', async () => {
+  let calls = 0, invalidations = 0;
+  globalThis.fetch = async () => { calls++; return response('event: error\ndata: {"code":"attraction_selection_stale","message":"景点已不可用，请重新选择。"}\n\n'); };
+  const store = useChatStore();
+  await store.sendMessage('介绍景点', { mode: 'attraction', attraction_id: 13 }, { onAttractionSelectionStale: () => invalidations++ });
+  assert.match(store.errorMessage, /重新选择/);
+  assert.equal(store.retryAvailable, false);
+  assert.equal(invalidations, 1);
+  await store.retryLastMessage();
+  assert.equal(calls, 1);
+});

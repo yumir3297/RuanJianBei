@@ -944,6 +944,7 @@ function submitQuery(rawQuery, extraOptions = {}) {
         volume: 80,
       },
       onContext: (selection) => interactionStore.applyResolvedSelection(selection),
+      onAttractionSelectionStale: () => interactionStore.clearSelection(),
       onThinking: () => avatar.setState("thinking"),
       onAvatar: (payload) => {
         try {
