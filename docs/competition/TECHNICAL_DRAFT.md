@@ -30,7 +30,7 @@ AI 修改先生成提案，后台任务保存状态；系统校验快照、景�
 
 ## 六、测试与部署
 
-测试覆盖示例：`backend/app/tests/test_pipeline.py`、`test_stream_knowledge_integration.py`、`test_itinerary_provenance.py`、`test_tour_progress_and_proposals.py`、`test_tool_execution_acceptance.py`，以及 `frontend/tests/proposal-recovery.test.mjs`。这些测试使用隔离数据或假供应商，不能直接代表真实设备和供应商性能。100 题评测集格式检查和评测脚本单元测试曾在隔离条件下通过，格式通过不等于回答准确；见 `eval/testset/e2e_qa_100.json`、`eval/tests/`。
+测试覆盖示例：`backend/app/tests/test_pipeline.py`、`test_stream_knowledge_integration.py`、`test_itinerary_provenance.py`、`test_tour_progress_and_proposals.py`、`test_tool_execution_acceptance.py`，以及 `frontend/tests/proposal-recovery.test.mjs`。`test_chroma_persistence_integration.py` 在真实本地 Chroma 上用合成向量检查持久化及写入失败回退，不检验真实嵌入模型质量。这些测试使用隔离数据或假供应商，不能直接代表真实设备和供应商性能。100 题评测集格式检查和评测脚本单元测试曾在隔离条件下通过，格式通过不等于回答准确；见 `eval/testset/e2e_qa_100.json`、`eval/tests/`。
 
 后端在 `backend/` 目录按照 `docs/DEVELOPMENT.md` 配置数据库、数据与模型后运行 `python -m uvicorn main:app`；持久提案需另启动 `python -m app.services.tool_execution.worker`。前端在 `frontend/` 运行 `npm ci` 和 `npm run dev`。启动可能执行迁移、初始化及模型预热，不能把示例命令理解为所有平台均已验收。真实密钥不得写入文档或提交。
 

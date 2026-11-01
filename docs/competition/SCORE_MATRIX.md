@@ -1,6 +1,6 @@
 # 竞赛评分与证据矩阵
 
-更新：2026-10-31。权重按用户提供的规则记录，官方原文及提交要求仍需核对；本表不预测得分。本次核对代码 `ce166b1`；后端最近全套在 `4d1f501` 为 454 passed、2 skipped，前端在 `ce166b1` 为 110 passed、构建通过。这些结果不等于真实模型或设备验收。
+更新：2026-11-01。权重按用户提供的规则记录，官方原文及提交要求仍需核对；本表不预测得分。后端在归因改动后的隔离环境中为 458 passed、2 skipped；前端在 `ce166b1` 为 110 passed、构建通过。真实 Chroma 专项在 `d730bc9` 为 2 passed。这些结果不等于真实模型或设备验收，也不表示之后所有改动均已完整回归。
 
 补充：W02 已在 `ec3f7a6` 集成，隔离 PostgreSQL 的领取与租约恢复测试已通过；真实供应商和完整运行验收仍在进行。官方赛道页面规则正文未能读取，无法独立确认本表权重、视频规格与届次；核对记录见工作区 `reports/competition-official.md`。学校公布的[第九届校内选拔通知](https://cs.dgut.edu.cn/info/1034/19118.htm)可确认该校通知涵盖 AI WEB 赛道，其视频提交描述不能替代赛道官方原文。
 
@@ -8,7 +8,7 @@
 |---|---|---|---|
 | LLM 8% | `backend/app/services/llm/openai_compatible.py` 有兼容接口；默认 stub | 需真实模型成功调用并记录首字和失败回退 | 真实凭据与环境、重复测量未确认；P0 |
 | Agent/工作流 8% | `services/qa/pipeline.py`、`services/itinerary/` 及已整合 W02 执行器 | 游客提出约束→展示修改→确认；隔离 fake provider 测试已覆盖任务状态与恢复 | 真实供应商、完整浏览器链路及 PostgreSQL 多 worker 仍待验收；P0 |
-| RAG 6% | `services/rag/`、知识发布、`api/chat.py` 来源输出；可用的条目、修订、片段 ID 在来源中保留 | `tests/test_pipeline.py` 检查来源及 SQLite 缓存，发布后复问仍需真实环境验收 | 真实 Chroma 重建、历史索引修复、资料权威性及引用忠实度未证实；P0 |
+| RAG 6% | `services/rag/`、知识发布、`api/chat.py` 来源输出；可用的条目、修订、片段 ID 在来源中保留 | `tests/test_pipeline.py` 检查来源及 SQLite 缓存；`test_chroma_persistence_integration.py` 使用真实本地 Chroma 和合成向量检查切换、过滤、重开及写入失败回退 | 真实嵌入模型、发布后复问、并发重建、历史索引修复、资料权威性及引用忠实度未证实；P0 |
 | 多模态 5% | `services/vision/qwen.py`、`api/voice.py`；默认可能 stub；游客可明确确认已发布景点 | 拍摄→线索→确认→来源→讲解与语音 | 真实照片/模型、低置信交互、端到端体验待证；P0 |
 | AI 安全 4% | 发布版本校验、上传与容量限制、身份约束；带游客记忆生成绕过共享缓存 | `tests/test_pipeline.py` 检查个性化缓存隔离；知识更新时旧音频停止的模拟测试 | v4 历史缓存仍需按数据策略处理；提示注入、真实供应商和跨进程边界待验收；P0 |
 | MCP/工具调用 4% | 行程规则与服务函数；W02 受控任务执行器已整合，见 `services/tool_execution/` | 展示受控任务执行和可验证结果 | 不把固定工作流称为已验收的模型自主工具选择；P1 |
