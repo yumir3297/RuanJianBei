@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Mapping
 from uuid import uuid4
 
+from pydantic import ValidationError
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +21,7 @@ from app.models.tour_session import (
 )
 from app.schemas.itinerary import TourSnapshotV2
 from app.services.itinerary.catalog import PublishedAttraction
+from app.services.itinerary.mutations import diff_snapshots
 from app.services.itinerary.progress import (
     ProgressCommand, ProgressConflict, TourProgress as V01Progress,
     apply_progress_command, start_tour, validate_remaining_budget,
@@ -448,12 +450,22 @@ class TourSessionRepository:
 
     @staticmethod
     def _proposal_payload(row: ItineraryProposal) -> dict:
+        base, candidate = _decode(row.base_snapshot_json), _decode(row.candidate_json)
+        diff = json.loads(row.diff_json)
+        comparable = isinstance(base, dict) and isinstance(candidate, dict) and base.get("schema_version") == 2 and candidate.get("schema_version") == 2
+        if comparable:
+            try:
+                changes = diff_snapshots(TourSnapshotV2.model_validate(base), TourSnapshotV2.model_validate(candidate))
+                diff = [{"kind": change.kind, "stop_id": change.stop_id, "before": change.before, "after": change.after}
+                        for change in changes]
+            except ValidationError:
+                comparable = False
         return {"id": row.id, "session_id": row.session_id, "base_version": row.base_version,
             "progress_version": row.progress_version, "draft_digest": row.draft_digest,
             "catalog_digest": row.catalog_digest, "status": row.status, "request_text": row.request_text,
-            "base_snapshot": _decode(row.base_snapshot_json), "execution_job_id": row.execution_job_id,
-            "operations": json.loads(row.operations_json), "candidate": json.loads(row.candidate_json),
-            "diff": json.loads(row.diff_json), "validation": json.loads(row.validation_json),
+            "base_snapshot": base, "execution_job_id": row.execution_job_id,
+            "operations": json.loads(row.operations_json), "candidate": candidate,
+            "diff": diff, "diff_verifiable": comparable, "validation": json.loads(row.validation_json),
             "clarification": row.clarification, "expires_at": row.expires_at.isoformat(),
             "applied_revision_id": row.applied_revision_id}
 
@@ -632,6 +644,8 @@ class TourSessionRepository:
         if proposal is None: return None
         if proposal.status != "ready" or _aware(proposal.expires_at) <= datetime.now(UTC):
             raise ValueError("提案已过期、需要澄清或已应用")
+        if not self._proposal_payload(proposal)["diff_verifiable"]:
+            raise ValueError("提案缺少可核对的原始行程，请重新生成")
         if (proposal.base_version != expected_version or proposal.progress_version != progress_version
                 or proposal.draft_digest != draft_digest):
             raise ValueError("草稿或游览进度已变化，请重新生成提案")

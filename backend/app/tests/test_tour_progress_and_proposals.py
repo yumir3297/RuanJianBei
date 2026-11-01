@@ -104,6 +104,36 @@ def test_proposal_apply_creates_exactly_one_revision_and_is_idempotent():
     _run(scenario)
 
 
+def test_restored_proposal_diff_is_rebuilt_from_recorded_snapshots():
+    async def scenario():
+        from app.repositories.tour_session import TourSessionRepository
+        engine, db = await open_test_session()
+        try:
+            repo = TourSessionRepository(db)
+            snapshot = _snapshot()
+            created = await repo.create_session("owner-a", "site", "游览", snapshot, "create")
+            candidate = json.loads(json.dumps(snapshot))
+            candidate["stops"][0]["name"] = "已发布名称"
+            generated = {"status": "ready", "base_snapshot": snapshot, "operations": [],
+                "candidate": candidate, "diff": [{"kind": "changed", "after": {"name": "错误名称"}}],
+                "validation": {"status": "pass", "conflicts": []}, "clarification": None}
+            proposal = await repo.create_proposal("owner-a", created["id"], 1, 0, "a" * 64,
+                "catalog", "修改", generated, "proposal")
+            restored = await repo.get_proposal("owner-a", created["id"], proposal["id"])
+            assert restored["diff"][0]["after"]["name"] == "已发布名称"
+            from app.models.tour_session import ItineraryProposal
+            await db.execute(update(ItineraryProposal).where(ItineraryProposal.id == proposal["id"]).values(base_snapshot_json="{}"))
+            await db.commit()
+            restored = await repo.get_proposal("owner-a", created["id"], proposal["id"])
+            assert restored["diff_verifiable"] is False
+            with pytest.raises(ValueError, match="原始行程"):
+                await repo.apply_proposal("owner-a", created["id"], proposal["id"], 1, 0,
+                                          "a" * 64, "apply")
+        finally:
+            await db.close(); await engine.dispose()
+    _run(scenario)
+
+
 def test_active_proposal_apply_refreshes_progress_version_for_next_command():
     async def scenario():
         from app.repositories.tour_session import TourSessionRepository
