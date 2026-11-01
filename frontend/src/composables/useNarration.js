@@ -80,6 +80,8 @@ export function useNarration({ getPosition, getSpots, isBusy, onTrigger, onInter
     if (!pendingSpot) return;
     const position = getPosition();
     if (!position || haversineMeters(position, pendingSpot) > EXIT_RADIUS_M) {
+      insideNames.delete(`${pendingSpot.name}__done`);
+      lastTriggeredAt.value = 0;
       pendingSpot = null;
       pendingSince = 0;
       status.value = "idle";
