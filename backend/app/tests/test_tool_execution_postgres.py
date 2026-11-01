@@ -9,9 +9,11 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy.engine import make_url
+from sqlalchemy import select as sql_select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.models.tour_session import TourIdentity
+from app.models.tool_execution import ToolJob
 from app.repositories.tool_execution import ToolExecutionRepository
 from app.repositories.tour_session import TourSessionRepository
 from app.schemas.itinerary import TourSnapshotV2
@@ -19,7 +21,8 @@ from app.tests.test_w02_runtime_review import expire_lease
 
 
 @pytest.mark.skipif(not os.getenv("GUIDE_TEST_POSTGRES_URL"), reason="requires disposable PostgreSQL")
-def test_two_worker_processes_do_not_claim_the_same_job():
+@pytest.mark.parametrize("external_started", [False, True], ids=["before-external", "external-unknown"])
+def test_two_worker_processes_do_not_claim_the_same_job(external_started):
     url = make_url(os.environ["GUIDE_TEST_POSTGRES_URL"])
     assert url.drivername == "postgresql+asyncpg"
     assert (url.database or "").startswith("guide_test_")
@@ -60,6 +63,8 @@ async def main():
             lease = await repo.claim_next(sys.argv[1])
             if lease:
                 assert await repo.start_attempt(lease, max_attempts=1)
+                if sys.argv[2] == "yes":
+                    assert await repo.mark_external_call(lease)
             print(f"{lease.job_id}:{lease.fence}" if lease else "none", flush=True)
             if lease:
                 await asyncio.sleep(60)
@@ -67,7 +72,7 @@ async def main():
         await engine.dispose()
 asyncio.run(main())
 '''
-    workers = [subprocess.Popen([sys.executable, "-c", script, f"process-{index}"],
+    workers = [subprocess.Popen([sys.executable, "-c", script, f"process-{index}", "yes" if external_started else "no"],
                                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
                for index in range(2)]
     try:
@@ -95,8 +100,13 @@ asyncio.run(main())
                     await expire_lease(session, job_id)
                     await ToolExecutionRepository(session).maintain()
                     lease = await ToolExecutionRepository(session).claim_next("replacement-process")
-                    assert lease is not None and lease.job_id == job_id and lease.fence > int(old_fence)
-                    assert await ToolExecutionRepository(session).start_attempt(lease, max_attempts=1)
+                    if external_started:
+                        assert lease is None
+                        job = await session.scalar(sql_select(ToolJob).where(ToolJob.id == job_id))
+                        assert job.status == "waiting_user"
+                    else:
+                        assert lease is not None and lease.job_id == job_id and lease.fence > int(old_fence)
+                        assert await ToolExecutionRepository(session).start_attempt(lease, max_attempts=1)
             finally:
                 await engine.dispose()
         asyncio.run(recover())
