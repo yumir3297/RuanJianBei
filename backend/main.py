@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -67,7 +68,7 @@ def _run_migrations() -> None:
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI):
+async def lifespan(app: FastAPI):
     settings = get_settings()
     security_failures = settings.production_security_failures
     if security_failures:
@@ -87,7 +88,13 @@ async def lifespan(_: FastAPI):
     from app.api.chat import get_cached_embedder, get_cached_reranker
     from app.services.qa.runtime import get_runtime_faq_matcher
     # 预加载 embedder（~512MB）
-    embedder = get_cached_embedder(settings.embedding_model_name, str(settings.model_cache_root))
+    embedder = None
+    try:
+        embedder = get_cached_embedder(settings.embedding_model_name, str(settings.model_cache_root))
+        app.state.embedding_model_available = True
+    except Exception:
+        app.state.embedding_model_available = False
+        logging.getLogger(__name__).exception("Embedding model unavailable; starting with repository-backed retrieval.")
 
     # 预加载 reranker（~1GB）
     get_cached_reranker(
@@ -134,6 +141,8 @@ def create_app() -> FastAPI:
     @app.get("/ready")
     async def ready() -> JSONResponse:
         failures: list[str] = []
+        if getattr(app.state, "embedding_model_available", None) is False:
+            failures.append("embedding_model_unavailable")
         async with AsyncSessionLocal() as session:
             try:
                 result = await session.execute(select(func.count(KnowledgeChunk.chunk_id)))
