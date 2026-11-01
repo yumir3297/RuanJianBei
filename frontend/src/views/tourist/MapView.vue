@@ -12,7 +12,7 @@
         <i :style="{ background: colorHex }"></i>景区颜色
       </button>
       <button type="button" class="map-narrate-toggle" :class="{ active: narrateOn }" :aria-pressed="narrateOn" @click="toggleNarrate">
-        {{ narrateOn ? "自动讲解中" : "开启自动讲解" }}
+        {{ narrateOn ? "关闭讲解设置" : "开启讲解设置" }}
       </button>
       <div class="map-geo-tip" v-if="narrateOn && geo.error">{{ geo.error }}</div>
       <SpotNarrationCard
@@ -36,7 +36,7 @@
       <button type="button" @click="toggleWalk">{{ walking ? "停止巡游" : "模拟巡游" }}</button>
       <span>模式：{{ modeLabel }}</span>
     </div>
-    <p v-if="narrateOn" class="map-note">自动讲解使用演示景点坐标，仅在模拟巡游时触发；真实定位下可手动选择景点讲解。</p>
+    <p v-if="narrateOn" class="map-note">自动讲解使用演示景点坐标，仅在模拟定位时触发；真实定位下可选择景点，再点击“让导游讲讲”。</p>
 
     <div class="map-live">
       <div class="map-live-item">
