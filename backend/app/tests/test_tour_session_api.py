@@ -13,6 +13,45 @@ from app.api.auth import create_admin_token
 from app.tests.async_db import open_test_session
 
 
+def test_frontend_preset_snapshot_round_trips_with_unknown_budget():
+    import json
+    import shutil
+    import subprocess
+    from pathlib import Path
+    import pytest
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("node is required for the frontend/backend contract test")
+    module = (Path(__file__).resolve().parents[3] / "frontend/src/utils/routeSnapshot.js").as_uri()
+    script = f"import {{routeSnapshot}} from {json.dumps(module)}; console.log(JSON.stringify(routeSnapshot({{id:'r',title:'路线',spots:['景点']}})))"
+    snapshot = json.loads(subprocess.check_output([node, "--input-type=module", "-e", script], text=True))
+
+    async def scenario():
+        engine, first_db = await open_test_session()
+        await first_db.close()
+        sessions = async_sessionmaker(bind=engine, expire_on_commit=False)
+        app = FastAPI()
+        app.include_router(tour_sessions.router, prefix="/api/tour-sessions")
+        async def db_dependency():
+            async with sessions() as db:
+                yield db
+        app.dependency_overrides[get_db_session] = db_dependency
+        app.dependency_overrides[get_app_settings] = lambda: Settings(site_id="lingshan", admin_token_secret="contract-test-secret")
+        try:
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+                csrf = (await client.get("/api/tour-sessions/bootstrap")).json()["csrf_token"]
+                response = await client.post("/api/tour-sessions", headers={"Origin": "http://testserver", "X-CSRF-Token": csrf, "Idempotency-Key": "route-contract"}, json={"title": "路线", "snapshot": snapshot})
+                assert response.status_code == 201, response.text
+                restored = await client.get(f"/api/tour-sessions/{response.json()['id']}")
+                assert restored.status_code == 200
+                assert restored.json()["snapshot"]["constraints"]["available_minutes"] is None
+                assert restored.json()["snapshot"]["stops"][0]["name"] == "景点"
+        finally:
+            await engine.dispose()
+    asyncio.run(scenario())
+
+
 def test_tour_session_api_scopes_access_and_preserves_conflicts():
     async def scenario():
         engine, first_db = await open_test_session()
