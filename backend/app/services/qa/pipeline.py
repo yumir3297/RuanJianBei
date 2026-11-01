@@ -336,6 +336,18 @@ class QAPipeline:
                 yield event
             return
 
+        ticket_terms = ("门票价格", "门票多少钱", "票价", "半价票", "免费入园")
+        ticket_discount = "优惠政策" in request.query and any(term in request.query for term in ("门票", "购票", "票务"))
+        if ticket_discount or any(term in request.query for term in ticket_terms):
+            async for event in self._emit_final_answer(
+                request=request, normalized_query=normalized_query,
+                answer="目前无法核实最新门票价格和优惠条件，请以景区官方票务信息或现场咨询为准。",
+                sources=[], hit_level="ticket_unverified", start=start,
+                resolved=resolved, expected_epoch=request_epoch,
+            ):
+                yield event
+            return
+
         if vision is None and intent_decision.intent == "static_route":
             static_route = await self._build_static_route_answer(request)
             if static_route is not None:
@@ -1018,8 +1030,8 @@ class QAPipeline:
             chat_log_id=chat_log_id,
             hit_level=hit_level,
             total_ms=latency_ms,
-            degraded=hit_level in {"rag_insufficient", "rag_llm_fallback", "schedule_unverified"},
-            provider="local" if hit_level.startswith("faq_") or hit_level in {"cache", "schedule_unverified"} else "rag",
+            degraded=hit_level in {"rag_insufficient", "rag_llm_fallback", "schedule_unverified", "ticket_unverified"},
+            provider="local" if hit_level.startswith("faq_") or hit_level in {"cache", "schedule_unverified", "ticket_unverified"} else "rag",
         )
 
     async def _epoch_is_current(self, expected_epoch: int | None) -> bool:

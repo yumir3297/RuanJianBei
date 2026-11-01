@@ -469,6 +469,17 @@ def test_schedule_guard_speaks_only_the_unverified_notice():
     assert events[-1].data["degraded"] is True
 
 
+def test_ticket_prices_do_not_return_unverified_faq():
+    matcher = FAQMatcher()
+    matcher.add([FAQEntry(id="ticket", category="票务", aliases=["门票价格"],
+                          answer="成人票100元", sources=["旧资料"])])
+    events = _run_turn(_build_test_pipeline(faq_matcher=matcher), query="门票价格", text_only=True, selection=None)
+    final = next(event.data["text"] for event in events if event.type == "text")
+    assert "100元" not in final
+    assert "官方" in final
+    assert events[-1].data["degraded"] is True
+
+
 def test_attraction_scoped_query_does_not_use_unscoped_faq():
     matcher = FAQMatcher()
     matcher.add([FAQEntry(id="general-location", category="实用信息", aliases=["景区位置"],
