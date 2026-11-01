@@ -310,7 +310,7 @@ import { normalizeAvatarPresetFromModelPath, DEFAULT_AVATAR_PRESET } from "../..
 import { GUIDE_PERSONA, useAvatar } from "../../composables/useAvatar";
 import { useWeather } from "../../composables/useWeather";
 import { isItineraryEditIntent } from "../../utils/itineraryIntent.js";
-import { findPublishedAttraction } from "../../utils/toolAttraction.js";
+import { resolvePublishedAttraction } from "../../utils/toolAttraction.js";
 import { itineraryProposalDiffText } from "../../utils/itineraryProposalDiff.js";
 import { useTourSessionsStore } from "../../stores/tourSessions";
 import { getSessionId, useChatStore } from "../../stores/chat";
@@ -1465,7 +1465,9 @@ watch(() => [chatStore.voiceFallback, chatStore.streaming, chatStore.errorMessag
 });
 const inputBusy = computed(() => chatStore.streaming || speechListening.value || isRecording.value || transcribing.value);
 
+let toolQuestionGeneration = 0;
 function setTool(id) {
+  toolQuestionGeneration += 1;
   const query = { ...route.query };
   delete query.selector;
   if (id && id !== activeTool.value) query.tool = id;
@@ -1479,6 +1481,7 @@ function handleTabKey(event) {
   nextTick(() => document.getElementById(activeTab.value + "-tab")?.focus());
 }
 function closeTool() {
+  toolQuestionGeneration += 1;
   const previous = activeTool.value;
   const query = { ...route.query };
   delete query.tool;
@@ -1502,13 +1505,20 @@ function handleDialogBackdrop(event, close) {
   const rect = event.currentTarget.getBoundingClientRect();
   if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) close();
 }
-function handleToolQuestion(payload) {
+async function handleToolQuestion(payload) {
   if (inputBusy.value) return;
+  const generation = ++toolQuestionGeneration;
+  const originTool = activeTool.value;
+  let namedAttractionId = null;
+  if (!payload.routeId && !payload.attractionId && payload.attraction) {
+    namedAttractionId = await resolvePublishedAttraction(payload.attraction, interactionStore);
+    if (generation !== toolQuestionGeneration || activeTool.value !== originTool || inputBusy.value) return;
+  }
   interactionStore.clearSelection();
   if (payload.routeId) interactionStore.selectRoute(payload.routeId);
   else if (payload.attractionId) interactionStore.selectAttraction(payload.attractionId);
   else if (payload.attraction) {
-    const attractionId = findPublishedAttraction(payload.attraction, interactionStore.bootstrap.attractions);
+    const attractionId = namedAttractionId;
     if (attractionId === null) {
       chatStore.errorMessage = "无法确认所选景点的已发布资料，请稍后重试或选择其他景点。";
       chatStore.retryAvailable = false;
