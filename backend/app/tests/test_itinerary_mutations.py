@@ -24,6 +24,20 @@ def _snapshot(**overrides) -> TourSnapshotV2:
 
 
 class ItineraryMutationTests(unittest.TestCase):
+    def test_ai_cannot_add_or_replace_a_visit_without_published_spot_code(self):
+        snapshot = _snapshot()
+        for raw in (
+            {"type": "add_visit", "name": "未经核实的景点"},
+            {"type": "replace_visit", "stop_id": str(snapshot.stops[0].stop_id), "name": "未经核实的景点"},
+        ):
+            with self.subTest(operation=raw["type"]):
+                operation = operation_adapter.validate_python(raw)
+                result = apply_manual_operations(snapshot, [operation], catalog_spot_codes={"LS-01"}, actor="ai")
+                self.assertEqual(result.validation, "conflict")
+                self.assertEqual(result.snapshot, snapshot)
+        manual = operation_adapter.validate_python({"type": "add_visit", "name": "游客自填地点"})
+        self.assertEqual(apply_manual_operations(snapshot, [manual], catalog_spot_codes={"LS-01"}).validation, "unverified")
+
     def test_ai_proposed_duration_is_not_reported_as_verified(self):
         snapshot = _snapshot()
         operation = operation_adapter.validate_python({"type": "set_duration", "stop_id": str(snapshot.stops[0].stop_id),

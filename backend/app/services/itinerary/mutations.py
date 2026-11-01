@@ -66,6 +66,8 @@ def _apply(snapshot: TourSnapshotV2, operation: ItineraryOperation,
            catalog_spot_codes: set[str] | None, actor: Actor, created_stop_id: UUID) -> None:
     stops = snapshot.stops
     if isinstance(operation, AddVisit):
+        if actor == "ai" and not operation.spot_code:
+            raise _RejectedOperation("AI 添加景点须选择已发布目录中的景点")
         _check_catalog(operation.spot_code, catalog_spot_codes)
         index = _insert_position(stops, operation.before_stop_id)
         stops.insert(index, ItineraryStop.model_validate({
@@ -105,6 +107,8 @@ def _apply(snapshot: TourSnapshotV2, operation: ItineraryOperation,
             snapshot.legs = [leg for leg in snapshot.legs if leg.from_stop_id != stop.stop_id and leg.to_stop_id != stop.stop_id]
             return
         if isinstance(operation, ReplaceVisit):
+            if actor == "ai" and not operation.spot_code:
+                raise _RejectedOperation("AI 替换景点须选择已发布目录中的景点")
             if stop.kind != "visit":
                 raise _RejectedOperation("只能替换景点停留")
             if _lock(stop, "name") or _lock(stop, "spot_code"):
