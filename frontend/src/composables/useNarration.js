@@ -15,6 +15,7 @@ export function useNarration({ getPosition, getSpots, isBusy, onTrigger, onInter
   let pendingSpot = null;
   let pendingSince = 0;
   let insideNames = new Set();
+  let generation = 0;
 
   function update() {
     const position = getPosition();
@@ -68,11 +69,12 @@ export function useNarration({ getPosition, getSpots, isBusy, onTrigger, onInter
   }
 
   function fire(spot) {
+    const currentGeneration = ++generation;
     activeSpot.value = spot;
     if (!completed.value.includes(spot.name)) completed.value = [...completed.value, spot.name];
     status.value = "playing";
     Promise.resolve(onTrigger && onTrigger(spot)).finally(() => {
-      if (status.value === "playing") status.value = "idle";
+      if (currentGeneration === generation && status.value === "playing") status.value = "idle";
     });
   }
 
@@ -101,6 +103,7 @@ export function useNarration({ getPosition, getSpots, isBusy, onTrigger, onInter
   }
 
   function reset() {
+    generation += 1;
     activeSpot.value = null;
     completed.value = [];
     status.value = "idle";

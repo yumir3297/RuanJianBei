@@ -66,3 +66,18 @@ test('replaced pending spot can be narrated when revisited', async () => {
     assert.deepEqual(triggered, ['甲']);
   } finally { await vite.close(); }
 });
+
+test('an older narration request cannot reset a newer playing state', async () => {
+  const vite = await createServer({ configFile: false, cacheDir: '/private/tmp/guide-vite-narration-generation', server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
+  try {
+    const { useNarration } = await vite.ssrLoadModule('/src/composables/useNarration.js');
+    const resolvers = [];
+    const narration = useNarration({ getPosition: () => null, getSpots: () => [], isBusy: () => false,
+      onTrigger: () => new Promise(resolve => resolvers.push(resolve)) });
+    narration.fire({ name: '甲' }); narration.fire({ name: '乙' });
+    resolvers[0]();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(narration.status.value, 'playing');
+    resolvers[1]();
+  } finally { await vite.close(); }
+});
