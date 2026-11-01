@@ -116,6 +116,11 @@ def test_proposal_api_replays_same_request_and_conflicts_on_changed_payload(monk
                 summaries = await client.get(path)
                 assert summaries.status_code == 200, summaries.text
                 assert summaries.json()["items"][0]["request_text"] == payload["text"]
+                async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as stranger:
+                    await stranger.get("/api/tour-sessions/bootstrap")
+                    denied = await stranger.get(path)
+                    assert denied.status_code == 404
+                    assert payload["text"] not in denied.text
 
                 conflict = await client.post(path, headers=headers, json={**payload, "text": "不同需求"})
                 assert conflict.status_code == 409, conflict.text
