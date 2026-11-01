@@ -1065,6 +1065,8 @@ def test_pipeline_uses_backend_preset_route() -> None:
     text_event = next(event for event in events if event.type == "text")
     assert intent_event.data["intent"] == "static_route"
     assert "亲子轻松线" in text_event.data["text"]
+    assert "客流" in text_event.data["text"]
+    assert "现场" in text_event.data["text"]
     assert events[-1].type == "done"
 
 

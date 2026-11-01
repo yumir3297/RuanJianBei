@@ -869,8 +869,8 @@ class QAPipeline:
                 routes[0],
             )
             answer = (
-                f"推荐路线：{selected.route_plan}。"
-                "这段为园内步行路线；如需少走路，可在出发前向服务台确认当日摆渡安排。"
+                f"可参考预设路线：{selected.route_plan}。"
+                "此路线未核验两点之间的实际通路；如需少走路，可向服务台确认当日安排。"
             )
         else:
             selected = None
@@ -892,7 +892,7 @@ class QAPipeline:
                 stops = [item.strip() for item in route_plan.split("→") if item.strip()]
                 route_plan = " → ".join(stops[:4])
                 answer = (
-                    f"推荐3小时精华路线：{route_plan}。"
+                    f"可参考路线中的前几个景点：{route_plan}。"
                     "时间紧时优先看核心景点，其余景点可根据现场时间灵活取舍。"
                 )
             elif "半天" in normalized:
@@ -908,6 +908,7 @@ class QAPipeline:
             else:
                 answer = f"推荐{selected.title}（{selected.duration_label}）：{route_plan}。"
 
+        answer += " 这是预设路线，未结合实时路况或客流，实际时长和开放情况请以现场信息为准。"
         sources = [{
             "evidence_id": "路线1",
             "title": selected.title,
