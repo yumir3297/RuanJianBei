@@ -373,7 +373,12 @@ def build_execution_report(
             "latency": "串行单次请求；all 包含失败，completed 仅指流完整结束，不代表回答正确；冷/热不保证真实缓存状态。",
             "source_hit_rate": "仅统计配置了预期来源的题目，关键词命中不代表引用支持回答。",
         },
-        "metric_sample_counts": {"source_hit_rate": len(source_results)},
+        "metric_sample_counts": {
+            "accuracy": len(results),
+            "evidence_rate": len(answer_cases),
+            "refusal_pass_rate": len(refusal_cases),
+            "source_hit_rate": len(source_results),
+        },
         "metrics": {
             "accuracy": _rate(results, lambda item: item["accuracy_pass"]),
             "evidence_rate": _rate(

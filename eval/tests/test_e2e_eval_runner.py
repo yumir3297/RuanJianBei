@@ -118,6 +118,9 @@ def test_source_hit_rate_excludes_cases_without_expected_sources():
                                     cases=cases, results=results)
     assert report["metrics"]["source_hit_rate"] == 0.0
     assert report["metric_sample_counts"]["source_hit_rate"] == 1
+    assert report["metric_sample_counts"]["accuracy"] == 2
+    assert report["metric_sample_counts"]["evidence_rate"] == 1
+    assert report["metric_sample_counts"]["refusal_pass_rate"] == 1
 
 
 def test_seed_testset_is_valid() -> None:
