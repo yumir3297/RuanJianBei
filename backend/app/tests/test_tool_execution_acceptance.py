@@ -113,6 +113,10 @@ def test_proposal_api_replays_same_request_and_conflicts_on_changed_payload(monk
                 assert replay.json()["id"] == first.json()["id"]
                 assert replay.json()["execution_job_id"] == first.json()["execution_job_id"]
 
+                summaries = await client.get(path)
+                assert summaries.status_code == 200, summaries.text
+                assert summaries.json()["items"][0]["request_text"] == payload["text"]
+
                 conflict = await client.post(path, headers=headers, json={**payload, "text": "不同需求"})
                 assert conflict.status_code == 409, conflict.text
 

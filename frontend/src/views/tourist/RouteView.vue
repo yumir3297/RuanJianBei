@@ -12,6 +12,10 @@
         <p v-else-if="tourStore.saveState === 'saved'" class="tour-session-status" role="status">已保存到此浏览器</p>
         <p v-if="tourStore.current" class="tour-session-current"><strong>当前游览：</strong>{{ tourStore.current.title }} · 第 {{ tourStore.current.version }} 版</p>
         <section v-if="tourStore.current?.snapshot?.schema_version === 2" class="tour-session-status" aria-label="后台行程提案">
+          <div v-if="tourStore.proposalChoices.length" aria-label="选择需要查看的提案">
+            <p>最近十条中的提案时间相同，请按原始需求选择查看；查看不会重新调用 AI。</p>
+            <button v-for="item in tourStore.proposalChoices" :key="item.id" type="button" class="tour-session-secondary" :disabled="tourStore.proposalLoading" @click="tourStore.selectProposalChoice(item.id)">{{ item.request_text || '未提供需求文本' }} · {{ ({ ready: '待确认', executing: '生成中', waiting_user: '需确认重试', needs_clarification: '需要补充', failed: '未完成', applied: '已应用' })[item.status] || '状态待确认' }} · {{ item.id.slice(-6) }}</button>
+          </div>
           <p v-if="tourStore.proposalLoading" role="status">正在检查后台提案；停止等待不会取消后台任务。</p>
           <p v-else-if="tourStore.proposal" role="status">{{ tourStore.proposal.status === 'waiting_user' ? '上次 AI 调用结果不确定，请回到对话查看费用风险并决定是否重试。' : tourStore.proposal.status === 'executing' ? '提案仍在后台生成。' : '已恢复行程提案，请回到对话查看结果。' }}</p>
           <button v-if="!tourStore.proposalLoading" type="button" class="tour-session-secondary" @click="tourStore.restoreProposal()">检查后台提案</button>

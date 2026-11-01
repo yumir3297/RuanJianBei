@@ -614,6 +614,7 @@ class TourSessionRepository:
                     "id": proposal["id"], "session_id": proposal["session_id"],
                     "status": proposal["status"], "execution_status": proposal.get("execution_status"),
                     "execution_job_id": proposal.get("execution_job_id"),
+                    "request_text": proposal["request_text"],
                     "created_at": row.created_at.isoformat() if row.created_at else None,
                 })
         return summaries

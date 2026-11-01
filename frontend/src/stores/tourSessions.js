@@ -55,6 +55,7 @@ export const useTourSessionsStore = defineStore("tourSessions", {
     proposalCanonical: "",
     proposalBaseSnapshot: null,
     proposalLoading: false,
+    proposalChoices: [],
     saveState: "idle",
     error: "",
     operationKeys: {},
@@ -67,6 +68,7 @@ export const useTourSessionsStore = defineStore("tourSessions", {
       proposalRequests.cancel();
       this.proposalLoading = false;
       this.proposal = null; this.proposalCanonical = ""; this.proposalBaseSnapshot = null;
+      this.proposalChoices = [];
     },
     async prepare() {
       if (this.csrfToken && this.identityId) return this.csrfToken;
@@ -143,7 +145,8 @@ export const useTourSessionsStore = defineStore("tourSessions", {
         if (!proposalRequests.isCurrent(request) || this.current?.id !== sessionId) return null;
         if (items.length > 1 && items[0].created_at && items[0].created_at === items[1].created_at) {
           this.clearProposal();
-          this.error = "多个提案创建时间相同，无法确定最新结果。请先等待后台任务结束并联系管理员核查，避免重复调用 AI 产生费用。";
+          this.proposalChoices = items.filter(item => item.created_at === items[0].created_at);
+          this.error = "多个提案创建时间相同，无法确定最新结果。请选择要查看的提案；避免重复调用 AI 产生费用。";
           return null;
         }
         // The API returns newest first. Never resurrect an older proposal
@@ -156,6 +159,21 @@ export const useTourSessionsStore = defineStore("tourSessions", {
         return await this.resumeProposal(detail);
       } catch (error) {
         if (proposalRequests.isCurrent(request) && !request.signal.aborted) this.error = "游览已打开，但提案状态暂时无法恢复；可重新检查后台提案。";
+        return null;
+      } finally { if (proposalRequests.finish(request)) this.proposalLoading = false; }
+    },
+    async selectProposalChoice(proposalId) {
+      const sessionId = this.current?.id;
+      if (!sessionId || !this.proposalChoices.some(item => item.id === proposalId && item.session_id === sessionId)) return null;
+      const request = proposalRequests.begin();
+      this.proposalLoading = true;
+      try {
+        const detail = await fetchItineraryProposal(sessionId, proposalId, request.signal);
+        if (!proposalRequests.isCurrent(request) || this.current?.id !== sessionId || detail.id !== proposalId || detail.session_id !== sessionId) return null;
+        this.proposalChoices = [];
+        return await this.resumeProposal(detail);
+      } catch {
+        if (proposalRequests.isCurrent(request) && !request.signal.aborted) this.error = "无法读取提案，请检查网络后重试。";
         return null;
       } finally { if (proposalRequests.finish(request)) this.proposalLoading = false; }
     },

@@ -54,12 +54,15 @@ test('equal proposal timestamps do not silently choose a random latest task', as
       { ...proposal('a', 'ready'), id: 'first', created_at: '2026-11-01T10:00:00' },
       { ...proposal('a', 'failed'), id: 'second', created_at: '2026-11-01T10:00:00' },
     ] };
-    return proposal();
+    return { ...proposal(), id: 'first' };
   };
   await store.restoreProposal();
   assert.equal(store.proposal, null);
   assert.match(store.error, /无法确定|无法判断/);
   assert.match(store.error, /避免重复调用/);
+  assert.equal(store.proposalChoices.length, 2);
+  await store.selectProposalChoice('first');
+  assert.equal(store.proposal.id, 'first');
 });
 
 test('opening a tour restores a ready proposal and its base without changing the saved draft', async () => {

@@ -135,9 +135,14 @@
             <button type="button" @click="continuePendingIntentAsEdit">生成行程提案</button>
             <button type="button" @click="pendingIntentQuery = ''">暂不处理</button>
           </section>
+          <section v-if="tourStore.proposalChoices.length" class="itinerary-proposal" aria-label="选择需要查看的提案">
+            <p>最近十条中的提案时间相同，请按原始需求选择查看；查看不会重新调用 AI。</p>
+            <button v-for="item in tourStore.proposalChoices" :key="item.id" type="button" :disabled="tourStore.proposalLoading" @click="tourStore.selectProposalChoice(item.id)">{{ item.request_text || '未提供需求文本' }} · {{ ({ ready: '待确认', executing: '生成中', waiting_user: '需确认重试', needs_clarification: '需要补充', failed: '未完成', applied: '已应用' })[item.status] || '状态待确认' }} · {{ item.id.slice(-6) }}</button>
+          </section>
           <section v-if="tourStore.proposal" class="itinerary-proposal" aria-label="行程修改提案">
             <header><strong>行程修改提案</strong><button type="button" @click="tourStore.cancelProposal()">关闭</button></header>
             <p>“{{ tourStore.proposal.request_text }}”</p>
+            <p v-if="tourStore.proposal.status === 'applied'">这份提案已应用，不会重复保存。</p>
             <p v-if="tourStore.proposalIsStale" class="itinerary-proposal-error" role="status">当前草稿已修改；这份提案仍基于修改前的行程，不能直接应用。请基于当前草稿重新生成。</p>
             <p v-if="tourStore.proposal.status === 'waiting_user'" role="status">AI 服务可能已收到上次请求，但结果未能保存。再次尝试可能重复产生调用费用；行程本身仍未改变。</p>
             <button v-if="tourStore.proposal.status === 'waiting_user'" type="button" :disabled="tourStore.proposalLoading" @click="tourStore.retryProposal(true)">确认可能重复产生调用费用并重试</button>
