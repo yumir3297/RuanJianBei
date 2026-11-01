@@ -1100,6 +1100,9 @@ def test_chat_route_respects_explicit_budget_before_keyword_preference():
             query="亲子路线", session_id="route-budget", selection=SelectionContext(mode="route", available_hours=2)))
         assert "短线" in answer
         assert "亲子长线" not in answer
+        natural, _ = await pipeline._build_static_route_answer(ChatRequest(
+            query="两个小时的亲子路线", session_id="route-natural"))
+        assert "短线" in natural
     asyncio.run(scenario())
 
 
@@ -1111,6 +1114,17 @@ def test_chat_route_discloses_when_no_known_template_fits_budget():
         assert "暂无" in answer and "符合" in answer
         assert "1小时" in answer
     asyncio.run(scenario())
+
+
+def test_chat_route_uses_clear_natural_language_time_budget():
+    from app.services.qa.pipeline import _explicit_route_hours
+    assert _explicit_route_hours("我只有两个小时，推荐亲子路线") == 2
+    assert _explicit_route_hours("3小时的路线") == 3
+    assert _explicit_route_hours("2小时或4小时路线") is None
+    assert _explicit_route_hours("1.5小时路线") is None
+    assert _explicit_route_hours("两三小时路线") is None
+    assert _explicit_route_hours("2到4小时路线") is None
+    assert _explicit_route_hours("半天路线") is None
 
 
 def _faq_matcher():

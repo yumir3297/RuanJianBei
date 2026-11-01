@@ -110,6 +110,17 @@ _TOPIC_AUDIENCE_HINTS = {
 }
 
 
+def _explicit_route_hours(query: str) -> int | None:
+    """Recognize only unambiguous whole-hour expressions; never round a duration."""
+    numerals = {"一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5,
+                "六": 6, "七": 7, "八": 8, "九": 9, "十": 10}
+    if re.search(r"\d+\.\d+\s*(?:个)?小时|(?:\d+|[一二两三四五六七八九十])\s*(?:个)?小时半|(?:\d+|[一二两三四五六七八九十])\s*[-–—~～至到或]\s*(?:\d+|[一二两三四五六七八九十])\s*(?:个)?小时|[一二两三四五六七八九十]{2,}\s*(?:个)?小时", query):
+        return None
+    values = [numerals.get(token, int(token) if token.isdigit() else 0)
+              for token in re.findall(r"(?<![\d.一二两三四五六七八九十])(\d{1,2}|[一二两三四五六七八九十])\s*(?:个)?小时", query)]
+    return values[0] if values and all(value == values[0] for value in values) and 1 <= values[0] <= 12 else None
+
+
 def _infer_audience_type(request: ChatRequest) -> str:
     selection = request.selection
     if selection is not None:
@@ -851,6 +862,8 @@ class QAPipeline:
             return None
 
         budget = request.selection.available_hours if request.selection else None
+        if budget is None:
+            budget = _explicit_route_hours(request.query)
         no_known_fit = False
         if budget is not None:
             fitting = [route for route in routes
