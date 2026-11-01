@@ -1,6 +1,7 @@
 """Opt-in integration check against a disposable, migrated local PostgreSQL DB."""
 import asyncio
 import os
+import select
 import subprocess
 import sys
 from datetime import UTC, datetime, timedelta
@@ -55,8 +56,13 @@ async def main():
     try:
         sys.stdin.readline()
         async with async_sessionmaker(engine, expire_on_commit=False)() as session:
-            lease = await ToolExecutionRepository(session).claim_next(sys.argv[1])
-            print(lease.job_id if lease else "none", flush=True)
+            repo = ToolExecutionRepository(session)
+            lease = await repo.claim_next(sys.argv[1])
+            if lease:
+                assert await repo.start_attempt(lease, max_attempts=1)
+            print(f"{lease.job_id}:{lease.fence}" if lease else "none", flush=True)
+            if lease:
+                await asyncio.sleep(60)
     finally:
         await engine.dispose()
 asyncio.run(main())
@@ -68,9 +74,32 @@ asyncio.run(main())
         for worker in workers:
             worker.stdin.write("start\n")
             worker.stdin.flush()
-        results = [worker.communicate(timeout=15) for worker in workers]
-        assert all(worker.returncode == 0 for worker in workers), results
-        assert sorted(stdout.strip() for stdout, _ in results) == sorted([job_id, "none"])
+        outputs = []
+        for worker in workers:
+            readable, _, _ = select.select([worker.stdout], [], [], 15)
+            assert readable, "worker did not report its claim"
+            outputs.append(worker.stdout.readline().strip())
+        claimed = [value for value in outputs if value != "none"]
+        assert len(claimed) == 1 and outputs.count("none") == 1
+        claimed_job, old_fence = claimed[0].split(":")
+        assert claimed_job == job_id
+        claimant = workers[outputs.index(claimed[0])]
+        claimant.kill()
+        claimant.communicate(timeout=5)
+
+        async def recover():
+            engine = create_async_engine(url)
+            sessions = async_sessionmaker(engine, expire_on_commit=False)
+            try:
+                async with sessions() as session:
+                    await expire_lease(session, job_id)
+                    await ToolExecutionRepository(session).maintain()
+                    lease = await ToolExecutionRepository(session).claim_next("replacement-process")
+                    assert lease is not None and lease.job_id == job_id and lease.fence > int(old_fence)
+                    assert await ToolExecutionRepository(session).start_attempt(lease, max_attempts=1)
+            finally:
+                await engine.dispose()
+        asyncio.run(recover())
     finally:
         for worker in workers:
             if worker.poll() is None:
