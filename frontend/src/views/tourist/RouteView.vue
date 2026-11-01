@@ -124,7 +124,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useTourSessionsStore } from "../../stores/tourSessions";
 import GuideIcon from "../../components/GuideIcon.vue";
 import { PRESET_ROUTES } from "../../constants/touristCatalog";
-import { routeDurationMinutes } from "../../utils/routeDuration";
+import { routeSnapshot } from "../../utils/routeSnapshot";
 import { fetchRecommendations } from "../../api/recommend";
 import { getSessionId } from "../../stores/chat";
 import { fetchItineraryCatalog } from "../../api/itinerary";
@@ -190,21 +190,11 @@ async function saveSelectedRoute() {
     await tourStore.create({ title: route.title || "我的游览", snapshot });
   } finally { sessionSaving.value = false; }
 }
-function routeSnapshot(route) {
-  const routeId = route.routeId || route.id;
-  const minutes = routeDurationMinutes(route.duration_label);
-  return {
-    constraints: { available_minutes: minutes, interests: [], companions: [], required_spots: [], excluded_spots: [], walking_preference: null },
-    stops: (route.spots || []).slice(0, 50).map(name => ({ name, spot_id: null, resolved: false })),
-    source: route.routeId ? "recommendation" : "preset",
-    source_references: routeId ? [{ source_type: route.routeId ? "recommendation" : "preset_route", source_id: String(routeId), label: route.title || "" }] : [],
-  };
-}
 async function updateCurrentTour() {
   if (!selectedRoute.value || !tourStore.current) return;
   sessionSaving.value = true;
   try {
-    await tourStore.save(routeSnapshot(selectedRoute.value));
+    await tourStore.save(routeSnapshot(selectedRoute.value, tourStore.current.snapshot?.constraints || {}));
   } finally { sessionSaving.value = false; }
 }
 async function openTour(id) { await tourStore.open(id); }
