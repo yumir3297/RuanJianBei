@@ -310,6 +310,7 @@ import { normalizeAvatarPresetFromModelPath, DEFAULT_AVATAR_PRESET } from "../..
 import { GUIDE_PERSONA, useAvatar } from "../../composables/useAvatar";
 import { useWeather } from "../../composables/useWeather";
 import { isItineraryEditIntent } from "../../utils/itineraryIntent.js";
+import { findPublishedAttraction } from "../../utils/toolAttraction.js";
 import { itineraryProposalDiffText } from "../../utils/itineraryProposalDiff.js";
 import { useTourSessionsStore } from "../../stores/tourSessions";
 import { getSessionId, useChatStore } from "../../stores/chat";
@@ -1507,8 +1508,14 @@ function handleToolQuestion(payload) {
   if (payload.routeId) interactionStore.selectRoute(payload.routeId);
   else if (payload.attractionId) interactionStore.selectAttraction(payload.attractionId);
   else if (payload.attraction) {
-    const attraction = interactionStore.bootstrap.attractions.find(item => item.title === payload.attraction);
-    if (attraction) interactionStore.selectAttraction(attraction.id);
+    const attractionId = findPublishedAttraction(payload.attraction, interactionStore.bootstrap.attractions);
+    if (attractionId === null) {
+      chatStore.errorMessage = "无法确认所选景点的已发布资料，请稍后重试或选择其他景点。";
+      chatStore.retryAvailable = false;
+      closeTool();
+      return;
+    }
+    interactionStore.selectAttraction(attractionId);
   }
   submitQuery(payload.query, { displayQuery: payload.query });
   closeTool();
