@@ -141,8 +141,11 @@ export const useTourSessionsStore = defineStore("tourSessions", {
       try {
         const items = await fetchItineraryProposals(sessionId, 10, request.signal);
         if (!proposalRequests.isCurrent(request) || this.current?.id !== sessionId) return null;
-        const resumable = items.find(item => ["executing", "waiting_user", "ready", "needs_clarification"].includes(item.status));
-        if (!resumable) return null;
+        // The API returns newest first. Never resurrect an older proposal
+        // merely because the latest one has reached a terminal state.
+        const latest = items[0];
+        const resumable = latest && ["executing", "waiting_user", "ready", "needs_clarification", "failed"].includes(latest.status) ? latest : null;
+        if (!resumable) { this.clearProposal(); return null; }
         const detail = await fetchItineraryProposal(sessionId, resumable.id, request.signal);
         if (!proposalRequests.isCurrent(request) || this.current?.id !== sessionId) return null;
         return await this.resumeProposal(detail);

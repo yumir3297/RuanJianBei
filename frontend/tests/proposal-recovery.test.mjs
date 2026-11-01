@@ -24,6 +24,30 @@ beforeEach(() => {
 });
 after(async () => { store?.clearProposal(); await vite.close(); });
 
+test('latest failed proposal is restored instead of an older ready proposal', async () => {
+  const failed = { ...proposal('a', 'failed'), id: 'failed-new', validation: { message: '提案未能完成' } };
+  const older = { ...proposal(), id: 'ready-old' };
+  route = async config => {
+    if (config.url.endsWith('/proposals')) return { items: [failed, older] };
+    if (config.url.endsWith('/proposals/failed-new')) return failed;
+    if (config.url.endsWith('/proposals/ready-old')) return older;
+    throw new Error(config.url);
+  };
+  await store.restoreProposal();
+  assert.equal(store.proposal.id, 'failed-new');
+  assert.equal(store.proposal.status, 'failed');
+});
+
+test('latest applied proposal does not resurrect an older ready proposal', async () => {
+  store.proposal = { ...proposal(), id: 'ready-old' };
+  route = async config => {
+    if (config.url.endsWith('/proposals')) return { items: [{ ...proposal('a', 'applied'), id: 'applied-new' }, { ...proposal(), id: 'ready-old' }] };
+    throw new Error(`unexpected detail request ${config.url}`);
+  };
+  await store.restoreProposal();
+  assert.equal(store.proposal, null);
+});
+
 test('opening a tour restores a ready proposal and its base without changing the saved draft', async () => {
   route = async config => {
     if (config.url === '/tour-sessions/a') return { id: 'a', version: 1, snapshot: snapshot('saved') };
