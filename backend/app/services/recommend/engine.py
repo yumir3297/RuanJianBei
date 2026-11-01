@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 
 from app.repositories.route import RouteRepository
@@ -96,21 +97,21 @@ class RecommendEngine:
 
     @staticmethod
     def _duration_hours(duration_label: str, available_hours: int) -> int:
-        match = re.search(r"(\d+)", duration_label)
+        match = re.search(r"(\d+(?:\.\d+)?)\s*(?:[-–—~～至]\s*(\d+(?:\.\d+)?))?", duration_label)
         if not match:
             return max(1, available_hours)
-        return min(int(match.group(1)), available_hours)
+        return max(1, math.ceil(max(float(match.group(1)), float(match.group(2) or match.group(1)))))
 
     @staticmethod
     def _build_reason(route_title: str, request: RecommendRequest, *, alternative: bool) -> str:
         interests = "、".join(request.interests) if request.interests else "综合游览"
         audience = request.audience_type or "general"
-        base = f"根据 {interests} 兴趣、{request.available_hours} 小时可用时间和 {audience} 人群偏好，匹配到 {route_title}。"
+        base = f"参考 {interests} 兴趣和 {audience} 人群偏好，推荐预设路线 {route_title}；路线时长与您可用的 {request.available_hours} 小时是否相符请自行核对。"
         comfort_tags = RecommendEngine._comfort_tags(request)
         if comfort_tags:
-            base = f"{base} 已结合{'、'.join(comfort_tags)}需求，优先选择较短路线与室内停留点。"
+            base = f"{base} 已参考{'、'.join(comfort_tags)}需求，实际步行距离及开放情况请以现场为准。"
         if alternative:
-            return f"{base} 这条路线作为低拥挤或备选方案返回，方便现场二次选择。"
+            return f"{base} 这条路线作为备选方案，客流情况请以现场为准。"
         return base
 
     @staticmethod

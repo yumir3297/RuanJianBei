@@ -45,9 +45,19 @@ def test_hot_weather_selects_short_comfort_route_with_explanation() -> None:
         route = response.routes[0]
         assert route.route_id == "route_003"
         assert route.comfort_tags == ["\u51cf\u5c11\u66b4\u6652", "\u5c11\u8d70\u8def", "\u9ad8\u6e29\u907f\u6691"]
-        assert "\u4f18\u5148\u9009\u62e9\u8f83\u77ed\u8def\u7ebf\u4e0e\u5ba4\u5185\u505c\u7559\u70b9" in route.reason
+        assert "现场" in route.reason
 
     asyncio.run(scenario())
+
+
+def test_duration_is_not_truncated_to_available_budget():
+    assert RecommendEngine._duration_hours("3.5-4小时全景", 2) == 4
+    assert RecommendEngine._duration_hours("2.5小时", 2) == 3
+
+
+def test_alternative_is_not_described_as_low_crowd_without_data():
+    reason = RecommendEngine._build_reason("路线", RecommendRequest(session_id="test", avoid_crowded=True), alternative=True)
+    assert "低拥挤" not in reason
 
 
 def test_rain_is_inferred_from_weather_condition() -> None:
