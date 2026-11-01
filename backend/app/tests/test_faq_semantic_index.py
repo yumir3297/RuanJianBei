@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from app.services.qa.faq_matcher import FAQEntry, FAQMatcher
 
 
@@ -33,6 +34,20 @@ def entries() -> list[FAQEntry]:
         FAQEntry("location", "景点位置", ["灵山大佛在哪里", "灵山大佛位置"], "位置答案", ["official"]),
         FAQEntry("hours", "开放信息", ["灵山大佛开放时间"], "开放答案", ["official"]),
     ]
+
+
+def test_failed_semantic_build_does_not_install_partial_index():
+    matcher = FAQMatcher()
+    matcher.add(entries())
+
+    class BrokenEmbedder(FakeEmbedder):
+        def embed_texts(self, texts):
+            raise RuntimeError("model failed")
+
+    with pytest.raises(RuntimeError, match="model failed"):
+        matcher.ensure_semantic_index(BrokenEmbedder(), threshold=0.8)
+    assert matcher.semantic_index is None
+    assert matcher.match("灵山大佛在哪里").entry.id == "location"
 
 
 def test_semantic_index_precomputes_aliases_and_embeds_query_once() -> None:

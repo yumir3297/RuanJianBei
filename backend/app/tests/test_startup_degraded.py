@@ -1,9 +1,11 @@
 import asyncio
 
+import pytest
 from httpx import ASGITransport, AsyncClient
 
 
-def test_missing_embedding_model_allows_startup_but_is_not_ready(monkeypatch, tmp_path):
+@pytest.mark.parametrize("failure", ["embedding_model_unavailable", "faq_semantic_index_unavailable"])
+def test_missing_model_or_semantic_index_allows_startup_but_is_not_ready(monkeypatch, tmp_path, failure):
     import main
     from app.api import chat
     from app.core.config import Settings
@@ -27,11 +29,16 @@ def test_missing_embedding_model_allows_startup_but_is_not_ready(monkeypatch, tm
         monkeypatch.setattr(main, name, noop)
     monkeypatch.setattr(main, "run_publication_worker", worker)
     monkeypatch.setattr(main, "run_import_worker", worker)
-    monkeypatch.setattr(runtime, "get_runtime_faq_matcher", noop)
+    async def faq(_session, *, embedder=None, **_kwargs):
+        if embedder is not None and failure == "faq_semantic_index_unavailable":
+            raise RuntimeError("semantic index failed")
+    monkeypatch.setattr(runtime, "get_runtime_faq_matcher", faq)
     monkeypatch.setattr(chat, "get_cached_reranker", lambda *args: None)
 
     def missing(*args):
-        raise RuntimeError("embedding model unavailable")
+        if failure == "embedding_model_unavailable":
+            raise RuntimeError("embedding model unavailable")
+        return object()
     monkeypatch.setattr(chat, "get_cached_embedder", missing)
 
     class Session:
@@ -50,5 +57,5 @@ def test_missing_embedding_model_allows_startup_but_is_not_ready(monkeypatch, tm
                 assert (await client.get("/health")).status_code == 200
                 ready = await client.get("/ready")
                 assert ready.status_code == 503
-                assert "embedding_model_unavailable" in ready.json()["failures"]
+                assert failure in ready.json()["failures"]
     asyncio.run(scenario())

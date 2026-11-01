@@ -107,8 +107,10 @@ class FAQMatcher:
         ):
             return 0.0
 
-        self.semantic_index = FAQSemanticIndex(embedder, threshold)
-        return self.semantic_index.build(self.entries)
+        candidate = FAQSemanticIndex(embedder, threshold)
+        elapsed = candidate.build(self.entries)
+        self.semantic_index = candidate
+        return elapsed
 
     def match_exact(self, query: str) -> FAQEntry | None:
         return self.exact_index.get(self._normalize(query))

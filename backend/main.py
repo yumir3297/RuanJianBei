@@ -104,9 +104,17 @@ async def lifespan(app: FastAPI):
         settings.reranker_max_length,
     )
 
-    # 预热 FAQ 语义索引（202条alias编码，~275ms）
+    # Load exact/fuzzy FAQ first; a semantic-index failure must not prevent startup.
     async with AsyncSessionLocal() as session:
-        faq_matcher = await get_runtime_faq_matcher(session, embedder=embedder)
+        await get_runtime_faq_matcher(session)
+        if embedder is not None:
+            try:
+                await get_runtime_faq_matcher(session, embedder=embedder,
+                                              semantic_threshold=settings.faq_semantic_threshold)
+                app.state.faq_semantic_index_available = True
+            except Exception:
+                app.state.faq_semantic_index_available = False
+                logging.getLogger(__name__).exception("FAQ semantic index unavailable; using exact and fuzzy matching.")
 
     publication_worker = asyncio.create_task(run_publication_worker(settings))
     import_worker = asyncio.create_task(run_import_worker(settings))
@@ -143,6 +151,8 @@ def create_app() -> FastAPI:
         failures: list[str] = []
         if getattr(app.state, "embedding_model_available", None) is False:
             failures.append("embedding_model_unavailable")
+        if getattr(app.state, "faq_semantic_index_available", None) is False:
+            failures.append("faq_semantic_index_unavailable")
         async with AsyncSessionLocal() as session:
             try:
                 result = await session.execute(select(func.count(KnowledgeChunk.chunk_id)))
