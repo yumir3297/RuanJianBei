@@ -12,6 +12,7 @@ from app.core.config import Settings
 from app.schemas.itinerary import ItineraryOperation, TourSnapshotV2
 from app.services.itinerary.catalog import CatalogSnapshot, PublishedAttraction
 from app.services.itinerary.candidates import CandidateSearchTooLarge, select_candidate
+from app.services.itinerary.mutations import diff_snapshots
 from app.services.itinerary.provenance import normalize_snapshot_provenance
 
 
@@ -150,7 +151,8 @@ class ItineraryIntentService:
         constraints = candidate.constraints
         if not set(constraints.required_spots + constraints.excluded_spots).issubset(entries):
             raise IntentError("提案中的约束引用了无效景点")
-        diff = [{"kind": d.kind, "stop_id": d.stop_id, "before": d.before, "after": d.after} for d in result.diff]
+        diff = [{"kind": d.kind, "stop_id": d.stop_id, "before": d.before, "after": d.after}
+                for d in diff_snapshots(snapshot, candidate)]
         return {"status": "ready", "clarification": None,
                 "operations": [op.model_dump(mode="json") for op in selected.operations],
                 "candidate": candidate.model_dump(mode="json"), "diff": diff,

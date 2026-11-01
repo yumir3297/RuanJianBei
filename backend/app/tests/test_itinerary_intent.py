@@ -127,6 +127,30 @@ def test_intent_service_selects_candidate_after_shared_reducer_validation(monkey
     assert result["candidate"]["stops"][1]["evidence"][0]["evidence_type"] == "estimate"
 
 
+def test_proposal_diff_uses_canonical_candidate_not_model_supplied_name(monkeypatch):
+    payload = {"result": "operations", "operations": [
+        {"type": "add_visit", "spot_code": "B", "name": "模型编造的名称", "duration_minutes": 20}
+    ]}
+
+    class FakeResponse:
+        def raise_for_status(self): pass
+        def json(self): return {"choices": [{"message": {"content": json.dumps(payload)}}]}
+
+    class FakeClient:
+        async def __aenter__(self): return self
+        async def __aexit__(self, *_): return None
+        async def post(self, *_args, **_kwargs): return FakeResponse()
+
+    monkeypatch.setattr("app.services.itinerary.intent.httpx.AsyncClient", lambda **_kwargs: FakeClient())
+    catalog = CatalogSnapshot("site", (PublishedAttraction("site", "B", "entry", "revision", "已发布名称"),), "digest")
+    settings = Settings(llm_provider="openai", llm_api_key="test", llm_base_url="https://example.test", llm_model="test")
+    result = asyncio.run(ItineraryIntentService().propose("增加景点", TourSnapshotV2(), catalog, settings))
+    added = next(change["after"] for change in result["diff"] if change["kind"] == "added")
+    assert added == result["candidate"]["stops"][0]
+    assert added["name"] == "已发布名称"
+    assert added["duration_basis"] == "estimate"
+
+
 def test_intent_service_retries_one_invalid_format_then_accepts_valid_response(monkeypatch):
     valid_payload = {"result": "operations", "operations": [
         {"type": "set_duration", "stop_id": "00000000-0000-0000-0000-000000000002", "duration_minutes": 45}

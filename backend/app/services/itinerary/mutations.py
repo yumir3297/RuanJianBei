@@ -173,7 +173,7 @@ def _validate(snapshot: TourSnapshotV2) -> tuple[Validation, tuple[str, ...], in
     return "pass", (), known_minutes
 
 
-def _diff(before: TourSnapshotV2, after: TourSnapshotV2) -> tuple[ItineraryDiff, ...]:
+def diff_snapshots(before: TourSnapshotV2, after: TourSnapshotV2) -> tuple[ItineraryDiff, ...]:
     old = {stop.stop_id: stop for stop in before.stops}
     new = {stop.stop_id: stop for stop in after.stops}
     result: list[ItineraryDiff] = []
@@ -233,4 +233,4 @@ def apply_manual_operations(
     validation, conflicts, known_minutes = _validate(candidate)
     if validation == "conflict":
         return MutationResult(original, (), validation, conflicts, known_minutes)
-    return MutationResult(candidate, _diff(original, candidate), validation, (), known_minutes)
+    return MutationResult(candidate, diff_snapshots(original, candidate), validation, (), known_minutes)
