@@ -34,3 +34,18 @@ print(json.dumps({'count': store.count(), 'ids': [r.id for r in store.query([1.0
                                capture_output=True, text=True, check=True, timeout=30)
     result = json.loads(completed.stdout.strip().splitlines()[-1])
     assert result == {"count": 2, "ids": ["c", "b"]}
+
+
+def test_real_chroma_failed_replacement_preserves_active_index(tmp_path):
+    store = ChromaVectorStore(tmp_path, "guide_failure")
+    original = VectorStoreRecord("original", "old", {"category": "history"}, [1.0, 0.0])
+    store.replace_all([original])
+    active_before = store.collection_name
+    duplicate = VectorStoreRecord("duplicate", "new", {"category": "nature"}, [0.0, 1.0])
+
+    with pytest.raises(Exception):
+        store.replace_all([duplicate, duplicate])
+
+    assert store.collection_name == active_before
+    assert [item.id for item in store.query([1.0, 0.0], 2)] == ["original"]
+    assert {item.name for item in store._client.list_collections()} == {active_before}
