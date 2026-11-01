@@ -433,6 +433,7 @@ async def create_itinerary_proposal(
 @router.get("/{session_id}/proposals")
 async def list_itinerary_proposals(
     session_id: str,
+    response: Response,
     limit: Annotated[int, Query(ge=1, le=20)] = 10,
     identity: TourIdentity = Depends(get_tour_identity),
     db: AsyncSession = Depends(get_db_session),
@@ -440,14 +441,16 @@ async def list_itinerary_proposals(
     items = await TourSessionRepository(db).list_proposals(identity.id, session_id, limit)
     if items is None:
         raise HTTPException(status_code=404, detail="游览不存在")
+    response.headers["Cache-Control"] = "no-store"
     return {"items": items}
 
 
 @router.get("/{session_id}/proposals/{proposal_id}")
-async def get_itinerary_proposal(session_id: str, proposal_id: str,
+async def get_itinerary_proposal(session_id: str, proposal_id: str, response: Response,
         identity: TourIdentity = Depends(get_tour_identity), db: AsyncSession = Depends(get_db_session)):
     item = await TourSessionRepository(db).get_proposal(identity.id, session_id, proposal_id)
     if item is None: raise HTTPException(status_code=404, detail="行程提案不存在")
+    response.headers["Cache-Control"] = "no-store"
     return item
 
 

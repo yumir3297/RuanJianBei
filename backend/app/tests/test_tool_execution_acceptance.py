@@ -116,6 +116,10 @@ def test_proposal_api_replays_same_request_and_conflicts_on_changed_payload(monk
                 summaries = await client.get(path)
                 assert summaries.status_code == 200, summaries.text
                 assert summaries.json()["items"][0]["request_text"] == payload["text"]
+                assert summaries.headers.get("cache-control") == "no-store"
+                detail = await client.get(f"{path}/{first.json()['id']}")
+                assert detail.status_code == 200, detail.text
+                assert detail.headers.get("cache-control") == "no-store"
                 async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as stranger:
                     await stranger.get("/api/tour-sessions/bootstrap")
                     denied = await stranger.get(path)
