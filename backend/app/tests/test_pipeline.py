@@ -1133,6 +1133,8 @@ def test_chat_route_uses_clear_natural_language_time_budget():
     assert _explicit_route_hours("半天路线") is None
     assert _explicit_route_hours("至少三小时的路线") is None
     assert _explicit_route_hours("三小时后到景区，推荐路线") is None
+    assert _explicit_route_hours("一小时30分钟路线") is None
+    assert _explicit_route_hours("3小时以上的路线") is None
 
 
 def test_ambiguous_route_time_is_disclosed():
