@@ -349,6 +349,8 @@ def build_execution_report(
     warm_results = [result for result in results if not result["is_cold_start"]]
     completed_results = [result for result in results if result["checks"]["stream_completed"] and not result["error_type"]]
     failed_results = [result for result in results if not result["checks"]["stream_completed"] or result["error_type"]]
+    source_case_ids = {case.id for case in cases if case.expected_sources}
+    source_results = [result for result in results if result["id"] in source_case_ids]
 
     return {
         "mode": mode,
@@ -369,7 +371,9 @@ def build_execution_report(
             "evidence_rate": "仅统计引用标记出现，未进行证据语义支持核验。",
             "refusal_pass_rate": "基于固定拒答词与规则，不等于安全性结论。",
             "latency": "串行单次请求；all 包含失败，completed 仅指流完整结束，不代表回答正确；冷/热不保证真实缓存状态。",
+            "source_hit_rate": "仅统计配置了预期来源的题目，关键词命中不代表引用支持回答。",
         },
+        "metric_sample_counts": {"source_hit_rate": len(source_results)},
         "metrics": {
             "accuracy": _rate(results, lambda item: item["accuracy_pass"]),
             "evidence_rate": _rate(
@@ -380,7 +384,7 @@ def build_execution_report(
                 refusal_cases,
                 lambda item: item["checks"]["refusal_correct"] and item["accuracy_pass"],
             ),
-            "source_hit_rate": _rate(results, lambda item: item["checks"]["source_hit"]),
+            "source_hit_rate": _rate(source_results, lambda item: item["checks"]["source_hit"]),
         },
         "latency_ms": {
             "first_text_all": summarize_latency(

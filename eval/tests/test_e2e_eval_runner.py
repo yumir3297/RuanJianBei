@@ -105,6 +105,21 @@ def mock_cases() -> list[E2ECase]:
     ]
 
 
+def test_source_hit_rate_excludes_cases_without_expected_sources():
+    cases = [mock_cases()[0], mock_cases()[2]]
+    results = [
+        {"expected_behavior": c.expected_behavior, "id": c.id, "is_cold_start": False,
+         "checks": {"stream_completed": True, "source_hit": hit, "citation_present": False,
+                    "refusal_correct": False}, "error_type": None, "accuracy_pass": False,
+         "first_text_ms": None, "total_ms": 1}
+        for c, hit in zip(cases, [False, True])
+    ]
+    report = build_execution_report(mode="local-server", testset_path=Path("mock.json"),
+                                    cases=cases, results=results)
+    assert report["metrics"]["source_hit_rate"] == 0.0
+    assert report["metric_sample_counts"]["source_hit_rate"] == 1
+
+
 def test_seed_testset_is_valid() -> None:
     cases = load_cases(Path(__file__).resolve().parents[1] / "testset" / "e2e_qa_seed.json")
 
