@@ -847,6 +847,14 @@ class QAPipeline:
         if not routes:
             return None
 
+        budget = request.selection.available_hours if request.selection else None
+        if budget is not None:
+            fitting = [route for route in routes
+                       if (hours := RecommendEngine._duration_hours(route.duration_label, budget)) is not None
+                       and hours <= budget]
+            if fitting:
+                routes = fitting
+
         def pick(*keywords: str):
             return next(
                 (

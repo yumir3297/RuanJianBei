@@ -1070,6 +1070,23 @@ def test_pipeline_uses_backend_preset_route() -> None:
     assert events[-1].type == "done"
 
 
+def test_chat_route_respects_explicit_budget_before_keyword_preference():
+    from types import SimpleNamespace
+    class Routes:
+        async def list_all(self):
+            return [
+                SimpleNamespace(id="route_001", title="亲子长线", tags="亲子", duration_label="6小时", route_plan="入口→大佛", source="模板", guide_points_json="[]", experiences_json="[]"),
+                SimpleNamespace(id="route_002", title="短线", tags="", duration_label="2小时", route_plan="入口→梵宫", source="模板", guide_points_json="[]", experiences_json="[]"),
+            ]
+    async def scenario():
+        pipeline = _build_test_pipeline(route_repository=Routes())
+        answer, _ = await pipeline._build_static_route_answer(ChatRequest(
+            query="亲子路线", session_id="route-budget", selection=SelectionContext(mode="route", available_hours=2)))
+        assert "短线" in answer
+        assert "亲子长线" not in answer
+    asyncio.run(scenario())
+
+
 def _faq_matcher():
     matcher = FAQMatcher()
     matcher.add(
