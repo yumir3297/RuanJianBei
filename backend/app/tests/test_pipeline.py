@@ -1145,6 +1145,18 @@ def test_ambiguous_route_time_is_disclosed():
     asyncio.run(scenario())
 
 
+def test_conflicting_route_budgets_request_clarification():
+    async def scenario():
+        pipeline = _build_test_pipeline(route_repository=DummyRouteRepository())
+        answer, sources = await pipeline._build_static_route_answer(ChatRequest(
+            query="我有三个小时，推荐路线", session_id="route-conflict",
+            selection=SelectionContext(mode="route", available_hours=2)))
+        assert "2小时" in answer and "3小时" in answer
+        assert "确认" in answer
+        assert sources == []
+    asyncio.run(scenario())
+
+
 def _faq_matcher():
     matcher = FAQMatcher()
     matcher.add(
