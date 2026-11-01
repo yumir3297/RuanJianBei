@@ -114,6 +114,7 @@ def test_restored_proposal_diff_is_rebuilt_from_recorded_snapshots():
             created = await repo.create_session("owner-a", "site", "游览", snapshot, "create")
             candidate = json.loads(json.dumps(snapshot))
             candidate["stops"][0]["name"] = "已发布名称"
+            candidate["stops"][0]["duration_minutes"] = 35
             generated = {"status": "ready", "base_snapshot": snapshot, "operations": [],
                 "candidate": candidate, "diff": [{"kind": "changed", "after": {"name": "错误名称"}}],
                 "validation": {"status": "pass", "conflicts": []}, "clarification": None}
@@ -121,6 +122,7 @@ def test_restored_proposal_diff_is_rebuilt_from_recorded_snapshots():
                 "catalog", "修改", generated, "proposal")
             restored = await repo.get_proposal("owner-a", created["id"], proposal["id"])
             assert restored["diff"][0]["after"]["name"] == "已发布名称"
+            assert restored["validation"]["status"] == "unverified"
             from app.models.tour_session import ItineraryProposal
             await db.execute(update(ItineraryProposal).where(ItineraryProposal.id == proposal["id"]).values(base_snapshot_json="{}"))
             await db.commit()

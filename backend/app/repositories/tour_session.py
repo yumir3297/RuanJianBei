@@ -452,12 +452,23 @@ class TourSessionRepository:
     def _proposal_payload(row: ItineraryProposal) -> dict:
         base, candidate = _decode(row.base_snapshot_json), _decode(row.candidate_json)
         diff = json.loads(row.diff_json)
+        validation = json.loads(row.validation_json)
         comparable = isinstance(base, dict) and isinstance(candidate, dict) and base.get("schema_version") == 2 and candidate.get("schema_version") == 2
         if comparable:
             try:
-                changes = diff_snapshots(TourSnapshotV2.model_validate(base), TourSnapshotV2.model_validate(candidate))
+                base_snapshot = TourSnapshotV2.model_validate(base)
+                candidate_snapshot = TourSnapshotV2.model_validate(candidate)
+                changes = diff_snapshots(base_snapshot, candidate_snapshot)
                 diff = [{"kind": change.kind, "stop_id": change.stop_id, "before": change.before, "after": change.after}
                         for change in changes]
+                old_stops = {stop.stop_id: stop for stop in base_snapshot.stops}
+                estimated = any(stop.duration_basis == "estimate" or (
+                    stop.duration_minutes is not None and
+                    (stop.stop_id not in old_stops or old_stops[stop.stop_id].duration_minutes != stop.duration_minutes)
+                ) for stop in candidate_snapshot.stops)
+                estimated |= any(leg.duration_basis == "estimate" for leg in candidate_snapshot.legs)
+                if estimated and validation.get("status") == "pass":
+                    validation["status"] = "unverified"
             except ValidationError:
                 comparable = False
         return {"id": row.id, "session_id": row.session_id, "base_version": row.base_version,
@@ -465,7 +476,7 @@ class TourSessionRepository:
             "catalog_digest": row.catalog_digest, "status": row.status, "request_text": row.request_text,
             "base_snapshot": base, "execution_job_id": row.execution_job_id,
             "operations": json.loads(row.operations_json), "candidate": candidate,
-            "diff": diff, "diff_verifiable": comparable, "validation": json.loads(row.validation_json),
+            "diff": diff, "diff_verifiable": comparable, "validation": validation,
             "clarification": row.clarification, "expires_at": row.expires_at.isoformat(),
             "applied_revision_id": row.applied_revision_id}
 
