@@ -53,6 +53,7 @@ def test_hot_weather_selects_short_comfort_route_with_explanation() -> None:
 def test_duration_is_not_truncated_to_available_budget():
     assert RecommendEngine._duration_hours("3.5-4小时全景", 2) == 4
     assert RecommendEngine._duration_hours("2.5小时", 2) == 3
+    assert RecommendEngine._duration_hours("时长待定", 2) is None
 
 
 def test_alternative_is_not_described_as_low_crowd_without_data():

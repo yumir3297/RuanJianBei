@@ -228,7 +228,7 @@ async function loadRecommendations() {
     if (token !== requestId) return;
     recommendations.value = (Array.isArray(data?.routes) ? data.routes : []).map(item => ({
       id: "recommended-" + item.route_id, routeId: item.route_id, title: String(item.title || "游览路线").replace(/^推荐[：:]/, ""),
-      duration_label: item.duration_label || (item.duration_hours || 2) + "小时",
+      duration_label: item.duration_label || (item.duration_hours != null ? item.duration_hours + "小时" : "时长待确认"),
       tags: [...(item.comfort_tags || []), "景区资料"],
       spots: String(item.route_plan || "").split(/\s*(?:→|->|—|－)\s*/).map(spot => spot.trim()).filter(Boolean),
       guide: [item.reason, ...(item.guide_points || [])].filter(Boolean).join("\n"), features: (item.experiences || []).join("；"),

@@ -96,10 +96,10 @@ class RecommendEngine:
         )
 
     @staticmethod
-    def _duration_hours(duration_label: str, available_hours: int) -> int:
-        match = re.search(r"(\d+(?:\.\d+)?)\s*(?:[-–—~～至]\s*(\d+(?:\.\d+)?))?", duration_label)
+    def _duration_hours(duration_label: str, available_hours: int) -> int | None:
+        match = re.search(r"(\d+(?:\.\d+)?)\s*(?:[-–—~～至]\s*(\d+(?:\.\d+)?))?\s*(?:小时|hours?)", duration_label, re.IGNORECASE)
         if not match:
-            return max(1, available_hours)
+            return None
         return max(1, math.ceil(max(float(match.group(1)), float(match.group(2) or match.group(1)))))
 
     @staticmethod

@@ -18,7 +18,7 @@ class RecommendItem(BaseModel):
     route_id: str
     title: str
     reason: str
-    duration_hours: int
+    duration_hours: int | None
     duration_label: str
     route_plan: str
     guide_points: list[str] = Field(default_factory=list)
