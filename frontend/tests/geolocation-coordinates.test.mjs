@@ -1,14 +1,14 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'vite';
-let vite, useGeolocation, narrationPosition, canFinishNarration, correct, callback, savedNavigator;
+let vite, useGeolocation, narrationPosition, demoNarrationPosition, canFinishNarration, correct, callback, savedNavigator;
 before(async () => {
  savedNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { geolocation: {
  watchPosition(success) { callback = success; return 17; }, clearWatch() {},
  } } });
  vite = await createServer({ configFile: false, cacheDir: '/private/tmp/guide-vite-geo-coordinate-tests', server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
- ({ useGeolocation, narrationPosition, canFinishNarration } = await vite.ssrLoadModule('/src/composables/useGeolocation.js'));
+ ({ useGeolocation, narrationPosition, demoNarrationPosition, canFinishNarration } = await vite.ssrLoadModule('/src/composables/useGeolocation.js'));
  ({ wgs84ToGcj02: correct } = await vite.ssrLoadModule('/src/constants/narration.js'));
 });
 after(async () => {
@@ -17,6 +17,11 @@ after(async () => {
  else delete globalThis.navigator;
 });
 const good = { latitude: 31.4285, longitude: 120.0998, accuracy: 8 };
+test('demo spot coordinates only trigger narration in simulation mode', () => {
+ const position = { lat: 31, lng: 120 };
+ assert.equal(demoNarrationPosition('real', position), null);
+ assert.equal(demoNarrationPosition('sim', position), position);
+});
 test('automatic narration remains valid only while near the spot with usable location', () => {
  const spot = { lat: 31.42, lng: 120.10 };
  assert.equal(canFinishNarration('real', spot, spot), true);

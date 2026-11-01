@@ -36,6 +36,7 @@
       <button type="button" @click="toggleWalk">{{ walking ? "停止巡游" : "模拟巡游" }}</button>
       <span>模式：{{ modeLabel }}</span>
     </div>
+    <p v-if="narrateOn" class="map-note">自动讲解使用演示景点坐标，仅在模拟巡游时触发；真实定位下可手动选择景点讲解。</p>
 
     <div class="map-live">
       <div class="map-live-item">
@@ -110,7 +111,7 @@ import SpotNarrationCard from "../../components/SpotNarrationCard.vue";
 import { scenicSpots, PRESET_ROUTES } from "../../constants/touristCatalog";
 import { LINGSHAN_CENTER, MAP_ZONES, SPOT_COORDS, ROUTE_ALIASES } from "../../constants/mapSpots";
 import { useAudioPlayer } from "../../composables/useAudioPlayer";
-import { useGeolocation, narrationPosition, canFinishNarration } from "../../composables/useGeolocation";
+import { useGeolocation, demoNarrationPosition, canFinishNarration } from "../../composables/useGeolocation";
 import { useNarration } from "../../composables/useNarration";
 import { speechText } from "../../constants/narration";
 import { fetchSpotNarration } from "../../api/narration";
@@ -339,7 +340,7 @@ let mapToolActive = false;
 let activeNarrationSession = null;
 
 const narration = useNarration({
-  getPosition: () => narrationPosition(geo.mode.value, geo.position.value),
+  getPosition: () => demoNarrationPosition(geo.mode.value, geo.position.value),
   getSpots: () => spots,
   isBusy: () => props.busy || audio.isPlaying.value,
   onTrigger: (spot) => playNarration(spot, { automatic: true }),
@@ -405,7 +406,7 @@ async function playNarration(spot, { automatic = false } = {}) {
   }
 
   if (!request.isCurrent() || activeNarrationSession?.id !== playbackSession.id) return;
-  if (automatic && !canFinishNarration(geo.mode.value, geo.position.value, spot)) {
+  if (automatic && (geo.mode.value !== "sim" || !canFinishNarration(geo.mode.value, geo.position.value, spot))) {
     stopNarration();
     throw new Error("自动讲解位置已失效");
   }

@@ -17,6 +17,10 @@ export function narrationPosition(mode, position) {
   return mode === "real" || mode === "sim" ? position : null;
 }
 
+export function demoNarrationPosition(mode, position) {
+  return mode === "sim" ? position : null;
+}
+
 export function canFinishNarration(mode, position, spot) {
   const current = narrationPosition(mode, position);
   return Boolean(current && spot && haversineMeters(current, spot) <= EXIT_RADIUS_M);
