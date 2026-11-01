@@ -78,18 +78,22 @@ export function useNarration({ getPosition, getSpots, isBusy, onTrigger, onInter
   /** 由外部在「忙 -> 空闲」时驱动。 */
   function drainPending() {
     if (!pendingSpot) return;
+    const position = getPosition();
+    if (!position || haversineMeters(position, pendingSpot) > EXIT_RADIUS_M) {
+      pendingSpot = null;
+      pendingSince = 0;
+      status.value = "idle";
+      return;
+    }
     if (isBusy && isBusy()) {
       // 排队过久说明当前播放卡住或过长，中断后补播，避免功能被永久阻塞
       if (Date.now() - pendingSince < maxPendingWaitMs) return;
       if (onInterrupt) onInterrupt();
     }
     const spot = pendingSpot;
-    const position = getPosition();
     pendingSpot = null;
     pendingSince = 0;
     status.value = "idle";
-    if (!position) return;
-    if (haversineMeters(position, spot) > EXIT_RADIUS_M) return; // 已走远，丢弃
     fire(spot);
   }
 
