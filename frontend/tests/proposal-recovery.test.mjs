@@ -65,6 +65,41 @@ test('equal proposal timestamps do not silently choose a random latest task', as
   assert.equal(store.proposal.id, 'first');
 });
 
+test('a chosen proposal arriving after switching tours cannot replace the new tour', async () => {
+  const late = deferred();
+  store.proposalChoices = [{ ...proposal('a', 'ready'), id: 'first' }];
+  route = async config => {
+    if (config.url.endsWith('/proposals/first')) return late.promise;
+    throw new Error(config.url);
+  };
+  const pending = store.selectProposalChoice('first');
+  await tick();
+  store.clearProposal();
+  store.current = { id: 'b', version: 1, snapshot: snapshot('b') };
+  store.draftSnapshot = snapshot('b');
+  late.resolve({ ...proposal('a'), id: 'first' });
+  await pending;
+  assert.equal(store.current.id, 'b');
+  assert.equal(store.proposal, null);
+  assert.deepEqual(store.draftSnapshot, snapshot('b'));
+});
+
+test('only the latest explicitly chosen proposal may update the current view', async () => {
+  const late = deferred();
+  store.proposalChoices = [{ ...proposal(), id: 'first' }, { ...proposal(), id: 'second' }];
+  route = async config => {
+    if (config.url.endsWith('/proposals/first')) return late.promise;
+    if (config.url.endsWith('/proposals/second')) return { ...proposal(), id: 'second' };
+    throw new Error(config.url);
+  };
+  const older = store.selectProposalChoice('first');
+  await tick();
+  await store.selectProposalChoice('second');
+  late.resolve({ ...proposal(), id: 'first' });
+  await older;
+  assert.equal(store.proposal.id, 'second');
+});
+
 test('opening a tour restores a ready proposal and its base without changing the saved draft', async () => {
   route = async config => {
     if (config.url === '/tour-sessions/a') return { id: 'a', version: 1, snapshot: snapshot('saved') };
