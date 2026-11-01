@@ -1131,6 +1131,18 @@ def test_chat_route_uses_clear_natural_language_time_budget():
     assert _explicit_route_hours("两三小时路线") is None
     assert _explicit_route_hours("2到4小时路线") is None
     assert _explicit_route_hours("半天路线") is None
+    assert _explicit_route_hours("至少三小时的路线") is None
+    assert _explicit_route_hours("三小时后到景区，推荐路线") is None
+
+
+def test_ambiguous_route_time_is_disclosed():
+    async def scenario():
+        pipeline = _build_test_pipeline(route_repository=DummyRouteRepository())
+        answer, _ = await pipeline._build_static_route_answer(ChatRequest(
+            query="1.5小时的亲子路线", session_id="route-unclear"))
+        assert "未能确定" in answer
+        assert "时间预算" in answer
+    asyncio.run(scenario())
 
 
 def _faq_matcher():
