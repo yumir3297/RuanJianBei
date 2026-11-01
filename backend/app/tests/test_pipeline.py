@@ -480,6 +480,13 @@ def test_ticket_prices_do_not_return_unverified_faq():
     assert events[-1].data["degraded"] is True
 
 
+def test_train_ticket_query_is_not_mislabeled_as_scenic_admission():
+    events = _run_turn(_build_test_pipeline(), query="无锡火车票价是多少", text_only=True, selection=None)
+    final = next(event.data["text"] for event in events if event.type == "text")
+    assert "门票" not in final
+    assert "官方" in final
+
+
 def test_attraction_scoped_query_does_not_use_unscoped_faq():
     matcher = FAQMatcher()
     matcher.add([FAQEntry(id="general-location", category="实用信息", aliases=["景区位置"],

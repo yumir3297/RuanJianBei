@@ -341,7 +341,7 @@ class QAPipeline:
         if ticket_discount or any(term in request.query for term in ticket_terms):
             async for event in self._emit_final_answer(
                 request=request, normalized_query=normalized_query,
-                answer="目前无法核实最新门票价格和优惠条件，请以景区官方票务信息或现场咨询为准。",
+                answer="目前无法核实最新票价和优惠条件，请以相关官方票务信息或现场咨询为准。",
                 sources=[], hit_level="ticket_unverified", start=start,
                 resolved=resolved, expected_epoch=request_epoch,
             ):
