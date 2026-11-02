@@ -7,6 +7,38 @@ from app.schemas.itinerary import TourSnapshotV2
 from app.services.itinerary.provenance import normalize_snapshot_provenance
 
 
+def test_replaced_attraction_does_not_inherit_old_duration_evidence():
+    stop_id = str(uuid4())
+    previous = TourSnapshotV2.model_validate({"stops": [{
+        "stop_id": stop_id, "kind": "visit", "spot_code": "A", "name": "甲",
+        "duration_minutes": 30, "duration_basis": "source",
+        "evidence": [{"evidence_type": "published_content", "reference_id": "source-A"}],
+    }]})
+    raw = previous.model_dump(mode="json")
+    raw["stops"][0].update(spot_code="B", name="乙")
+    updated = normalize_snapshot_provenance(TourSnapshotV2.model_validate(raw), previous=previous,
+                                             new_stop_created_by="ai")
+    assert updated.stops[0].duration_basis == "estimate"
+    assert all(item.reference_id != "source-A" for item in updated.stops[0].evidence)
+
+
+def test_replaced_attraction_does_not_inherit_route_leg_evidence():
+    first, second = str(uuid4()), str(uuid4())
+    previous = TourSnapshotV2.model_validate({
+        "stops": [
+            {"stop_id": first, "kind": "visit", "spot_code": "A", "name": "甲"},
+            {"stop_id": second, "kind": "visit", "spot_code": "B", "name": "乙"},
+        ],
+        "legs": [{"from_stop_id": first, "to_stop_id": second, "duration_minutes": 10,
+                  "duration_basis": "source", "evidence": [{"evidence_type": "published_content", "reference_id": "old-route"}]}],
+    })
+    raw = previous.model_dump(mode="json")
+    raw["stops"][0].update(spot_code="C", name="丙")
+    updated = normalize_snapshot_provenance(TourSnapshotV2.model_validate(raw), previous=previous)
+    assert updated.legs[0].duration_minutes is None
+    assert updated.legs[0].evidence == []
+
+
 def test_ai_proposed_durations_are_not_attributed_to_visitor_input():
     stop_id = str(uuid4())
     previous = TourSnapshotV2.model_validate({"stops": [{

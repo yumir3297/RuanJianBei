@@ -6,6 +6,18 @@ from app.schemas.itinerary import EvidenceReference, TourSnapshotV2
 from app.services.itinerary.catalog import PublishedAttraction
 
 
+def same_stop_location(old, new) -> bool:
+    if old.kind != new.kind or old.spot_code != new.spot_code:
+        return False
+    return old.kind != "visit" or old.spot_code is not None or old.name == new.name
+
+
+def mark_inherited_duration_unverified(stop) -> None:
+    stop.duration_basis = "estimate" if stop.duration_minutes is not None else "unknown"
+    stop.evidence = ([EvidenceReference(evidence_type="estimate", label="景点变更后原停留时长需重新确认")]
+                     if stop.duration_minutes is not None else [])
+
+
 def normalize_snapshot_provenance(
     snapshot: TourSnapshotV2,
     *,
@@ -54,7 +66,9 @@ def normalize_snapshot_provenance(
 
         if old is not None:
             stop.created_by = old.created_by
-            if old.duration_minutes == stop.duration_minutes:
+            if not same_stop_location(old, stop) and old.duration_minutes == stop.duration_minutes:
+                mark_inherited_duration_unverified(stop)
+            elif old.duration_minutes == stop.duration_minutes:
                 stop.duration_basis = old.duration_basis
                 stop.evidence = old.evidence
             else:
@@ -67,9 +81,15 @@ def normalize_snapshot_provenance(
         (str(leg.from_stop_id), str(leg.to_stop_id)): leg
         for leg in previous.legs
     } if previous else {}
+    new_stops = {str(stop.stop_id): stop for stop in result.stops}
     for leg in result.legs:
         old = old_legs.get((str(leg.from_stop_id), str(leg.to_stop_id)))
-        if old is not None and old.duration_minutes == leg.duration_minutes:
+        endpoints_unchanged = all(
+            stop_id in old_stops and stop_id in new_stops
+            and same_stop_location(old_stops[stop_id], new_stops[stop_id])
+            for stop_id in (str(leg.from_stop_id), str(leg.to_stop_id))
+        )
+        if old is not None and endpoints_unchanged and old.duration_minutes == leg.duration_minutes:
             leg.duration_basis = old.duration_basis
             leg.evidence = old.evidence
         else:

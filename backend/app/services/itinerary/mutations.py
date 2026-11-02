@@ -18,6 +18,7 @@ from app.schemas.itinerary import (
     TourSnapshotV2,
     UpdateConstraints,
 )
+from app.services.itinerary.provenance import mark_inherited_duration_unverified
 
 Validation = Literal["pass", "conflict", "unverified"]
 Actor = Literal["manual", "ai"]
@@ -114,8 +115,12 @@ def _apply(snapshot: TourSnapshotV2, operation: ItineraryOperation,
             if _lock(stop, "name") or _lock(stop, "spot_code"):
                 raise _RejectedOperation("景点信息已锁定，不能替换")
             _check_catalog(operation.spot_code, catalog_spot_codes)
+            location_changed = (stop.spot_code != operation.spot_code or
+                                (stop.spot_code is None and stop.name != operation.name))
             stop.name = operation.name
             stop.spot_code = operation.spot_code
+            if location_changed:
+                mark_inherited_duration_unverified(stop)
             stop.source_entry_id = None
             stop.source_revision_id = None
             stop.legacy_spot_id = None

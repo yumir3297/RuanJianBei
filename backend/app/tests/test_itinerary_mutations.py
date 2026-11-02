@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from pydantic import TypeAdapter
 
-from app.schemas.itinerary import ItineraryOperation, TourSnapshotV2
+from app.schemas.itinerary import EvidenceReference, ItineraryOperation, TourSnapshotV2
 from app.services.itinerary.mutations import apply_manual_operations
 
 operation_adapter = TypeAdapter(ItineraryOperation)
@@ -24,6 +24,18 @@ def _snapshot(**overrides) -> TourSnapshotV2:
 
 
 class ItineraryMutationTests(unittest.TestCase):
+    def test_replace_visit_marks_inherited_duration_unverified(self):
+        snapshot = _snapshot(constraints={"available_minutes": 120})
+        snapshot.stops[0].duration_basis = "source"
+        snapshot.stops[0].evidence = [EvidenceReference(evidence_type="published_content", reference_id="old")]
+        operation = operation_adapter.validate_python({
+            "type": "replace_visit", "stop_id": str(snapshot.stops[0].stop_id),
+            "name": "新景点", "spot_code": "LS-02",
+        })
+        result = apply_manual_operations(snapshot, [operation], catalog_spot_codes={"LS-01", "LS-02"}, actor="ai")
+        self.assertEqual(result.validation, "unverified")
+        self.assertEqual(result.snapshot.stops[0].duration_basis, "estimate")
+
     def test_ai_cannot_add_or_replace_a_visit_without_published_spot_code(self):
         snapshot = _snapshot()
         for raw in (
