@@ -22,6 +22,8 @@
 
 行程提案需额外启动独立 worker；配置和命令见[开发指南](./docs/DEVELOPMENT.md#持久行程提案-worker)。API 已启动不代表 worker 正在处理任务。
 
+启动后可检查 `http://127.0.0.1:8000/ready`；503 表示存在所列未就绪项。`/health` 仅表示服务响应，不能证明真实模型或知识库可用。FAQ 故障恢复和多进程限制见[开发指南](./docs/DEVELOPMENT.md)。
+
 ### 前置要求
 
 - Python 3.13+
