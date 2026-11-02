@@ -12,6 +12,8 @@
 
 同日进一步在隔离 SQLite 实验：保持外键开启，实验性地以原生 `ALTER TABLE ... ADD COLUMN ... REFERENCES` 替代知识迁移中两处表重建，合成知识及游览任务关联保留，`foreign_key_check` 为空，缓存清空。实验库与全新 head 对照所有表的列名、外键指向及索引名/列/唯一性，仅显示缺少语音字段；实验未执行该字段的独立补齐迁移。未比较列类型、默认值、约束名、check/unique 约束或失败恢复，也未验证真实数据和 PostgreSQL；本实验未形成可执行修复方案，不能用于生产。
 
+补充反射对照：共有列类型、可空性、默认值及可反射 unique/check 定义未发现差异；三个实验新增外键为匿名，新库对应外键有名称。另在同类 SQLite 连接的事务内建表后主动抛错，回滚后表仍存在，说明该配置下 DDL 可部分持久化；这不是对完整迁移故障状态的穷举。隔离 PostgreSQL 17 实例已成功初始化、启动和停止，但实验 Python 缺少同步驱动 `psycopg`，没有完成 PostgreSQL 迁移验证，未访问现有数据库。
+
 2026-11-01 对照原 W02 快照 `48ef626`：对 `repositories/tool_execution.py`、执行器的 `registry.py`、`runner.py`、`worker.py` 与行程的 `intent.py`、`progress.py`、`provenance.py` 做 Python AST 函数/类名称集合比较，未发现原名称消失；这不证明签名、实现或行为等价。抽查 diff：当前任务仓库增加进度版本检查和父记录先 flush；handler 从原来的空 registry 扩展为行程提案，runner 增加事务内结果持久化，维护与取消逻辑也有修改。原 W02 快照并非集成提交的祖先，集成采用增量适配；剩余前端、迁移、文档及任务仓库逐项行为仍需核对，不能凭名称相同认定已全部合并。
 
 前端接口结构对照：`frontend/src/api/itinerary.js`、`api/tourSessions.js` 和 `stores/tourSessions.js` 的原有命名导出在集成版均可找到；前两个 API 文件的 diff 显示新增提案列表恢复与确认重复调用风险的重试，预算查询增加可选参数。集成版 store 有恢复、重试和确认路径，`frontend/tests/proposal-recovery.test.mjs` 覆盖部分模拟恢复及乱序。导出名称和局部测试不证明接口签名、所有 store 状态或页面行为完全等价；`ChatView.vue`、`RouteView.vue` 变化较大，真实浏览器、弱网及手机仍需验收。
