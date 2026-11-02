@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Literal
 
 from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, UploadFile, status
@@ -56,6 +57,17 @@ from app.services.tts.welcome_cache import _derive_model_key, generate_and_cache
 
 
 router = APIRouter(dependencies=[Depends(require_admin_token)])
+
+
+async def _reload_faq_after_commit(session: AsyncSession) -> float:
+    try:
+        return await reload_runtime_faq_matcher(session)
+    except Exception as error:
+        logging.getLogger(__name__).exception("FAQ reload failed after data commit")
+        raise HTTPException(status_code=503, detail={
+            "code": "faq_saved_reload_failed",
+            "message": "资料已保存，但 FAQ 刷新失败；请先核对已保存内容并联系管理员恢复索引，不要重复提交。",
+        }) from error
 
 VALID_VOICE_TYPES = {"gentle-female", "calm-female", "deep-male", "lively-female"}
 
@@ -141,7 +153,7 @@ async def resolve_blind_spot_with_faq(
         KnowledgeBlindSpotRepository(session),
         FAQRepository(session),
     ).resolve_with_faq(blind_spot_id, payload)
-    faq_reload_ms = await reload_runtime_faq_matcher(session)
+    faq_reload_ms = await _reload_faq_after_commit(session)
     faq_stats = get_runtime_faq_stats()
     return BlindSpotResolutionResponse(
         message="Knowledge blind spot resolved with FAQ.",
@@ -159,7 +171,7 @@ async def sync_processed_data(
     settings: Settings = Depends(get_app_settings),
 ) -> DataSyncResponse:
     report = await ProcessedDataImporter(session, settings).sync()
-    faq_reload_ms = await reload_runtime_faq_matcher(session)
+    faq_reload_ms = await _reload_faq_after_commit(session)
     faq_stats = get_runtime_faq_stats()
 
     return DataSyncResponse(

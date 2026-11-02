@@ -1,7 +1,9 @@
 import asyncio
 import json
 
+import pytest
 from fastapi import FastAPI
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
@@ -45,6 +47,59 @@ def build_client(db_path, monkeypatch):
     client = TestClient(app)
     client.headers.update({"Authorization": f"Bearer {create_admin_token(get_settings().admin_token_secret)}"})
     return client
+
+
+def test_faq_save_reports_committed_state_when_reload_fails(tmp_path, monkeypatch):
+    db_path = tmp_path / "reload-failure.db"
+    client = build_client(db_path, monkeypatch)
+
+    async def seed():
+        engine, session = await open_test_session(str(db_path))
+        try:
+            await BlindSpotTracker(KnowledgeBlindSpotRepository(session)).record(raw_query="测试问题", normalized_query="测试问题")
+            return (await session.scalars(select(KnowledgeBlindSpot))).first().id
+        finally:
+            await session.close()
+            await engine.dispose()
+
+    blind_id = asyncio.run(seed())
+    async def fail_reload(_session):
+        raise RuntimeError("private failure details")
+    monkeypatch.setattr(admin, "reload_runtime_faq_matcher", fail_reload)
+    response = client.post(f"/api/admin/blind-spots/{blind_id}/resolve-with-faq", json={
+        "faq_id": "test_faq", "category": "测试", "aliases": ["测试问题"],
+        "answer": "测试答案", "sources": ["测试来源"],
+    })
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] == "faq_saved_reload_failed"
+    assert "private failure details" not in response.text
+
+    async def check():
+        engine, session = await open_test_session(str(db_path))
+        try:
+            assert await session.get(FAQEntryRecord, "test_faq") is not None
+        finally:
+            await session.close()
+            await engine.dispose()
+    asyncio.run(check())
+
+
+def test_data_sync_reports_saved_when_post_commit_reload_fails(monkeypatch):
+    committed = []
+    class Importer:
+        def __init__(self, *_args): pass
+        async def sync(self):
+            committed.append(True)
+            return object()
+    async def fail_reload(_session):
+        raise RuntimeError("index unavailable")
+    monkeypatch.setattr(admin, "ProcessedDataImporter", Importer)
+    monkeypatch.setattr(admin, "reload_runtime_faq_matcher", fail_reload)
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(admin.sync_processed_data(session=object(), settings=get_settings()))
+    assert committed == [True]
+    assert error.value.status_code == 503
+    assert error.value.detail["code"] == "faq_saved_reload_failed"
 
 
 def test_admin_lists_and_resolves_blind_spot_with_faq(tmp_path, monkeypatch) -> None:

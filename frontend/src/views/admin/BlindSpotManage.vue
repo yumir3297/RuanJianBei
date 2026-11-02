@@ -207,7 +207,14 @@ async function submitResolve() {
       dialogVisible.value = false;
       loadSpots();
     } catch (e) {
-      ElMessage.error(`提交失败: ${e?.response?.data?.detail || e.message}`);
+      const detail = e?.response?.data?.detail;
+      if (detail?.code === "faq_saved_reload_failed") {
+        ElMessage.warning(detail.message);
+        dialogVisible.value = false;
+        await loadSpots();
+      } else {
+        ElMessage.error(`提交失败: ${detail || e.message}`);
+      }
     } finally {
       submitting.value = false;
     }

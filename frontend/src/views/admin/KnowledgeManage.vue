@@ -765,7 +765,13 @@ async function handleSync() {
     ElMessage.success(`资料已写入工作区，新增和变更内容需检查后发布；耗时约 ${(res.report.duration_ms / 1000).toFixed(1)}s`);
     await loadEntries();
   } catch (e) {
-    ElMessage.error(`同步失败: ${e?.response?.data?.detail || e.message}`);
+    const detail = e?.response?.data?.detail;
+    if (detail?.code === "faq_saved_reload_failed") {
+      ElMessage.warning(detail.message);
+      await loadEntries();
+    } else {
+      ElMessage.error(`同步失败: ${detail || e.message}`);
+    }
   } finally {
     syncing.value = false;
   }
