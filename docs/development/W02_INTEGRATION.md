@@ -22,6 +22,8 @@
 
 2026-11-01 对照原 W02 快照 `48ef626`：对 `repositories/tool_execution.py`、执行器的 `registry.py`、`runner.py`、`worker.py` 与行程的 `intent.py`、`progress.py`、`provenance.py` 做 Python AST 函数/类名称集合比较，未发现原名称消失；这不证明签名、实现或行为等价。抽查 diff：当前任务仓库增加进度版本检查和父记录先 flush；handler 从原来的空 registry 扩展为行程提案，runner 增加事务内结果持久化，维护与取消逻辑也有修改。原 W02 快照并非集成提交的祖先，集成采用增量适配；剩余前端、迁移、文档及任务仓库逐项行为仍需核对，不能凭名称相同认定已全部合并。
 
+2026-11-02 对照任务接口：原快照与集成版 `backend/app/api/tool_execution.py` 内容一致，读取、取消和重试入口未改写；仓库实现增加游览进度版本检查、将 `unknown` 视为外部结果不确定、取消竞争保护和重试预算调整。现有任务验收测试覆盖未知结果重试确认、取消竞争和幂等回放；本次在集成版运行任务验收及游览提案专项共 28 passed。此为局部源码和隔离测试核对，不证明全部并发、真实供应商或浏览器行为等价。
+
 前端接口结构对照：`frontend/src/api/itinerary.js`、`api/tourSessions.js` 和 `stores/tourSessions.js` 的原有命名导出在集成版均可找到；前两个 API 文件的 diff 显示新增提案列表恢复与确认重复调用风险的重试，预算查询增加可选参数。集成版 store 有恢复、重试和确认路径，`frontend/tests/proposal-recovery.test.mjs` 覆盖部分模拟恢复及乱序。导出名称和局部测试不证明接口签名、所有 store 状态或页面行为完全等价；`ChatView.vue`、`RouteView.vue` 变化较大，真实浏览器、弱网及手机仍需验收。
 
 2026-10-30，集成到 `codex/competition-integration` 的 V01、K01、W01 和 F01 快照。行程提案通过持久任务异步执行；浏览器恢复查询，重试外部调用结果不明的任务必须明确确认风险。浏览器停止等待不等同于取消服务端任务。运行 worker：在 `backend/` 使用 `python -m app.services.tool_execution.worker`，API 进程不自动启动 worker。
