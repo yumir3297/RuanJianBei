@@ -11,6 +11,21 @@ ROOT = Path(__file__).resolve().parents[2]
 OLD_HEAD = "f1b4c9d76e20"
 
 
+def test_guard_rejects_missing_knowledge_import_batches(tmp_path, monkeypatch):
+    database_url = f"sqlite:///{tmp_path / 'partial.db'}"
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    config = Config(str(ROOT / "alembic.ini"))
+    config.set_main_option("script_location", str(ROOT / "alembic"))
+    command.upgrade(config, "head")
+    command.downgrade(config, "6e1a4c7d9b20")
+    engine = create_engine(database_url)
+    with engine.begin() as connection:
+        connection.execute(text("DROP TABLE knowledge_import_batches"))
+    with pytest.raises(RuntimeError, match="knowledge_import_batches"):
+        command.upgrade(config, "head")
+    engine.dispose()
+
+
 def test_original_w02_lineage_cannot_be_silently_marked_current(tmp_path, monkeypatch):
     legacy_scripts = tmp_path / "legacy_alembic"
     shutil.copytree(ROOT / "alembic", legacy_scripts, ignore=shutil.ignore_patterns("__pycache__"))
