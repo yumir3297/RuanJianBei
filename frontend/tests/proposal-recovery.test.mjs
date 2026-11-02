@@ -38,6 +38,32 @@ test('latest failed proposal is restored instead of an older ready proposal', as
   assert.equal(store.proposal.status, 'failed');
 });
 
+test('late progress after proposal apply cannot overwrite another tour', async () => {
+  const late = deferred();
+  const started = deferred();
+  await store.resumeProposal(proposal());
+  route = async config => {
+    if (config.url.endsWith('/proposals/p-a/apply')) return { id: 'a', version: 2, snapshot: snapshot('applied') };
+    if (config.url === '/tour-sessions/a/progress') { started.resolve(); return late.promise; }
+    if (config.url.endsWith('/revisions')) return { items: [] };
+    if (config.url.endsWith('/budget')) return {};
+    throw new Error(config.url);
+  };
+  const pending = store.confirmProposal();
+  await started.promise;
+  store.clearProposal();
+  store.current = { id: 'b', version: 1, snapshot: snapshot('b') };
+  store.draftSnapshot = snapshot('b');
+  store.progress = { progress_version: 99, current_stop_id: 'b' };
+  store.proposal = proposal('b');
+  late.resolve({ progress_version: 1, current_stop_id: 'a' });
+  await pending;
+  assert.equal(store.current.id, 'b');
+  assert.equal(store.progress.current_stop_id, 'b');
+  assert.equal(store.proposal.id, 'p-b');
+  assert.deepEqual(store.draftSnapshot, snapshot('b'));
+});
+
 test('latest applied proposal does not resurrect an older ready proposal', async () => {
   store.proposal = { ...proposal(), id: 'ready-old' };
   route = async config => {

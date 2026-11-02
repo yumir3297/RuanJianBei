@@ -420,9 +420,12 @@ export const useTourSessionsStore = defineStore("tourSessions", {
       if (isProposalDraftStale(this.proposalCanonical, this.draftSnapshot)) { this.error = "草稿已变化，请重新生成提案。"; return null; }
       const submittedDraft = cloneJson(this.draftSnapshot);
       const sessionId = this.current.id;
+      const request = proposalRequests.begin();
+      const isCurrent = () => proposalRequests.isCurrent(request) && this.current?.id === sessionId;
       try {
         await this.prepare();
-        if (this.current?.id !== sessionId || this.proposal?.id !== proposal.id
+        if (!isCurrent()) return null;
+        if (this.proposal?.id !== proposal.id
           || isProposalDraftStale(this.proposalCanonical, this.draftSnapshot)) {
           this.error = "确认期间游览或草稿已变化，请重新检查提案。";
           return null;
@@ -431,23 +434,33 @@ export const useTourSessionsStore = defineStore("tourSessions", {
         const payload = { expected_version: this.current.version, progress_version: this.progress?.progress_version || 0, draft_digest: proposal.draft_digest };
         const { fingerprint, key } = this.operationKey(`proposal-apply:${proposal.id}`, payload);
         const applied = await applyItineraryProposal(sessionId, proposal.id, payload, this.csrfToken, key);
-        if (this.current?.id !== sessionId) return null;
+        if (!isCurrent() || this.proposal?.id !== proposal.id) return null;
+        this.clearOperationKey(fingerprint);
         this.current = applied;
         const reconciledDraft = reconcileDraftAfterAsyncApply(submittedDraft, this.draftSnapshot, this.current.snapshot);
         this.draftSnapshot = reconciledDraft.draftSnapshot;
         this.items = this.items.map(item => item.id === this.current.id ? this.current : item);
-        this.progress = await refreshProgressAfterItineraryApply(this.current.id, fetchTourProgress);
+        const progress = await refreshProgressAfterItineraryApply(sessionId, fetchTourProgress);
+        if (!isCurrent() || this.proposal?.id !== proposal.id) return null;
+        this.progress = progress;
         this.progressSyncRequired = !this.progress;
         if (!this.progress) this.error = "行程已保存，但游览进度未能同步；刷新后再继续记录进度。";
         if (this.progress?.current_stop_id !== previousCurrentStopId) this.currentStopRemainingMinutes = null;
-        this.revisions = await fetchTourRevisions(this.current.id).catch(() => this.revisions);
-        this.proposal = null; this.proposalCanonical = ""; this.proposalBaseSnapshot = null; this.clearOperationKey(fingerprint);
+        const revisions = await fetchTourRevisions(sessionId).catch(() => null);
+        if (!isCurrent() || this.proposal?.id !== proposal.id) return null;
+        if (revisions) this.revisions = revisions;
+        this.proposal = null; this.proposalCanonical = ""; this.proposalBaseSnapshot = null;
         if (reconciledDraft.hasConcurrentEdits) {
           this.saveState = "idle";
           this.error = "提案已应用；确认期间的手动修改已保留为未保存草稿，请核对后再保存。";
         }
-        this.budget = await fetchTourBudget(this.current.id, this.currentStopRemainingMinutes).catch(() => null); return this.current;
-      } catch (error) { this.error = error?.response?.data?.detail || "提案已失效，请刷新后重新生成。"; return null; }
+        const budget = await fetchTourBudget(sessionId, this.currentStopRemainingMinutes).catch(() => null);
+        if (!isCurrent()) return null;
+        this.budget = budget; return this.current;
+      } catch (error) {
+        if (isCurrent()) this.error = error?.response?.data?.detail || "提案已失效，请刷新后重新生成。";
+        return null;
+      } finally { proposalRequests.finish(request); }
     },
     cancelProposal() {
       this.clearProposal();
