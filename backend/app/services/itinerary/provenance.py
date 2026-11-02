@@ -18,6 +18,25 @@ def mark_inherited_duration_unverified(stop) -> None:
                      if stop.duration_minutes is not None else [])
 
 
+def sanitize_replaced_locations(snapshot: TourSnapshotV2, previous: TourSnapshotV2) -> tuple[TourSnapshotV2, bool]:
+    """Remove evidence attached to a previous location from persisted proposals."""
+    result = snapshot.model_copy(deep=True)
+    old_stops = {str(stop.stop_id): stop for stop in previous.stops}
+    changed = set()
+    for stop in result.stops:
+        old = old_stops.get(str(stop.stop_id))
+        if old is not None and not same_stop_location(old, stop):
+            changed.add(str(stop.stop_id))
+            if stop.duration_minutes == old.duration_minutes:
+                mark_inherited_duration_unverified(stop)
+    for leg in result.legs:
+        if str(leg.from_stop_id) in changed or str(leg.to_stop_id) in changed:
+            leg.duration_minutes = None
+            leg.duration_basis = "unknown"
+            leg.evidence = []
+    return result, bool(changed)
+
+
 def normalize_snapshot_provenance(
     snapshot: TourSnapshotV2,
     *,

@@ -136,6 +136,44 @@ def test_restored_proposal_diff_is_rebuilt_from_recorded_snapshots():
     _run(scenario)
 
 
+def test_restored_old_proposal_does_not_present_replaced_spot_evidence():
+    async def scenario():
+        from app.repositories.tour_session import TourSessionRepository
+        engine, db = await open_test_session()
+        try:
+            repo = TourSessionRepository(db)
+            snapshot = _snapshot()
+            first = snapshot["stops"][0]
+            first.update(duration_basis="source", evidence=[{"evidence_type": "published_content", "reference_id": "old-spot"}])
+            second_id = str(uuid4())
+            snapshot["stops"].append({"stop_id": second_id, "kind": "visit", "spot_code": "LS-02", "name": "其他景点", "duration_minutes": 20, "duration_basis": "user"})
+            snapshot["legs"] = [{"from_stop_id": first["stop_id"], "to_stop_id": second_id,
+                "duration_minutes": 10, "duration_basis": "source", "evidence": [{"evidence_type": "published_content", "reference_id": "old-route"}]}]
+            created = await repo.create_session("owner-a", "site", "游览", snapshot, "create")
+            candidate = json.loads(json.dumps(snapshot))
+            candidate["stops"][0].update(spot_code="LS-03", name="新景点")
+            generated = {"status": "ready", "base_snapshot": snapshot, "operations": [], "candidate": candidate,
+                "diff": [], "validation": {"status": "pass", "conflicts": []}, "clarification": None}
+            proposal = await repo.create_proposal("owner-a", created["id"], 1, 0, "a" * 64, "catalog", "替换", generated, "proposal")
+            restored = await repo.get_proposal("owner-a", created["id"], proposal["id"])
+            stop = restored["candidate"]["stops"][0]
+            leg = restored["candidate"]["legs"][0]
+            assert all(e.get("reference_id") != "old-spot" for e in stop["evidence"])
+            assert all(e.get("reference_id") != "old-route" for e in leg["evidence"])
+            assert restored["validation"]["status"] == "unverified"
+            applied = await repo.apply_proposal("owner-a", created["id"], proposal["id"], 1, 0,
+                                                "a" * 64, "apply")
+            applied_stop = applied["snapshot"]["stops"][0]
+            applied_leg = applied["snapshot"]["legs"][0]
+            assert applied_stop["duration_basis"] == stop["duration_basis"]
+            assert applied_stop["evidence"] == stop["evidence"]
+            assert applied_leg["duration_minutes"] == leg["duration_minutes"]
+            assert applied_leg["evidence"] == leg["evidence"]
+        finally:
+            await db.close(); await engine.dispose()
+    _run(scenario)
+
+
 def test_apply_proposal_preserves_manual_duration_from_unsaved_base_draft():
     async def scenario():
         from app.repositories.tour_session import TourSessionRepository

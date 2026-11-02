@@ -26,7 +26,7 @@ from app.services.itinerary.progress import (
     ProgressCommand, ProgressConflict, TourProgress as V01Progress,
     apply_progress_command, start_tour, validate_remaining_budget,
 )
-from app.services.itinerary.provenance import normalize_snapshot_provenance
+from app.services.itinerary.provenance import normalize_snapshot_provenance, sanitize_replaced_locations
 
 TRASH_DAYS = 30
 IDEMPOTENCY_DAYS = 7
@@ -458,6 +458,8 @@ class TourSessionRepository:
             try:
                 base_snapshot = TourSnapshotV2.model_validate(base)
                 candidate_snapshot = TourSnapshotV2.model_validate(candidate)
+                candidate_snapshot, location_changed = sanitize_replaced_locations(candidate_snapshot, base_snapshot)
+                candidate = candidate_snapshot.model_dump(mode="json")
                 changes = diff_snapshots(base_snapshot, candidate_snapshot)
                 diff = [{"kind": change.kind, "stop_id": change.stop_id, "before": change.before, "after": change.after}
                         for change in changes]
@@ -467,7 +469,7 @@ class TourSessionRepository:
                     (stop.stop_id not in old_stops or old_stops[stop.stop_id].duration_minutes != stop.duration_minutes)
                 ) for stop in candidate_snapshot.stops)
                 estimated |= any(leg.duration_basis == "estimate" for leg in candidate_snapshot.legs)
-                if estimated and validation.get("status") == "pass":
+                if (estimated or location_changed) and validation.get("status") == "pass":
                     validation["status"] = "unverified"
             except ValidationError:
                 comparable = False
