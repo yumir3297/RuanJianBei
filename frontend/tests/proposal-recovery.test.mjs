@@ -64,6 +64,33 @@ test('late progress after proposal apply cannot overwrite another tour', async (
   assert.deepEqual(store.draftSnapshot, snapshot('b'));
 });
 
+test('confirm cannot be repeated while applied proposal is refreshing', async () => {
+  const late = deferred();
+  const started = deferred();
+  let calls = 0;
+  await store.resumeProposal(proposal());
+  route = async config => {
+    if (config.url.endsWith('/proposals/p-a/apply')) {
+      calls += 1;
+      if (calls > 1) throw new Error('duplicate apply');
+      return { id: 'a', version: 2, snapshot: snapshot('base') };
+    }
+    if (config.url === '/tour-sessions/a/progress') { started.resolve(); return late.promise; }
+    if (config.url.endsWith('/revisions')) return { items: [] };
+    if (config.url.endsWith('/budget')) return {};
+    throw new Error(config.url);
+  };
+  const first = store.confirmProposal();
+  await started.promise;
+  await store.confirmProposal();
+  late.resolve({ progress_version: 2, current_stop_id: 'a' });
+  await first;
+  assert.equal(calls, 1);
+  assert.equal(store.current.version, 2);
+  assert.equal(store.progress.progress_version, 2);
+  assert.equal(store.proposal, null);
+});
+
 test('latest applied proposal does not resurrect an older ready proposal', async () => {
   store.proposal = { ...proposal(), id: 'ready-old' };
   route = async config => {

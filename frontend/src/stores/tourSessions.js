@@ -55,6 +55,7 @@ export const useTourSessionsStore = defineStore("tourSessions", {
     proposalCanonical: "",
     proposalBaseSnapshot: null,
     proposalLoading: false,
+    proposalApplying: false,
     proposalChoices: [],
     saveState: "idle",
     error: "",
@@ -67,6 +68,7 @@ export const useTourSessionsStore = defineStore("tourSessions", {
     clearProposal() {
       proposalRequests.cancel();
       this.proposalLoading = false;
+      this.proposalApplying = false;
       this.proposal = null; this.proposalCanonical = ""; this.proposalBaseSnapshot = null;
       this.proposalChoices = [];
     },
@@ -416,12 +418,13 @@ export const useTourSessionsStore = defineStore("tourSessions", {
     },
     async confirmProposal() {
       const proposal = this.proposal;
-      if (!proposal || proposal.status !== "ready" || !this.current || proposal.session_id !== this.current.id) return null;
+      if (this.proposalApplying || !proposal || proposal.status !== "ready" || !this.current || proposal.session_id !== this.current.id) return null;
       if (isProposalDraftStale(this.proposalCanonical, this.draftSnapshot)) { this.error = "草稿已变化，请重新生成提案。"; return null; }
       const submittedDraft = cloneJson(this.draftSnapshot);
       const sessionId = this.current.id;
       const request = proposalRequests.begin();
       const isCurrent = () => proposalRequests.isCurrent(request) && this.current?.id === sessionId;
+      this.proposalApplying = true;
       try {
         await this.prepare();
         if (!isCurrent()) return null;
@@ -460,7 +463,7 @@ export const useTourSessionsStore = defineStore("tourSessions", {
       } catch (error) {
         if (isCurrent()) this.error = error?.response?.data?.detail || "提案已失效，请刷新后重新生成。";
         return null;
-      } finally { proposalRequests.finish(request); }
+      } finally { if (proposalRequests.finish(request)) this.proposalApplying = false; }
     },
     cancelProposal() {
       this.clearProposal();
