@@ -2,8 +2,12 @@ from __future__ import annotations
 
 import json
 
+from sqlalchemy import delete, update
+
 from app.core.exceptions import NotFoundError
 from app.models.knowledge_blind_spot import KnowledgeBlindSpot
+from app.models.knowledge_workspace import KnowledgeState
+from app.models.qa_cache import QACacheEntry
 from app.repositories.faq import FAQRepository
 from app.repositories.knowledge_blind_spot import KnowledgeBlindSpotRepository
 from app.schemas.blind_spot import ResolveBlindSpotWithFAQRequest
@@ -44,6 +48,12 @@ class BlindSpotResolutionService:
             faq_id=payload.faq_id,
             category=payload.category,
         )
+        result = await self.session.execute(
+            update(KnowledgeState).where(KnowledgeState.id == 1).values(epoch=KnowledgeState.epoch + 1)
+        )
+        if result.rowcount == 0:
+            self.session.add(KnowledgeState(id=1, epoch=2))
+        await self.session.execute(delete(QACacheEntry))
         await self.session.commit()
         await self.session.refresh(blind_spot)
         return blind_spot

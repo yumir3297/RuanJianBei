@@ -20,6 +20,42 @@ from app.services.qa.faq_matcher import FAQMatcher
 from app.tests.async_db import open_test_session
 
 
+@pytest.mark.parametrize("fail", [False, True])
+def test_resolve_faq_and_epoch_commit_together(tmp_path, monkeypatch, fail):
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+    from app.models.knowledge_workspace import KnowledgeState
+    from app.repositories.faq import FAQRepository
+    from app.schemas.blind_spot import ResolveBlindSpotWithFAQRequest
+    from app.services.qa.blind_spot_resolution import BlindSpotResolutionService
+
+    async def scenario():
+        engine, session = await open_test_session(str(tmp_path / "faq-epoch.db"))
+        try:
+            await BlindSpotTracker(KnowledgeBlindSpotRepository(session)).record(raw_query="测试", normalized_query="测试")
+            blind_id = (await session.scalars(select(KnowledgeBlindSpot))).first().id
+            session.add(KnowledgeState(id=1, epoch=10))
+            await session.commit()
+            service = BlindSpotResolutionService(KnowledgeBlindSpotRepository(session), FAQRepository(session))
+            if fail:
+                async def reject(*args, **kwargs):
+                    raise RuntimeError("injected failure")
+                monkeypatch.setattr(service.blind_spot_repository, "mark_resolved_with_faq", reject)
+            payload = ResolveBlindSpotWithFAQRequest(faq_id="epoch-test", category="测试", aliases=["测试"], answer="回答", sources=["资料"])
+            if fail:
+                with pytest.raises(RuntimeError, match="injected failure"):
+                    await service.resolve_with_faq(blind_id, payload)
+                await session.rollback()
+            else:
+                await service.resolve_with_faq(blind_id, payload)
+            async with async_sessionmaker(engine, expire_on_commit=False)() as observer:
+                assert (await observer.get(KnowledgeState, 1)).epoch == (10 if fail else 11)
+                assert (await observer.get(FAQEntryRecord, "epoch-test") is not None) is (not fail)
+        finally:
+            await session.close()
+            await engine.dispose()
+    asyncio.run(scenario())
+
+
 def build_client(db_path, monkeypatch):
     app = FastAPI()
     register_exception_handlers(app)
