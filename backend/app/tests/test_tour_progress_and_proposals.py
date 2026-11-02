@@ -136,7 +136,8 @@ def test_restored_proposal_diff_is_rebuilt_from_recorded_snapshots():
     _run(scenario)
 
 
-def test_restored_old_proposal_does_not_present_replaced_spot_evidence():
+@pytest.mark.parametrize("new_minutes", [20, 40])
+def test_restored_old_proposal_does_not_present_replaced_spot_evidence(new_minutes):
     async def scenario():
         from app.repositories.tour_session import TourSessionRepository
         engine, db = await open_test_session()
@@ -151,7 +152,7 @@ def test_restored_old_proposal_does_not_present_replaced_spot_evidence():
                 "duration_minutes": 10, "duration_basis": "source", "evidence": [{"evidence_type": "published_content", "reference_id": "old-route"}]}]
             created = await repo.create_session("owner-a", "site", "游览", snapshot, "create")
             candidate = json.loads(json.dumps(snapshot))
-            candidate["stops"][0].update(spot_code="LS-03", name="新景点")
+            candidate["stops"][0].update(spot_code="LS-03", name="新景点", duration_minutes=new_minutes)
             generated = {"status": "ready", "base_snapshot": snapshot, "operations": [], "candidate": candidate,
                 "diff": [], "validation": {"status": "pass", "conflicts": []}, "clarification": None}
             proposal = await repo.create_proposal("owner-a", created["id"], 1, 0, "a" * 64, "catalog", "替换", generated, "proposal")

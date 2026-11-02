@@ -29,6 +29,8 @@ def sanitize_replaced_locations(snapshot: TourSnapshotV2, previous: TourSnapshot
             changed.add(str(stop.stop_id))
             if stop.duration_minutes == old.duration_minutes:
                 mark_inherited_duration_unverified(stop)
+            else:
+                _set_submitted_duration_provenance(stop, "ai")
     for leg in result.legs:
         if str(leg.from_stop_id) in changed or str(leg.to_stop_id) in changed:
             leg.duration_minutes = None
