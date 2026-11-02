@@ -252,10 +252,14 @@ def validate_remaining_budget(
         message = "游览尚未结束，已超过截止时间"
     elif available is not None and known > available:
         status = "conflict"
-        message = "按当前点完整计划时长估算，已知剩余游览时长超过截止时间" if estimated_current_stop else "已知剩余游览时长超过截止时间"
+        message = "计入的剩余游览时长超过截止时间"
+        if estimated_duration or estimated_current_stop:
+            message += "（包含估算时长）"
     elif available is None or unknown_stop_ids or unknown_legs or estimated_duration:
         status = "unverified"
         message = "当前点按完整计划时长保守估算；剩余预算或部分停留/路段时长缺少可靠依据" if estimated_current_stop else "剩余预算或部分停留/路段时长缺少可靠依据"
+        if estimated_duration and not estimated_current_stop:
+            message += "（包含估算时长）"
     else:
         status = "pass"
         message = "按当前点完整计划时长保守估算，剩余游览时长在截止时间内" if estimated_current_stop else "已知剩余游览时长在截止时间内"

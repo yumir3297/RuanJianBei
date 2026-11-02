@@ -64,7 +64,7 @@
               </li></ul>
               <small>恢复会创建一个新版本；已完成或已跳过的游览记录不会回退。</small>
             </details>
-            <p v-if="tourStore.budget">{{ tourStore.budget.estimated_current_stop ? '估算剩余' : '剩余已知' }} {{ tourStore.budget.known_minutes }} 分钟 · {{ budgetText }}<span v-if="tourStore.budget.estimated_current_stop">（当前点按完整计划时长保守估算）</span></p>
+            <p v-if="tourStore.budget">已计入剩余 {{ tourStore.budget.known_minutes }} 分钟 · {{ budgetText }}</p>
             <p v-if="tourStore.progressSyncRequired" class="tour-session-status" role="status">游览进度尚未同步，请刷新后再继续操作。</p>
             <button v-if="!tourStore.progressSyncRequired && (!tourStore.progress || tourStore.progress.status === 'not_started')" type="button" class="tour-session-secondary" :disabled="!draft.stops.length || isDirty || sessionSaving" @click="tourStore.start()">开始游览</button>
             <p v-if="isDirty && (!tourStore.progress || tourStore.progress.status === 'not_started')" class="tour-session-status">保存当前修改后才能开始游览。</p>

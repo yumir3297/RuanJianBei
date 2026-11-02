@@ -40,6 +40,7 @@ class ItineraryProgressTests(unittest.TestCase):
                 else: candidate.legs[0].duration_basis = "estimate"
                 result = validate_remaining_budget(candidate, None, datetime(2026, 10, 29, 8, 0, tzinfo=UTC))
                 self.assertEqual(result.status, "unverified")
+                self.assertIn("估算", result.message)
     def test_start_stores_server_time_and_deadline(self):
         snapshot = _snapshot()
         now = datetime(2026, 10, 29, 8, 0, tzinfo=UTC)
