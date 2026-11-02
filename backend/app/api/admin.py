@@ -189,6 +189,18 @@ async def sync_processed_data(
     )
 
 
+@router.post("/refresh-faq")
+async def refresh_faq(session: AsyncSession = Depends(get_db_session)) -> dict:
+    from app.services.qa.runtime import faq_semantic_index_failed
+    try:
+        elapsed = await reload_runtime_faq_matcher(session)
+    except Exception as error:
+        logging.getLogger(__name__).exception("FAQ refresh failed")
+        raise HTTPException(status_code=503, detail="FAQ 刷新失败，请检查数据库与模型后重试。") from error
+    return {"faq_reload_ms": elapsed, "scope": "current_process",
+            "semantic_failure": faq_semantic_index_failed()}
+
+
 @router.post("/build-rag-index", response_model=RAGIndexBuildResponse)
 async def build_rag_index(
     session: AsyncSession = Depends(get_db_session),

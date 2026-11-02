@@ -102,6 +102,23 @@ def test_data_sync_reports_saved_when_post_commit_reload_fails(monkeypatch):
     assert error.value.detail["code"] == "faq_saved_reload_failed"
 
 
+def test_admin_can_refresh_faq_without_reimporting_data(tmp_path, monkeypatch):
+    client = build_client(tmp_path / "faq-refresh.db", monkeypatch)
+    calls = []
+    async def reload_faq(_session):
+        calls.append("reload")
+        return 3.5
+    monkeypatch.setattr(admin, "reload_runtime_faq_matcher", reload_faq)
+    response = client.post("/api/admin/refresh-faq")
+    assert response.status_code == 200
+    assert response.json()["faq_reload_ms"] == 3.5
+    assert response.json()["scope"] == "current_process"
+    assert calls == ["reload"]
+    client.headers.pop("Authorization")
+    assert client.post("/api/admin/refresh-faq").status_code == 401
+    assert calls == ["reload"]
+
+
 def test_admin_lists_and_resolves_blind_spot_with_faq(tmp_path, monkeypatch) -> None:
     db_path = tmp_path / "blind-spot-admin.db"
     client = build_client(db_path, monkeypatch)

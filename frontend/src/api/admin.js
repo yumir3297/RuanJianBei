@@ -25,6 +25,11 @@ export async function syncOfficialData() {
   return data;
 }
 
+export async function refreshFaq() {
+  const { data } = await http.post("/admin/refresh-faq", null, { timeout: 30000 });
+  return data;
+}
+
 export async function rebuildVectorIndex() {
   const { data } = await http.post("/admin/build-rag-index", null, { timeout: 120000 });
   return data;

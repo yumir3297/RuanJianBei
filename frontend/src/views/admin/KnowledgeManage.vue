@@ -208,6 +208,11 @@
             </div>
 
             <div class="action-item">
+              <div><strong>刷新 FAQ</strong><p>重新读取当前进程的 FAQ，不重新导入资料；其他进程及语义索引需另行检查。</p></div>
+              <el-button :loading="refreshingFaq" @click="handleRefreshFaq">刷新 FAQ</el-button>
+            </div>
+
+            <div class="action-item">
               <div class="action-copy">
                 <strong>重建向量索引</strong>
                 <p>知识内容更新后重建检索索引，保证讲解问答命中率与资料可追溯性。</p>
@@ -357,13 +362,14 @@ import {
   fetchKnowledgeList,
   updateKnowledge,
 } from "../../api/knowledge";
-import { rebuildVectorIndex, syncOfficialData } from "../../api/admin";
+import { rebuildVectorIndex, syncOfficialData, refreshFaq } from "../../api/admin";
 import { createKnowledgePublication, fetchKnowledgePublication, retryKnowledgePublication } from "../../api/knowledgePublications";
 
 const entries = ref([]);
 const loading = ref(false);
 const error = ref("");
 const syncing = ref(false);
+const refreshingFaq = ref(false);
 const rebuilding = ref(false);
 const lastUpdatedAt = ref("");
 const selectedRows = ref([]);
@@ -774,6 +780,20 @@ async function handleSync() {
     }
   } finally {
     syncing.value = false;
+  }
+}
+
+async function handleRefreshFaq() {
+  refreshingFaq.value = true;
+  try {
+    const result = await refreshFaq();
+    ElMessage.warning(result.semantic_failure
+      ? "当前进程 FAQ 已重载，语义索引仍有故障；请检查服务健康状态及其他进程。"
+      : "当前进程 FAQ 已重载；请另行检查语义索引和其他进程的健康状态。");
+  } catch (error) {
+    ElMessage.error(`FAQ 刷新失败：${error?.response?.data?.detail || error.message}`);
+  } finally {
+    refreshingFaq.value = false;
   }
 }
 
