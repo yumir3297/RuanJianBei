@@ -10,6 +10,8 @@
 
 2026-11-02 隔离实验：用 `48ef626` 的原始任务迁移在临时 SQLite 建旧库，插入合成知识条目、分块、缓存、游客身份、游览和任务关联，以 Alembic Operations 执行上述候选顺序，不更改 Alembic 版本。连接默认 `PRAGMA foreign_keys=0` 时，条目和分块被关联到 `legacy_47`，游览与任务关联保留，`foreign_key_check` 为空；问答缓存从 1 条清空为 0。另在连接上明确启用 `foreign_keys=ON` 并确认值为 1，知识迁移批量重建 `knowledge_entries` 时因已有分块引用而触发外键约束错误。两种结果均不证明完整 schema、异常回滚、真实旧数据或 PostgreSQL 兼容；**不得据此在真实库关闭外键或执行修复**。SQLite 合成游览记录显式提供时间，未验证旧库所有默认值。
 
+同日进一步在隔离 SQLite 实验：保持外键开启，实验性地以原生 `ALTER TABLE ... ADD COLUMN ... REFERENCES` 替代知识迁移中两处表重建，合成知识及游览任务关联保留，`foreign_key_check` 为空，缓存清空。实验库与全新 head 对照所有表的列名、外键指向及索引名/列/唯一性，仅显示缺少语音字段；实验未执行该字段的独立补齐迁移。未比较列类型、默认值、约束名、check/unique 约束或失败恢复，也未验证真实数据和 PostgreSQL；本实验未形成可执行修复方案，不能用于生产。
+
 2026-11-01 对照原 W02 快照 `48ef626`：对 `repositories/tool_execution.py`、执行器的 `registry.py`、`runner.py`、`worker.py` 与行程的 `intent.py`、`progress.py`、`provenance.py` 做 Python AST 函数/类名称集合比较，未发现原名称消失；这不证明签名、实现或行为等价。抽查 diff：当前任务仓库增加进度版本检查和父记录先 flush；handler 从原来的空 registry 扩展为行程提案，runner 增加事务内结果持久化，维护与取消逻辑也有修改。原 W02 快照并非集成提交的祖先，集成采用增量适配；剩余前端、迁移、文档及任务仓库逐项行为仍需核对，不能凭名称相同认定已全部合并。
 
 前端接口结构对照：`frontend/src/api/itinerary.js`、`api/tourSessions.js` 和 `stores/tourSessions.js` 的原有命名导出在集成版均可找到；前两个 API 文件的 diff 显示新增提案列表恢复与确认重复调用风险的重试，预算查询增加可选参数。集成版 store 有恢复、重试和确认路径，`frontend/tests/proposal-recovery.test.mjs` 覆盖部分模拟恢复及乱序。导出名称和局部测试不证明接口签名、所有 store 状态或页面行为完全等价；`ChatView.vue`、`RouteView.vue` 变化较大，真实浏览器、弱网及手机仍需验收。
