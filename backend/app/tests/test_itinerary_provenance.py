@@ -22,6 +22,24 @@ def test_replaced_attraction_does_not_inherit_old_duration_evidence():
     assert all(item.reference_id != "source-A" for item in updated.stops[0].evidence)
 
 
+def test_changed_published_revision_downgrades_only_source_based_duration():
+    old = TourSnapshotV2.model_validate({"stops": [{
+        "stop_id": str(uuid4()), "kind": "visit", "spot_code": "A", "name": "甲",
+        "source_entry_id": "entry-a", "source_revision_id": "old-revision",
+        "duration_minutes": 30, "duration_basis": "source",
+        "evidence": [{"evidence_type": "published_content", "reference_id": "old-duration-source"}],
+    }]})
+    entries = {"A": SimpleNamespace(title="甲", entry_id="entry-a", published_revision_id="new-revision")}
+    updated = normalize_snapshot_provenance(old, previous=old, catalog_entries=entries)
+    assert updated.stops[0].source_revision_id == "new-revision"
+    assert updated.stops[0].duration_basis == "estimate"
+    assert any(item.reference_id == "old-duration-source" for item in updated.stops[0].evidence)
+    old.stops[0].duration_basis = "user"
+    old.stops[0].evidence = []
+    updated = normalize_snapshot_provenance(old, previous=old, catalog_entries=entries)
+    assert updated.stops[0].duration_basis == "user"
+
+
 def test_replaced_attraction_does_not_inherit_route_leg_evidence():
     first, second = str(uuid4()), str(uuid4())
     previous = TourSnapshotV2.model_validate({
@@ -89,7 +107,7 @@ def test_untrusted_draft_provenance_is_normalized_from_server_facts():
 
     original, added = normalized.stops
     assert (original.name, original.source_entry_id, original.source_revision_id) == ("甲景点", "entry-a", "revision-a")
-    assert original.duration_basis == "source"
+    assert original.duration_basis == "estimate"
     assert original.evidence[0].reference_id == "duration-doc"
     assert original.created_by == "template"
     assert (added.name, added.source_entry_id, added.source_revision_id) == ("乙景点", "entry-b", "revision-b")

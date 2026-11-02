@@ -91,7 +91,14 @@ def normalize_snapshot_provenance(
                 mark_inherited_duration_unverified(stop)
             elif old.duration_minutes == stop.duration_minutes:
                 stop.duration_basis = old.duration_basis
-                stop.evidence = old.evidence
+                stop.evidence = list(old.evidence)
+                if (old.duration_basis == "source" and catalog_entries is not None
+                        and (old.source_entry_id, old.source_revision_id)
+                        != (stop.source_entry_id, stop.source_revision_id)):
+                    stop.duration_basis = "estimate"
+                    if len(stop.evidence) < 20:
+                        stop.evidence.append(EvidenceReference(
+                            evidence_type="estimate", label="景点资料版本变化，原停留时长需重新核验"))
             else:
                 _set_submitted_duration_provenance(stop, new_stop_created_by)
         else:
