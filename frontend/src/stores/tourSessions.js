@@ -139,6 +139,7 @@ export const useTourSessionsStore = defineStore("tourSessions", {
       } finally { openRequests.finish(request); }
     },
     async restoreProposal(sessionId = this.current?.id) {
+      if (this.proposalApplying) return null;
       if (this.current?.id !== sessionId || this.current.snapshot?.schema_version !== 2) return null;
       const request = proposalRequests.begin();
       this.proposalLoading = true;
@@ -165,6 +166,7 @@ export const useTourSessionsStore = defineStore("tourSessions", {
       } finally { if (proposalRequests.finish(request)) this.proposalLoading = false; }
     },
     async selectProposalChoice(proposalId) {
+      if (this.proposalApplying) return null;
       const sessionId = this.current?.id;
       if (!sessionId || !this.proposalChoices.some(item => item.id === proposalId && item.session_id === sessionId)) return null;
       const request = proposalRequests.begin();
@@ -341,6 +343,7 @@ export const useTourSessionsStore = defineStore("tourSessions", {
       } finally { currentStopBudgetRequests.finish(request); }
     },
     async requestProposal(text) {
+      if (this.proposalApplying) return null;
       if (!this.current || this.draftSnapshot?.schema_version !== 2) { this.error = "请先在路线页升级并打开 V2 游览。"; return null; }
       const sessionId = this.current.id;
       const expectedVersion = this.current.version;
@@ -366,6 +369,7 @@ export const useTourSessionsStore = defineStore("tourSessions", {
       } finally { if (proposalRequests.finish(request)) this.proposalLoading = false; }
     },
     async resumeProposal(proposal, fallbackBase = this.draftSnapshot) {
+      if (this.proposalApplying) return null;
       const sessionId = this.current?.id;
       if (!proposal?.id || !sessionId || proposal.session_id !== sessionId) return null;
       const request = proposalRequests.begin();
@@ -395,6 +399,7 @@ export const useTourSessionsStore = defineStore("tourSessions", {
       } finally { if (proposalRequests.finish(request)) this.proposalLoading = false; }
     },
     async retryProposal(confirmDuplicateRisk = false) {
+      if (this.proposalApplying) return null;
       const proposal = this.proposal;
       const sessionId = this.current?.id;
       if (confirmDuplicateRisk !== true) { this.error = "请先确认可能重复调用 AI 并产生费用的风险。"; return null; }

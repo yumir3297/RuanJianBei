@@ -91,6 +91,28 @@ test('confirm cannot be repeated while applied proposal is refreshing', async ()
   assert.equal(store.proposal, null);
 });
 
+test('checking proposals during confirmation does not interrupt the saved tour refresh', async () => {
+  const late = deferred();
+  const started = deferred();
+  await store.resumeProposal(proposal());
+  route = async config => {
+    if (config.url.endsWith('/proposals/p-a/apply')) return { id: 'a', version: 2, snapshot: snapshot('base') };
+    if (config.url === '/tour-sessions/a/progress') { started.resolve(); return late.promise; }
+    if (config.url.endsWith('/proposals')) return { items: [proposal()] };
+    if (config.url.endsWith('/proposals/p-a')) return proposal();
+    if (config.url.endsWith('/revisions')) return { items: [] };
+    if (config.url.endsWith('/budget')) return {};
+    throw new Error(config.url);
+  };
+  const pending = store.confirmProposal();
+  await started.promise;
+  await store.restoreProposal();
+  late.resolve({ progress_version: 2 });
+  await pending;
+  assert.equal(store.proposalApplying, false);
+  assert.equal(store.progress.progress_version, 2);
+});
+
 test('latest applied proposal does not resurrect an older ready proposal', async () => {
   store.proposal = { ...proposal(), id: 'ready-old' };
   route = async config => {

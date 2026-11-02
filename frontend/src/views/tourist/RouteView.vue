@@ -18,7 +18,7 @@
           </div>
           <p v-if="tourStore.proposalLoading" role="status">正在检查后台提案；停止等待不会取消后台任务。</p>
           <p v-else-if="tourStore.proposal" role="status">{{ tourStore.proposal.status === 'waiting_user' ? '上次 AI 调用结果不确定，请回到对话查看费用风险并决定是否重试。' : tourStore.proposal.status === 'executing' ? '提案仍在后台生成。' : '已恢复行程提案，请回到对话查看结果。' }}</p>
-          <button v-if="!tourStore.proposalLoading" type="button" class="tour-session-secondary" @click="tourStore.restoreProposal()">检查后台提案</button>
+          <button v-if="!tourStore.proposalLoading" type="button" class="tour-session-secondary" :disabled="tourStore.proposalApplying" @click="tourStore.restoreProposal()">检查后台提案</button>
           <button v-else type="button" class="tour-session-secondary" @click="tourStore.cancelProposal()">停止等待</button>
         </section>
         <ol v-if="tourStore.current?.snapshot?.stops?.length" class="tour-session-stops"><li v-for="(stop, index) in tourStore.current.snapshot.stops" :key="`${stop.name}-${index}`">{{ stop.name }}</li></ol>
