@@ -14,6 +14,10 @@
 
 补充反射对照：共有列类型、可空性、默认值及可反射 unique/check 定义未发现差异；三个实验新增外键为匿名，新库对应外键有名称。另在同类 SQLite 连接的事务内建表后主动抛错，回滚后表仍存在，说明该配置下 DDL 可部分持久化；这不是对完整迁移故障状态的穷举。隔离 PostgreSQL 17 实例已成功初始化、启动和停止，但实验 Python 缺少同步驱动 `psycopg`，没有完成 PostgreSQL 迁移验证，未访问现有数据库。
 
+后续在独立 PostgreSQL 17 临时实例以 asyncpg 和 Alembic Operations 直接构造旧迁移结构（包含 `48ef626` 原始 f1），再实验性运行知识工作区、导入批次、游览进度迁移及提案列补齐；一条合成知识和分块均关联 `legacy_47`，数据库中统计到 35 个外键。实验未创建或更改 Alembic 版本表，未插入游览、任务或缓存数据，未比较完整 schema、约束等价及异常回滚，也未接触真实旧库；临时实例已停止。结果仅证明该合成知识样例的有限补齐能力，不能作为数据库升级或修复验收。
+
+`backend/app/tests/test_w02_sqlite_recovery_experiment.py` 将 SQLite 外键开启时的知识迁移片段保留为隔离实验测试，运行时生成临时旧结构并替换知识迁移中的两段操作；它不执行完整补齐或提供修复工具。含该测试的后端全套 496 passed、5 skipped，不能证明真实旧库兼容。
+
 2026-11-01 对照原 W02 快照 `48ef626`：对 `repositories/tool_execution.py`、执行器的 `registry.py`、`runner.py`、`worker.py` 与行程的 `intent.py`、`progress.py`、`provenance.py` 做 Python AST 函数/类名称集合比较，未发现原名称消失；这不证明签名、实现或行为等价。抽查 diff：当前任务仓库增加进度版本检查和父记录先 flush；handler 从原来的空 registry 扩展为行程提案，runner 增加事务内结果持久化，维护与取消逻辑也有修改。原 W02 快照并非集成提交的祖先，集成采用增量适配；剩余前端、迁移、文档及任务仓库逐项行为仍需核对，不能凭名称相同认定已全部合并。
 
 前端接口结构对照：`frontend/src/api/itinerary.js`、`api/tourSessions.js` 和 `stores/tourSessions.js` 的原有命名导出在集成版均可找到；前两个 API 文件的 diff 显示新增提案列表恢复与确认重复调用风险的重试，预算查询增加可选参数。集成版 store 有恢复、重试和确认路径，`frontend/tests/proposal-recovery.test.mjs` 覆盖部分模拟恢复及乱序。导出名称和局部测试不证明接口签名、所有 store 状态或页面行为完全等价；`ChatView.vue`、`RouteView.vue` 变化较大，真实浏览器、弱网及手机仍需验收。
