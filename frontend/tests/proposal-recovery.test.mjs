@@ -45,6 +45,37 @@ test('late undelete cannot replace a newly selected tour', async () => {
   assert.deepEqual(store.draftSnapshot, snapshot('b'));
 });
 
+test('late undelete failure is ignored after switching tours', async () => {
+  let rejectRequest;
+  const started = deferred();
+  route = async config => {
+    if (config.url.endsWith('/undelete')) {
+      started.resolve();
+      return new Promise((_, reject) => { rejectRequest = reject; });
+    }
+    throw new Error(config.url);
+  };
+  const pending = store.restoreDeleted('a');
+  await started.promise;
+  store.current = { id: 'b', version: 1, snapshot: snapshot('b') };
+  rejectRequest(new Error('network'));
+  assert.equal(await pending, null);
+  assert.equal(store.current.id, 'b');
+});
+
+test('undelete remains successful when trash refresh fails', async () => {
+  route = async config => {
+    if (config.url.endsWith('/undelete')) return { id: 'a', version: 2, snapshot: snapshot('restored') };
+    if (config.url.endsWith('/revisions')) return { items: [] };
+    if (config.url.endsWith('/progress')) return { progress_version: 2 };
+    if (config.url.endsWith('/budget')) return {};
+    if (config.url.endsWith('/trash')) throw new Error('network');
+    throw new Error(config.url);
+  };
+  assert.equal((await store.restoreDeleted('a')).version, 2);
+  assert.match(store.error, /已恢复.*回收站/);
+});
+
 test('undelete opens the restored tour and loads its progress', async () => {
   route = async config => {
     if (config.url === '/tour-sessions/a/undelete') return { id: 'a', version: 2, snapshot: snapshot('restored') };

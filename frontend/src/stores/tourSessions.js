@@ -543,8 +543,16 @@ export const useTourSessionsStore = defineStore("tourSessions", {
         this.progressSyncRequired = !progress;
         this.currentStopRemainingMinutes = null;
         this.budget = budget;
-        await this.loadTrash();
+        try {
+          const trash = await fetchTourTrash();
+          if (openRequests.isCurrent(request) && this.current?.id === id) this.trash = trash;
+        } catch {
+          if (openRequests.isCurrent(request) && this.current?.id === id) this.error = "游览已恢复，但回收站列表暂时无法刷新。";
+        }
         return openRequests.isCurrent(request) ? restored : null;
+      } catch (error) {
+        if (!isCurrent()) return null;
+        throw error;
       } finally { openRequests.finish(request); }
     },
     async purge(id) {
