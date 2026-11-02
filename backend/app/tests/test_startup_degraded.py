@@ -66,3 +66,24 @@ def test_missing_model_or_semantic_index_allows_startup_but_is_not_ready(monkeyp
                     runtime.set_faq_semantic_index_failed(False)
                     assert failure not in (await client.get("/ready")).json()["failures"]
     asyncio.run(scenario())
+
+
+def test_competition_readiness_rejects_stub_language_model(monkeypatch):
+    import main
+    from app.core.config import Settings
+    monkeypatch.setattr(main, "get_settings", lambda: Settings(competition_mode=True, llm_provider="stub"))
+    class Session:
+        async def __aenter__(self): return self
+        async def __aexit__(self, *args): pass
+        async def execute(self, _query):
+            class Result:
+                def scalar_one(self): return 1
+            return Result()
+    monkeypatch.setattr(main, "AsyncSessionLocal", Session)
+
+    async def scenario():
+        async with AsyncClient(transport=ASGITransport(app=main.create_app()), base_url="http://test") as client:
+            response = await client.get("/ready")
+            assert response.status_code == 503
+            assert "llm_stub_not_competition_ready" in response.json()["failures"]
+    asyncio.run(scenario())
