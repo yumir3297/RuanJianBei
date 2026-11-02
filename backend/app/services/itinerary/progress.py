@@ -216,6 +216,7 @@ def validate_remaining_budget(
 
     known = 0
     estimated_current_stop = False
+    estimated_duration = False
     unknown_stop_ids: list[UUID] = []
     unknown_legs: list[tuple[UUID, UUID]] = []
     for stop in remaining:
@@ -226,12 +227,14 @@ def validate_remaining_budget(
                 else:
                     known += stop.duration_minutes
                     estimated_current_stop = True
+                    estimated_duration |= stop.duration_basis == "estimate"
             elif current_stop_remaining_minutes < 0:
                 raise ValueError("当前停留剩余分钟不能为负数")
             else:
                 known += current_stop_remaining_minutes
         elif stop.duration_minutes is not None:
             known += stop.duration_minutes
+            estimated_duration |= stop.duration_basis == "estimate"
         else:
             unknown_stop_ids.append(stop.stop_id)
 
@@ -242,6 +245,7 @@ def validate_remaining_budget(
             unknown_legs.append((left.stop_id, right.stop_id))
         else:
             known += leg.duration_minutes
+            estimated_duration |= leg.duration_basis == "estimate"
 
     if deadline_passed:
         status: Literal["pass", "conflict", "unverified"] = "conflict"
@@ -249,7 +253,7 @@ def validate_remaining_budget(
     elif available is not None and known > available:
         status = "conflict"
         message = "按当前点完整计划时长估算，已知剩余游览时长超过截止时间" if estimated_current_stop else "已知剩余游览时长超过截止时间"
-    elif available is None or unknown_stop_ids or unknown_legs:
+    elif available is None or unknown_stop_ids or unknown_legs or estimated_duration:
         status = "unverified"
         message = "当前点按完整计划时长保守估算；剩余预算或部分停留/路段时长缺少可靠依据" if estimated_current_stop else "剩余预算或部分停留/路段时长缺少可靠依据"
     else:

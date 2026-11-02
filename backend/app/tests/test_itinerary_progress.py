@@ -28,6 +28,18 @@ def _snapshot():
 
 
 class ItineraryProgressTests(unittest.TestCase):
+    def test_estimated_stop_or_leg_keeps_budget_unverified(self):
+        data = _snapshot().model_dump(mode="json")
+        data["legs"] = [{"from_stop_id": data["stops"][0]["stop_id"],
+                         "to_stop_id": data["stops"][1]["stop_id"],
+                         "duration_minutes": 5, "duration_basis": "source"}]
+        for target in ("stop", "leg"):
+            with self.subTest(target=target):
+                candidate = TourSnapshotV2.model_validate(data).model_copy(deep=True)
+                if target == "stop": candidate.stops[0].duration_basis = "estimate"
+                else: candidate.legs[0].duration_basis = "estimate"
+                result = validate_remaining_budget(candidate, None, datetime(2026, 10, 29, 8, 0, tzinfo=UTC))
+                self.assertEqual(result.status, "unverified")
     def test_start_stores_server_time_and_deadline(self):
         snapshot = _snapshot()
         now = datetime(2026, 10, 29, 8, 0, tzinfo=UTC)
