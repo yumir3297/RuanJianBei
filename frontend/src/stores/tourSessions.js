@@ -519,20 +519,33 @@ export const useTourSessionsStore = defineStore("tourSessions", {
       return true;
     },
     async restoreDeleted(id) {
-      openRequests.cancel(); this.clearProposal();
-      await this.prepare();
-      this.current = await restoreTourSession(id, this.csrfToken);
-      this.currentId = id; writeCurrentId(id);
+      const request = openRequests.begin();
+      const previousId = this.current?.id;
+      const isCurrent = () => openRequests.isCurrent(request) && this.current?.id === previousId;
       this.clearProposal();
-      this.items = [this.current, ...this.items.filter(item => item.id !== id)];
-      this.revisions = await fetchTourRevisions(id).catch(() => []);
-      this.draftSnapshot = cloneJson(this.current.snapshot || {});
-      this.progress = await fetchTourProgress(id).catch(() => null);
-      this.progressSyncRequired = !this.progress;
-      this.currentStopRemainingMinutes = null;
-      this.budget = this.current.snapshot?.schema_version === 2 ? await fetchTourBudget(id).catch(() => null) : null;
-      await this.loadTrash();
-      return this.current;
+      try {
+        await this.prepare();
+        if (!isCurrent()) return null;
+        const restored = await restoreTourSession(id, this.csrfToken);
+        if (!isCurrent()) return null;
+        const [revisions, progress, budget] = await Promise.all([
+          fetchTourRevisions(id).catch(() => []),
+          fetchTourProgress(id).catch(() => null),
+          restored.snapshot?.schema_version === 2 ? fetchTourBudget(id).catch(() => null) : null,
+        ]);
+        if (!isCurrent()) return null;
+        this.current = restored;
+        this.currentId = id; writeCurrentId(id);
+        this.items = [restored, ...this.items.filter(item => item.id !== id)];
+        this.revisions = revisions;
+        this.draftSnapshot = cloneJson(restored.snapshot || {});
+        this.progress = progress;
+        this.progressSyncRequired = !progress;
+        this.currentStopRemainingMinutes = null;
+        this.budget = budget;
+        await this.loadTrash();
+        return openRequests.isCurrent(request) ? restored : null;
+      } finally { openRequests.finish(request); }
     },
     async purge(id) {
       await this.prepare();

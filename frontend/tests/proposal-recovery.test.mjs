@@ -24,6 +24,42 @@ beforeEach(() => {
 });
 after(async () => { store?.clearProposal(); await vite.close(); });
 
+test('late undelete cannot replace a newly selected tour', async () => {
+  const late = deferred();
+  const started = deferred();
+  route = async config => {
+    if (config.url === '/tour-sessions/a/undelete') { started.resolve(); return late.promise; }
+    if (config.url.endsWith('/revisions')) return { items: [] };
+    if (config.url.endsWith('/progress')) return { progress_version: 1 };
+    if (config.url.endsWith('/budget')) return {};
+    if (config.url.endsWith('/trash')) return { items: [] };
+    throw new Error(config.url);
+  };
+  const pending = store.restoreDeleted('a');
+  await started.promise;
+  store.current = { id: 'b', version: 1, snapshot: snapshot('b') };
+  store.draftSnapshot = snapshot('b');
+  late.resolve({ id: 'a', version: 2, snapshot: snapshot('a') });
+  await pending;
+  assert.equal(store.current.id, 'b');
+  assert.deepEqual(store.draftSnapshot, snapshot('b'));
+});
+
+test('undelete opens the restored tour and loads its progress', async () => {
+  route = async config => {
+    if (config.url === '/tour-sessions/a/undelete') return { id: 'a', version: 2, snapshot: snapshot('restored') };
+    if (config.url.endsWith('/revisions')) return { items: [] };
+    if (config.url.endsWith('/progress')) return { progress_version: 2 };
+    if (config.url.endsWith('/budget')) return { known_minutes: 10 };
+    if (config.url.endsWith('/trash')) return { items: [] };
+    throw new Error(config.url);
+  };
+  await store.restoreDeleted('a');
+  assert.equal(store.current.version, 2);
+  assert.equal(store.progress.progress_version, 2);
+  assert.deepEqual(store.draftSnapshot, snapshot('restored'));
+});
+
 test('late revision restore cannot replace a newly selected tour', async () => {
   const late = deferred();
   const started = deferred();
