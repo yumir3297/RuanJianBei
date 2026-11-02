@@ -34,7 +34,7 @@ def test_experimental_native_alter_preserves_knowledge_with_foreign_keys(tmp_pat
     def enable_foreign_keys(connection, _record):
         connection.execute("PRAGMA foreign_keys=ON")
 
-    with engine.begin() as connection:
+    with engine.connect() as connection:
         assert connection.exec_driver_sql("PRAGMA foreign_keys").scalar() == 1
         connection.execute(text("INSERT INTO knowledge_entries (id,title,category,content,source,aliases,created_at,updated_at) VALUES (47,'test','test','original','test','',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)"))
         connection.execute(text("INSERT INTO knowledge_chunks (chunk_id,source_entry_id,chunk_index,title,category,content,source,created_at) VALUES ('c47',47,0,'test','test','chunk','test',CURRENT_TIMESTAMP)"))
@@ -52,10 +52,26 @@ def test_experimental_native_alter_preserves_knowledge_with_foreign_keys(tmp_pat
 '''
         namespace = {}
         exec(compile(source[:start] + experimental + source[end:], str(path), "exec"), namespace)
+        # Preserve the synthetic old data before testing a failure in the DDL transaction.
+        connection.commit()
+        connection.exec_driver_sql("BEGIN")
+        assert connection.connection.driver_connection.in_transaction
+        with Operations.context(MigrationContext.configure(connection)):
+            namespace["upgrade"]()
+        connection.rollback()  # Simulated failure immediately after c84 completes.
+        assert connection.exec_driver_sql("SELECT name FROM sqlite_master WHERE name='knowledge_revisions'").all() == []
+        assert connection.execute(text("SELECT content FROM knowledge_entries")).scalar_one() == "original"
+        assert connection.execute(text("SELECT content FROM knowledge_chunks")).scalar_one() == "chunk"
+        assert connection.execute(text("SELECT count(*) FROM qa_cache_entries")).scalar_one() == 1
+        assert connection.exec_driver_sql("PRAGMA foreign_key_check").all() == []
+        connection.commit()  # Close the implicit read transaction before retrying.
+        connection.exec_driver_sql("BEGIN")
+        assert connection.connection.driver_connection.in_transaction
         with Operations.context(MigrationContext.configure(connection)):
             namespace["upgrade"]()
         result = connection.execute(text("SELECT e.content, e.published_revision_id, r.content, c.revision_id FROM knowledge_entries e JOIN knowledge_revisions r ON r.id=e.published_revision_id JOIN knowledge_chunks c ON c.source_entry_id=e.id")).one()
         assert tuple(result) == ("original", "legacy_47", "original", "legacy_47")
         assert connection.execute(text("SELECT count(*) FROM qa_cache_entries")).scalar_one() == 0
         assert connection.exec_driver_sql("PRAGMA foreign_key_check").all() == []
+        connection.rollback()  # This is an experiment, not a persisted repair.
     engine.dispose()
