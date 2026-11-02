@@ -7,21 +7,21 @@ from pathlib import Path
 from time import perf_counter
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.models.behavior_summary import BehaviorSummary
 from app.models.faq import FAQEntryRecord
 from app.models.knowledge import KnowledgeEntry
-from app.models.knowledge_workspace import KnowledgeRevision
+from app.models.knowledge_workspace import KnowledgeRevision, KnowledgeState
+from app.models.qa_cache import QACacheEntry
 from app.models.route import RouteTemplate
 from app.repositories.behavior_summary import BehaviorSummaryRepository
 from app.repositories.faq import FAQRepository
 from app.repositories.knowledge_chunk import KnowledgeChunkRepository
 from app.repositories.knowledge import KnowledgeRepository
 from app.repositories.knowledge_blind_spot import KnowledgeBlindSpotRepository
-from app.repositories.qa_cache import QACacheRepository
 from app.repositories.route import RouteRepository
 from app.services.data_import.chunker import KnowledgeChunker
 
@@ -54,7 +54,6 @@ class ProcessedDataImporter:
         self.faq_repository = FAQRepository(session)
         self.route_repository = RouteRepository(session)
         self.behavior_summary_repository = BehaviorSummaryRepository(session)
-        self.qa_cache_repository = QACacheRepository(session)
 
     async def sync(self) -> DataImportReport:
         import asyncio
@@ -90,8 +89,13 @@ class ProcessedDataImporter:
         route_count = await self._sync_route_templates(route_payload)
         behavior_count = await self._sync_behavior_summary(behavior_summary_payload)
 
+        result = await self.session.execute(
+            update(KnowledgeState).where(KnowledgeState.id == 1).values(epoch=KnowledgeState.epoch + 1)
+        )
+        if result.rowcount == 0:
+            self.session.add(KnowledgeState(id=1, epoch=2))
+        await self.session.execute(delete(QACacheEntry))
         await self.session.commit()
-        await self.qa_cache_repository.invalidate()
 
         return DataImportReport(
             knowledge_imported=knowledge_count,

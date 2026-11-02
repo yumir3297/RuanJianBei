@@ -19,6 +19,60 @@ from app.repositories.route import RouteRepository
 from app.tests.async_db import open_test_session
 
 
+def test_processed_sync_advances_visibility_epoch_in_data_transaction(tmp_path):
+    from app.models.knowledge_workspace import KnowledgeState
+    from app.repositories.qa_cache import QACacheRepository
+    from app.services.qa.cache import QACache
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+    db_path = tmp_path / "epoch.db"
+    settings = Settings(database_url=f"sqlite:///{db_path}", chroma_persist_dir=str(tmp_path / "index"))
+
+    async def scenario():
+        engine, session = await open_test_session(str(db_path))
+        try:
+            session.add(KnowledgeState(id=1, epoch=10))
+            await session.commit()
+            await ProcessedDataImporter(session, settings).sync()
+            # A request that began before sync can still write its old key later.
+            await QACache(QACacheRepository(session), ttl_seconds=60).set("q", "旧答案", [], epoch=10)
+            async with async_sessionmaker(engine, expire_on_commit=False)() as observer:
+                assert (await observer.get(KnowledgeState, 1)).epoch == 11
+                assert await observer.scalar(select(func.count(FAQEntryRecord.id))) > 0
+                assert await QACache(QACacheRepository(observer), ttl_seconds=60).get("q", epoch=11) is None
+        finally:
+            await session.close()
+            await engine.dispose()
+    asyncio.run(scenario())
+
+
+def test_failed_processed_sync_does_not_commit_epoch_or_faq(tmp_path, monkeypatch):
+    from app.models.knowledge_workspace import KnowledgeState
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+    db_path = tmp_path / "failed-epoch.db"
+    settings = Settings(database_url=f"sqlite:///{db_path}", chroma_persist_dir=str(tmp_path / "index"))
+
+    async def fail_before_commit(_self, _payload):
+        raise RuntimeError("injected import failure")
+
+    monkeypatch.setattr(ProcessedDataImporter, "_sync_behavior_summary", fail_before_commit)
+
+    async def scenario():
+        engine, session = await open_test_session(str(db_path))
+        try:
+            session.add(KnowledgeState(id=1, epoch=10))
+            await session.commit()
+            with pytest.raises(RuntimeError, match="injected import failure"):
+                await ProcessedDataImporter(session, settings).sync()
+            await session.rollback()
+            async with async_sessionmaker(engine, expire_on_commit=False)() as observer:
+                assert (await observer.get(KnowledgeState, 1)).epoch == 10
+                assert await observer.scalar(select(func.count(FAQEntryRecord.id))) == 0
+        finally:
+            await session.close()
+            await engine.dispose()
+    asyncio.run(scenario())
+
+
 def test_processed_import_waits_for_index_writer_lock(tmp_path):
     from app.services.rag.index_write_lock import index_write_lock
     db_path = tmp_path / "locked-import.db"
