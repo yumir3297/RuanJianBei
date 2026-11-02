@@ -1,5 +1,7 @@
 # W02 集成记录
 
+2026-11-02 更正与阻塞：原始保全快照 `48ef626` 中 `f1b4c9d76e20` 的父节点是 `e9f4c2b8016a`，不是下文实验模拟的 `5c81a1e74f2b`。用该快照的原始 W02 迁移文件和集成版其余迁移，在临时 SQLite 从空库升级至旧 `f1b4c9d76e20`，再切换集成版迁移升级至 head：语音列虽被补上，`itinerary_proposals` 表仍不存在，`tour_sessions` 也缺少进度相关字段。此前语音迁移测试只验证了另一条模拟路径，不能证明原始快照路径兼容。**禁止仅凭 Alembic 版本号对真实旧 W02 数据库直接升级或投入使用**；先备份并在副本逐项核对完整 schema 与数据，制定、测试独立修复迁移。该实验未使用真实旧数据库，也未验证 PostgreSQL 或完整缺失范围。
+
 2026-11-01 对照原 W02 快照 `48ef626`：对 `repositories/tool_execution.py`、执行器的 `registry.py`、`runner.py`、`worker.py` 与行程的 `intent.py`、`progress.py`、`provenance.py` 做 Python AST 函数/类名称集合比较，未发现原名称消失；这不证明签名、实现或行为等价。抽查 diff：当前任务仓库增加进度版本检查和父记录先 flush；handler 从原来的空 registry 扩展为行程提案，runner 增加事务内结果持久化，维护与取消逻辑也有修改。原 W02 快照并非集成提交的祖先，集成采用增量适配；剩余前端、迁移、文档及任务仓库逐项行为仍需核对，不能凭名称相同认定已全部合并。
 
 前端接口结构对照：`frontend/src/api/itinerary.js`、`api/tourSessions.js` 和 `stores/tourSessions.js` 的原有命名导出在集成版均可找到；前两个 API 文件的 diff 显示新增提案列表恢复与确认重复调用风险的重试，预算查询增加可选参数。集成版 store 有恢复、重试和确认路径，`frontend/tests/proposal-recovery.test.mjs` 覆盖部分模拟恢复及乱序。导出名称和局部测试不证明接口签名、所有 store 状态或页面行为完全等价；`ChatView.vue`、`RouteView.vue` 变化较大，真实浏览器、弱网及手机仍需验收。
