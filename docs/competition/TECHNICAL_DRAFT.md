@@ -16,6 +16,8 @@
 
 游客提问经 `frontend/src/views/tourist/ChatView.vue`、`frontend/src/composables/useSSEStream.js` 进入 `backend/app/api/chat.py` 和 `backend/app/services/qa/pipeline.py`。流程按实际分支使用 FAQ、缓存、检索、模型及语音服务，不代表每次请求都调用大模型。SSE 传递文字、来源、音频及完成或错误事件。
 
+架构选型比较了保留现有流水线、局部引入 LangGraph 和其他轻量 Agent 框架。当前采用现有流水线及受控任务执行器的增量方案，以保留 FAQ/缓存快速路径和既有流式协议；LangGraph 的状态图与持久化能力尚未通过同一真实任务链证明优于该方案，因此没有全量迁移。此选择是当前工程判断，不是性能优越结论；候选框架版本、许可和约束见 [框架调研](../architecture/FRAMEWORK_RESEARCH.md)。
+
 ## 四、AI 与知识方案
 
 知识问答结合 FAQ 和检索结果生成回答；知识发布及可见性由后端知识服务管理，问答链路对发布版本变化进行检查。模型服务由配置决定，未配置真实供应商时存在 stub 或降级路径；检索结果及来源展示不自动证明回答真实，仍需逐条核对。见 `backend/app/services/qa/pipeline.py`、`backend/app/services/knowledge/`、`backend/app/core/config.py`。
@@ -28,6 +30,8 @@
 
 AI 修改先生成提案，后台任务保存状态；系统校验快照、景点目录和版本，游客查看差异并明确确认后才生成新行程版本。服务端重建来源，避免直接信任客户端证据；外部调用结果不确定时要求用户确认重复调用风险。见 `backend/app/services/tool_execution/handlers.py`、`backend/app/repositories/tool_execution.py`、`backend/app/repositories/tour_session.py`、`frontend/src/stores/tourSessions.js`。未核实提案仍可由用户确认应用，应清楚展示其限制。
 
+模型生成的新增或替换景点需要当前已发布目录的景点代码；提案新增或修改的时长按估算处理，并提示游客核对。候选所需操作也由模型推断，规则检查不能独立证明其完整包含游客原话，因此确认界面必须同时展示原始需求与修改差异。已有测试覆盖目录变化、快照失效和提案恢复，但真实模型的约束满足率仍待人工评测。
+
 ## 六、测试与部署
 
 测试覆盖示例：`backend/app/tests/test_pipeline.py`、`test_stream_knowledge_integration.py`、`test_itinerary_provenance.py`、`test_tour_progress_and_proposals.py`、`test_tool_execution_acceptance.py`，以及 `frontend/tests/proposal-recovery.test.mjs`。`test_chroma_persistence_integration.py` 在真实本地 Chroma 上用合成向量检查持久化及写入失败回退，不检验真实嵌入模型质量。这些测试使用隔离数据或假供应商，不能直接代表真实设备和供应商性能。100 题评测集格式检查和评测脚本单元测试曾在隔离条件下通过，格式通过不等于回答准确；见 `eval/testset/e2e_qa_100.json`、`eval/tests/`。
@@ -35,6 +39,8 @@ AI 修改先生成提案，后台任务保存状态；系统校验快照、景�
 后端在 `backend/` 目录按照 `docs/DEVELOPMENT.md` 配置数据库、数据与模型后运行 `python -m uvicorn main:app`；持久提案需另启动 `python -m app.services.tool_execution.worker`。前端在 `frontend/` 运行 `npm ci` 和 `npm run dev`。启动可能执行迁移、初始化及模型预热，不能把示例命令理解为所有平台均已验收。真实密钥不得写入文档或提交。
 
 目前知识库按配置使用单站点数据库，不是逐条多租户隔离。W02 迁移的父节点调整以旧迁移未部署为前提，已有数据库须先核查版本和 schema，参见 `docs/development/W02_INTEGRATION.md`。停止浏览器等待并不等于取消服务端任务或撤回供应商调用；不确定的外部结果可能产生重复调用费用。
+
+模型或 FAQ 语义索引不可用时，服务可进入降级启动或回退；`/ready` 会报告已检测到的未就绪项，`/health` 仅表示进程响应。管理员可单独重载处理请求的进程内 FAQ，但这不证明其他 worker 或语义索引已经恢复。隔离 PostgreSQL 上已验证有限的会话竞争、两个进程领取以及外部调用标记前后的进程终止恢复；租约过期由测试触发，未执行真实外部调用或生产压力。详见 [W02 集成记录](../development/W02_INTEGRATION.md) 与 [开发进度](../development/PROGRESS.md)。
 
 ## 七、特点与局限
 
