@@ -2,6 +2,20 @@
 
 本文件是当时的调研快照，并非当前最新版本清单；安装或部署前应重新核对官方发布、许可证和兼容性。尚无本项目真实业务链的框架性能对照。
 
+## 2026-11-02：PyPI 元数据复核
+
+下表是复核时页面显示的发行版，不保证今后不变，也不证明与本项目全部依赖兼容；包许可不自动覆盖模型、插件及服务端许可。
+
+| 包 | 页面版本 | 许可 | Python 要求 |
+|---|---|---|---|
+| [LangGraph](https://pypi.org/project/langgraph/) | 1.2.19 | MIT | >=3.10 |
+| [Pydantic AI](https://pypi.org/project/pydantic-ai/) | 2.64.0 | MIT | >=3.11 |
+| [OpenAI Agents SDK](https://pypi.org/project/openai-agents/) | 0.24.0 | MIT | >=3.10 |
+| [Langfuse Python SDK](https://pypi.org/project/langfuse/) | 5.1.0 | MIT | >=3.11,<4 |
+| [Ragas](https://pypi.org/project/ragas/) | 0.4.3 | Apache License（页面分类） | >=3.9 |
+
+上述五个当前页面的 Python 版本交集至少为 3.11 且小于 4；旧快照中的 3.10 交集已不适用于这些版本。依赖求解、供应商兼容和许可细节仍需在目标环境验证；本次没有安装框架或测量性能。
+
 ## 结论
 
 若当前导游链路主要是检索、提示词、生成和流式返回，优先保留 FastAPI 和显式 pipeline，把模型、检索、会话和观测接口解耦；先用实际延迟、失败率和回答质量验证。只有出现跨请求持久执行、人工审批、复杂分支/并行和恢复等需求时，再评估引入 LangGraph；轻量 agent 框架适合需要工具调用和类型化结果但不需要复杂图状态的场景。这个建议是架构判断，未基于本项目代码性能实测。
