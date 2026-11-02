@@ -476,25 +476,37 @@ export const useTourSessionsStore = defineStore("tourSessions", {
     },
     async restoreRevision(revision) {
       if (!this.current || !revision?.id) return null;
+      const sessionId = this.current.id;
+      const request = openRequests.begin();
+      const isCurrent = () => openRequests.isCurrent(request) && this.current?.id === sessionId;
       try {
         await this.prepare();
+        if (!isCurrent()) return null;
         const payload = { revision_id: revision.id, expected_version: this.current.version };
-        const { fingerprint, key } = this.operationKey(`restore-revision:${this.current.id}`, payload);
-        this.current = await restoreTourRevision(this.current.id, revision.id, this.current.version, this.csrfToken, key);
+        const { fingerprint, key } = this.operationKey(`restore-revision:${sessionId}`, payload);
+        const restored = await restoreTourRevision(sessionId, revision.id, this.current.version, this.csrfToken, key);
+        if (!isCurrent()) return null;
+        this.current = restored;
         this.draftSnapshot = cloneJson(this.current.snapshot);
         this.items = this.items.map(item => item.id === this.current.id ? this.current : item);
-        this.progress = await fetchTourProgress(this.current.id).catch(() => this.progress);
+        const progress = await fetchTourProgress(sessionId).catch(() => null);
+        if (!isCurrent()) return null;
+        this.progress = progress;
         this.progressSyncRequired = !this.progress;
         if (!this.progress?.current_stop_id) this.currentStopRemainingMinutes = null;
-        this.budget = this.current.snapshot?.schema_version === 2
-          ? await fetchTourBudget(this.current.id, this.currentStopRemainingMinutes).catch(() => null) : null;
-        this.revisions = await fetchTourRevisions(this.current.id).catch(() => this.revisions);
+        const budget = this.current.snapshot?.schema_version === 2
+          ? await fetchTourBudget(sessionId, this.currentStopRemainingMinutes).catch(() => null) : null;
+        if (!isCurrent()) return null;
+        this.budget = budget;
+        const revisions = await fetchTourRevisions(sessionId).catch(() => null);
+        if (!isCurrent()) return null;
+        if (revisions) this.revisions = revisions;
         this.clearOperationKey(fingerprint);
         return this.current;
       } catch (error) {
-        this.error = error?.response?.data?.detail || "无法恢复此版本；若有已完成游览记录，服务端会阻止覆盖。";
+        if (isCurrent()) this.error = error?.response?.data?.detail || "无法恢复此版本；若有已完成游览记录，服务端会阻止覆盖。";
         return null;
-      }
+      } finally { openRequests.finish(request); }
     },
     async remove(id) {
       const item = this.items.find(entry => entry.id === id) || this.current;

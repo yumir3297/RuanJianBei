@@ -24,6 +24,26 @@ beforeEach(() => {
 });
 after(async () => { store?.clearProposal(); await vite.close(); });
 
+test('late revision restore cannot replace a newly selected tour', async () => {
+  const late = deferred();
+  const started = deferred();
+  route = async config => {
+    if (config.url.includes('/restore')) { started.resolve(); return late.promise; }
+    if (config.url.endsWith('/progress')) return { progress_version: 1 };
+    if (config.url.endsWith('/budget')) return {};
+    if (config.url.endsWith('/revisions')) return { items: [] };
+    throw new Error(config.url);
+  };
+  const pending = store.restoreRevision({ id: 'revision-a' });
+  await started.promise;
+  store.current = { id: 'b', version: 1, snapshot: snapshot('b') };
+  store.draftSnapshot = snapshot('b');
+  late.resolve({ id: 'a', version: 2, snapshot: snapshot('restored-a') });
+  await pending;
+  assert.equal(store.current.id, 'b');
+  assert.deepEqual(store.draftSnapshot, snapshot('b'));
+});
+
 test('latest failed proposal is restored instead of an older ready proposal', async () => {
   const failed = { ...proposal('a', 'failed'), id: 'failed-new', validation: { message: '提案未能完成' } };
   const older = { ...proposal(), id: 'ready-old' };
