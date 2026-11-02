@@ -9,6 +9,11 @@ from app.services.rag.embedder import BaseEmbedder
 _faq_matcher = FAQMatcher()
 _last_reload_ms = 0.0
 _semantic_index_failed = False
+_faq_reload_failed = False
+
+
+def faq_reload_failed() -> bool:
+    return _faq_reload_failed
 
 
 def set_faq_semantic_index_failed(failed: bool) -> None:
@@ -39,14 +44,16 @@ async def get_runtime_faq_matcher(
 
 
 async def reload_runtime_faq_matcher(session: AsyncSession) -> float:
-    global _last_reload_ms
+    global _last_reload_ms, _faq_reload_failed
     had_semantic_index = _faq_matcher.semantic_index is not None
     try:
         _last_reload_ms = await _faq_matcher.reload(session)
     except Exception:
+        _faq_reload_failed = True
         if had_semantic_index and _faq_matcher.semantic_index is None:
             set_faq_semantic_index_failed(True)
         raise
+    _faq_reload_failed = False
     if had_semantic_index:
         set_faq_semantic_index_failed(False)
     return _last_reload_ms

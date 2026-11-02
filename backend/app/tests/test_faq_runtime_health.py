@@ -1,5 +1,6 @@
 import asyncio
 
+import pytest
 from app.services.qa import runtime
 
 
@@ -25,6 +26,31 @@ def test_runtime_semantic_failure_and_recovery_are_reported(monkeypatch):
         matcher.broken = False
         await runtime.get_runtime_faq_matcher(None, embedder=object())
         assert not runtime.faq_semantic_index_failed()
+
+    asyncio.run(scenario())
+
+
+def test_reload_failure_remains_visible_until_a_successful_reload(monkeypatch):
+    class Matcher:
+        semantic_index = None
+        broken = True
+
+        async def reload(self, _session):
+            if self.broken:
+                raise RuntimeError("database unavailable")
+            return 1.0
+
+    matcher = Matcher()
+    monkeypatch.setattr(runtime, "_faq_matcher", matcher)
+    monkeypatch.setattr(runtime, "_faq_reload_failed", False, raising=False)
+
+    async def scenario():
+        with pytest.raises(RuntimeError):
+            await runtime.reload_runtime_faq_matcher(None)
+        assert runtime.faq_reload_failed()
+        matcher.broken = False
+        await runtime.reload_runtime_faq_matcher(None)
+        assert not runtime.faq_reload_failed()
 
     asyncio.run(scenario())
 

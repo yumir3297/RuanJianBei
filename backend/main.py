@@ -153,7 +153,9 @@ def create_app() -> FastAPI:
         failures: list[str] = []
         if getattr(app.state, "embedding_model_available", None) is False:
             failures.append("embedding_model_unavailable")
-        from app.services.qa.runtime import faq_semantic_index_failed
+        from app.services.qa.runtime import faq_reload_failed, faq_semantic_index_failed
+        if faq_reload_failed():
+            failures.append("faq_reload_failed")
         if faq_semantic_index_failed():
             failures.append("faq_semantic_index_unavailable")
         async with AsyncSessionLocal() as session:
