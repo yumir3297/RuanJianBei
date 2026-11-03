@@ -1,4 +1,11 @@
 // Confirmation is an explicit visitor choice among currently displayed published entries.
+export function buildVisionChatRequest(result, confirmation) {
+  return {
+    query: "请依据已发布资料帮助我了解这张照片可能涉及的景点。",
+    visionContext: { ...result, ...(confirmation ? { confirmation } : {}) },
+  };
+}
+
 export function visionConfirmation(catalog, spotCode) {
   if (!spotCode || !catalog?.site_id) return null;
   const item = (catalog.items || []).find(entry => entry.spot_code === spotCode);

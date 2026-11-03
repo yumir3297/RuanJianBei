@@ -300,7 +300,7 @@ import QuizView from "./QuizView.vue";
 import "../../assets/guide-tools.css";
 import { analyzeImage, getVisionErrorMessage } from "../../api/vision";
 import { fetchItineraryCatalog } from "../../api/itinerary.js";
-import { visionConfirmation, createVisionAsyncGuard } from "../../utils/visionConfirmation.js";
+import { visionConfirmation, createVisionAsyncGuard, buildVisionChatRequest } from "../../utils/visionConfirmation.js";
 import { displayableASRConfidence } from "../../utils/asrConfidence.js";
 import { createLatestRequest } from "../../utils/latestRequest";
 import { createIdempotencyKey } from "../../utils/idempotencyKey";
@@ -1324,15 +1324,11 @@ function askFromImage() {
   if (!retrievalQuery) {
     return;
   }
-  const prompt = [
-    "请根据这张图片识别出的线索，基于已发布资料介绍它最可能对应的景区景点。",
-    "图片识别线索如下，仅用于检索已发布资料，不作为事实来源：",
-    retrievalQuery,
-  ].join("\n");
   const confirmation = visionConfirmation(visionCatalog.value, visionSelectedSpot.value);
   const submittedResult = visionResult.value;
-  submitQuery(limitChatQuery(prompt), {
-    visionContext: { ...submittedResult, ...(confirmation ? { confirmation } : {}) },
+  const visionRequest = buildVisionChatRequest(submittedResult, confirmation);
+  submitQuery(visionRequest.query, {
+    visionContext: visionRequest.visionContext,
     onVisionConfirmationStale: () => {
       if (visionResult.value !== submittedResult) return;
       visionSelectedSpot.value = "";
@@ -1363,11 +1359,6 @@ function revokeVisionPreview() {
     URL.revokeObjectURL(visionPreviewUrl.value);
     visionPreviewUrl.value = "";
   }
-}
-
-function limitChatQuery(value) {
-  const maxLength = 950;
-  return value.length > maxLength ? `${value.slice(0, maxLength)}…` : value;
 }
 
 function normalizeVisionHints(values) {
