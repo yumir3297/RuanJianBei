@@ -1,5 +1,7 @@
 # 开发进度
 
+2026-11-03：独立 Python worker 加载旧 FAQ 后，父进程在临时 SQLite 同事务更新 FAQ 和 epoch；worker 下一次读取新答案。FAQ 版本专项 3 passed，Windows 因管道 select 不支持跳过跨进程用例；未验证 PostgreSQL、真实服务、模型或并发压力。
+
 2026-11-03：FAQ runtime 在请求获取时比较数据库知识 epoch，不一致时串行重载；加载前后版本不一致则报错并标记故障，请求绑定的 matcher 版本与请求版本不一致时停止回答。隔离 SQLite 覆盖另一会话更新后重载，替身覆盖加载中版本变化及恢复、旧 matcher 请求拒绝；后端全套 510 passed、5 skipped。当前仍原地重载 matcher，重载期间可能暂时走无 FAQ 路径；真实多进程、PostgreSQL、加载并发和延迟影响尚未验收。
 
 2026-11-03：将 FAQ runtime 更新后仍返回旧答案的隔离 SQLite 复现保存为 strict xfail 回归；专项 1 xfailed，表示问题仍存在。索引加载过程中再次更新、运行中请求与真实多进程仍未覆盖；修复须绑定 matcher 与知识版本并避免旧请求混用新版本。

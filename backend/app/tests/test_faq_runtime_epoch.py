@@ -1,4 +1,8 @@
 import asyncio
+import select
+import sqlite3
+import subprocess
+import sys
 import pytest
 
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -8,6 +12,53 @@ from app.models.knowledge_workspace import KnowledgeState
 from app.services.qa import runtime
 from app.services.qa.faq_matcher import FAQMatcher
 from app.tests.async_db import open_test_session
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="select on subprocess pipes is not supported on Windows")
+def test_faq_worker_refreshes_after_another_process_updates_database(tmp_path):
+    database = tmp_path / "cross-process.db"
+
+    async def setup():
+        engine, session = await open_test_session(str(database))
+        session.add_all([KnowledgeState(id=1, epoch=1), FAQEntryRecord(
+            id="f", category="test", aliases_json='["问题"]', answer="旧答案", sources_json="[]")])
+        await session.commit()
+        await session.close()
+        await engine.dispose()
+
+    asyncio.run(setup())
+    script = '''
+import asyncio, sys
+from app.services.qa.runtime import get_runtime_faq_matcher
+from app.tests.async_db import open_test_session
+async def main():
+    engine, session = await open_test_session(sys.argv[1])
+    try:
+        matcher = await get_runtime_faq_matcher(session)
+        print(matcher.match_exact("问题").answer, flush=True)
+        await asyncio.to_thread(sys.stdin.readline)
+        matcher = await get_runtime_faq_matcher(session)
+        print(matcher.match_exact("问题").answer, flush=True)
+    finally:
+        await session.close()
+        await engine.dispose()
+asyncio.run(main())
+'''
+    child = subprocess.Popen([sys.executable, "-u", "-c", script, str(database)], stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        assert select.select([child.stdout], [], [], 15)[0], "worker did not load FAQ"
+        assert child.stdout.readline().strip() == "旧答案"
+        with sqlite3.connect(database) as conn:
+            conn.execute("UPDATE faq_entries SET answer=? WHERE id='f'", ("新答案",))
+            conn.execute("UPDATE knowledge_state SET epoch=2 WHERE id=1")
+        output, errors = child.communicate("continue\n", timeout=15)
+        assert child.returncode == 0, errors
+        assert output.strip() == "新答案"
+    finally:
+        if child.poll() is None:
+            child.kill()
+            child.communicate()
 
 
 def test_reload_detects_epoch_change_and_recovers(monkeypatch):
