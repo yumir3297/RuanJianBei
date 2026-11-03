@@ -156,3 +156,53 @@ def test_postgres_api_confirmation_locks_catalog_until_commit(tmp_path, monkeypa
     asyncio.run(run())
 
 
+
+
+def test_postgres_concurrent_identical_proposal_apply_replays_once(monkeypatch):
+    from datetime import UTC, datetime, timedelta
+    from app.models.tour_session import TourIdentity
+    from app.models.knowledge_workspace import KnowledgeState
+
+    async def run():
+        engine = create_async_engine(_safe_url())
+        sessions = async_sessionmaker(engine, expire_on_commit=False)
+        owner_id = str(uuid4())
+        try:
+            async with sessions() as seed:
+                assert await seed.get(KnowledgeState, 1) is not None
+                seed.add(TourIdentity(id=owner_id, credential_digest=uuid4().hex * 2,
+                                      expires_at=datetime.now(UTC) + timedelta(days=1)))
+                await seed.commit()
+                snapshot = {'schema_version': 2, 'constraints': {'available_minutes': 60},
+                            'stops': [{'stop_id': str(uuid4()), 'kind': 'rest', 'name': '休息',
+                                       'duration_minutes': 10, 'duration_basis': 'user'}], 'legs': []}
+                repo = TourSessionRepository(seed)
+                tour = await repo.create_session(owner_id, 'site', '行程', snapshot, 'create')
+                catalog = await PublishedAttractionCatalog(K01PublishedAttractionSource(seed, site_id='site')).list_for_site('site')
+                generated = {'status': 'ready', 'base_snapshot': snapshot, 'operations': [], 'candidate': snapshot,
+                             'diff': [], 'validation': {'status': 'pass', 'conflicts': []}, 'clarification': None}
+                proposal = await repo.create_proposal(owner_id, tour['id'], 1, 0, 'a' * 64,
+                                                      catalog.digest, '调整', generated, 'proposal')
+            original = TourSessionRepository._replay
+            both = asyncio.Event()
+            count = 0
+            async def barrier(self, *args, **kwargs):
+                nonlocal count
+                result = await original(self, *args, **kwargs)
+                if args[1] == 'proposal_apply' and result is None and count < 2:
+                    count += 1
+                    if count == 2: both.set()
+                    await asyncio.wait_for(both.wait(), 5)
+                return result
+            monkeypatch.setattr(TourSessionRepository, '_replay', barrier)
+            async def apply():
+                async with sessions() as session:
+                    return await TourSessionRepository(session).apply_proposal(
+                        owner_id, tour['id'], proposal['id'], 1, 0, 'a' * 64, 'apply', catalog_site_id='site')
+            first, second = await asyncio.wait_for(asyncio.gather(apply(), apply()), 10)
+            assert first == second
+            async with sessions() as check:
+                assert len(await TourSessionRepository(check).list_revisions(owner_id, tour['id'])) == 2
+        finally:
+            await engine.dispose()
+    asyncio.run(run())
