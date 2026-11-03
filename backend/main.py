@@ -167,9 +167,12 @@ def create_app() -> FastAPI:
             except Exception:
                 failures.append("database_unavailable")
 
-        for provider, key in ((settings.llm_provider, settings.llm_api_key), (settings.asr_provider, settings.asr_api_key), (settings.tts_provider, settings.tts_api_key)):
-            if provider != "stub" and not key:
-                failures.append(f"{provider}_api_key_missing")
+        if settings.llm_provider != "stub" and not settings.llm_api_key:
+            failures.append(f"{settings.llm_provider}_api_key_missing")
+        if settings.asr_provider not in ("stub", "local_sensevoice") and not settings.asr_api_key:
+            failures.append(f"{settings.asr_provider}_api_key_missing")
+        if settings.tts_provider != "stub" and not settings.tts_ready:
+            failures.append(f"{settings.tts_provider}_api_key_missing")
         if settings.competition_mode and settings.llm_provider.strip().lower() == "stub":
             failures.append("llm_stub_not_competition_ready")
         if settings.competition_mode and settings.admin_password == "admin123" and "default_admin_password" not in failures:

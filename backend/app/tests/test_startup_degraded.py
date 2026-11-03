@@ -87,3 +87,31 @@ def test_competition_readiness_rejects_stub_language_model(monkeypatch):
             assert response.status_code == 503
             assert "llm_stub_not_competition_ready" in response.json()["failures"]
     asyncio.run(scenario())
+
+
+def test_readiness_checks_voice_credentials_for_selected_provider(monkeypatch):
+    import main
+    from app.core.config import Settings
+    settings = Settings(llm_provider="stub", asr_provider="local_sensevoice",
+                        tts_provider="volcengine", tts_api_key="",
+                        volcengine_tts_api_key="test-credential")
+    monkeypatch.setattr(main, "get_settings", lambda: settings)
+
+    class Session:
+        async def __aenter__(self): return self
+        async def __aexit__(self, *args): pass
+        async def execute(self, _query):
+            class Result:
+                def scalar_one(self): return 1
+            return Result()
+    monkeypatch.setattr(main, "AsyncSessionLocal", Session)
+
+    async def scenario():
+        async with AsyncClient(transport=ASGITransport(app=main.create_app()), base_url="http://test") as client:
+            failures = (await client.get("/ready")).json()["failures"]
+            assert "volcengine_api_key_missing" not in failures
+            assert "local_sensevoice_api_key_missing" not in failures
+            settings.volcengine_tts_api_key = ""
+            failures = (await client.get("/ready")).json()["failures"]
+            assert "volcengine_api_key_missing" in failures
+    asyncio.run(scenario())
