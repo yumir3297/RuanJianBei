@@ -469,7 +469,7 @@ class TourSessionRepository:
                     (stop.stop_id not in old_stops or old_stops[stop.stop_id].duration_minutes != stop.duration_minutes)
                 ) for stop in candidate_snapshot.stops)
                 estimated |= any(leg.duration_basis == "estimate" for leg in candidate_snapshot.legs)
-                if (estimated or location_changed) and validation.get("status") == "pass":
+                if (estimated or location_changed or candidate_snapshot.constraints.rest_every_minutes is not None) and validation.get("status") == "pass":
                     validation["status"] = "unverified"
             except ValidationError:
                 comparable = False

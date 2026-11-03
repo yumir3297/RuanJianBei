@@ -517,3 +517,24 @@ def test_save_revision_status_fence_rejects_session_state_change_before_commit(m
         finally:
             await db.close(); await engine.dispose()
     _run(scenario)
+
+
+def test_restored_old_proposal_with_rest_interval_is_unverified():
+    async def scenario():
+        from app.repositories.tour_session import TourSessionRepository
+        engine, db = await open_test_session()
+        try:
+            repo = TourSessionRepository(db)
+            snapshot = _snapshot()
+            snapshot["constraints"]["rest_every_minutes"] = 30
+            created = await repo.create_session("owner-a", "site", "游览", snapshot, "create-rest")
+            generated = {"status": "ready", "base_snapshot": snapshot, "operations": [],
+                         "candidate": snapshot, "diff": [],
+                         "validation": {"status": "pass", "conflicts": []}, "clarification": None}
+            proposal = await repo.create_proposal("owner-a", created["id"], 1, 0, "a" * 64,
+                                                  "catalog", "安排休息", generated, "proposal-rest")
+            restored = await repo.get_proposal("owner-a", created["id"], proposal["id"])
+            assert restored["validation"]["status"] == "unverified"
+        finally:
+            await db.close(); await engine.dispose()
+    _run(scenario)
