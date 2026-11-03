@@ -15,6 +15,64 @@ from app.services.qa.faq_matcher import FAQEntry
 from app.tests.async_db import open_test_session
 
 
+def test_empty_faq_does_not_reload_repeatedly(monkeypatch, tmp_path):
+    old_reload = FAQMatcher.reload
+    calls = 0
+
+    async def counted(self, session):
+        nonlocal calls
+        calls += 1
+        return await old_reload(self, session)
+
+    monkeypatch.setattr(runtime, "_faq_matcher", FAQMatcher())
+    monkeypatch.setattr(FAQMatcher, "reload", counted)
+
+    async def scenario():
+        engine, session = await open_test_session(str(tmp_path / "empty.db"))
+        try:
+            await runtime.get_runtime_faq_matcher(session)
+            await runtime.get_runtime_faq_matcher(session)
+            assert calls == 1
+        finally:
+            await session.close()
+            await engine.dispose()
+    asyncio.run(scenario())
+
+
+def test_concurrent_requests_share_one_refresh(monkeypatch):
+    class Visibility:
+        def __init__(self, _session): pass
+        async def read_epoch(self): return 2
+
+    old = FAQMatcher()
+    old.add([FAQEntry(id="old", category="test", aliases=["问题"], answer="旧", sources=[])])
+    old.knowledge_epoch = 1
+    monkeypatch.setattr(runtime, "_faq_matcher", old)
+    monkeypatch.setattr(runtime, "VisibilityService", Visibility)
+
+    async def scenario():
+        started, release = asyncio.Event(), asyncio.Event()
+        calls = 0
+
+        async def load(matcher, _session):
+            nonlocal calls
+            calls += 1
+            started.set()
+            await release.wait()
+            matcher.add([FAQEntry(id="new", category="test", aliases=["问题"], answer="新", sources=[])])
+
+        monkeypatch.setattr(FAQMatcher, "load_from_db", load)
+        tasks = [asyncio.create_task(runtime.get_runtime_faq_matcher(object())) for _ in range(3)]
+        await started.wait()
+        await asyncio.sleep(0)
+        release.set()
+        results = await asyncio.gather(*tasks)
+        assert all(m.match_exact("问题").answer == "新" for m in results)
+        assert calls == 1
+
+    asyncio.run(scenario())
+
+
 def test_reload_keeps_old_matcher_usable_until_new_matcher_is_ready(monkeypatch):
     old = FAQMatcher()
     old.add([FAQEntry(id="old", category="test", aliases=["问题"], answer="旧答案", sources=[])])

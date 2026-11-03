@@ -40,12 +40,18 @@ async def get_runtime_faq_matcher(
     semantic_threshold: float = 0.85,
 ) -> FAQMatcher:
     epoch = await VisibilityService(session).read_epoch() if session is not None else None
-    if not _faq_matcher.entries or (epoch is not None and getattr(_faq_matcher, "knowledge_epoch", None) != epoch):
-        try:
-            await reload_runtime_faq_matcher(session)
-        except FAQSemanticReloadError:
-            # The replacement exact/fuzzy matcher has already been published.
-            pass
+    if (epoch is None and not _faq_matcher.entries) or (epoch is not None and getattr(_faq_matcher, "knowledge_epoch", None) != epoch):
+        async with _reload_lock:
+            # Other requests may have completed the same refresh while we waited.
+            current_epoch = await VisibilityService(session).read_epoch() if session is not None else None
+            needs_reload = ((current_epoch is None and not _faq_matcher.entries) or
+                            (current_epoch is not None and getattr(_faq_matcher, "knowledge_epoch", None) != current_epoch))
+            if needs_reload:
+                try:
+                    await _reload_runtime_faq_matcher_locked(session)
+                except FAQSemanticReloadError:
+                    # The replacement exact/fuzzy matcher has already been published.
+                    pass
     if embedder is not None:
         try:
             _faq_matcher.ensure_semantic_index(embedder, semantic_threshold)
