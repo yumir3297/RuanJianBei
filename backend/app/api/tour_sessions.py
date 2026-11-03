@@ -463,6 +463,13 @@ async def apply_itinerary_proposal(
 ):
     _protect_write(request, identity, settings)
     repo = TourSessionRepository(db)
+    try:
+        replay = await repo.replay_proposal_apply(identity.id, session_id, proposal_id, payload.expected_version,
+                                                  payload.progress_version, payload.draft_digest, idempotency_key)
+    except IdempotencyConflict as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    if replay is not None:
+        return replay
     proposal = await repo.get_proposal(identity.id, session_id, proposal_id)
     if proposal is None: raise HTTPException(status_code=404, detail="行程提案不存在")
     catalog = await PublishedAttractionCatalog(K01PublishedAttractionSource(db, site_id=settings.site_id)).list_for_site(settings.site_id)

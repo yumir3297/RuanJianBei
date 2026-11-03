@@ -112,10 +112,14 @@ def test_worker_proposal_apply_with_catalog_change_or_stable_catalog(monkeypatch
                     apply_payload = {"expected_version": created["version"],
                                      "progress_version": started["progress_version"], "draft_digest": digest}
                     applied = await client.post(apply_path, headers=apply_headers, json=apply_payload)
+                    published_rows["items"] = []  # Catalog changes after the successful commit.
                     replay = await client.post(apply_path, headers=apply_headers, json=apply_payload)
                     assert applied.status_code == 200, applied.text
                     assert replay.status_code == 200, replay.text
                     assert replay.json() == applied.json()
+                    changed = await client.post(apply_path, headers=apply_headers,
+                                                json={**apply_payload, "expected_version": created["version"] + 1})
+                    assert changed.status_code == 409
                     assert applied.json()["version"] == created["version"] + 1
                     assert applied.json()["snapshot"]["stops"][0]["duration_minutes"] == 15
                     async with sessions() as check_db:

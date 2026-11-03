@@ -648,6 +648,12 @@ class TourSessionRepository:
                 })
         return summaries
 
+    async def replay_proposal_apply(self, owner_id: str, session_id: str, proposal_id: str,
+            expected_version: int, progress_version: int, draft_digest: str, idempotency_key: str) -> dict | None:
+        request = {"session_id": session_id, "proposal_id": proposal_id, "expected_version": expected_version,
+                   "progress_version": progress_version, "draft_digest": draft_digest}
+        return await self._replay(owner_id, "proposal_apply", idempotency_key, request)
+
     async def apply_proposal(self, owner_id: str, session_id: str, proposal_id: str,
             expected_version: int, progress_version: int, draft_digest: str, idempotency_key: str,
             catalog_entries: Mapping[str, PublishedAttraction] | None = None) -> dict | None:
