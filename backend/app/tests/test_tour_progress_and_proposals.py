@@ -15,6 +15,27 @@ def _run(coro):
     asyncio.run(coro())
 
 
+async def _seed_published_catalog(db):
+    from app.models.knowledge import KnowledgeEntry
+    from app.models.knowledge_workspace import KnowledgeRevision, KnowledgeState
+    from app.services.itinerary.catalog import K01PublishedAttractionSource, PublishedAttractionCatalog
+
+    db.add(KnowledgeState(id=1, epoch=1))
+    for code, title in [("LS-01", "梵宫"), ("LS-02", "其他景点"), ("LS-03", "新景点")]:
+        metadata = json.dumps({"attraction_id": code})
+        entry = KnowledgeEntry(title=title, category="景点信息", content="测试资料", source="测试", aliases="", metadata_json=metadata)
+        db.add(entry)
+        await db.flush()
+        revision = KnowledgeRevision(id=str(uuid4()), knowledge_entry_id=entry.id, title=title,
+                                     category=entry.category, content=entry.content, source=entry.source,
+                                     aliases="", metadata_json=metadata)
+        db.add(revision)
+        await db.flush()
+        entry.published_revision_id = revision.id
+    await db.commit()
+    return (await PublishedAttractionCatalog(K01PublishedAttractionSource(db, site_id="site")).list_for_site("site")).digest
+
+
 def _snapshot():
     stop_id = str(uuid4())
     return {"schema_version": 2, "constraints": {"available_minutes": 90},
@@ -82,6 +103,7 @@ def test_proposal_apply_creates_exactly_one_revision_and_is_idempotent():
         engine, db = await open_test_session()
         try:
             repo = TourSessionRepository(db)
+            catalog_digest = await _seed_published_catalog(db)
             snapshot = _snapshot()
             created = await repo.create_session("owner-a", "site", "游览", snapshot, "create")
             candidate = json.loads(json.dumps(snapshot))
@@ -90,12 +112,12 @@ def test_proposal_apply_creates_exactly_one_revision_and_is_idempotent():
                 "candidate": candidate, "diff": [{"kind": "constraints"}],
                 "validation": {"status": "pass", "conflicts": []}, "clarification": None}
             proposal = await repo.create_proposal("owner-a", created["id"], 1, 0, "a" * 64,
-                "catalog-digest", "shorten the trip", generated, "proposal-create")
+                catalog_digest, "shorten the trip", generated, "proposal-create")
             assert (await repo.get_proposal("owner-b", created["id"], proposal["id"])) is None
             applied = await repo.apply_proposal("owner-a", created["id"], proposal["id"], 1, 0,
-                "a" * 64, "proposal-apply")
+                "a" * 64, "proposal-apply", catalog_site_id="site")
             replay = await repo.apply_proposal("owner-a", created["id"], proposal["id"], 1, 0,
-                "a" * 64, "proposal-apply")
+                "a" * 64, "proposal-apply", catalog_site_id="site")
             assert applied == replay and applied["version"] == 2
             assert applied["snapshot"]["constraints"]["available_minutes"] == 60
             assert len(await repo.list_revisions("owner-a", created["id"])) == 2
@@ -110,6 +132,7 @@ def test_restored_proposal_diff_is_rebuilt_from_recorded_snapshots():
         engine, db = await open_test_session()
         try:
             repo = TourSessionRepository(db)
+            catalog_digest = await _seed_published_catalog(db)
             snapshot = _snapshot()
             created = await repo.create_session("owner-a", "site", "游览", snapshot, "create")
             candidate = json.loads(json.dumps(snapshot))
@@ -119,7 +142,7 @@ def test_restored_proposal_diff_is_rebuilt_from_recorded_snapshots():
                 "candidate": candidate, "diff": [{"kind": "changed", "after": {"name": "错误名称"}}],
                 "validation": {"status": "pass", "conflicts": []}, "clarification": None}
             proposal = await repo.create_proposal("owner-a", created["id"], 1, 0, "a" * 64,
-                "catalog", "修改", generated, "proposal")
+                catalog_digest, "修改", generated, "proposal")
             restored = await repo.get_proposal("owner-a", created["id"], proposal["id"])
             assert restored["diff"][0]["after"]["name"] == "已发布名称"
             assert restored["validation"]["status"] == "unverified"
@@ -130,7 +153,7 @@ def test_restored_proposal_diff_is_rebuilt_from_recorded_snapshots():
             assert restored["diff_verifiable"] is False
             with pytest.raises(ValueError, match="原始行程"):
                 await repo.apply_proposal("owner-a", created["id"], proposal["id"], 1, 0,
-                                          "a" * 64, "apply")
+                                          "a" * 64, "apply", catalog_site_id="site")
         finally:
             await db.close(); await engine.dispose()
     _run(scenario)
@@ -143,6 +166,7 @@ def test_restored_old_proposal_does_not_present_replaced_spot_evidence(new_minut
         engine, db = await open_test_session()
         try:
             repo = TourSessionRepository(db)
+            catalog_digest = await _seed_published_catalog(db)
             snapshot = _snapshot()
             first = snapshot["stops"][0]
             first.update(duration_basis="source", evidence=[{"evidence_type": "published_content", "reference_id": "old-spot"}])
@@ -155,7 +179,7 @@ def test_restored_old_proposal_does_not_present_replaced_spot_evidence(new_minut
             candidate["stops"][0].update(spot_code="LS-03", name="新景点", duration_minutes=new_minutes)
             generated = {"status": "ready", "base_snapshot": snapshot, "operations": [], "candidate": candidate,
                 "diff": [], "validation": {"status": "pass", "conflicts": []}, "clarification": None}
-            proposal = await repo.create_proposal("owner-a", created["id"], 1, 0, "a" * 64, "catalog", "替换", generated, "proposal")
+            proposal = await repo.create_proposal("owner-a", created["id"], 1, 0, "a" * 64, catalog_digest, "替换", generated, "proposal")
             restored = await repo.get_proposal("owner-a", created["id"], proposal["id"])
             stop = restored["candidate"]["stops"][0]
             leg = restored["candidate"]["legs"][0]
@@ -163,7 +187,7 @@ def test_restored_old_proposal_does_not_present_replaced_spot_evidence(new_minut
             assert all(e.get("reference_id") != "old-route" for e in leg["evidence"])
             assert restored["validation"]["status"] == "unverified"
             applied = await repo.apply_proposal("owner-a", created["id"], proposal["id"], 1, 0,
-                                                "a" * 64, "apply")
+                                                "a" * 64, "apply", catalog_site_id="site")
             applied_stop = applied["snapshot"]["stops"][0]
             applied_leg = applied["snapshot"]["legs"][0]
             assert applied_stop["duration_basis"] == stop["duration_basis"]
@@ -181,6 +205,7 @@ def test_apply_proposal_preserves_manual_duration_from_unsaved_base_draft():
         engine, db = await open_test_session()
         try:
             repo = TourSessionRepository(db)
+            catalog_digest = await _seed_published_catalog(db)
             snapshot = _snapshot()
             created = await repo.create_session("owner-a", "site", "游览", snapshot, "create")
             draft = json.loads(json.dumps(snapshot))
@@ -193,9 +218,9 @@ def test_apply_proposal_preserves_manual_duration_from_unsaved_base_draft():
             generated = {"status": "ready", "base_snapshot": draft, "operations": [], "candidate": candidate,
                          "diff": [], "validation": {"status": "pass", "conflicts": []}, "clarification": None}
             proposal = await repo.create_proposal("owner-a", created["id"], 1, 0, "a" * 64,
-                "catalog", "调整时间预算", generated, "proposal")
+                catalog_digest, "调整时间预算", generated, "proposal")
             applied = await repo.apply_proposal("owner-a", created["id"], proposal["id"], 1, 0,
-                                                "a" * 64, "apply")
+                                                "a" * 64, "apply", catalog_site_id="site")
             stop = applied["snapshot"]["stops"][0]
             assert stop["duration_minutes"] == 40
             assert stop["duration_basis"] == "user"
@@ -214,6 +239,7 @@ def test_legacy_proposal_cannot_add_an_unpublished_free_text_visit():
         engine, db = await open_test_session()
         try:
             repo = TourSessionRepository(db)
+            catalog_digest = await _seed_published_catalog(db)
             snapshot = _snapshot()
             created = await repo.create_session("owner-a", "site", "游览", snapshot, "create")
             candidate = json.loads(json.dumps(snapshot))
@@ -221,10 +247,10 @@ def test_legacy_proposal_cannot_add_an_unpublished_free_text_visit():
             generated = {"status": "ready", "base_snapshot": snapshot, "operations": [], "candidate": candidate,
                          "diff": [], "validation": {"status": "unverified", "conflicts": []}, "clarification": None}
             proposal = await repo.create_proposal("owner-a", created["id"], 1, 0, "a" * 64,
-                "catalog", "添加景点", generated, "proposal")
+                catalog_digest, "添加景点", generated, "proposal")
             with pytest.raises(ValueError, match="已发布"):
                 await repo.apply_proposal("owner-a", created["id"], proposal["id"], 1, 0,
-                                          "a" * 64, "apply", catalog_entries={})
+                                          "a" * 64, "apply", catalog_entries={}, catalog_site_id="site")
             assert (await repo.get_session("owner-a", created["id"]))["version"] == 1
         finally:
             await db.close(); await engine.dispose()
@@ -237,6 +263,7 @@ def test_proposal_keeps_unchanged_manually_entered_visit():
         engine, db = await open_test_session()
         try:
             repo = TourSessionRepository(db)
+            catalog_digest = await _seed_published_catalog(db)
             snapshot = _snapshot()
             snapshot["stops"][0]["spot_code"] = None
             snapshot["stops"][0]["name"] = "游客自填地点"
@@ -246,9 +273,9 @@ def test_proposal_keeps_unchanged_manually_entered_visit():
             generated = {"status": "ready", "base_snapshot": snapshot, "operations": [], "candidate": candidate,
                          "diff": [], "validation": {"status": "unverified", "conflicts": []}, "clarification": None}
             proposal = await repo.create_proposal("owner-a", created["id"], 1, 0, "a" * 64,
-                "catalog", "调整预算", generated, "proposal")
+                catalog_digest, "调整预算", generated, "proposal")
             applied = await repo.apply_proposal("owner-a", created["id"], proposal["id"], 1, 0,
-                                                "a" * 64, "apply", catalog_entries={})
+                                                "a" * 64, "apply", catalog_entries={}, catalog_site_id="site")
             assert applied["snapshot"]["stops"][0]["name"] == "游客自填地点"
         finally:
             await db.close(); await engine.dispose()
@@ -262,6 +289,7 @@ def test_active_proposal_apply_refreshes_progress_version_for_next_command():
         engine, db = await open_test_session()
         try:
             repo = TourSessionRepository(db)
+            catalog_digest = await _seed_published_catalog(db)
             snapshot = _snapshot()
             created = await repo.create_session("owner-a", "site", "游览", snapshot, "create")
             started = await repo.start_progress("owner-a", created["id"], 1, "start")
@@ -273,11 +301,11 @@ def test_active_proposal_apply_refreshes_progress_version_for_next_command():
                 "candidate": candidate, "diff": [{"kind": "constraints"}],
                 "validation": {"status": "pass", "conflicts": []}, "clarification": None}
             proposal = await repo.create_proposal("owner-a", created["id"], 1,
-                started["progress_version"], "c" * 64, "catalog-digest", "缩短总时长",
+                started["progress_version"], "c" * 64, catalog_digest, "缩短总时长",
                 generated, "active-proposal-create")
 
             applied = await repo.apply_proposal("owner-a", created["id"], proposal["id"], 1,
-                started["progress_version"], "c" * 64, "active-proposal-apply")
+                started["progress_version"], "c" * 64, "active-proposal-apply", catalog_site_id="site")
             reconciled = await repo.get_progress("owner-a", created["id"])
             assert applied["version"] == 2
             assert reconciled["progress_version"] == started["progress_version"] + 1
@@ -299,6 +327,7 @@ def test_active_tour_rejects_total_budget_change_without_rewriting_deadline(via_
         engine, db = await open_test_session()
         try:
             repo = TourSessionRepository(db)
+            catalog_digest = await _seed_published_catalog(db)
             snapshot = _snapshot()
             created = await repo.create_session("owner-a", "site", "游览", snapshot, "create")
             started = await repo.start_progress("owner-a", created["id"], 1, "start")
@@ -308,9 +337,9 @@ def test_active_tour_rejects_total_budget_change_without_rewriting_deadline(via_
                 generated = {"status": "ready", "operations": [], "candidate": candidate,
                     "diff": [], "validation": {"status": "pass", "conflicts": []}}
                 proposal = await repo.create_proposal("owner-a", created["id"], 1,
-                    started["progress_version"], "d" * 64, "catalog", "缩短时长", generated, "proposal")
+                    started["progress_version"], "d" * 64, catalog_digest, "缩短时长", generated, "proposal")
                 change = repo.apply_proposal("owner-a", created["id"], proposal["id"], 1,
-                    started["progress_version"], "d" * 64, "apply")
+                    started["progress_version"], "d" * 64, "apply", catalog_site_id="site")
             else:
                 change = repo.save_revision("owner-a", created["id"], 1, candidate, "save")
             with pytest.raises(ValueError, match="进行中.*总时长"):
@@ -547,16 +576,17 @@ def test_apply_rejects_conflicting_or_unknown_validation(validation_status):
         engine, db = await open_test_session()
         try:
             repo = TourSessionRepository(db)
+            catalog_digest = await _seed_published_catalog(db)
             snapshot = _snapshot()
             created = await repo.create_session("owner-a", "site", "游览", snapshot, "create-invalid")
             generated = {"status": "ready", "base_snapshot": snapshot, "operations": [],
                          "candidate": snapshot, "diff": [],
                          "validation": {"status": validation_status, "conflicts": []}, "clarification": None}
             proposal = await repo.create_proposal("owner-a", created["id"], 1, 0, "a" * 64,
-                                                  "catalog", "调整", generated, "proposal-invalid")
+                                                  catalog_digest, "调整", generated, "proposal-invalid")
             with pytest.raises(ValueError, match="校验"):
                 await repo.apply_proposal("owner-a", created["id"], proposal["id"], 1, 0,
-                                          "a" * 64, "apply-invalid")
+                                          "a" * 64, "apply-invalid", catalog_site_id="site")
             assert len(await repo.list_revisions("owner-a", created["id"])) == 1
         finally:
             await db.close(); await engine.dispose()
@@ -569,6 +599,7 @@ def test_old_pass_proposal_with_conflicting_constraints_is_rejected():
         engine, db = await open_test_session()
         try:
             repo = TourSessionRepository(db)
+            catalog_digest = await _seed_published_catalog(db)
             base = _snapshot()
             created = await repo.create_session("owner-a", "site", "游览", base, "create-conflict")
             candidate = json.loads(json.dumps(base))
@@ -577,12 +608,12 @@ def test_old_pass_proposal_with_conflicting_constraints_is_rejected():
                          "candidate": candidate, "diff": [],
                          "validation": {"status": "pass", "conflicts": []}, "clarification": None}
             proposal = await repo.create_proposal("owner-a", created["id"], 1, 0, "a" * 64,
-                                                  "catalog", "调整", generated, "old-conflict")
+                                                  catalog_digest, "调整", generated, "old-conflict")
             restored = await repo.get_proposal("owner-a", created["id"], proposal["id"])
             assert restored["validation"]["status"] == "conflict"
             with pytest.raises(ValueError, match="校验"):
                 await repo.apply_proposal("owner-a", created["id"], proposal["id"], 1, 0,
-                                          "a" * 64, "apply-conflict")
+                                          "a" * 64, "apply-conflict", catalog_site_id="site")
             assert len(await repo.list_revisions("owner-a", created["id"])) == 1
         finally:
             await db.close(); await engine.dispose()

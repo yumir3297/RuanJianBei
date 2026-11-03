@@ -11,7 +11,6 @@ from app.services.knowledge.workspace import KnowledgeWorkspaceService
 from app.tests.async_db import open_test_session
 
 
-@pytest.mark.xfail(strict=True, reason="catalog can change after the confirmation check")
 def test_old_catalog_snapshot_is_rejected_after_real_withdrawal(tmp_path):
     async def run():
         engine, seed = await open_test_session(str(tmp_path / 'race.db'))
@@ -33,6 +32,8 @@ def test_old_catalog_snapshot_is_rejected_after_real_withdrawal(tmp_path):
         try:
             with pytest.raises(ValueError):
                 await repo.apply_proposal('owner', tour['id'], proposal['id'], 1, 0, 'a'*64, 'apply', catalog_entries={e.spot_code: e for e in catalog.entries})
+            with pytest.raises(ValueError, match='景区与目录不一致'):
+                await repo.apply_proposal('owner', tour['id'], proposal['id'], 1, 0, 'a'*64, 'apply', catalog_site_id='other')
         finally:
             await seed.close(); await engine.dispose()
     asyncio.run(run())

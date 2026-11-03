@@ -659,6 +659,8 @@ class TourSessionRepository:
             expected_version: int, progress_version: int, draft_digest: str, idempotency_key: str,
             catalog_entries: Mapping[str, PublishedAttraction] | None = None,
             catalog_site_id: str | None = None) -> dict | None:
+        if not catalog_site_id:
+            raise ValueError("确认提案需要景区目录保护")
         request = {"session_id": session_id, "proposal_id": proposal_id, "expected_version": expected_version,
             "progress_version": progress_version, "draft_digest": draft_digest}
         replay = await self._replay(owner_id, "proposal_apply", idempotency_key, request)
@@ -667,6 +669,11 @@ class TourSessionRepository:
             ItineraryProposal.id == proposal_id, ItineraryProposal.session_id == session_id,
             ItineraryProposal.owner_id == owner_id))
         if proposal is None: return None
+        site = await self.session.scalar(select(TourSession.site_id).where(
+            TourSession.id == session_id, TourSession.owner_id == owner_id, TourSession.deleted_at.is_(None)))
+        if site is None: return None
+        if site != catalog_site_id:
+            raise ValueError("行程景区与目录不一致")
         if catalog_site_id is not None:
             locked = await self.session.execute(update(KnowledgeState).where(KnowledgeState.id == 1)
                 .values(epoch=KnowledgeState.epoch, updated_at=KnowledgeState.updated_at))
