@@ -11,7 +11,35 @@ from app.models.faq import FAQEntryRecord
 from app.models.knowledge_workspace import KnowledgeState
 from app.services.qa import runtime
 from app.services.qa.faq_matcher import FAQMatcher
+from app.services.qa.faq_matcher import FAQEntry
 from app.tests.async_db import open_test_session
+
+
+def test_reload_keeps_old_matcher_usable_until_new_matcher_is_ready(monkeypatch):
+    old = FAQMatcher()
+    old.add([FAQEntry(id="old", category="test", aliases=["问题"], answer="旧答案", sources=[])])
+    monkeypatch.setattr(runtime, "_faq_matcher", old)
+
+    async def scenario():
+        started, release = asyncio.Event(), asyncio.Event()
+
+        async def delayed_load(matcher, _session):
+            started.set()
+            await release.wait()
+            matcher.add([FAQEntry(id="new", category="test", aliases=["问题"], answer="新答案", sources=[])])
+
+        monkeypatch.setattr(FAQMatcher, "load_from_db", delayed_load)
+        task = asyncio.create_task(runtime.reload_runtime_faq_matcher(None))
+        await started.wait()
+        try:
+            assert old.match_exact("问题").answer == "旧答案"
+        finally:
+            release.set()
+            await task
+        assert runtime._faq_matcher.match_exact("问题").answer == "新答案"
+        assert runtime._faq_matcher is not old
+
+    asyncio.run(scenario())
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="select on subprocess pipes is not supported on Windows")
@@ -80,6 +108,7 @@ def test_reload_detects_epoch_change_and_recovers(monkeypatch):
 
     matcher = Matcher()
     monkeypatch.setattr(runtime, "_faq_matcher", matcher)
+    monkeypatch.setattr(runtime, "FAQMatcher", Matcher)
     monkeypatch.setattr(runtime, "VisibilityService", Visibility)
     monkeypatch.setattr(runtime, "_faq_reload_failed", False)
 
@@ -90,7 +119,8 @@ def test_reload_detects_epoch_change_and_recovers(monkeypatch):
         assert matcher.knowledge_epoch != 2
         await runtime.reload_runtime_faq_matcher(object())
         assert not runtime.faq_reload_failed()
-        assert matcher.knowledge_epoch == 2
+        assert runtime._faq_matcher.knowledge_epoch == 2
+        assert matcher.knowledge_epoch is None
 
     asyncio.run(scenario())
 

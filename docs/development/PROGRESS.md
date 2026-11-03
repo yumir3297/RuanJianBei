@@ -1,5 +1,7 @@
 # 开发进度
 
+2026-11-03：FAQ 重载改为独立候选构建、版本核对后切换，避免加载中清空已有请求持有的索引；语义构建失败且版本稳定时发布精确/模糊索引并标记故障。延迟加载回归先复现再通过，后端全套 512 passed、5 skipped；真实多进程高并发、PostgreSQL 和模型构建耗时仍待验证。
+
 2026-11-03：独立 Python worker 加载旧 FAQ 后，父进程在临时 SQLite 同事务更新 FAQ 和 epoch；worker 下一次读取新答案。FAQ 版本专项 3 passed，Windows 因管道 select 不支持跳过跨进程用例；未验证 PostgreSQL、真实服务、模型或并发压力。
 
 2026-11-03：FAQ runtime 在请求获取时比较数据库知识 epoch，不一致时串行重载；加载前后版本不一致则报错并标记故障，请求绑定的 matcher 版本与请求版本不一致时停止回答。隔离 SQLite 覆盖另一会话更新后重载，替身覆盖加载中版本变化及恢复、旧 matcher 请求拒绝；后端全套 510 passed、5 skipped。当前仍原地重载 matcher，重载期间可能暂时走无 FAQ 路径；真实多进程、PostgreSQL、加载并发和延迟影响尚未验收。

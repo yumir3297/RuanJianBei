@@ -43,6 +43,7 @@ def test_reload_failure_remains_visible_until_a_successful_reload(monkeypatch):
     matcher = Matcher()
     monkeypatch.setattr(runtime, "_faq_matcher", matcher)
     monkeypatch.setattr(runtime, "_faq_reload_failed", False, raising=False)
+    monkeypatch.setattr(runtime, "FAQMatcher", lambda: matcher)
 
     async def scenario():
         with pytest.raises(RuntimeError):
@@ -56,14 +57,20 @@ def test_reload_failure_remains_visible_until_a_successful_reload(monkeypatch):
 
 
 def test_runtime_reload_failure_is_visible(monkeypatch):
+    from types import SimpleNamespace
     class Matcher:
-        semantic_index = object()
+        semantic_index = None
 
         async def reload(self, _session):
-            self.semantic_index = None
+            return 1.0
+
+        def ensure_semantic_index(self, _embedder, _threshold):
             raise RuntimeError("semantic rebuild failed")
 
-    monkeypatch.setattr(runtime, "_faq_matcher", Matcher())
+    old = Matcher()
+    old.semantic_index = SimpleNamespace(embedder=object(), threshold=0.85)
+    monkeypatch.setattr(runtime, "_faq_matcher", old)
+    monkeypatch.setattr(runtime, "FAQMatcher", Matcher)
     monkeypatch.setattr(runtime, "_semantic_index_failed", False)
 
     async def scenario():

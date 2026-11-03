@@ -54,25 +54,33 @@ async def reload_runtime_faq_matcher(session: AsyncSession) -> float:
 
 
 async def _reload_runtime_faq_matcher_locked(session: AsyncSession) -> float:
-    global _last_reload_ms, _faq_reload_failed
-    had_semantic_index = _faq_matcher.semantic_index is not None
+    global _last_reload_ms, _faq_reload_failed, _faq_matcher
+    old_semantic_index = _faq_matcher.semantic_index
+    candidate = FAQMatcher()
+    semantic_error = None
     try:
         before = await VisibilityService(session).read_epoch() if session is not None else None
-        _last_reload_ms = await _faq_matcher.reload(session)
+        elapsed = await candidate.reload(session)
+        if old_semantic_index is not None:
+            try:
+                candidate.ensure_semantic_index(old_semantic_index.embedder, old_semantic_index.threshold)
+            except Exception as error:
+                semantic_error = error
         after = await VisibilityService(session).read_epoch() if session is not None else None
         if before != after:
             raise RuntimeError("FAQ knowledge version changed during reload")
         if before is not None:
-            _faq_matcher.knowledge_epoch = before
+            candidate.knowledge_epoch = before
     except Exception:
         _faq_reload_failed = True
-        if session is not None:
-            _faq_matcher.knowledge_epoch = -1
-        if had_semantic_index and _faq_matcher.semantic_index is None:
-            set_faq_semantic_index_failed(True)
         raise
-    _faq_reload_failed = False
-    if had_semantic_index:
+    _faq_matcher = candidate
+    _last_reload_ms = elapsed
+    _faq_reload_failed = semantic_error is not None
+    if semantic_error is not None:
+        set_faq_semantic_index_failed(True)
+        raise semantic_error
+    if old_semantic_index is not None:
         set_faq_semantic_index_failed(False)
     return _last_reload_ms
 
