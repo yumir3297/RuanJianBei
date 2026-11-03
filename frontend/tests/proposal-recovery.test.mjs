@@ -520,3 +520,26 @@ test('save progress refresh cannot overwrite a newer progress command', async ()
   await saving;
   assert.equal(store.progress.progress_version, 3);
 });
+
+test('save refresh arriving before an in-flight progress command does not discard the command result', async () => {
+  const refresh = deferred(), refreshStarted = deferred(), command = deferred(), commandStarted = deferred();
+  store.progress = { status: 'active', progress_version: 1, current_stop_id: 'one' };
+  route = async config => {
+    if (config.url === '/tour-sessions/a/v2') return { id: 'a', version: 2, snapshot: snapshot('base') };
+    if (config.url.endsWith('/revisions')) return { items: [] };
+    if (config.url.endsWith('/progress') && config.method === 'get') { refreshStarted.resolve(); return refresh.promise; }
+    if (config.url.endsWith('/progress') && config.method === 'post') { commandStarted.resolve(); return command.promise; }
+    if (config.url.endsWith('/budget')) return {};
+    throw new Error(config.url);
+  };
+  const saving = store.save();
+  await refreshStarted.promise;
+  const advancing = store.applyProgress({ type: 'complete', stop_id: 'one' });
+  await commandStarted.promise;
+  refresh.resolve({ status: 'active', progress_version: 2, current_stop_id: 'one' });
+  await saving;
+  command.resolve({ status: 'active', progress_version: 3, current_stop_id: 'two' });
+  await advancing;
+  assert.equal(store.progress.progress_version, 3);
+  assert.equal(store.progress.current_stop_id, 'two');
+});

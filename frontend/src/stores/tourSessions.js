@@ -328,12 +328,14 @@ export const useTourSessionsStore = defineStore("tourSessions", {
       try {
         await this.prepare();
         if (this.current !== current || this.progress !== originalProgress) return null;
-        const previousCurrentStopId = originalProgress.current_stop_id;
         const payload = { expected_progress_version: originalProgress.progress_version, command };
         const { fingerprint, key } = this.operationKey(`progress:${current.id}`, payload);
         const updated = await sendTourProgressCommand(current.id, originalProgress.progress_version, command, this.csrfToken, key);
         this.clearOperationKey(fingerprint);
-        if (this.current !== current || this.progress !== originalProgress) return null;
+        if (this.current !== current || (this.progress !== originalProgress &&
+          !(Number.isInteger(updated?.progress_version) && Number.isInteger(this.progress?.progress_version) &&
+            updated.progress_version > this.progress.progress_version))) return null;
+        const previousCurrentStopId = this.progress?.current_stop_id;
         this.progress = updated;
         this.progressSyncRequired = false;
         if (this.progress.current_stop_id !== previousCurrentStopId) this.currentStopRemainingMinutes = null;
