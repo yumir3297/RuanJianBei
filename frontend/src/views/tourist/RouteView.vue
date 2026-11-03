@@ -38,13 +38,15 @@
             <label>每隔多久休息（分钟）<input v-model.number="draft.constraints.rest_every_minutes" type="number" min="15" max="240" placeholder="未设置" :disabled="tourStore.progress?.status === 'active'"></label>
             <label>必去景点<select multiple v-model="draft.constraints.required_spots" :disabled="tourStore.progress?.status === 'active'"><option v-for="spot in catalog.items || []" :key="spot.spot_code" :value="spot.spot_code">{{ spot.title }}</option></select></label>
             <label>排除景点<select multiple v-model="draft.constraints.excluded_spots" :disabled="tourStore.progress?.status === 'active'"><option v-for="spot in catalog.items || []" :key="spot.spot_code" :value="spot.spot_code">{{ spot.title }}</option></select></label>
+            <small v-if="savedStops.some(stop => stop.locked_fields?.length)">已保存的锁定会限制编辑、删除或顺序调整；解锁后请先保存再修改。</small>
             <div v-for="(stop, index) in draft.stops" :key="stop.stop_id" class="itinerary-stop-row">
               <span>{{ index + 1 }}. {{ stop.name }}</span><small>{{ progressLabel(stop.stop_id) }}</small>
-              <button type="button" :disabled="index === 0 || tourStore.progress?.status === 'active'" @click="moveStop(index, -1)">↑</button>
-              <button type="button" :disabled="index === draft.stops.length - 1 || tourStore.progress?.status === 'active'" @click="moveStop(index, 1)">↓</button>
-              <button type="button" :disabled="tourStore.progress?.status === 'active' || ['completed','skipped'].includes(tourStore.progress?.status_by_stop?.[stop.stop_id])" @click="draft.stops.splice(index, 1)">×</button>
-              <label>停留分钟<input :value="stop.duration_minutes ?? ''" type="number" min="1" max="720" :disabled="tourStore.progress?.status === 'active' || stop.locked_fields?.includes('duration')" @input="setManualStopDuration(stop, $event.target.value)"></label>
+              <button type="button" :disabled="tourStore.progress?.status === 'active' || !canMoveStop(draft.stops, index, -1, savedStops)" @click="moveStop(index, -1)">↑</button>
+              <button type="button" :disabled="tourStore.progress?.status === 'active' || !canMoveStop(draft.stops, index, 1, savedStops)" @click="moveStop(index, 1)">↓</button>
+              <button type="button" :disabled="tourStore.progress?.status === 'active' || !canDeleteStop(draft.stops, index, savedStops) || ['completed','skipped'].includes(tourStore.progress?.status_by_stop?.[stop.stop_id])" @click="draft.stops.splice(index, 1)">×</button>
+              <label>停留分钟<input :value="stop.duration_minutes ?? ''" type="number" min="1" max="720" :disabled="tourStore.progress?.status === 'active' || !canEditDuration(stop, savedStops)" @input="setManualStopDuration(stop, $event.target.value)"></label>
               <button type="button" :disabled="tourStore.progress?.status === 'active'" @click="toggleStopLock(stop, 'stop')">{{ stop.locked_fields?.includes('stop') ? '解锁此点' : '锁定此点' }}</button>
+              <button v-if="stop.locked_fields?.some(field => field !== 'stop')" type="button" :disabled="tourStore.progress?.status === 'active'" @click="stop.locked_fields = stop.locked_fields.filter(field => field === 'stop')">解除字段及位置锁</button>
             </div>
             <div class="itinerary-add-row">
               <select v-model="selectedSpotCode"><option value="">选择已发布景点</option><option v-for="spot in catalog.items || []" :key="spot.spot_code" :value="spot.spot_code">{{ spot.title }}</option></select>
@@ -135,6 +137,7 @@ import { fetchRecommendations } from "../../api/recommend";
 import { getSessionId } from "../../stores/chat";
 import { fetchItineraryCatalog } from "../../api/itinerary";
 import { setManualStopDuration } from "../../utils/itineraryDuration";
+import { canDeleteStop, canEditDuration, canMoveStop } from "../../utils/itineraryLocks";
 const props = defineProps({ busy: { type: Boolean, default: false }, weather: { type: Object, default: null } });
 defineEmits(["ask"]);
 const categories = ["预设路线", "半日精选", "主题体验", "特色路线"];
@@ -158,6 +161,7 @@ const offline = ref(false);
 let requestId = 0;
 const routes = computed(() => recommendations.value.length ? recommendations.value : PRESET_ROUTES.filter(item => item.category === category.value));
 const draft = computed(() => tourStore.draftSnapshot || { constraints: {}, stops: [] });
+const savedStops = computed(() => tourStore.current?.snapshot?.stops || []);
 const isDirty = computed(() => JSON.stringify(draft.value) !== JSON.stringify(tourStore.current?.snapshot || {}));
 const currentProgressStop = computed(() => draft.value.stops?.find(stop => tourStore.progress?.status_by_stop?.[stop.stop_id] === "current") || null);
 const budgetText = computed(() => tourStore.budget?.message || "待计算");
