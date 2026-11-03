@@ -10,7 +10,40 @@ from app.services.qa.faq_matcher import FAQMatcher
 from app.tests.async_db import open_test_session
 
 
-@pytest.mark.xfail(strict=True, reason="FAQ runtime does not yet reload when knowledge epoch changes")
+def test_reload_detects_epoch_change_and_recovers(monkeypatch):
+    class Visibility:
+        values = iter([1, 2, 2, 2])
+
+        def __init__(self, _session):
+            pass
+
+        async def read_epoch(self):
+            return next(self.values)
+
+    class Matcher:
+        semantic_index = None
+        knowledge_epoch = None
+
+        async def reload(self, _session):
+            return 1.0
+
+    matcher = Matcher()
+    monkeypatch.setattr(runtime, "_faq_matcher", matcher)
+    monkeypatch.setattr(runtime, "VisibilityService", Visibility)
+    monkeypatch.setattr(runtime, "_faq_reload_failed", False)
+
+    async def scenario():
+        with pytest.raises(RuntimeError, match="version changed"):
+            await runtime.reload_runtime_faq_matcher(object())
+        assert runtime.faq_reload_failed()
+        assert matcher.knowledge_epoch != 2
+        await runtime.reload_runtime_faq_matcher(object())
+        assert not runtime.faq_reload_failed()
+        assert matcher.knowledge_epoch == 2
+
+    asyncio.run(scenario())
+
+
 def test_runtime_reloads_after_other_session_updates_faq_and_epoch(monkeypatch, tmp_path):
     monkeypatch.setattr(runtime, "_faq_matcher", FAQMatcher())
 

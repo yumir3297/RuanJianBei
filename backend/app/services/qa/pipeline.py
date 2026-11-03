@@ -242,6 +242,10 @@ class QAPipeline:
     async def stream_chat(self, request: ChatRequest):
         start = perf_counter()
         request_epoch = await self.visibility_service.read_epoch() if self.visibility_service is not None else None
+        faq_epoch = getattr(self.faq_matcher, "knowledge_epoch", None)
+        if request_epoch is not None and faq_epoch is not None and faq_epoch != request_epoch:
+            yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
+            return
         text_emotion = self.text_emotion_analyzer.analyze(request.query)
         audio_emotion = None
         if request.emotion_context is not None:

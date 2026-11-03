@@ -1185,6 +1185,23 @@ def _faq_matcher():
     return matcher
 
 
+def test_stale_bound_faq_stops_before_faq_or_shared_cache():
+    class CurrentVisibility:
+        async def read_epoch(self):
+            return 2
+
+    class ForbiddenCache:
+        async def get(self, *_args, **_kwargs):
+            raise AssertionError("stale FAQ request must not read shared cache")
+
+    matcher = _faq_matcher()
+    matcher.knowledge_epoch = 1
+    pipeline = _build_test_pipeline(faq_matcher=matcher, visibility_service=CurrentVisibility(), qa_cache=ForbiddenCache())
+    events = _run_turn(pipeline, query="景区在哪里", selection=None, audience="child")
+    assert any(event.type == "error" for event in events)
+    assert not any(event.type in ("text", "text_chunk", "done") for event in events)
+
+
 def test_faq_fast_path_stays_llm_free_for_default_audience() -> None:
     llm_service = DummyLLMService()
     rag_service = RecordingRAGService()

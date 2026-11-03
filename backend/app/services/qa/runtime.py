@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import asyncio
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.qa.faq_matcher import FAQMatcher
+from app.services.knowledge.visibility import VisibilityService
 from app.services.rag.embedder import BaseEmbedder
 
 
@@ -10,6 +13,7 @@ _faq_matcher = FAQMatcher()
 _last_reload_ms = 0.0
 _semantic_index_failed = False
 _faq_reload_failed = False
+_reload_lock = asyncio.Lock()
 
 
 def faq_reload_failed() -> bool:
@@ -31,7 +35,8 @@ async def get_runtime_faq_matcher(
     embedder: BaseEmbedder | None = None,
     semantic_threshold: float = 0.85,
 ) -> FAQMatcher:
-    if not _faq_matcher.entries:
+    epoch = await VisibilityService(session).read_epoch() if session is not None else None
+    if not _faq_matcher.entries or (epoch is not None and getattr(_faq_matcher, "knowledge_epoch", None) != epoch):
         await reload_runtime_faq_matcher(session)
     if embedder is not None:
         try:
@@ -44,12 +49,25 @@ async def get_runtime_faq_matcher(
 
 
 async def reload_runtime_faq_matcher(session: AsyncSession) -> float:
+    async with _reload_lock:
+        return await _reload_runtime_faq_matcher_locked(session)
+
+
+async def _reload_runtime_faq_matcher_locked(session: AsyncSession) -> float:
     global _last_reload_ms, _faq_reload_failed
     had_semantic_index = _faq_matcher.semantic_index is not None
     try:
+        before = await VisibilityService(session).read_epoch() if session is not None else None
         _last_reload_ms = await _faq_matcher.reload(session)
+        after = await VisibilityService(session).read_epoch() if session is not None else None
+        if before != after:
+            raise RuntimeError("FAQ knowledge version changed during reload")
+        if before is not None:
+            _faq_matcher.knowledge_epoch = before
     except Exception:
         _faq_reload_failed = True
+        if session is not None:
+            _faq_matcher.knowledge_epoch = -1
         if had_semantic_index and _faq_matcher.semantic_index is None:
             set_faq_semantic_index_failed(True)
         raise
