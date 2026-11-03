@@ -657,8 +657,11 @@ class TourSessionRepository:
         if proposal is None: return None
         if proposal.status != "ready" or _aware(proposal.expires_at) <= datetime.now(UTC):
             raise ValueError("提案已过期、需要澄清或已应用")
-        if not self._proposal_payload(proposal)["diff_verifiable"]:
+        proposal_payload = self._proposal_payload(proposal)
+        if not proposal_payload["diff_verifiable"]:
             raise ValueError("提案缺少可核对的原始行程，请重新生成")
+        if proposal_payload["validation"].get("status") not in ("pass", "unverified"):
+            raise ValueError("提案校验存在冲突或状态未知，请重新生成")
         if (proposal.base_version != expected_version or proposal.progress_version != progress_version
                 or proposal.draft_digest != draft_digest):
             raise ValueError("草稿或游览进度已变化，请重新生成提案")

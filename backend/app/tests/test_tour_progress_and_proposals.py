@@ -538,3 +538,26 @@ def test_restored_old_proposal_with_rest_interval_is_unverified():
         finally:
             await db.close(); await engine.dispose()
     _run(scenario)
+
+
+@pytest.mark.parametrize("validation_status", ["conflict", "unexpected"])
+def test_apply_rejects_conflicting_or_unknown_validation(validation_status):
+    async def scenario():
+        from app.repositories.tour_session import TourSessionRepository
+        engine, db = await open_test_session()
+        try:
+            repo = TourSessionRepository(db)
+            snapshot = _snapshot()
+            created = await repo.create_session("owner-a", "site", "游览", snapshot, "create-invalid")
+            generated = {"status": "ready", "base_snapshot": snapshot, "operations": [],
+                         "candidate": snapshot, "diff": [],
+                         "validation": {"status": validation_status, "conflicts": []}, "clarification": None}
+            proposal = await repo.create_proposal("owner-a", created["id"], 1, 0, "a" * 64,
+                                                  "catalog", "调整", generated, "proposal-invalid")
+            with pytest.raises(ValueError, match="校验"):
+                await repo.apply_proposal("owner-a", created["id"], proposal["id"], 1, 0,
+                                          "a" * 64, "apply-invalid")
+            assert len(await repo.list_revisions("owner-a", created["id"])) == 1
+        finally:
+            await db.close(); await engine.dispose()
+    _run(scenario)
