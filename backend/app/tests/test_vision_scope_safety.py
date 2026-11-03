@@ -59,8 +59,11 @@ def test_vision_retrieval_query_is_used_as_untrusted_search_hint():
             self.query = query
             return await super().retrieve(query, normalized_query, top_k, scope)
     rag = Rag()
-    pipeline = QAPipeline(query_rewriter=QueryRewriter(), faq_matcher=FAQMatcher(), qa_cache=QACache(DummyCacheRepo(), ttl_seconds=60), rag_service=rag, llm_service=DummyLLMService(), tts_service=StubTTSService(), avatar_service=StubAvatarService(), chat_log_repository=DummyChatLogRepo(), guided_selector=DummyGuidedSelector(), followup_suggestions=FollowUpSuggestionService())
+    llm = DummyLLMService()
+    pipeline = QAPipeline(query_rewriter=QueryRewriter(), faq_matcher=FAQMatcher(), qa_cache=QACache(DummyCacheRepo(), ttl_seconds=60), rag_service=rag, llm_service=llm, tts_service=StubTTSService(), avatar_service=StubAvatarService(), chat_log_repository=DummyChatLogRepo(), guided_selector=DummyGuidedSelector(), followup_suggestions=FollowUpSuggestionService())
     async def run():
         return [e async for e in pipeline.stream_chat(ChatRequest(query="介绍照片", session_id="v-hint", text_only=True, vision_context=VisionContext(retrieval_query="梵宫莲花穹顶")))]
     asyncio.run(run())
     assert "梵宫莲花穹顶" in rag.query
+    assert "未经确认" in llm.received[0]["query"]
+    assert "不要断言照片" in llm.received[0]["query"]

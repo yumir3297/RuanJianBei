@@ -567,6 +567,12 @@ class QAPipeline:
                         "回答只能根据参考资料，资料不足时明确说明。\n"
                         f"游客原始问题：{request.query}"
                     )
+                elif vision is not None:
+                    generation_query = (
+                        "图片识别线索未经确认，仅用于检索；不要断言照片中的景点身份。"
+                        "只能依据参考资料提供有条件的说明，身份不明确时请游客选择或确认景点。\n"
+                        f"游客原始问题：{request.query}"
+                    )
                 async for item in self.llm_service.stream_generate(
                     self._emotion_aware_query(generation_query),
                     documents,
