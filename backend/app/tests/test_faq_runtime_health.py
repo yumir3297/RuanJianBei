@@ -111,3 +111,45 @@ def test_epoch_refresh_semantic_failure_keeps_new_exact_matcher_available(monkey
         assert runtime.faq_semantic_index_failed()
         assert runtime.faq_reload_failed()
     asyncio.run(scenario())
+
+
+def test_semantic_recovery_clears_only_its_own_reload_failure(monkeypatch):
+    from types import SimpleNamespace
+
+    class Visibility:
+        def __init__(self, _session): pass
+        async def read_epoch(self): return 2
+
+    class Candidate:
+        entries = ["new"]
+        semantic_index = None
+        broken = True
+        db_broken = False
+        async def reload(self, _session):
+            if self.db_broken: raise RuntimeError("database unavailable")
+            return 1.0
+        def ensure_semantic_index(self, *_args):
+            if self.broken: raise RuntimeError("semantic unavailable")
+
+    candidate = Candidate()
+    old = SimpleNamespace(entries=["old"], knowledge_epoch=1,
+                          semantic_index=SimpleNamespace(embedder=object(), threshold=0.85))
+    monkeypatch.setattr(runtime, "_faq_matcher", old)
+    monkeypatch.setattr(runtime, "FAQMatcher", lambda: candidate)
+    monkeypatch.setattr(runtime, "VisibilityService", Visibility)
+    monkeypatch.setattr(runtime, "_faq_reload_failed", False)
+    monkeypatch.setattr(runtime, "_semantic_index_failed", False)
+
+    async def scenario():
+        await runtime.get_runtime_faq_matcher(object())
+        assert runtime.faq_semantic_index_failed()
+        candidate.broken = False
+        await runtime.get_runtime_faq_matcher(object(), embedder=object())
+        assert not runtime.faq_semantic_index_failed()
+        assert not runtime.faq_reload_failed()
+        candidate.db_broken = True
+        with pytest.raises(RuntimeError, match="database unavailable"):
+            await runtime.reload_runtime_faq_matcher(object())
+        await runtime.get_runtime_faq_matcher(object(), embedder=object())
+        assert runtime.faq_reload_failed()
+    asyncio.run(scenario())

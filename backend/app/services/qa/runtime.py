@@ -13,6 +13,7 @@ _faq_matcher = FAQMatcher()
 _last_reload_ms = 0.0
 _semantic_index_failed = False
 _faq_reload_failed = False
+_faq_reload_failure_kind: str | None = None
 _reload_lock = asyncio.Lock()
 
 
@@ -39,6 +40,7 @@ async def get_runtime_faq_matcher(
     embedder: BaseEmbedder | None = None,
     semantic_threshold: float = 0.85,
 ) -> FAQMatcher:
+    global _faq_reload_failed, _faq_reload_failure_kind
     epoch = await VisibilityService(session).read_epoch() if session is not None else None
     if (epoch is None and not _faq_matcher.entries) or (epoch is not None and getattr(_faq_matcher, "knowledge_epoch", None) != epoch):
         async with _reload_lock:
@@ -59,6 +61,9 @@ async def get_runtime_faq_matcher(
             set_faq_semantic_index_failed(True)
             raise
         set_faq_semantic_index_failed(False)
+        if _faq_reload_failure_kind == "semantic":
+            _faq_reload_failed = False
+            _faq_reload_failure_kind = None
     return _faq_matcher
 
 
@@ -68,7 +73,7 @@ async def reload_runtime_faq_matcher(session: AsyncSession) -> float:
 
 
 async def _reload_runtime_faq_matcher_locked(session: AsyncSession) -> float:
-    global _last_reload_ms, _faq_reload_failed, _faq_matcher
+    global _last_reload_ms, _faq_reload_failed, _faq_reload_failure_kind, _faq_matcher
     old_semantic_index = _faq_matcher.semantic_index
     candidate = FAQMatcher()
     semantic_error = None
@@ -87,10 +92,12 @@ async def _reload_runtime_faq_matcher_locked(session: AsyncSession) -> float:
             candidate.knowledge_epoch = before
     except Exception:
         _faq_reload_failed = True
+        _faq_reload_failure_kind = "reload"
         raise
     _faq_matcher = candidate
     _last_reload_ms = elapsed
     _faq_reload_failed = semantic_error is not None
+    _faq_reload_failure_kind = "semantic" if semantic_error is not None else None
     if semantic_error is not None:
         set_faq_semantic_index_failed(True)
         raise FAQSemanticReloadError("FAQ semantic index rebuild failed") from semantic_error
