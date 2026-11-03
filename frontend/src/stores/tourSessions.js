@@ -333,8 +333,9 @@ export const useTourSessionsStore = defineStore("tourSessions", {
         const updated = await sendTourProgressCommand(current.id, originalProgress.progress_version, command, this.csrfToken, key);
         this.clearOperationKey(fingerprint);
         if (this.current !== current || (this.progress !== originalProgress &&
-          !(Number.isInteger(updated?.progress_version) && Number.isInteger(this.progress?.progress_version) &&
-            updated.progress_version > this.progress.progress_version))) return null;
+          !(Number.isInteger(updated?.progress_version) &&
+            ((this.progress == null && this.progressSyncRequired) ||
+              (Number.isInteger(this.progress?.progress_version) && updated.progress_version > this.progress.progress_version))))) return null;
         const previousCurrentStopId = this.progress?.current_stop_id;
         this.progress = updated;
         this.progressSyncRequired = false;
@@ -346,7 +347,7 @@ export const useTourSessionsStore = defineStore("tourSessions", {
         this.budget = budget;
         return appliedProgress;
       } catch (error) {
-        if (this.current === current && this.progress === originalProgress)
+        if (this.current === current)
           this.error = error?.response?.data?.detail || "进度已更新，请刷新后继续。";
         return null;
       }

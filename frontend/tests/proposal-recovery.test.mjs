@@ -543,3 +543,42 @@ test('save refresh arriving before an in-flight progress command does not discar
   assert.equal(store.progress.progress_version, 3);
   assert.equal(store.progress.current_stop_id, 'two');
 });
+
+test('successful progress command survives a failed save progress refresh', async () => {
+  let rejectRefresh;
+  const refreshStarted = deferred(), command = deferred(), commandStarted = deferred();
+  store.progress = { status: 'active', progress_version: 1, current_stop_id: 'one' };
+  route = async config => {
+    if (config.url === '/tour-sessions/a/v2') return { id: 'a', version: 2, snapshot: snapshot('base') };
+    if (config.url.endsWith('/revisions')) return { items: [] };
+    if (config.url.endsWith('/progress') && config.method === 'get') { refreshStarted.resolve(); return new Promise((_, reject) => { rejectRefresh = reject; }); }
+    if (config.url.endsWith('/progress') && config.method === 'post') { commandStarted.resolve(); return command.promise; }
+    if (config.url.endsWith('/budget')) return {};
+    throw new Error(config.url);
+  };
+  const saving = store.save(); await refreshStarted.promise;
+  const advancing = store.applyProgress({ type: 'complete', stop_id: 'one' }); await commandStarted.promise;
+  rejectRefresh(new Error('network')); await saving;
+  command.resolve({ status: 'active', progress_version: 3, current_stop_id: 'two' }); await advancing;
+  assert.equal(store.progress?.progress_version, 3);
+  assert.equal(store.progressSyncRequired, false);
+});
+
+test('failed progress command remains visible after save progress refresh', async () => {
+  let rejectCommand;
+  const refresh = deferred(), refreshStarted = deferred(), commandStarted = deferred();
+  store.progress = { status: 'active', progress_version: 1, current_stop_id: 'one' };
+  route = async config => {
+    if (config.url === '/tour-sessions/a/v2') return { id: 'a', version: 2, snapshot: snapshot('base') };
+    if (config.url.endsWith('/revisions')) return { items: [] };
+    if (config.url.endsWith('/progress') && config.method === 'get') { refreshStarted.resolve(); return refresh.promise; }
+    if (config.url.endsWith('/progress') && config.method === 'post') { commandStarted.resolve(); return new Promise((_, reject) => { rejectCommand = reject; }); }
+    if (config.url.endsWith('/budget')) return {};
+    throw new Error(config.url);
+  };
+  const saving = store.save(); await refreshStarted.promise;
+  const advancing = store.applyProgress({ type: 'complete', stop_id: 'one' }); await commandStarted.promise;
+  refresh.resolve({ status: 'active', progress_version: 2, current_stop_id: 'one' }); await saving;
+  rejectCommand(new Error('network')); await advancing;
+  assert.ok(store.error, 'a failed command must not be silently discarded');
+});
