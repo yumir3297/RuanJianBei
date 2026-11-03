@@ -339,6 +339,7 @@ export const useTourSessionsStore = defineStore("tourSessions", {
         const previousCurrentStopId = this.progress?.current_stop_id;
         this.progress = updated;
         this.progressSyncRequired = false;
+        if (this.error === "行程已保存，但游览进度未能同步；刷新后再继续记录进度。") this.error = "";
         if (this.progress.current_stop_id !== previousCurrentStopId) this.currentStopRemainingMinutes = null;
         const appliedProgress = this.progress;
         const remaining = this.currentStopRemainingMinutes;

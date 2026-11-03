@@ -562,6 +562,7 @@ test('successful progress command survives a failed save progress refresh', asyn
   command.resolve({ status: 'active', progress_version: 3, current_stop_id: 'two' }); await advancing;
   assert.equal(store.progress?.progress_version, 3);
   assert.equal(store.progressSyncRequired, false);
+  assert.doesNotMatch(store.error, /游览进度未能同步/);
 });
 
 test('failed progress command remains visible after save progress refresh', async () => {
