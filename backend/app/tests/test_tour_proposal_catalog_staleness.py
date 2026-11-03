@@ -114,6 +114,10 @@ def test_worker_proposal_apply_with_catalog_change_or_stable_catalog(monkeypatch
                                      "progress_version": started["progress_version"], "draft_digest": digest}
                     applied = await client.post(apply_path, headers=apply_headers, json=apply_payload)
                     published_rows["items"] = []  # Catalog changes after the successful commit.
+                    async with sessions() as state_db:
+                        state = await state_db.get(KnowledgeState, 1)
+                        await state_db.delete(state)
+                        await state_db.commit()
                     replay = await client.post(apply_path, headers=apply_headers, json=apply_payload)
                     assert applied.status_code == 200, applied.text
                     assert replay.status_code == 200, replay.text

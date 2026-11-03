@@ -206,3 +206,27 @@ def test_concurrent_identical_proposal_apply_replays_result(tmp_path, monkeypatc
         finally:
             await engine.dispose()
     asyncio.run(run())
+
+
+def test_missing_knowledge_state_rejects_confirmation_without_creating_revision(tmp_path):
+    async def run():
+        engine, session = await open_test_session(str(tmp_path / 'missing-state.db'))
+        try:
+            snapshot = {'schema_version': 2, 'constraints': {'available_minutes': 60},
+                        'stops': [{'stop_id': str(uuid4()), 'kind': 'rest', 'name': '休息',
+                                   'duration_minutes': 10, 'duration_basis': 'user'}], 'legs': []}
+            repo = TourSessionRepository(session)
+            tour = await repo.create_session('owner', 'site', '行程', snapshot, 'create')
+            catalog = await PublishedAttractionCatalog(K01PublishedAttractionSource(session, site_id='site')).list_for_site('site')
+            generated = {'status': 'ready', 'base_snapshot': snapshot, 'operations': [], 'candidate': snapshot,
+                         'diff': [], 'validation': {'status': 'pass', 'conflicts': []}, 'clarification': None}
+            proposal = await repo.create_proposal('owner', tour['id'], 1, 0, 'a' * 64, catalog.digest,
+                                                  '调整', generated, 'proposal')
+            with pytest.raises(ValueError, match='知识状态不可用'):
+                await repo.apply_proposal('owner', tour['id'], proposal['id'], 1, 0, 'a' * 64,
+                                          'apply', catalog_site_id='site')
+            await session.rollback()
+            assert len(await repo.list_revisions('owner', tour['id'])) == 1
+        finally:
+            await session.close(); await engine.dispose()
+    asyncio.run(run())
