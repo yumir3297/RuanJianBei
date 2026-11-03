@@ -230,3 +230,56 @@ def test_missing_knowledge_state_rejects_confirmation_without_creating_revision(
         finally:
             await session.close(); await engine.dispose()
     asyncio.run(run())
+
+
+def test_api_catalog_lock_timeout_is_retryable_without_duplicate_revision(tmp_path, monkeypatch):
+    from datetime import UTC, datetime, timedelta
+    from fastapi import FastAPI
+    from httpx import ASGITransport, AsyncClient
+    from sqlalchemy import update, text
+    from app.api import tour_sessions
+    from app.core.config import Settings
+    from app.core.deps import get_app_settings, get_db_session
+    from app.models.knowledge_workspace import KnowledgeState
+    from app.models.tour_session import TourIdentity
+
+    async def run():
+        engine, seed = await open_test_session(str(tmp_path / 'busy.db'))
+        owner = TourIdentity(id='owner', credential_digest='a' * 64, expires_at=datetime.now(UTC) + timedelta(days=1))
+        seed.add_all([owner, KnowledgeState(id=1, epoch=1)])
+        await seed.commit()
+        snapshot = {'schema_version': 2, 'constraints': {'available_minutes': 60}, 'stops': [{'stop_id': str(uuid4()), 'kind': 'rest', 'name': '休息', 'duration_minutes': 10, 'duration_basis': 'user'}], 'legs': []}
+        repo = TourSessionRepository(seed)
+        tour = await repo.create_session(owner.id, 'site', '行程', snapshot, 'create')
+        catalog = await PublishedAttractionCatalog(K01PublishedAttractionSource(seed, site_id='site')).list_for_site('site')
+        generated = {'status': 'ready', 'base_snapshot': snapshot, 'operations': [], 'candidate': snapshot, 'diff': [], 'validation': {'status': 'pass', 'conflicts': []}, 'clarification': None}
+        proposal = await repo.create_proposal(owner.id, tour['id'], 1, 0, 'a'*64, catalog.digest, '调整', generated, 'proposal')
+        await seed.close()
+        sessions = async_sessionmaker(engine, expire_on_commit=False)
+        app = FastAPI(); app.include_router(tour_sessions.router, prefix='/api/tour-sessions')
+        async def session_dep():
+            async with sessions() as session:
+                await session.execute(text('PRAGMA busy_timeout=50'))
+                yield session
+        app.dependency_overrides[get_db_session] = session_dep
+        app.dependency_overrides[get_app_settings] = lambda: Settings(site_id='site')
+        app.dependency_overrides[tour_sessions.get_tour_identity] = lambda: owner
+        monkeypatch.setattr(tour_sessions, '_protect_write', lambda *_: None)
+        path = f"/api/tour-sessions/{tour['id']}/proposals/{proposal['id']}/apply"
+        headers = {'Idempotency-Key': 'apply'}
+        payload = {'expected_version': 1, 'progress_version': 0, 'draft_digest': 'a'*64}
+        try:
+            async with sessions() as holder:
+                await holder.execute(update(KnowledgeState).where(KnowledgeState.id == 1).values(epoch=KnowledgeState.epoch))
+                async with AsyncClient(transport=ASGITransport(app=app, raise_app_exceptions=False), base_url='http://test') as client:
+                    failed = await client.post(path, headers=headers, json=payload)
+                    assert failed.status_code == 503, failed.text
+                    async with sessions() as check:
+                        assert len(await TourSessionRepository(check).list_revisions(owner.id, tour['id'])) == 1
+                    await holder.rollback()
+                    result = await client.post(path, headers=headers, json=payload)
+                    assert result.status_code == 200, result.text
+                    assert result.json()['version'] == 2
+        finally:
+            await engine.dispose()
+    asyncio.run(run())

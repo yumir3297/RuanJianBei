@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+import sqlite3
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
@@ -30,6 +31,15 @@ from app.services.itinerary.intent import snapshot_digest
 from app.services.tour_session_identity import ensure_tour_identity, require_tour_write_protection
 
 router = APIRouter()
+
+
+def _is_retryable_transaction_conflict(error: DBAPIError) -> bool:
+    original = error.orig
+    sqlite_code = getattr(original, "sqlite_errorcode", None)
+    if isinstance(sqlite_code, int) and (sqlite_code & 0xff) in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED):
+        return True
+    return any(getattr(item, "sqlstate", None) in {"55P03", "40P01", "40001"}
+               for item in (original, getattr(original, "__cause__", None)) if item is not None)
 
 
 class ProgressCommandRequest(StrictModel):
@@ -223,8 +233,6 @@ async def save_tour_session_v2(
         raise _conflict(error) from error
     except (IdempotencyConflict, ValueError) as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
-
-
 @router.post("/{session_id}/upgrade-v2")
 async def upgrade_tour_session_v2(
     session_id: str, payload: UpgradeItineraryRequest, request: Request,
@@ -483,6 +491,11 @@ async def apply_itinerary_proposal(
         raise _conflict(error) from error
     except (IdempotencyConflict, ValueError) as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
+    except DBAPIError as error:
+        if not _is_retryable_transaction_conflict(error):
+            raise
+        await db.rollback()
+        raise HTTPException(status_code=503, detail="服务繁忙，请使用相同请求重试并检查结果。") from error
     if result is None: raise HTTPException(status_code=404, detail="行程提案不存在")
     return result
 
