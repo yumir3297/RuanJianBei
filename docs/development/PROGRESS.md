@@ -1,3 +1,5 @@
+2026-11-03：目录竞态补充真实 ASGI 接口回归：在首次目录读取后、仓库确认前由另一 SQLite 会话真实下架并提交，现接口仍返回 200；该测试先按期望 409 失败，暂标 strict xfail。仓库与接口两项复现均 xfailed；修复仍需保证锁内重新读取到提交的原子顺序，不能仅新增一次未受保护读取。此测试的交错钩子等待写入提交，若改为读取前取锁则须调整为验证写入等待及合理串行顺序。
+
 2026-11-03：新增仅接受 /private/tmp Unix socket 与 guide_test_ 专用数据库的 PostgreSQL 目录锁实验，观察下架事务的真实锁等待；当前未设置专用数据库时 1 skipped。尝试初始化隔离 PostgreSQL 时 shmget 被环境以 Operation not permitted 拒绝，未取得 PostgreSQL 运行证据。实验仅供专用可丢弃数据库，不能用于业务库；目录竞态和生产修复仍未完成。
 
 2026-11-03：目录竞态锁方案的隔离实验：文件 SQLite 独立会话中，对已存在的 knowledge_state 行执行无变化 UPDATE 并持有事务时，真实景点下架的写入等待；释放后下架完成并递增 epoch。专项 1 passed、原竞态 1 xfailed。该实验未接入生产路径，不证明 PostgreSQL、缺失状态行、崩溃、超时或所有写入路径安全；已有未见调用的 KnowledgeRepository.delete 不更新 epoch。发布和下架先写景点再更新状态行，方案须审查锁顺序和死锁。目录竞态仍未修复。
