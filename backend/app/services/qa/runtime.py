@@ -16,6 +16,10 @@ _faq_reload_failed = False
 _reload_lock = asyncio.Lock()
 
 
+class FAQSemanticReloadError(RuntimeError):
+    """A current exact FAQ index is available but its semantic index failed."""
+
+
 def faq_reload_failed() -> bool:
     return _faq_reload_failed
 
@@ -37,7 +41,11 @@ async def get_runtime_faq_matcher(
 ) -> FAQMatcher:
     epoch = await VisibilityService(session).read_epoch() if session is not None else None
     if not _faq_matcher.entries or (epoch is not None and getattr(_faq_matcher, "knowledge_epoch", None) != epoch):
-        await reload_runtime_faq_matcher(session)
+        try:
+            await reload_runtime_faq_matcher(session)
+        except FAQSemanticReloadError:
+            # The replacement exact/fuzzy matcher has already been published.
+            pass
     if embedder is not None:
         try:
             _faq_matcher.ensure_semantic_index(embedder, semantic_threshold)
@@ -79,7 +87,7 @@ async def _reload_runtime_faq_matcher_locked(session: AsyncSession) -> float:
     _faq_reload_failed = semantic_error is not None
     if semantic_error is not None:
         set_faq_semantic_index_failed(True)
-        raise semantic_error
+        raise FAQSemanticReloadError("FAQ semantic index rebuild failed") from semantic_error
     if old_semantic_index is not None:
         set_faq_semantic_index_failed(False)
     return _last_reload_ms

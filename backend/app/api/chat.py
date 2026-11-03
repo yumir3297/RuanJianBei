@@ -191,6 +191,7 @@ async def build_pipeline(
         logger.exception(
             "FAQ semantic index initialization failed; exact and fuzzy FAQ matching remain available."
         )
+        faq_matcher = await get_runtime_faq_matcher(session)
 
     try:
         if embedder is None:
