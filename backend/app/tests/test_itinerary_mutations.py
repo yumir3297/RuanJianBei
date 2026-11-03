@@ -141,3 +141,10 @@ class ItineraryMutationTests(unittest.TestCase):
         self.assertEqual(result.validation, "conflict")
         self.assertEqual(len(result.snapshot.stops), 1)
         self.assertEqual(result.diff, ())
+
+
+def test_rest_interval_is_not_reported_as_verified_without_validation():
+    snapshot = _snapshot(constraints={"available_minutes": 120, "rest_every_minutes": 30})
+    snapshot.stops[0].duration_minutes = 90
+    result = apply_manual_operations(snapshot, [], catalog_spot_codes={"LS-01"})
+    assert result.validation == "unverified"
