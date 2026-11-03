@@ -58,6 +58,7 @@ export const useTourSessionsStore = defineStore("tourSessions", {
     proposalApplying: false,
     proposalChoices: [],
     saveState: "idle",
+    savingSessionIds: [],
     error: "",
     operationKeys: {},
   }),
@@ -109,6 +110,10 @@ export const useTourSessionsStore = defineStore("tourSessions", {
       this.trash = await fetchTourTrash();
     },
     async open(id) {
+      if (this.savingSessionIds.includes(id)) {
+        this.error = "这条游览正在保存，请稍后再打开。";
+        return null;
+      }
       const request = openRequests.begin();
       this.clearProposal();
       this.error = "";
@@ -211,12 +216,13 @@ export const useTourSessionsStore = defineStore("tourSessions", {
       }
     },
     async save(snapshot = this.draftSnapshot) {
-      if (!this.current || this.saveState === "saving") return null;
+      if (!this.current || this.saveState === "saving" || this.savingSessionIds.includes(this.current.id)) return null;
       this.error = "";
       this.saveState = "saving";
       this.draftSnapshot = cloneJson(snapshot || {});
       const original = this.current;
       const sessionId = original.id;
+      this.savingSessionIds = [...this.savingSessionIds, sessionId];
       const submittedDraft = cloneJson(this.draftSnapshot);
       const payload = { expected_version: original.version, snapshot: submittedDraft };
       const progressBeforeSave = this.progress;
@@ -239,7 +245,6 @@ export const useTourSessionsStore = defineStore("tourSessions", {
         const revisions = await fetchTourRevisions(sessionId).catch(() => null);
         if (!isCurrent()) return null;
         if (revisions) this.revisions = revisions;
-        this.saveState = reconciled.hasConcurrentEdits ? "idle" : "saved";
         if (reconciled.hasConcurrentEdits) this.error = "行程已保存；保存期间的修改已保留为未保存草稿，请核对后再保存。";
         const progress = await refreshProgressAfterPlanSave(sessionId, progressBeforeSave, fetchTourProgress);
         if (!isCurrent()) return null;
@@ -249,6 +254,7 @@ export const useTourSessionsStore = defineStore("tourSessions", {
         const budget = saved.snapshot?.schema_version === 2 ? await fetchTourBudget(sessionId).catch(() => null) : null;
         if (!isCurrent()) return null;
         this.budget = budget;
+        this.saveState = reconciled.hasConcurrentEdits ? "idle" : "saved";
         return this.current;
       } catch (error) {
         if (!isCurrent()) return null;
@@ -259,6 +265,8 @@ export const useTourSessionsStore = defineStore("tourSessions", {
           ? "这条游览已在其他标签页更新。你的当前内容已保留，请重新打开后再继续。"
           : "保存失败，当前内容仍保留在页面中，可重试。";
         return null;
+      } finally {
+        this.savingSessionIds = this.savingSessionIds.filter(id => id !== sessionId);
       }
     },
     async upgradeV2() {

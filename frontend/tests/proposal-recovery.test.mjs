@@ -482,3 +482,22 @@ test('late manual save cannot replace the newly selected tour', async () => {
   assert.equal(store.current.id, 'b');
   assert.deepEqual(store.draftSnapshot, snapshot('b'));
 });
+
+test('reopening a tour while saving does not leave an older version displayed', async () => {
+  const late = deferred(), started = deferred();
+  route = async config => {
+    if (config.url === '/tour-sessions/a/v2') { started.resolve(); return late.promise; }
+    if (config.url === '/tour-sessions/a') return { id: 'a', version: 1, snapshot: snapshot('base') };
+    if (config.url.endsWith('/revisions')) return { items: [] };
+    if (config.url.endsWith('/progress')) return { status: 'not_started', progress_version: 0 };
+    if (config.url.endsWith('/budget')) return {};
+    if (config.url.includes('/proposals')) return { items: [] };
+    throw new Error(config.url);
+  };
+  const pending = store.save();
+  await started.promise;
+  await store.open('a');
+  late.resolve({ id: 'a', version: 2, snapshot: snapshot('base') });
+  await pending;
+  assert.equal(store.current.version, 2);
+});
