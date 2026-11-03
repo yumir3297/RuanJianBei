@@ -31,6 +31,8 @@
 
 ### 1. 后端
 
+后端启动会自动运行数据库迁移。已有数据库尤其是旧 W02 数据库，启动前须先备份，并在隔离副本核对结构及迁移兼容性；不能仅凭版本号直接升级。已知限制见 [W02 集成记录](./docs/development/W02_INTEGRATION.md)。首次试用建议使用独立空数据库。
+
 ```powershell
 cd backend
 python -m venv .venv
