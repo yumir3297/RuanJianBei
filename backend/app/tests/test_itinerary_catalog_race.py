@@ -169,3 +169,39 @@ def test_api_confirmation_locks_catalog_until_commit(tmp_path, monkeypatch):
         finally:
             await engine.dispose()
     asyncio.run(run())
+
+
+def test_concurrent_identical_proposal_apply_replays_result(tmp_path, monkeypatch):
+    from app.models.knowledge_workspace import KnowledgeState
+    async def run():
+        engine, seed = await open_test_session(str(tmp_path / 'idempotency.db'))
+        seed.add(KnowledgeState(id=1, epoch=1)); await seed.commit()
+        snapshot = {'schema_version': 2, 'constraints': {'available_minutes': 60}, 'stops': [{'stop_id': str(uuid4()), 'kind': 'rest', 'name': '休息', 'duration_minutes': 10, 'duration_basis': 'user'}], 'legs': []}
+        repo = TourSessionRepository(seed)
+        tour = await repo.create_session('owner', 'site', '行程', snapshot, 'create')
+        catalog = await PublishedAttractionCatalog(K01PublishedAttractionSource(seed, site_id='site')).list_for_site('site')
+        generated = {'status': 'ready', 'base_snapshot': snapshot, 'operations': [], 'candidate': snapshot, 'diff': [], 'validation': {'status': 'pass', 'conflicts': []}, 'clarification': None}
+        proposal = await repo.create_proposal('owner', tour['id'], 1, 0, 'a'*64, catalog.digest, '调整', generated, 'proposal')
+        await seed.close()
+        sessions = async_sessionmaker(engine, expire_on_commit=False)
+        original = TourSessionRepository._replay
+        count = 0
+        both = asyncio.Event()
+        async def barrier(self, *args, **kwargs):
+            nonlocal count
+            result = await original(self, *args, **kwargs)
+            if args[1] == 'proposal_apply' and result is None and count < 2:
+                count += 1
+                if count == 2: both.set()
+                await asyncio.wait_for(both.wait(), 3)
+            return result
+        monkeypatch.setattr(TourSessionRepository, '_replay', barrier)
+        async def apply():
+            async with sessions() as session:
+                return await TourSessionRepository(session).apply_proposal('owner', tour['id'], proposal['id'], 1, 0, 'a'*64, 'apply', catalog_entries={}, catalog_site_id='site')
+        try:
+            first, second = await asyncio.gather(apply(), apply())
+            assert first == second
+        finally:
+            await engine.dispose()
+    asyncio.run(run())

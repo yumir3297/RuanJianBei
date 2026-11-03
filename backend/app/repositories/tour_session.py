@@ -672,6 +672,11 @@ class TourSessionRepository:
                 .values(epoch=KnowledgeState.epoch, updated_at=KnowledgeState.updated_at))
             if locked.rowcount != 1:
                 raise ValueError("知识状态不可用，请检查数据库后重试")
+            replay = await self._replay(owner_id, "proposal_apply", idempotency_key, request)
+            if replay is not None:
+                await self.session.rollback()
+                return replay
+            await self.session.refresh(proposal)
             catalog = await PublishedAttractionCatalog(K01PublishedAttractionSource(
                 self.session, site_id=catalog_site_id)).list_for_site(catalog_site_id)
             if proposal.catalog_digest != catalog.digest:
@@ -691,8 +696,9 @@ class TourSessionRepository:
             TourSession.id == session_id, TourSession.owner_id == owner_id, TourSession.deleted_at.is_(None)))
         if item is None: return None
         if item.version != expected_version:
+            current_version = item.version
             await self.session.rollback()
-            raise RevisionConflict(item.version)
+            raise RevisionConflict(current_version)
         current_revision = await self.session.scalar(select(TourSessionRevision).where(
             TourSessionRevision.session_id == session_id, TourSessionRevision.version == item.version))
         current_raw = _decode(current_revision.snapshot_json) if current_revision else {}
