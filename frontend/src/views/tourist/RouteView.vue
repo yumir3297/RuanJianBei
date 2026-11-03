@@ -43,7 +43,7 @@
               <button type="button" :disabled="index === 0 || tourStore.progress?.status === 'active'" @click="moveStop(index, -1)">↑</button>
               <button type="button" :disabled="index === draft.stops.length - 1 || tourStore.progress?.status === 'active'" @click="moveStop(index, 1)">↓</button>
               <button type="button" :disabled="tourStore.progress?.status === 'active' || ['completed','skipped'].includes(tourStore.progress?.status_by_stop?.[stop.stop_id])" @click="draft.stops.splice(index, 1)">×</button>
-              <label>停留分钟<input v-model.number="stop.duration_minutes" type="number" min="1" max="720" :disabled="tourStore.progress?.status === 'active' || stop.locked_fields?.includes('duration')"></label>
+              <label>停留分钟<input :value="stop.duration_minutes ?? ''" type="number" min="1" max="720" :disabled="tourStore.progress?.status === 'active' || stop.locked_fields?.includes('duration')" @input="setManualStopDuration(stop, $event.target.value)"></label>
               <button type="button" :disabled="tourStore.progress?.status === 'active'" @click="toggleStopLock(stop, 'stop')">{{ stop.locked_fields?.includes('stop') ? '解锁此点' : '锁定此点' }}</button>
             </div>
             <div class="itinerary-add-row">
@@ -134,6 +134,7 @@ import { routeSnapshot } from "../../utils/routeSnapshot";
 import { fetchRecommendations } from "../../api/recommend";
 import { getSessionId } from "../../stores/chat";
 import { fetchItineraryCatalog } from "../../api/itinerary";
+import { setManualStopDuration } from "../../utils/itineraryDuration";
 const props = defineProps({ busy: { type: Boolean, default: false }, weather: { type: Object, default: null } });
 defineEmits(["ask"]);
 const categories = ["预设路线", "半日精选", "主题体验", "特色路线"];
