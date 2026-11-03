@@ -21,7 +21,7 @@ from app.models.tour_session import (
 )
 from app.schemas.itinerary import TourSnapshotV2
 from app.services.itinerary.catalog import PublishedAttraction
-from app.services.itinerary.mutations import diff_snapshots
+from app.services.itinerary.mutations import apply_manual_operations, diff_snapshots
 from app.services.itinerary.progress import (
     ProgressCommand, ProgressConflict, TourProgress as V01Progress,
     apply_progress_command, start_tour, validate_remaining_budget,
@@ -469,7 +469,11 @@ class TourSessionRepository:
                     (stop.stop_id not in old_stops or old_stops[stop.stop_id].duration_minutes != stop.duration_minutes)
                 ) for stop in candidate_snapshot.stops)
                 estimated |= any(leg.duration_basis == "estimate" for leg in candidate_snapshot.legs)
-                if (estimated or location_changed or candidate_snapshot.constraints.rest_every_minutes is not None) and validation.get("status") == "pass":
+                current_check = apply_manual_operations(candidate_snapshot, [], catalog_spot_codes=None)
+                if current_check.validation == "conflict" and validation.get("status") in ("pass", "unverified"):
+                    validation["status"] = "conflict"
+                    validation["conflicts"] = list(current_check.conflicts)
+                elif (estimated or location_changed or current_check.validation == "unverified") and validation.get("status") == "pass":
                     validation["status"] = "unverified"
             except ValidationError:
                 comparable = False

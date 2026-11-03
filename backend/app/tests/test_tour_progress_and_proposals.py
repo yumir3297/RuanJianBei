@@ -561,3 +561,29 @@ def test_apply_rejects_conflicting_or_unknown_validation(validation_status):
         finally:
             await db.close(); await engine.dispose()
     _run(scenario)
+
+
+def test_old_pass_proposal_with_conflicting_constraints_is_rejected():
+    async def scenario():
+        from app.repositories.tour_session import TourSessionRepository
+        engine, db = await open_test_session()
+        try:
+            repo = TourSessionRepository(db)
+            base = _snapshot()
+            created = await repo.create_session("owner-a", "site", "游览", base, "create-conflict")
+            candidate = json.loads(json.dumps(base))
+            candidate["constraints"]["excluded_spots"] = ["LS-01"]
+            generated = {"status": "ready", "base_snapshot": base, "operations": [],
+                         "candidate": candidate, "diff": [],
+                         "validation": {"status": "pass", "conflicts": []}, "clarification": None}
+            proposal = await repo.create_proposal("owner-a", created["id"], 1, 0, "a" * 64,
+                                                  "catalog", "调整", generated, "old-conflict")
+            restored = await repo.get_proposal("owner-a", created["id"], proposal["id"])
+            assert restored["validation"]["status"] == "conflict"
+            with pytest.raises(ValueError, match="校验"):
+                await repo.apply_proposal("owner-a", created["id"], proposal["id"], 1, 0,
+                                          "a" * 64, "apply-conflict")
+            assert len(await repo.list_revisions("owner-a", created["id"])) == 1
+        finally:
+            await db.close(); await engine.dispose()
+    _run(scenario)
