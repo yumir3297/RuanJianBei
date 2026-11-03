@@ -448,3 +448,37 @@ test('only the latest current-stop budget query can update the result, even when
   assert.equal(store.currentStopRemainingMinutes, 5);
   assert.equal(store.budget.known_minutes, 5);
 });
+
+test('manual save preserves edits made while its request is pending', async () => {
+  const late = deferred(); const started = deferred();
+  route = async config => {
+    if (config.url === '/tour-sessions/a/v2') { started.resolve(); return late.promise; }
+    if (config.url.endsWith('/revisions')) return { items: [] };
+    if (config.url.endsWith('/budget')) return {};
+    throw new Error(config.url);
+  };
+  const pending = store.save();
+  await started.promise;
+  store.draftSnapshot = snapshot('edited');
+  late.resolve({ id: 'a', version: 2, snapshot: snapshot('base') });
+  await pending;
+  assert.deepEqual(store.draftSnapshot, snapshot('edited'));
+});
+
+test('late manual save cannot replace the newly selected tour', async () => {
+  const late = deferred(); const started = deferred();
+  route = async config => {
+    if (config.url === '/tour-sessions/a/v2') { started.resolve(); return late.promise; }
+    if (config.url.endsWith('/revisions')) return { items: [] };
+    if (config.url.endsWith('/budget')) return {};
+    throw new Error(config.url);
+  };
+  const pending = store.save();
+  await started.promise;
+  store.current = { id: 'b', version: 1, snapshot: snapshot('b') };
+  store.draftSnapshot = snapshot('b');
+  late.resolve({ id: 'a', version: 2, snapshot: snapshot('base') });
+  await pending;
+  assert.equal(store.current.id, 'b');
+  assert.deepEqual(store.draftSnapshot, snapshot('b'));
+});

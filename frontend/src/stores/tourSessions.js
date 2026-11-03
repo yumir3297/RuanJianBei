@@ -211,29 +211,47 @@ export const useTourSessionsStore = defineStore("tourSessions", {
       }
     },
     async save(snapshot = this.draftSnapshot) {
-      if (!this.current) return null;
+      if (!this.current || this.saveState === "saving") return null;
       this.error = "";
       this.saveState = "saving";
       this.draftSnapshot = cloneJson(snapshot || {});
-      const payload = { expected_version: this.current.version, snapshot: this.draftSnapshot };
+      const original = this.current;
+      const sessionId = original.id;
+      const submittedDraft = cloneJson(this.draftSnapshot);
+      const payload = { expected_version: original.version, snapshot: submittedDraft };
       const progressBeforeSave = this.progress;
-      const { fingerprint, key } = this.operationKey(`save:${this.current.id}`, payload);
+      const { fingerprint, key } = this.operationKey(`save:${sessionId}`, payload);
+      let expectedCurrent = original;
+      const isCurrent = () => this.current === expectedCurrent;
       try {
         await this.prepare();
-        this.current = this.draftSnapshot?.schema_version === 2
-          ? await saveTourSessionV2(this.current.id, payload, this.csrfToken, key)
-          : await saveTourSession(this.current.id, payload, this.csrfToken, key);
-        this.draftSnapshot = cloneJson(this.current.snapshot || {});
-        this.items = this.items.map(item => item.id === this.current.id ? this.current : item);
-        this.revisions = await fetchTourRevisions(this.current.id).catch(() => this.revisions);
-        this.saveState = "saved";
-        this.progress = await refreshProgressAfterPlanSave(this.current.id, progressBeforeSave, fetchTourProgress);
+        if (!isCurrent()) return null;
+        const saved = submittedDraft?.schema_version === 2
+          ? await saveTourSessionV2(sessionId, payload, this.csrfToken, key)
+          : await saveTourSession(sessionId, payload, this.csrfToken, key);
+        this.clearOperationKey(fingerprint);
+        if (!isCurrent()) return null;
+        this.current = saved;
+        expectedCurrent = this.current;
+        const reconciled = reconcileDraftAfterAsyncApply(submittedDraft, this.draftSnapshot, saved.snapshot || {});
+        this.draftSnapshot = reconciled.draftSnapshot;
+        this.items = this.items.map(item => item.id === sessionId ? saved : item);
+        const revisions = await fetchTourRevisions(sessionId).catch(() => null);
+        if (!isCurrent()) return null;
+        if (revisions) this.revisions = revisions;
+        this.saveState = reconciled.hasConcurrentEdits ? "idle" : "saved";
+        if (reconciled.hasConcurrentEdits) this.error = "行程已保存；保存期间的修改已保留为未保存草稿，请核对后再保存。";
+        const progress = await refreshProgressAfterPlanSave(sessionId, progressBeforeSave, fetchTourProgress);
+        if (!isCurrent()) return null;
+        this.progress = progress;
         this.progressSyncRequired = progressBeforeSave?.status === "active" && !this.progress;
         if (this.progressSyncRequired) this.error = "行程已保存，但游览进度未能同步；刷新后再继续记录进度。";
-        this.budget = this.current.snapshot?.schema_version === 2 ? await fetchTourBudget(this.current.id).catch(() => null) : null;
-        this.clearOperationKey(fingerprint);
+        const budget = saved.snapshot?.schema_version === 2 ? await fetchTourBudget(sessionId).catch(() => null) : null;
+        if (!isCurrent()) return null;
+        this.budget = budget;
         return this.current;
       } catch (error) {
+        if (!isCurrent()) return null;
         this.saveState = error?.response?.status === 409 ? "conflict" : "error";
         this.error = error?.code === "TOUR_COOKIE_UNAVAILABLE"
           ? error.message
