@@ -19,8 +19,9 @@ from app.models.tour_session import (
     TourSessionRevision,
     TourProgressRecord, TourProgressEvent, ItineraryProposal,
 )
+from app.models.knowledge_workspace import KnowledgeState
 from app.schemas.itinerary import TourSnapshotV2
-from app.services.itinerary.catalog import PublishedAttraction
+from app.services.itinerary.catalog import PublishedAttraction, PublishedAttractionCatalog, K01PublishedAttractionSource
 from app.services.itinerary.mutations import apply_manual_operations, diff_snapshots
 from app.services.itinerary.progress import (
     ProgressCommand, ProgressConflict, TourProgress as V01Progress,
@@ -656,7 +657,8 @@ class TourSessionRepository:
 
     async def apply_proposal(self, owner_id: str, session_id: str, proposal_id: str,
             expected_version: int, progress_version: int, draft_digest: str, idempotency_key: str,
-            catalog_entries: Mapping[str, PublishedAttraction] | None = None) -> dict | None:
+            catalog_entries: Mapping[str, PublishedAttraction] | None = None,
+            catalog_site_id: str | None = None) -> dict | None:
         request = {"session_id": session_id, "proposal_id": proposal_id, "expected_version": expected_version,
             "progress_version": progress_version, "draft_digest": draft_digest}
         replay = await self._replay(owner_id, "proposal_apply", idempotency_key, request)
@@ -665,6 +667,16 @@ class TourSessionRepository:
             ItineraryProposal.id == proposal_id, ItineraryProposal.session_id == session_id,
             ItineraryProposal.owner_id == owner_id))
         if proposal is None: return None
+        if catalog_site_id is not None:
+            locked = await self.session.execute(update(KnowledgeState).where(KnowledgeState.id == 1)
+                .values(epoch=KnowledgeState.epoch, updated_at=KnowledgeState.updated_at))
+            if locked.rowcount != 1:
+                raise ValueError("知识状态不可用，请检查数据库后重试")
+            catalog = await PublishedAttractionCatalog(K01PublishedAttractionSource(
+                self.session, site_id=catalog_site_id)).list_for_site(catalog_site_id)
+            if proposal.catalog_digest != catalog.digest:
+                raise ValueError("景点资料已更新，请重新生成提案")
+            catalog_entries = {entry.spot_code: entry for entry in catalog.entries}
         if proposal.status != "ready" or _aware(proposal.expires_at) <= datetime.now(UTC):
             raise ValueError("提案已过期、需要澄清或已应用")
         proposal_payload = self._proposal_payload(proposal)

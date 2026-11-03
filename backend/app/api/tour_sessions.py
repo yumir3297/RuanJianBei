@@ -478,7 +478,7 @@ async def apply_itinerary_proposal(
     try:
         result = await repo.apply_proposal(identity.id, session_id, proposal_id, payload.expected_version,
             payload.progress_version, payload.draft_digest, idempotency_key,
-            catalog_entries={entry.spot_code: entry for entry in catalog.entries})
+            catalog_entries={entry.spot_code: entry for entry in catalog.entries}, catalog_site_id=settings.site_id)
     except RevisionConflict as error:
         raise _conflict(error) from error
     except (IdempotencyConflict, ValueError) as error:

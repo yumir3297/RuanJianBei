@@ -138,6 +138,7 @@ class K01PublishedAttractionSource:
                 KnowledgeRevision.category == "景点信息",
             )
             .order_by(KnowledgeEntry.id.asc())
+            .execution_options(populate_existing=True)
         )
         entries: list[PublishedAttraction] = []
         for entry, revision in result.all():

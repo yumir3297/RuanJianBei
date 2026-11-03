@@ -27,7 +27,8 @@ def test_worker_proposal_apply_with_catalog_change_or_stable_catalog(monkeypatch
         engine, db = await open_test_session()
         owner = TourIdentity(id="owner-a", credential_digest="a" * 64,
             expires_at=datetime.now(UTC) + timedelta(days=1))
-        db.add(owner)
+        from app.models.knowledge_workspace import KnowledgeState
+        db.add_all([owner, KnowledgeState(id=1, epoch=1)])
         await db.commit()
         snapshot = TourSnapshotV2.model_validate({
             "schema_version": 2,
