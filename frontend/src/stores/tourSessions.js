@@ -248,12 +248,16 @@ export const useTourSessionsStore = defineStore("tourSessions", {
         if (reconciled.hasConcurrentEdits) this.error = "行程已保存；保存期间的修改已保留为未保存草稿，请核对后再保存。";
         const progress = await refreshProgressAfterPlanSave(sessionId, progressBeforeSave, fetchTourProgress);
         if (!isCurrent()) return null;
-        this.progress = progress;
-        this.progressSyncRequired = progressBeforeSave?.status === "active" && !this.progress;
-        if (this.progressSyncRequired) this.error = "行程已保存，但游览进度未能同步；刷新后再继续记录进度。";
-        const budget = saved.snapshot?.schema_version === 2 ? await fetchTourBudget(sessionId).catch(() => null) : null;
+        if (this.progress === progressBeforeSave) {
+          this.progress = progress;
+          this.progressSyncRequired = progressBeforeSave?.status === "active" && !this.progress;
+          if (this.progressSyncRequired) this.error = "行程已保存，但游览进度未能同步；刷新后再继续记录进度。";
+        }
+        const budgetProgress = this.progress;
+        const remaining = this.currentStopRemainingMinutes;
+        const budget = saved.snapshot?.schema_version === 2 ? await fetchTourBudget(sessionId, remaining).catch(() => null) : null;
         if (!isCurrent()) return null;
-        this.budget = budget;
+        if (this.progress === budgetProgress && this.currentStopRemainingMinutes === remaining) this.budget = budget;
         this.saveState = reconciled.hasConcurrentEdits ? "idle" : "saved";
         return this.current;
       } catch (error) {

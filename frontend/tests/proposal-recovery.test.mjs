@@ -501,3 +501,22 @@ test('reopening a tour while saving does not leave an older version displayed', 
   await pending;
   assert.equal(store.current.version, 2);
 });
+
+test('save progress refresh cannot overwrite a newer progress command', async () => {
+  const refresh = deferred(), started = deferred();
+  store.progress = { status: 'active', progress_version: 1, current_stop_id: 'one' };
+  route = async config => {
+    if (config.url === '/tour-sessions/a/v2') return { id: 'a', version: 2, snapshot: snapshot('base') };
+    if (config.url.endsWith('/revisions')) return { items: [] };
+    if (config.url.endsWith('/progress') && config.method === 'get') { started.resolve(); return refresh.promise; }
+    if (config.url.endsWith('/progress') && config.method === 'post') return { status: 'active', progress_version: 3, current_stop_id: 'two' };
+    if (config.url.endsWith('/budget')) return {};
+    throw new Error(config.url);
+  };
+  const saving = store.save();
+  await started.promise;
+  await store.applyProgress({ type: 'complete', stop_id: 'one' });
+  refresh.resolve({ status: 'active', progress_version: 2, current_stop_id: 'one' });
+  await saving;
+  assert.equal(store.progress.progress_version, 3);
+});
