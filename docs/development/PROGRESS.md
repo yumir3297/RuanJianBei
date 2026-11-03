@@ -1,5 +1,7 @@
 # 开发进度
 
+2026-11-03：隔离 SQLite 复现 FAQ 跨进程同步风险的核心状态：一个 runtime 已加载旧 FAQ，另一个数据库 session 提交新答案并将 epoch 从 1 改为 2 后，再次获取该 runtime 的 matcher 仍返回旧答案。此为单进程内模拟另一个写入者，并非实际多进程或真实服务测试；未修改真实数据。需设计带版本绑定和原子切换的重载，避免旧 matcher 配新 epoch 及加载期间再次更新。
+
 2026-11-02：盲区转 FAQ 将知识 epoch 递增和缓存清理与 FAQ 更新同事务提交；隔离 SQLite 测试覆盖成功及失败回滚，后端全套 507 passed、5 skipped。多 worker 的 FAQ 内存索引仍不会随 epoch 自动刷新，旧索引跨进程一致性及真实 PostgreSQL 待处理。
 
 2026-11-02：processed-data 同步将知识 epoch 递增和数据库缓存清理纳入资料提交事务；隔离 SQLite 验证成功递增、失败回滚及同步后旧 epoch 缓存写入不会被新 epoch 读取。后端全套 505 passed、5 skipped。未模拟完整 LLM 并发或真实 PostgreSQL，多 worker FAQ 内存索引重载仍未解决。
