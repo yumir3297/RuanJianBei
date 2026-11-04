@@ -60,6 +60,7 @@ from app.services.qa.speech_event_adapter import (
     words_to_viseme_timeline as build_words_viseme_timeline,
 )
 from app.services.qa.stream_events import StreamEvent
+from app.services.qa.stream_lifecycle import cancel_and_join
 from app.services.qa.vision_evidence import resolve_vision_evidence
 from app.services.qa.answer_styler import polish_answer, no_evidence_reply
 from app.services.qa.evidence_retrieval import retrieve_evidence
@@ -681,13 +682,7 @@ class QAPipeline:
             await cancel_audio()
             raise
         finally:
-            for task in (llm_task, tts_task):
-                if task is not None and not task.done():
-                    task.cancel()
-            await asyncio.gather(
-                *(task for task in (llm_task, tts_task) if task is not None),
-                return_exceptions=True,
-            )
+            await cancel_and_join(llm_task, tts_task)
             if tts_stream is not None:
                 try:
                     await tts_stream.close()
