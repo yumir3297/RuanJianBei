@@ -63,6 +63,7 @@ from app.services.qa.stream_events import StreamEvent
 from app.services.qa.stream_lifecycle import AudioTaskGroup, cancel_and_join, forward_events, forward_tts_events
 from app.services.qa.stream_mux import StreamMuxState
 from app.services.qa.streaming_tts_buffer import StreamingTTSBuffer
+from app.services.qa.streaming_tts_controller import StreamingTTSController
 from app.services.qa.vision_evidence import resolve_vision_evidence
 from app.services.qa.answer_styler import polish_answer, no_evidence_reply
 from app.services.qa.evidence_retrieval import retrieve_evidence
@@ -525,6 +526,9 @@ class QAPipeline:
         )
         mux_state = StreamMuxState(streaming_requested=streaming_requested)
         streaming_tts_buffer = StreamingTTSBuffer()
+        streaming_tts_controller = StreamingTTSController(
+            tts_stream, mux_state, streaming_tts_buffer, tts_finish_requested
+        )
         visibility_changed = False
 
         try:
@@ -588,33 +592,8 @@ class QAPipeline:
                             except QueueEmpty:
                                 break
 
-                if (
-                    mux_state.tts_connected
-                    and not mux_state.tts_failed
-                    and tts_stream is not None
-                    and streaming_tts_buffer.ready()
-                ):
-                    chunk = streaming_tts_buffer.take_ready()
-                    assert chunk is not None
-                    try:
-                        await tts_stream.send_text(chunk)
-                    except Exception:
-                        logger.exception("Streaming TTS send failed; switching to HTTP fallback")
-                        mux_state.tts_failed = True
-                        mux_state.tts_done = True
-
-                if mux_state.llm_done and mux_state.tts_connected and not mux_state.tts_failed and not mux_state.tts_finish_sent and tts_stream is not None:
-                    try:
-                        remaining_chunk = streaming_tts_buffer.drain()
-                        if remaining_chunk is not None:
-                            await tts_stream.send_text(remaining_chunk)
-                        await tts_stream.finish()
-                        tts_finish_requested.set()
-                        mux_state.tts_finish_sent = True
-                    except Exception:
-                        logger.exception("Streaming TTS finish failed; switching to HTTP fallback")
-                        mux_state.tts_failed = True
-                        mux_state.tts_done = True
+                await streaming_tts_controller.flush_ready()
+                await streaming_tts_controller.finish_if_ready()
 
                 if mux_state.llm_done and streaming_requested and not mux_state.tts_connected and mux_state.tts_failed:
                     mux_state.tts_done = True
