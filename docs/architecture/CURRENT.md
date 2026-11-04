@@ -1,6 +1,6 @@
 # 当前架构索引
 
-代码核对基线为 `codex/competition-integration` 分支（核对于 2026-11-05）；具体提交以 Git 历史和 [开发进度](../development/PROGRESS.md) 为准。问答仍由显式 `QAPipeline` 驱动，FAQ/缓存/RAG 快速通道与 SSE、HTTP/流式 TTS 并行调度；情绪、表达策略和游客记忆是每次流请求的 ContextVar 状态。`pipeline.py` 现为 949 行，负责请求/知识流程、产流设置、FAQ/RAG/cache、完成与降级持久化；事件消费已拆到专用组件。答案补读、最终音频片段选择、缓存资格及消息落库仍在 Pipeline/对应辅助节点。此索引描述源码结构，不代表真实供应商或设备已验收。完整入口见 [功能地图](../REPO_MAP.md)。
+代码核对基线为 `codex/competition-integration` 分支（核对于 2026-11-05）；具体提交以 Git 历史和 [开发进度](../development/PROGRESS.md) 为准。问答仍由显式 `QAPipeline` 驱动，FAQ/缓存/RAG 快速通道与 SSE、HTTP/流式 TTS 并行调度；情绪、表达策略和游客记忆是每次流请求的 ContextVar 状态。`pipeline.py` 现为 952 行，负责请求/知识流程、产流设置、FAQ/RAG/cache、完成与降级持久化；事件消费已拆到专用组件。答案补读、最终音频片段选择和 HTTP TTS drain 已在辅助节点中，缓存资格及消息落库仍在 Pipeline。此索引描述源码结构，不代表真实供应商或设备已验收。完整入口见 [功能地图](../REPO_MAP.md)。
 
 ```mermaid
 flowchart LR
@@ -16,7 +16,7 @@ flowchart LR
 ```
 
 - `backend/app/api/router.py` 注册聊天、识景、语音、知识和游览任务；`services/qa/pipeline.py` 与 `intent_router.py` 是问答执行入口。无状态画像提取位于 `services/qa/request_profile.py`，确定性路线回答位于 `services/qa/route_fast_path.py`，整小时预算解析位于 `services/qa/route_constraints.py`；`services/qa/vision_evidence.py` 将游客确认与当前发布目录、检索范围绑定，`services/qa/answer_fast_paths.py` 将最新开放时间/票价不可核实规则、FAQ 直接回答、受众改写证据和共享缓存资格解析为独立决策，`services/qa/evidence_retrieval.py` 将检索片段和带修订/分块 ID 的来源记录成对返回，`services/qa/speech_event_adapter.py` 将 TTS 数据转换为 SSE 音频、字幕和数字人事件。
-- 流生命周期辅助件现拆在 `services/qa/stream_lifecycle.py`（`StreamProducerGroup` 管理 LLM/TTS producer task 与流式 session 的取消、join、关闭；`AudioTaskGroup` 管理并发 HTTP 音频任务）、`stream_mux.py`（LLM/TTS mux 状态、交付决策和消息读取前后的 epoch fence）、`stream_mux_consumer.py`（消费 mux 事件、保留 SSE 顺序、收集 usage/finish、积累 token、调度句级 HTTP TTS 并驱动 streaming TTS flush）、`streaming_tts_buffer.py` / `streaming_tts_controller.py`（流式 TTS 文本缓冲、发送、finish 和异常降级）、`queued_stream_events.py`（HTTP TTS 生成的 SSE 音频事件队列）、`stream_answer.py`（答案累计与可播句切分）及 `stream_completion.py`（选择最终 FAQ 全文、流式 TTS 失败补播片段或 HTTP TTS 尾句）。Pipeline 仍控制产流设置和清理、FAQ/RAG 的文字与来源事件顺序、最终补播任务等待/epoch 校验、cache 和持久化；FAQ、缓存、RAG、证据绑定和 epoch fence 必须在后续拆分中保持。
+- 流生命周期辅助件现拆在 `services/qa/stream_lifecycle.py`（`StreamProducerGroup` 管理 LLM/TTS producer task 与流式 session 的取消、join、关闭；`AudioTaskGroup` 管理并发 HTTP 音频任务）、`stream_mux.py`（LLM/TTS mux 状态、交付决策和消息读取前后的 epoch fence）、`stream_mux_consumer.py`（消费 mux 事件、保留 SSE 顺序、收集 usage/finish、积累 token、调度句级 HTTP TTS 并驱动 streaming TTS flush）、`streaming_tts_buffer.py` / `streaming_tts_controller.py`（流式 TTS 文本缓冲、发送、finish 和异常降级）、`queued_stream_events.py`（HTTP TTS 生成的 SSE 音频事件队列）、`stream_answer.py`（答案累计与可播句切分）及 `stream_completion.py`（选择最终 FAQ 全文、流式 TTS 失败补播片段或 HTTP TTS 尾句；按任务完成和知识 epoch 检查顺序发布 HTTP TTS SSE 并取消剩余任务）。Pipeline 仍控制产流设置和清理、FAQ/RAG 的文字与来源事件顺序、完成后 fallback 文本/cache/持久化；FAQ、缓存、RAG、证据绑定和 epoch fence 必须在后续拆分中保持。
 - 复杂行程操作由持久任务 worker 处理，普通问答不进入通用 Supervisor。后续架构选择仍是显式 Pipeline，不引入运行时 Agent 框架。
 - `services/tool_execution/worker.py` 是单独进程；执行器不是自动嵌入 API。它目前只注册 `itinerary.proposal`，不能称为通用多 Agent 平台。
 - `frontend/src/stores/tourSessions.js` 负责任务与提案恢复；`useAudioPlayer.js` 管理互斥播放与内容时间轴；`ThreeAvatar.vue` 是 Three.js/VRM 视图。口型是基于文本拼音，非音频驱动模型。

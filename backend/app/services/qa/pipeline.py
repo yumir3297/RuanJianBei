@@ -61,7 +61,7 @@ from app.services.qa.speech_event_adapter import (
 from app.services.qa.stream_events import StreamEvent
 from app.services.qa.queued_stream_events import QueuedStreamEvents
 from app.services.qa.stream_answer import StreamAnswerBuffer
-from app.services.qa.stream_completion import final_audio_segments
+from app.services.qa.stream_completion import AudioTaskDrainer, final_audio_segments
 from app.services.qa.stream_lifecycle import AudioTaskGroup, StreamProducerGroup
 from app.services.qa.stream_mux import StreamMuxState
 from app.services.qa.stream_mux_consumer import StreamMuxConsumer
@@ -585,18 +585,21 @@ class QAPipeline:
         ):
             schedule_audio(text)
 
+        audio_drainer = AudioTaskDrainer(
+            tasks=audio_group.tasks,
+            audio_events=audio_events,
+            epoch_is_current=lambda: self._epoch_is_current(request_epoch),
+            cancel_audio=cancel_audio,
+        )
         try:
-            for task in audio_group.tasks:
-                await task
-                if not await self._epoch_is_current(request_epoch):
-                    await cancel_audio()
-                    yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
-                    return
-                for audio_event in audio_events.drain():
-                    yield audio_event
+            async for audio_event in audio_drainer.events():
+                yield audio_event
         except BaseException:
             await cancel_audio()
             raise
+        if audio_drainer.visibility_changed:
+            yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
+            return
 
         if degraded_llm and self.blind_spot_tracker is not None:
             try:
