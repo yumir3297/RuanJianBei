@@ -23,7 +23,6 @@ class StreamMuxState:
         self.tts_done = not streaming_requested
         self.tts_failed = False
         self.tts_finish_sent = False
-        self.tts_text_buffer = ""
         self.tts_confirmed_chars = 0
 
     def consume(self, kind: str, payload: object | None) -> MuxDelivery:

@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 from app.services.qa.stream_mux import StreamMuxState
+from app.services.qa.streaming_tts_buffer import StreamingTTSBuffer
 
 
 def test_stream_mux_tracks_terminal_events_and_tts_fallback_progress():
@@ -31,3 +32,24 @@ def test_stream_mux_marks_connection_failure_for_http_fallback():
     assert delivery.warning == "connect"
     assert mux.tts_failed
     assert mux.tts_done
+
+
+def test_streaming_tts_buffer_flushes_at_existing_phrase_boundaries():
+    buffer = StreamingTTSBuffer()
+
+    buffer.append("短句。")
+    assert buffer.take_ready() == "短句。"
+    assert buffer.take_ready() is None
+
+    buffer.append("逗号分段，")
+    assert buffer.take_ready() is None
+    buffer.append("再加三字，")
+    assert buffer.take_ready() == "逗号分段，再加三字，"
+
+
+def test_streaming_tts_buffer_drains_unfinished_tail_once():
+    buffer = StreamingTTSBuffer()
+    buffer.append("尾部未完成")
+
+    assert buffer.drain() == "尾部未完成"
+    assert buffer.drain() is None

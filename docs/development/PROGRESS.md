@@ -1,3 +1,5 @@
+2026-11-05：将流式 TTS 文本 chunk 缓冲与 flush 策略抽至 `qa/streaming_tts_buffer.StreamingTTSBuffer`，保留原标点/长度触发条件；finish 时 drain 尾部文本，空 buffer 不重复发送。新增标点 flush、逗号长度边界和一次性尾部 drain 行为测试。含 stream mux/lifecycle、Pipeline/受众、chat SSE、知识 epoch、语音适配、TTS 流、FAQ fallback 回归 80 passed、1 条 Starlette 弃用警告；compileall 与 diff --check 通过。Pipeline 仍决定供应商 send/finish、失败降级和 SSE 事件时序。
+
 2026-11-05：新增 `qa/stream_mux.StreamMuxState`，将 LLM/TTS mux 消息到请求生命周期状态的转换从主生成循环拆出：LLM done/error、TTS connect/error/done、字时间戳确认字符偏移、audio-ready 信号由状态对象更新/路由；Pipeline 仍负责 epoch fence、LLM usage/finish、回答文本、SSE 适配、TTS send/finish 和降级调度。新增 mux 状态行为测试，覆盖 TTS midstream 失败偏移与连接失败；stream mux/lifecycle、Pipeline/受众、chat SSE、knowledge epoch、语音适配、TTS 流和 FAQ fallback 回归 78 passed、1 条 Starlette 弃用警告；compileall 与 diff --check 通过。尚未真实供应商/设备验收。
 
 2026-11-05：将 HTTP TTS 句子任务调度与请求级取消收敛到 `qa/stream_lifecycle.AudioTaskGroup`：保留并发上限 3、此前任务依赖、audio-ready 通知和取消后 join。Pipeline 继续处理音频/SSE 消费、epoch 变化取消及 provider 降级。新增任务取消后等待 worker `finally` 清理的行为测试；流生命周期、Pipeline/受众、chat SSE、knowledge epoch、语音适配、TTS 流与 FAQ fallback 回归 76 passed、1 条 Starlette 弃用警告；compileall 与 diff --check 通过。一次初始运行发现测试 worker 缺少 `notify` 参数，修正后回归通过。

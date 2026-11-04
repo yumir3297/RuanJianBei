@@ -62,6 +62,7 @@ from app.services.qa.speech_event_adapter import (
 from app.services.qa.stream_events import StreamEvent
 from app.services.qa.stream_lifecycle import AudioTaskGroup, cancel_and_join, forward_events, forward_tts_events
 from app.services.qa.stream_mux import StreamMuxState
+from app.services.qa.streaming_tts_buffer import StreamingTTSBuffer
 from app.services.qa.vision_evidence import resolve_vision_evidence
 from app.services.qa.answer_styler import polish_answer, no_evidence_reply
 from app.services.qa.evidence_retrieval import retrieve_evidence
@@ -523,6 +524,7 @@ class QAPipeline:
             else None
         )
         mux_state = StreamMuxState(streaming_requested=streaming_requested)
+        streaming_tts_buffer = StreamingTTSBuffer()
         visibility_changed = False
 
         try:
@@ -572,7 +574,7 @@ class QAPipeline:
 
                     if streaming_requested:
                         if not mux_state.tts_failed:
-                            mux_state.tts_text_buffer += token
+                            streaming_tts_buffer.append(token)
                     elif faq_documents is None:
                         # HTTP TTS：句子级别缓冲
                         sentences, sentence_buffer = self._take_speakable_sentences(sentence_buffer)
@@ -590,10 +592,10 @@ class QAPipeline:
                     mux_state.tts_connected
                     and not mux_state.tts_failed
                     and tts_stream is not None
-                    and self._should_flush_streaming_tts(mux_state.tts_text_buffer)
+                    and streaming_tts_buffer.ready()
                 ):
-                    chunk = mux_state.tts_text_buffer
-                    mux_state.tts_text_buffer = ""
+                    chunk = streaming_tts_buffer.take_ready()
+                    assert chunk is not None
                     try:
                         await tts_stream.send_text(chunk)
                     except Exception:
@@ -603,9 +605,9 @@ class QAPipeline:
 
                 if mux_state.llm_done and mux_state.tts_connected and not mux_state.tts_failed and not mux_state.tts_finish_sent and tts_stream is not None:
                     try:
-                        if mux_state.tts_text_buffer:
-                            await tts_stream.send_text(mux_state.tts_text_buffer)
-                            mux_state.tts_text_buffer = ""
+                        remaining_chunk = streaming_tts_buffer.drain()
+                        if remaining_chunk is not None:
+                            await tts_stream.send_text(remaining_chunk)
                         await tts_stream.finish()
                         tts_finish_requested.set()
                         mux_state.tts_finish_sent = True
@@ -750,17 +752,6 @@ class QAPipeline:
                     sentences.append(sentence)
                 start = index + 1
         return sentences, buffer[start:]
-
-    @staticmethod
-    def _should_flush_streaming_tts(buffer: str) -> bool:
-        """以短语为单位发送，兼顾首音延迟、韵律和 WebSocket 帧数量。"""
-        if not buffer:
-            return False
-        if buffer[-1] in "。！？!?；;\n":
-            return True
-        if buffer[-1] in "，、," and len(buffer) >= 8:
-            return True
-        return len(buffer) >= 16
 
     async def _emit_final_answer(
         self,
