@@ -1253,6 +1253,86 @@ def test_chat_route_uses_clear_natural_language_time_budget():
     assert _explicit_route_hours("3小时以上的路线") is None
 
 
+def test_confirmed_vision_context_retrieves_only_from_the_confirmed_published_entry():
+    class Catalog:
+        async def list_for_site(self, site_id):
+            assert site_id == "lingshan"
+            return SimpleNamespace(entries=[SimpleNamespace(
+                site_id="lingshan", spot_code="LS-01", published_revision_id="revision-1",
+                entry_id="42", title="灵山梵宫",
+            )])
+
+    async def scenario():
+        rag = RecordingRAGService()
+        llm = DummyLLMService()
+        pipeline = _build_test_pipeline(
+            rag_service=rag, llm_service=llm,
+            vision_catalog=Catalog(), vision_site_id="lingshan",
+        )
+        events = [event async for event in pipeline.stream_chat(ChatRequest(
+            query="请介绍这张照片里的建筑", session_id="vision-confirmed", text_only=True,
+            vision_context={"confirmation": {
+                "site_id": "lingshan", "spot_code": "LS-01",
+                "published_revision_id": "revision-1",
+            }},
+        ))]
+
+        assert rag.scopes == [RetrievalScope(source_entry_id=42)]
+        assert "灵山梵宫" in llm.received[0]["query"]
+        assert events[-1].type == "done"
+
+    asyncio.run(scenario())
+
+
+def test_unconfirmed_vision_context_does_not_keep_a_prior_attraction_scope():
+    async def scenario():
+        rag = RecordingRAGService()
+        pipeline = _build_test_pipeline(
+            rag_service=rag,
+            guided_selector=DummyGuidedSelector(),
+        )
+        events = [event async for event in pipeline.stream_chat(ChatRequest(
+            query="请介绍这张照片里的建筑", session_id="vision-unconfirmed", text_only=True,
+            selection=SelectionContext(mode="attraction", attraction_id=13),
+            vision_context={"candidate_attractions": ["灵山梵宫"], "retrieval_query": "梵宫"},
+        ))]
+
+        assert rag.scopes == [None]
+        context = next(event for event in events if event.type == "context")
+        assert "vision_scope_unconfirmed" in context.data["warnings"]
+
+    asyncio.run(scenario())
+
+
+def test_stale_vision_confirmation_stops_before_rag_retrieval():
+    class Catalog:
+        async def list_for_site(self, site_id):
+            assert site_id == "lingshan"
+            return SimpleNamespace(entries=[SimpleNamespace(
+                site_id="lingshan", spot_code="LS-01", published_revision_id="revision-current",
+                entry_id="42", title="灵山梵宫",
+            )])
+
+    async def scenario():
+        rag = RecordingRAGService()
+        pipeline = _build_test_pipeline(
+            rag_service=rag, vision_catalog=Catalog(), vision_site_id="lingshan",
+        )
+        events = [event async for event in pipeline.stream_chat(ChatRequest(
+            query="请介绍这张照片里的建筑", session_id="vision-stale", text_only=True,
+            vision_context={"confirmation": {
+                "site_id": "lingshan", "spot_code": "LS-01",
+                "published_revision_id": "revision-old",
+            }},
+        ))]
+
+        error = next(event for event in events if event.type == "error")
+        assert error.data["code"] == "vision_confirmation_stale"
+        assert rag.scopes == []
+
+    asyncio.run(scenario())
+
+
 def test_ambiguous_route_time_is_disclosed():
     async def scenario():
         pipeline = _build_test_pipeline(route_repository=DummyRouteRepository())

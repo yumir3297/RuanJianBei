@@ -79,6 +79,7 @@ from app.services.qa.request_profile import (
 )
 from app.services.qa.route_fast_path import StaticRouteAnswerBuilder
 from app.services.qa.stream_events import StreamEvent
+from app.services.qa.vision_evidence import resolve_vision_evidence
 from app.services.qa.answer_styler import polish_answer, no_evidence_reply
 from app.services.rag.base import BaseRAGService, RetrievedDocument, RetrievalScope
 from app.services.rag.query_rewriter import QueryRewriter
@@ -278,35 +279,20 @@ class QAPipeline:
         # 识别候选尚未经游客确认，也不能用模型自报置信度当成校准概率。
         # 避免将候选、旧选择或历史景点静默视为当前照片的事实。
         vision = request.vision_context
-        confirmed_visual_title = None
-        if vision is not None and vision.confirmation is not None:
-            confirmation = vision.confirmation
-            selected_spot = None
-            if self.vision_catalog is not None and confirmation.site_id == self.vision_site_id:
-                try:
-                    catalog = await self.vision_catalog.list_for_site(self.vision_site_id)
-                    selected_spot = next((item for item in catalog.entries if item.site_id == self.vision_site_id and item.spot_code == confirmation.spot_code and item.published_revision_id == confirmation.published_revision_id), None)
-                except Exception:
-                    logger.exception("Confirmed visual attraction catalog lookup failed")
-            if selected_spot is None or not selected_spot.entry_id.isdigit() or int(selected_spot.entry_id) < 1:
-                yield StreamEvent(type="error", data={"code": "vision_confirmation_stale", "message": "景点已下架、更新或不属于当前景区，请重新选择。"})
-                return
-            confirmed_visual_title = selected_spot.title
-            resolved = ResolvedInteraction(
-                selection=resolved.selection,
-                scope=RetrievalScope(source_entry_id=int(selected_spot.entry_id)),
-                resolution_source="selection",
-                active_subject=selected_spot.title,
-                warnings=resolved.warnings,
+        vision_evidence = await resolve_vision_evidence(
+            vision,
+            resolved,
+            vision_catalog=self.vision_catalog,
+            vision_site_id=self.vision_site_id,
+        )
+        if vision_evidence.error_code is not None:
+            yield StreamEvent(
+                type="error",
+                data={"code": vision_evidence.error_code, "message": vision_evidence.error_message},
             )
-        elif vision is not None:
-            resolved = ResolvedInteraction(
-                selection=resolved.selection,
-                scope=None,
-                resolution_source=resolved.resolution_source,
-                active_subject=None,
-                warnings=(*resolved.warnings, "vision_scope_unconfirmed"),
-            )
+            return
+        resolved = vision_evidence.resolved
+        confirmed_visual_title = vision_evidence.confirmed_title
 
         yield StreamEvent(type="context", data=resolved.to_event_data())
         yield StreamEvent(
