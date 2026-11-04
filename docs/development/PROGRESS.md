@@ -2,6 +2,8 @@
 
 2026-11-04：抽取 `qa/answer_fast_paths.py`，将 FAQ 结果解析为默认受众直答或非默认受众唯一证据，并集中判断视觉、游客记忆和非中性情绪是否允许共享缓存；Pipeline 继续控制 epoch 检查、缓存 IO、SSE、RAG 与 LLM 时序。新增 3 项节点测试；AI 指定回归集合 136 passed、1 条 Starlette 弃用警告，compileall 与 diff 检查通过。未声称延迟改善，模型调用规则由既有 Pipeline 回归覆盖。
 
+2026-11-04：继续扩展 `qa/answer_fast_paths.py`，将“开放时间/演出时间”和“门票价格/优惠”数据不可核实拦截条件一并集中；响应文案、hit level、空来源和绕过模型/缓存的既有执行由 Pipeline 保持。新增规则测试，完整指定 AI 回归集合 138 passed、1 条 Starlette 弃用警告；compileall 与 diff 检查通过。未接入实时票务或开放时间数据，也未改变其可信状态。
+
 2026-11-04：为主工作区未提交内容建立只读保全检查点 `codex/preserved-uncommitted-2026-11-04`（`4acaa53`，父提交 `672a104`），使用独立临时 Git 索引捕获 115 个路径，明确排除 `frontend/node_modules`。原工作区索引、文件和 95 项状态记录保持不变；检查点已取入集成仓库供后续逐项比较，不等于已合入功能分支。
 
 2026-11-04：在集成分支运行前端聊天流、SSE 与 PCM 错误专项 `node --test`，23 passed。覆盖服务端 `completion=incomplete` 的前端处理、部分回答保留与重试、迟到请求隔离、SSE heartbeat/超时和 PCM 错误回退；此为本地模拟测试，不验证真实浏览器或设备。

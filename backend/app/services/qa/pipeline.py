@@ -33,7 +33,12 @@ from app.services.memory.profile import build_memory_prompt
 from app.services.qa.cache import QACache
 from app.services.qa.blind_spot_tracker import BlindSpotTracker
 from app.services.qa.faq_matcher import FAQMatcher
-from app.services.qa.answer_fast_paths import resolve_faq_path, shared_cache_allowed
+from app.services.qa.answer_fast_paths import (
+    resolve_faq_path,
+    resolve_ticket_answer,
+    resolve_unverified_schedule_answer,
+    shared_cache_allowed,
+)
 from app.services.qa.followup_suggestions import FollowUpSuggestionService
 from app.services.qa.guided_selector import (
     GuidedSelectionResolver,
@@ -289,23 +294,22 @@ class QAPipeline:
 
         # No verified live schedule is connected. Do not present static FAQ,
         # cached answers, or retrieved schedules as current opening hours.
-        schedule_terms = ("开放时间", "营业时间", "演出时间", "什么时候开放", "几点开放", "几点开门", "几点关门")
-        if any(term in request.query for term in schedule_terms):
+        schedule_answer = resolve_unverified_schedule_answer(request.query)
+        if schedule_answer is not None:
             async for event in self._emit_final_answer(
                 request=request, normalized_query=normalized_query,
-                answer="目前无法核实最新开放或演出时间，请以景区当日官方公告或现场咨询为准。",
+                answer=schedule_answer,
                 sources=[], hit_level="schedule_unverified", start=start,
                 resolved=resolved, expected_epoch=request_epoch,
             ):
                 yield event
             return
 
-        ticket_terms = ("门票价格", "门票多少钱", "票价", "半价票", "免费入园")
-        ticket_discount = "优惠政策" in request.query and any(term in request.query for term in ("门票", "购票", "票务"))
-        if ticket_discount or any(term in request.query for term in ticket_terms):
+        ticket_answer = resolve_ticket_answer(request.query)
+        if ticket_answer is not None:
             async for event in self._emit_final_answer(
                 request=request, normalized_query=normalized_query,
-                answer="目前无法核实最新票价和优惠条件，请以相关官方票务信息或现场咨询为准。",
+                answer=ticket_answer,
                 sources=[], hit_level="ticket_unverified", start=start,
                 resolved=resolved, expected_epoch=request_epoch,
             ):

@@ -1,5 +1,10 @@
 from app.services.qa.faq_matcher import FAQEntry, FAQMatchResult
-from app.services.qa.answer_fast_paths import resolve_faq_path, shared_cache_allowed
+from app.services.qa.answer_fast_paths import (
+    resolve_faq_path,
+    resolve_ticket_answer,
+    resolve_unverified_schedule_answer,
+    shared_cache_allowed,
+)
 
 
 def _faq_result() -> FAQMatchResult:
@@ -46,3 +51,17 @@ def test_shared_cache_is_disabled_for_personalized_or_non_neutral_requests():
     assert not shared_cache_allowed(vision_present=True, memory_prompt=None, neutral=True)
     assert not shared_cache_allowed(vision_present=False, memory_prompt="游客偏好", neutral=True)
     assert not shared_cache_allowed(vision_present=False, memory_prompt=None, neutral=False)
+
+
+def test_schedule_fast_path_only_answers_when_query_requests_current_schedule():
+    assert resolve_unverified_schedule_answer("景区几点关门") == (
+        "目前无法核实最新开放或演出时间，请以景区当日官方公告或现场咨询为准。"
+    )
+    assert resolve_unverified_schedule_answer("讲讲景区历史") is None
+
+
+def test_ticket_fast_path_answers_ticket_discounts_but_not_general_discounts():
+    assert resolve_ticket_answer("门票优惠政策") == (
+        "目前无法核实最新票价和优惠条件，请以相关官方票务信息或现场咨询为准。"
+    )
+    assert resolve_ticket_answer("景区优惠政策") is None

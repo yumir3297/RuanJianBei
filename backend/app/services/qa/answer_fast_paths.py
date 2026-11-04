@@ -7,6 +7,11 @@ from app.services.qa.answer_styler import polish_answer
 from app.services.qa.faq_matcher import FAQMatchResult
 from app.services.rag.base import RetrievedDocument
 
+_SCHEDULE_TERMS = (
+    "开放时间", "营业时间", "演出时间", "什么时候开放", "几点开放", "几点开门", "几点关门",
+)
+_TICKET_TERMS = ("门票价格", "门票多少钱", "票价", "半价票", "免费入园")
+
 
 @dataclass(slots=True)
 class FAQPathDecision:
@@ -66,3 +71,16 @@ def shared_cache_allowed(
 ) -> bool:
     """Shared answers cannot cross personalized or multimodal request context."""
     return not vision_present and memory_prompt is None and neutral
+
+
+def resolve_unverified_schedule_answer(query: str) -> str | None:
+    if not any(term in query for term in _SCHEDULE_TERMS):
+        return None
+    return "目前无法核实最新开放或演出时间，请以景区当日官方公告或现场咨询为准。"
+
+
+def resolve_ticket_answer(query: str) -> str | None:
+    ticket_discount = "优惠政策" in query and any(term in query for term in ("门票", "购票", "票务"))
+    if not ticket_discount and not any(term in query for term in _TICKET_TERMS):
+        return None
+    return "目前无法核实最新票价和优惠条件，请以相关官方票务信息或现场咨询为准。"
