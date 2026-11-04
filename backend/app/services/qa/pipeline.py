@@ -9,7 +9,7 @@ from contextvars import ContextVar, Token
 from dataclasses import dataclass
 from asyncio import QueueEmpty
 from time import perf_counter
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 # ── 拼音导入缓存 ──
 _PINYIN_FN = None
@@ -53,6 +53,9 @@ from app.services.llm.prompt_builder import get_audience_style
 from app.services.llm.types import LLMStreamEvent, LLMUsage
 from app.services.emotion import (
     EmotionLabel,
+    EmotionResponsePolicy,
+    EmotionSignal,
+    FusedEmotion,
     MultimodalEmotionFusion,
     TextEmotionAnalyzer,
     apply_answer_prefix,
@@ -89,10 +92,10 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class _PipelineRequestState:
-    active_emotion: Any
-    active_response_policy: Any
-    active_text_emotion: Any = None
-    active_audio_emotion: Any = None
+    active_emotion: FusedEmotion
+    active_response_policy: EmotionResponsePolicy
+    active_text_emotion: EmotionSignal | None = None
+    active_audio_emotion: EmotionSignal | None = None
     memory_prompt: str | None = None
 
 _LINGSHAN_ATTRACTIONS = [
@@ -256,35 +259,35 @@ class QAPipeline:
         return self._request_state.get() or self._default_request_state
 
     @property
-    def _active_emotion(self):
+    def _active_emotion(self) -> FusedEmotion:
         return self._current_request_state().active_emotion
 
     @_active_emotion.setter
-    def _active_emotion(self, value):
+    def _active_emotion(self, value: FusedEmotion) -> None:
         self._current_request_state().active_emotion = value
 
     @property
-    def _active_response_policy(self):
+    def _active_response_policy(self) -> EmotionResponsePolicy:
         return self._current_request_state().active_response_policy
 
     @_active_response_policy.setter
-    def _active_response_policy(self, value):
+    def _active_response_policy(self, value: EmotionResponsePolicy) -> None:
         self._current_request_state().active_response_policy = value
 
     @property
-    def _active_text_emotion(self):
+    def _active_text_emotion(self) -> EmotionSignal | None:
         return self._current_request_state().active_text_emotion
 
     @_active_text_emotion.setter
-    def _active_text_emotion(self, value):
+    def _active_text_emotion(self, value: EmotionSignal | None) -> None:
         self._current_request_state().active_text_emotion = value
 
     @property
-    def _active_audio_emotion(self):
+    def _active_audio_emotion(self) -> EmotionSignal | None:
         return self._current_request_state().active_audio_emotion
 
     @_active_audio_emotion.setter
-    def _active_audio_emotion(self, value):
+    def _active_audio_emotion(self, value: EmotionSignal | None) -> None:
         self._current_request_state().active_audio_emotion = value
 
     @property
