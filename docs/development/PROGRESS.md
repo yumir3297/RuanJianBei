@@ -1,3 +1,5 @@
+2026-11-04：隔离 PostgreSQL 实测真实知识发布服务在模拟确认事务持有 knowledge_state 锁时等待，锁释放后发布成功，专项 1 passed。嵌入和向量存储使用替身；数据库以 metadata 建表并使用合成数据，临时实例已停止。此实验未调用实际确认 API，不证明崩溃、死锁或旧版本进程安全。
+
 2026-11-04：隔离文件 SQLite 测试验证真实知识发布服务在状态写锁持有时等待，释放后完成发布，专项 1 passed；使用 fake embedder/vector store，持锁模拟确认事务，未调用确认 API、PostgreSQL 或真实模型。
 
 2026-11-04：隔离 PostgreSQL ASGI 实测目录状态行锁超时：事务设置 100ms lock_timeout，接口返回 503、无新增修订；释放锁后同幂等键成功，专项 1 passed。使用临时 Unix socket、metadata 建表和合成数据，服务已停止；不证明死锁、提交断连或真实部署的行为。
