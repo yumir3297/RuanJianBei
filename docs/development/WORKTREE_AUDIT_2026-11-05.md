@@ -101,3 +101,151 @@
 | `??` | `frontend/src/utils/publicationRecovery.js` | 已合并（当前内容与集成树逐字节相同） | 快照含该文件；集成树含该文件 |
 | `??` | `frontend/src/utils/speechRatePreference.js` | 已合并（当前内容与集成树逐字节相同） | 快照含该文件；集成树含该文件 |
 | `??` | `frontend/tests/` | 目录递归比较：15 个文件逐字节相同、1 个不同，集成树另有 22 个；保留两侧版本，本轮不迁移前端测试 | 当前文件 16；与集成树相同 15、不同 1、集成缺少 0、集成额外 22；快照路径 16 |
+
+## V01/W02 活动 worktree 差异
+
+字节相同才记为已合并；不同实现不按祖先关系或功能名称推断等价。目录按文件递归比较，并排除 Python cache 文件。
+
+### V01（`v01-worktree`）
+
+当前 HEAD `098553f`，49 个 porcelain 状态路径；保全快照 `v01-preserved-snapshot`。分类统计：25 同路径存在但内容不同；需语义审查；24 已合并（当前内容与集成树相同）.
+
+| 状态 | 路径 | 分类 | 对照证据 |
+|---|---|---|---|
+| ` M` | `backend/app/api/tour_sessions.py` | 后续实现替代候选：现集成测试覆盖源测试并新增提案回放/目录过期用例；保留快照，不覆盖 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/models/__init__.py` | 已被集成模型注册扩展替代；保留源版本用于核对迁移引用 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/models/tour_session.py` | 被后续模型/版本约束实现替代候选；具体 schema 迁移仍需审计 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/repositories/tour_session.py` | 后续仓储包含提案 reservation、锁和版本 fence；不以旧文件覆盖 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/schemas/itinerary.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| ` M` | `backend/app/services/itinerary/progress.py` | 后续进度版本及状态 fence 实现不同；相关行为由集成回归覆盖 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/tests/test_itinerary_progress.py` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/tests/test_tour_session_api.py` | 集成测试包含源测试用例并增加覆盖；旧测试实现由后续用例替代 | snapshot=yes; integration=yes |
+| ` M` | `docs/ARCHITECTURE.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `docs/COMPATIBILITY.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `docs/REPO_MAP.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `docs/plans/2026-10-28-ai-workbench-backlog.md` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| ` M` | `docs/superpowers/plans/2026-10-29-v01-editable-itinerary.md` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/api/tourSessions.js` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/assets/guide-page.css` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/assets/guide-tools.css` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/composables/useAudioPlayer.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/stores/chat.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/stores/tourSessions.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/views/tourist/ChatView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/views/tourist/MapView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/views/tourist/RouteView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `backend/alembic/versions/5c81a1e74f2b_add_tour_progress_and_proposals.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `backend/app/services/itinerary/candidates.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `backend/app/services/itinerary/intent.py` | 后续实现不同；需逐项核验意图覆盖，暂不移植 | snapshot=yes; integration=yes |
+| `??` | `backend/app/services/itinerary/provenance.py` | 后续来源校验实现不同；需逐项核验约束覆盖，暂不移植 | snapshot=yes; integration=yes |
+| `??` | `backend/app/tests/test_itinerary_intent.py` | 9 个源测试、10 个集成测试；名称不完全相同，具体断言待审 | snapshot=yes; integration=yes |
+| `??` | `backend/app/tests/test_itinerary_provenance.py` | 2 个源测试、6 个集成测试；需核对具体断言后确认替代关系 | snapshot=yes; integration=yes |
+| `??` | `backend/app/tests/test_tour_budget_api.py` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `backend/app/tests/test_tour_progress_and_proposals.py` | 20 个集成测试包含源 10 个用例并新增恢复/预算/来源校验场景；后续实现替代 | snapshot=yes; integration=yes |
+| `??` | `backend/app/tests/test_tour_proposal_catalog_staleness.py` | 后续目录版本验证实现不同；保留快照，语义由集成 staleness 测试验证 | snapshot=yes; integration=yes |
+| `??` | `frontend/src/api/itinerary.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `frontend/src/utils/cloneJson.js` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `frontend/src/utils/itineraryIntent.js` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `frontend/src/utils/itineraryProposalDiff.js` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `frontend/src/utils/progressRefresh.js` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `frontend/src/utils/proposalApplyState.js` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `frontend/src/utils/proposalSnapshot.js` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `frontend/src/utils/requestGeneration.js` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `frontend/src/utils/tourBudgetParams.js` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `frontend/tests/audio-playback-session.test.mjs` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `frontend/tests/clone-json.test.mjs` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `frontend/tests/itinerary-intent.test.mjs` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `frontend/tests/itinerary-proposal-diff.test.mjs` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `frontend/tests/progress-refresh.test.mjs` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `frontend/tests/proposal-apply-state.test.mjs` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `frontend/tests/proposal-snapshot.test.mjs` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `frontend/tests/request-generation.test.mjs` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `frontend/tests/tour-budget-api.test.mjs` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+
+### W02（`code/w02-worktree`）
+
+当前 HEAD `a8c2837`，35 个 porcelain 状态路径；保全快照 `w02-preserved-snapshot`。分类统计：25 同路径存在但内容不同；需语义审查；6 已合并（当前内容与集成树相同）；4 目录内有相同/不同/新增文件，需逐项核验.
+
+| 状态 | 路径 | 分类 | 对照证据 |
+|---|---|---|---|
+| ` M` | `backend/alembic/env.py` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/api/router.py` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/api/tour_sessions.py` | 后续实现替代候选：现集成测试覆盖源测试并新增提案回放/目录过期用例；保留快照，不覆盖 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/models/__init__.py` | 已被集成模型注册扩展替代；保留源版本用于核对迁移引用 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/models/tour_session.py` | 被后续模型/版本约束实现替代候选；具体 schema 迁移仍需审计 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/repositories/tour_session.py` | 后续仓储包含提案 reservation、锁和版本 fence；不以旧文件覆盖 | snapshot=yes; integration=yes |
+| ` M` | `docs/ARCHITECTURE.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `docs/COMPATIBILITY.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `docs/REPO_MAP.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `docs/plans/2026-10-28-ai-workbench-backlog.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/api/tourSessions.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/assets/guide-tools.css` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/composables/useAudioPlayer.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/stores/chat.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/stores/tourSessions.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/views/tourist/ChatView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/views/tourist/MapView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/views/tourist/RouteView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `backend/alembic/versions/5c81a1e74f2b_add_tour_progress_and_proposals.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `backend/alembic/versions/f1b4c9d76e20_add_tool_execution.py` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `backend/app/api/tool_execution.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `backend/app/models/tool_execution.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `backend/app/repositories/tool_execution.py` | 后续 repository 实现不同；集成树含幂等回放、lease/fence 与取消处理测试，未覆盖旧文件 | snapshot=yes; integration=yes |
+| `??` | `backend/app/schemas/itinerary.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `backend/app/schemas/tool_execution.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `backend/app/services/itinerary/` | 目录内有相同/不同/新增文件，需逐项核验 | 4 个源码/资料文件；相同=1、不同=3、集成缺少=0、集成额外=3（排除 Python cache） |
+| `??` | `backend/app/services/tool_execution/` | 目录内有相同/不同/新增文件，需逐项核验 | 6 个源码/资料文件；相同=0、不同=6、集成缺少=0、集成额外=0（排除 Python cache） |
+| `??` | `docs/research/` | 目录内有相同/不同/新增文件，需逐项核验 | 1 个源码/资料文件；相同=0、不同=1、集成缺少=0、集成额外=1（排除 Python cache） |
+| `??` | `docs/selling-points/` | 目录内有相同/不同/新增文件，需逐项核验 | 1 个源码/资料文件；相同=0、不同=1、集成缺少=0、集成额外=2（排除 Python cache） |
+| `??` | `docs/superpowers/plans/2026-10-29-v01-editable-itinerary.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `docs/superpowers/plans/2026-10-29-w02-durable-execution.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `docs/superpowers/plans/2026-10-29-w02-execution-ledger.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `docs/superpowers/specs/2026-10-29-w02-durable-execution-design.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `frontend/src/api/itinerary.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `frontend/src/utils/requestGeneration.js` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+
+### W02/V01 集成副本（`code/w02-integration`）
+
+当前 HEAD `098553f`，39 个 porcelain 状态路径；保全快照 `w02-integration-preserved-snapshot`。分类统计：29 同路径存在但内容不同；需语义审查；8 已合并（当前内容与集成树相同）；2 目录内有相同/不同/新增文件，需逐项核验.
+
+| 状态 | 路径 | 分类 | 对照证据 |
+|---|---|---|---|
+| ` M` | `backend/alembic/env.py` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/api/router.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| ` M` | `backend/app/api/tour_sessions.py` | 后续实现替代候选：现集成测试覆盖源测试并新增提案回放/目录过期用例；保留快照，不覆盖 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/models/__init__.py` | 已被集成模型注册扩展替代；保留源版本用于核对迁移引用 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/models/tour_session.py` | 被后续模型/版本约束实现替代候选；具体 schema 迁移仍需审计 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/repositories/tour_session.py` | 后续仓储包含提案 reservation、锁和版本 fence；不以旧文件覆盖 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/schemas/itinerary.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| ` M` | `backend/app/services/itinerary/progress.py` | 后续进度版本及状态 fence 实现不同；相关行为由集成回归覆盖 | snapshot=yes; integration=yes |
+| ` M` | `docs/ARCHITECTURE.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `docs/COMPATIBILITY.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `docs/REPO_MAP.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `docs/plans/2026-10-28-ai-workbench-backlog.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `docs/superpowers/plans/2026-10-29-v01-editable-itinerary.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/api/tourSessions.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/assets/guide-tools.css` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/composables/useAudioPlayer.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/stores/chat.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/stores/tourSessions.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/views/tourist/ChatView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/views/tourist/MapView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/views/tourist/RouteView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `backend/alembic/versions/5c81a1e74f2b_add_tour_progress_and_proposals.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `backend/alembic/versions/f1b4c9d76e20_add_tool_execution.py` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `backend/app/api/tool_execution.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `backend/app/models/tool_execution.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `backend/app/repositories/tool_execution.py` | 后续 repository 实现不同；集成树含幂等回放、lease/fence 与取消处理测试，未覆盖旧文件 | snapshot=yes; integration=yes |
+| `??` | `backend/app/schemas/tool_execution.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `backend/app/services/itinerary/candidates.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| `??` | `backend/app/services/itinerary/intent.py` | 后续实现不同；需逐项核验意图覆盖，暂不移植 | snapshot=yes; integration=yes |
+| `??` | `backend/app/services/itinerary/provenance.py` | 后续来源校验实现不同；需逐项核验约束覆盖，暂不移植 | snapshot=yes; integration=yes |
+| `??` | `backend/app/services/tool_execution/` | 目录内有相同/不同/新增文件，需逐项核验 | 6 个源码/资料文件；相同=4、不同=2、集成缺少=0、集成额外=0（排除 Python cache） |
+| `??` | `backend/app/tests/test_tool_execution_acceptance.py` | 原 W02 工作树无此文件；测试仅见于后续 W02/V01 快照并扩充于当前集成树 | snapshot=yes; integration=yes |
+| `??` | `docs/research/2026-10-29-w02-durable-execution-research.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `docs/selling-points/` | 目录内有相同/不同/新增文件，需逐项核验 | 1 个源码/资料文件；相同=0、不同=1、集成缺少=0、集成额外=2（排除 Python cache） |
+| `??` | `docs/superpowers/plans/2026-10-29-w02-durable-execution.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `docs/superpowers/plans/2026-10-29-w02-execution-ledger.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `docs/superpowers/specs/2026-10-29-w02-durable-execution-design.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `frontend/src/api/itinerary.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `frontend/src/utils/requestGeneration.js` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
