@@ -187,7 +187,7 @@
 | ` M` | `frontend/src/views/tourist/MapView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/views/tourist/RouteView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | `??` | `backend/alembic/versions/5c81a1e74f2b_add_tour_progress_and_proposals.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
-| `??` | `backend/alembic/versions/f1b4c9d76e20_add_tool_execution.py` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `backend/alembic/versions/f1b4c9d76e20_add_tool_execution.py` | 被集成 migration merge 替代，不能单独移植：源父 revision=`e9f4c2b8016a`，集成父 revision=`8ab42c17d3e9`；集成版同时添加 itinerary proposal execution 字段 | snapshot=yes; integration=yes |
 | `??` | `backend/app/api/tool_execution.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | `??` | `backend/app/models/tool_execution.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | `??` | `backend/app/repositories/tool_execution.py` | 后续 repository 实现不同；集成树含幂等回放、lease/fence 与取消处理测试，未覆盖旧文件 | snapshot=yes; integration=yes |
@@ -203,6 +203,12 @@
 | `??` | `docs/superpowers/specs/2026-10-29-w02-durable-execution-design.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | `??` | `frontend/src/api/itinerary.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | `??` | `frontend/src/utils/requestGeneration.js` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+
+### Migration lineage 语义核验
+
+- V01 `5c81a1e74f2b_add_tour_progress_and_proposals.py` 在源与集成树字节相同；集成 revision `8ab42c17d3e9` 将它与 speech metadata migration `c3b7e1d9a62f` 合并。
+- W02 快照 revision `f1b4c9d76e20` 的父为 `e9f4c2b8016a`，且不添加 `itinerary_proposals.base_snapshot_json` / `execution_job_id`。集成树同 revision 改为父 `8ab42c17d3e9`，并增加这两列及索引；之后 `6e1a4c7d9b20` 检查/补齐遗失的 speech metadata，`7d2e93a5b601` 与 `91a0c5e2f347` 分别拒绝已知不完整的 W02/knowledge schema。此为有意处理分叉迁移历史的后续实现，旧 W02 migration 必须保留在快照，不得单独 cherry-pick。
+- 临时 Python 环境没有 Alembic `command` API（`test_speech_metadata_migration.py` 收集时报 `ImportError`），故没有声称本轮实跑 Alembic 升级。该迁移链真实数据库往返仍待具备 Alembic 的隔离环境；此限制不影响单独运行的 W02 执行验收/worker 测试。
 
 ### W02/V01 集成副本（`code/w02-integration`）
 
