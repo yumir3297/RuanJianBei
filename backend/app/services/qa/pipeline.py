@@ -62,7 +62,8 @@ from app.services.qa.stream_events import StreamEvent
 from app.services.qa.queued_stream_events import QueuedStreamEvents
 from app.services.qa.stream_answer import StreamAnswerBuffer
 from app.services.qa.stream_lifecycle import AudioTaskGroup, StreamProducerGroup
-from app.services.qa.stream_mux import StreamMuxState, get_epoch_guarded_message
+from app.services.qa.stream_mux import StreamMuxState
+from app.services.qa.stream_mux_consumer import StreamMuxConsumer
 from app.services.qa.streaming_tts_buffer import StreamingTTSBuffer
 from app.services.qa.streaming_tts_controller import StreamingTTSController
 from app.services.qa.vision_evidence import resolve_vision_evidence
@@ -462,8 +463,6 @@ class QAPipeline:
         llm_fallback_hit_level = f"{llm_hit_level}_llm_fallback"
 
         answer_stream = StreamAnswerBuffer()
-        llm_usage = LLMUsage()
-        llm_finish_reason: str | None = None
         audio_events = QueuedStreamEvents()
         audio_group = AudioTaskGroup(
             lambda sentence, **kwargs: self._queue_audio(sentence, audio_events, **kwargs)
@@ -525,78 +524,37 @@ class QAPipeline:
         streaming_tts_controller = StreamingTTSController(
             tts_stream, mux_state, streaming_tts_buffer, tts_finish_requested
         )
-        visibility_changed = False
+        stream_consumer = StreamMuxConsumer(
+            queue=mux_queue,
+            mux_state=mux_state,
+            epoch_is_current=lambda: self._epoch_is_current(request_epoch),
+            answer_buffer=answer_stream,
+            audio_events=audio_events,
+            schedule_audio=schedule_audio,
+            streaming_tts_buffer=streaming_tts_buffer,
+            streaming_tts_controller=streaming_tts_controller,
+            streaming_requested=streaming_requested,
+            text_only=request.text_only,
+            faq_documents_present=faq_documents is not None,
+            adapt_tts_event=self._handle_streaming_tts_event,
+            coerce_llm_event=self._coerce_llm_event,
+        )
 
         try:
-            while not mux_state.llm_done or not mux_state.tts_done:
-                message = await get_epoch_guarded_message(
-                    mux_queue,
-                    lambda: self._epoch_is_current(request_epoch),
-                )
-                if message is None:
-                    visibility_changed = True
-                    break
-                kind, payload = message
-
-                delivery = mux_state.consume(kind, payload)
-                if kind == "tts_connected":
-                    logger.info("Streaming TTS session started for chat")
-                if delivery.warning == "connect":
-                    logger.warning("Streaming TTS unavailable; HTTP fallback will synthesize remaining text: %s", type(payload).__name__)
-                elif delivery.warning == "mid_response":
-                    logger.warning("Streaming TTS failed mid-response; HTTP fallback will synthesize remaining text")
-                if delivery.llm_error is not None:
-                    continue
-                if delivery.tts_payload is not None:
-                    for sse in self._handle_streaming_tts_event(delivery.tts_payload):
-                        yield sse
-                if delivery.drain_audio:
-                    for audio_event in audio_events.drain():
-                        yield audio_event
-                event = self._coerce_llm_event(delivery.llm_payload) if delivery.has_llm_payload else None
-
-                if event is not None:
-                    if event.type == "usage":
-                        llm_usage = event.usage
-                        continue
-                    if event.type == "finish":
-                        llm_finish_reason = event.finish_reason
-                        continue
-                    token = event.text
-                    if not token:
-                        continue
-                    answer_stream.append(token)
-                    if faq_documents is None:
-                        yield StreamEvent(type="text_chunk", data={"token": token})
-
-                    if streaming_requested:
-                        if not mux_state.tts_failed:
-                            streaming_tts_buffer.append(token)
-                    elif faq_documents is None:
-                        # HTTP TTS：句子级别缓冲
-                        sentences = answer_stream.take_speakable_sentences()
-                        for sentence in sentences:
-                            if not request.text_only:
-                                schedule_audio(sentence)
-
-                        for audio_event in audio_events.drain():
-                            yield audio_event
-
-                await streaming_tts_controller.flush_ready()
-                await streaming_tts_controller.finish_if_ready()
-
-                if mux_state.llm_done and streaming_requested and not mux_state.tts_connected and mux_state.tts_failed:
-                    mux_state.tts_done = True
+            async for event in stream_consumer.events():
+                yield event
         except BaseException:
             await cancel_audio()
             raise
         finally:
             await stream_producers.close()
 
+        llm_usage = stream_consumer.llm_usage
+        llm_finish_reason = stream_consumer.llm_finish_reason
         if mux_state.llm_error is not None:
             await cancel_audio()
             raise mux_state.llm_error
-        if visibility_changed:
+        if stream_consumer.visibility_changed:
             await cancel_audio()
             yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
             return

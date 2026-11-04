@@ -1,10 +1,16 @@
 from types import SimpleNamespace
 
 import asyncio
+from types import SimpleNamespace
 
 import pytest
 
+from app.services.llm.types import LLMStreamEvent, LLMUsage
+from app.services.qa.queued_stream_events import QueuedStreamEvents
+from app.services.qa.stream_answer import StreamAnswerBuffer
+from app.services.qa.stream_events import StreamEvent
 from app.services.qa.stream_mux import StreamMuxState, get_epoch_guarded_message
+from app.services.qa.stream_mux_consumer import StreamMuxConsumer
 from app.services.qa.streaming_tts_buffer import StreamingTTSBuffer
 
 
@@ -81,3 +87,53 @@ async def test_epoch_guarded_mux_read_does_not_wait_when_epoch_is_already_stale(
 
     assert await get_epoch_guarded_message(queue, epoch_is_current) is None
     assert queue.empty()
+
+
+@pytest.mark.asyncio
+async def test_stream_mux_consumer_emits_text_and_keeps_usage_and_finish_metadata():
+    queue = asyncio.Queue()
+    usage = LLMUsage(prompt_tokens=2, completion_tokens=3, total_tokens=5)
+    events = [
+        LLMStreamEvent(type="usage", usage=usage),
+        LLMStreamEvent(type="content", text="回答完成。"),
+        LLMStreamEvent(type="finish", finish_reason="stop"),
+        None,
+    ]
+    for kind, payload in zip(("llm", "llm", "llm", "llm_done"), events):
+        await queue.put((kind, payload))
+
+    class Controller:
+        async def flush_ready(self):
+            return None
+
+        async def finish_if_ready(self):
+            return None
+
+    async def epoch_is_current():
+        return True
+
+    consumer = StreamMuxConsumer(
+        queue=queue,
+        mux_state=StreamMuxState(streaming_requested=False),
+        epoch_is_current=epoch_is_current,
+        answer_buffer=StreamAnswerBuffer(),
+        audio_events=QueuedStreamEvents(),
+        schedule_audio=lambda sentence: pytest.fail(f"unexpected speech task: {sentence}"),
+        streaming_tts_buffer=SimpleNamespace(append=lambda token: None),
+        streaming_tts_controller=Controller(),
+        streaming_requested=False,
+        text_only=True,
+        faq_documents_present=False,
+        adapt_tts_event=lambda event: (StreamEvent(type="audio", data={"event": event}),),
+        coerce_llm_event=lambda event: event,
+    )
+
+    emitted = [event async for event in consumer.events()]
+
+    assert [(event.type, event.data) for event in emitted] == [
+        ("text_chunk", {"token": "回答完成。"})
+    ]
+    assert consumer.answer_buffer.full_answer == "回答完成。"
+    assert consumer.llm_usage == usage
+    assert consumer.llm_finish_reason == "stop"
+    assert not consumer.visibility_changed
