@@ -6,6 +6,8 @@
 
 2026-11-04：对 QAPipeline 做赋值点 AST 审计：除构造函数初始化的依赖外，请求期间仅写入情绪、表达策略、文本/音频情绪和游客记忆四类字段，均由 ContextVar 代理。源码同时显示 chat 与 guide 入口当前各自调用 `build_pipeline`，多个大型模型资源和 FAQ matcher 通过缓存/运行时对象共享；本次不据此宣称所有依赖可并发共享，其线程安全和重载一致性由各自专项继续验证。
 
+2026-11-04：扩大 AI 回归范围：Pipeline、Pipeline audience、FAQ 系列、RAG 系列、IntentRouter、OpenAI-compatible LLM、guide narration API、chat SSE、visitor memory、selection cache key 和 knowledge-stream integration 共 121 passed、1 warning。只覆盖列明测试文件，不代表全后端或真实模型/设备通过。
+
 2026-11-04：AI 架构增量改造将 QAPipeline 的情绪、表达策略和游客记忆状态从共享实例字段隔离到每次 `stream_chat` 的 ContextVar 请求上下文，并在流结束、异常或取消时恢复上下文。强制交错的共享 Pipeline 回归分别验证情绪/数字人策略和两个游客的记忆提示：旧实现按预期错配失败，新实现通过；另显式关闭聊天流，确认默认状态恢复。Pipeline、聊天 SSE 与游客记忆相关测试共 57 passed、1 warning。测试依赖仅安装于 `/private/tmp/guide-ai-arch-venv`。未触及原主工作区的未提交改动。Worktree 核对显示 V01、W02、K01 整合分支为 `codex/competition-integration` 祖先；已建立主工作区保全检查点供后续选择性比较。
 
 2026-11-04：隔离 PostgreSQL ASGI 测试在提案确认持锁后取消请求，另一会话成功下架且行程未新增修订，专项 1 passed；使用合成数据及身份保护替身、metadata 建表，实例已停止。未覆盖真实浏览器断网或提交期间取消。
