@@ -8,6 +8,8 @@
 
 2026-11-04：将无状态的整小时路线预算解析从 `QAPipeline` 提取到 `qa/route_constraints.py`，保留 Pipeline 内兼容导入，未改变路由行为。新模块边界测试先因模块不存在而失败，提取后通过；Pipeline 路线测试及 AI 回归集合共 122 passed、1 warning，语法编译与 diff 检查通过。该拆分减少领域文本解析与流式编排的耦合，不代表整个 Pipeline 已完成拆分。
 
+2026-11-04：继续拆分 AI 问答边界：画像推断与兴趣提取迁至 `qa/request_profile.py`，确定性预设路线回答迁至 `qa/route_fast_path.py`，`QAPipeline` 保留兼容方法并委托新业务节点。新节点测试在模块缺失时先失败；完成委托后，路由、Pipeline、FAQ、RAG、SSE、记忆等 AI 回归共 123 passed、1 warning。未改变路线回答策略；真实模型、语音和设备验收不在本次结果内。
+
 2026-11-04：扩大 AI 回归范围：Pipeline、Pipeline audience、FAQ 系列、RAG 系列、IntentRouter、OpenAI-compatible LLM、guide narration API、chat SSE、visitor memory、selection cache key 和 knowledge-stream integration 共 121 passed、1 warning。只覆盖列明测试文件，不代表全后端或真实模型/设备通过。
 
 2026-11-04：AI 架构增量改造将 QAPipeline 的情绪、表达策略和游客记忆状态从共享实例字段隔离到每次 `stream_chat` 的 ContextVar 请求上下文，并在流结束、异常或取消时恢复上下文。强制交错的共享 Pipeline 回归分别验证情绪/数字人策略和两个游客的记忆提示：旧实现按预期错配失败，新实现通过；另显式关闭聊天流，确认默认状态恢复。Pipeline、聊天 SSE 与游客记忆相关测试共 57 passed、1 warning。测试依赖仅安装于 `/private/tmp/guide-ai-arch-venv`。未触及原主工作区的未提交改动。Worktree 核对显示 V01、W02、K01 整合分支为 `codex/competition-integration` 祖先；已建立主工作区保全检查点供后续选择性比较。

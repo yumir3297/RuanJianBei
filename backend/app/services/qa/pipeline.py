@@ -44,7 +44,6 @@ from app.repositories.route import RouteRepository
 from app.repositories.visitor import VisitorRepository
 from app.repositories.visitor_memory import VisitorMemoryRepository
 from app.schemas.chat import ChatRequest, ConversationContext
-from app.schemas.recommend import RecommendRequest
 from app.services.avatar.base import BaseAvatarService
 from app.services.avatar.viseme import build_viseme_timeline, build_viseme_timeline_fallback
 from app.services.llm.base import BaseLLMService
@@ -73,9 +72,14 @@ from app.services.qa.guided_selector import (
 )
 from app.services.qa.intent_router import IntentRouter
 from app.services.qa.route_constraints import explicit_route_hours as _explicit_route_hours
+from app.services.qa.request_profile import (
+    extract_interests as _extract_interests,
+    infer_audience_type as _infer_audience_type,
+    resolve_narration_audience as _resolve_narration_audience,
+)
+from app.services.qa.route_fast_path import StaticRouteAnswerBuilder
 from app.services.qa.stream_events import StreamEvent
 from app.services.qa.answer_styler import polish_answer, no_evidence_reply
-from app.services.recommend.engine import RecommendEngine
 from app.services.rag.base import BaseRAGService, RetrievedDocument, RetrievalScope
 from app.services.rag.query_rewriter import QueryRewriter
 from app.services.tts.base import BaseTTSService
@@ -97,73 +101,6 @@ class _PipelineRequestState:
     active_text_emotion: EmotionSignal | None = None
     active_audio_emotion: EmotionSignal | None = None
     memory_prompt: str | None = None
-
-_LINGSHAN_ATTRACTIONS = [
-    "灵山大佛", "大佛", "灵山梵宫", "梵宫", "九龙灌浴", "五印坛城",
-    "坛城", "五明桥", "五智门", "五灯湖", "佛教文化博览馆", "佛足坛",
-    "拈花堂", "拈花广场", "无尽意斋", "曼飞龙塔", "梵天花海",
-    "大照壁", "灵山大照壁", "百子戏弥勒", "祥符禅寺",
-    "菩提大道", "阿育王柱", "降魔浮雕", "香月花街", "鹿鸣谷",
-    "灵山胜境", "灵山",
-]
-
-_PERSONA_AUDIENCE_MAP = {
-    "hanfu": "culture",
-    "monk": "culture",
-    "modern": "free",
-}
-
-_TOPIC_AUDIENCE_HINTS = {
-    "family": "family",
-    "blessing": "culture",
-    "history": "culture",
-    "architecture": "culture",
-    "routes": "free",
-    "dining": "leisure",
-    "practical": "general",
-}
-
-
-def _infer_audience_type(request: ChatRequest) -> str:
-    selection = request.selection
-    if selection is not None:
-        if selection.audience_type:
-            return selection.audience_type
-        if selection.mode == "topic" and selection.topic_key:
-            return _TOPIC_AUDIENCE_HINTS.get(selection.topic_key, "general")
-    if request.persona:
-        return _PERSONA_AUDIENCE_MAP.get(request.persona, "general")
-    return "general"
-
-
-def _extract_interests(request: ChatRequest) -> list[str]:
-    interests: list[str] = []
-    selection = request.selection
-    if selection is not None and selection.interests:
-        interests.extend(selection.interests)
-    query = request.query
-    for attraction in _LINGSHAN_ATTRACTIONS:
-        if attraction in query and attraction not in interests:
-            interests.append(attraction)
-    return interests[:8]
-
-
-_FAMILY_AUDIENCE_TYPES = {"family"}
-
-
-def _resolve_narration_audience(request: ChatRequest) -> str:
-    """解析讲解口径（child/adult/expert）。
-
-    - 显式传入的 request.audience 优先；
-    - 否则按路线人群画像兜底：family -> child，其余 -> adult；
-    - culture/leisure/free 只是路线画像，不擅自升级为 expert。
-    """
-    if request.audience:
-        return request.audience
-    if _infer_audience_type(request) in _FAMILY_AUDIENCE_TYPES:
-        return "child"
-    return "adult"
-
 
 def _faq_evidence_document(match: FAQMatchResult) -> RetrievedDocument:
     """把 FAQ 答复包装成一条检索资料。
@@ -227,6 +164,7 @@ class QAPipeline:
         self.intent_router = intent_router or IntentRouter()
         self.knowledge_repository = knowledge_repository
         self.route_repository = route_repository
+        self.route_fast_path = StaticRouteAnswerBuilder(route_repository)
         self.visibility_service = visibility_service
         self.speech_profile = speech_profile
         self.vision_catalog = vision_catalog
@@ -924,121 +862,8 @@ class QAPipeline:
         )
 
     async def _build_static_route_answer(self, request: ChatRequest) -> tuple[str, list[dict]] | None:
-        """从后端预设路线模板中挑选一条路线作答，不依赖任何外部编排服务。"""
-        if self.route_repository is None:
-            return None
-
-        routes = await self.route_repository.list_all()
-        if not routes:
-            return None
-
-        budget = request.selection.available_hours if request.selection else None
-        query_budget = _explicit_route_hours(request.query)
-        if budget is not None and query_budget is not None and budget != query_budget:
-            return (f"当前选择的时间是{budget}小时，问题中是{query_budget}小时；请确认时间预算，重新选择或清除之前的时间设置后再提问。", [])
-        if budget is None:
-            budget = query_budget
-        no_known_fit = False
-        if budget is not None:
-            fitting = [route for route in routes
-                       if (hours := RecommendEngine._duration_hours(route.duration_label, budget)) is not None
-                       and hours <= budget]
-            if fitting:
-                routes = fitting
-            else:
-                no_known_fit = True
-
-        def pick(*keywords: str):
-            return next(
-                (
-                    route
-                    for route in routes
-                    if any(keyword in route.title or keyword in getattr(route, "tags", "") for keyword in keywords)
-                ),
-                None,
-            )
-
-        normalized = (request.query or "").strip()
-        is_point_to_point = (
-            "大佛" in normalized
-            and "梵宫" in normalized
-            and any(marker in normalized for marker in ("怎么走", "怎么去", "从", "到"))
-        )
-        if is_point_to_point:
-            selected = next(
-                (route for route in routes if "大佛" in route.route_plan and "梵宫" in route.route_plan),
-                routes[0],
-            )
-            answer = (
-                f"可参考预设路线：{selected.route_plan}。"
-                "此路线未核验两点之间的实际通路；如需少走路，可向服务台确认当日安排。"
-            )
-        else:
-            selected = None
-            if any(marker in normalized for marker in ("小孩", "孩子", "亲子")):
-                selected = pick("亲子")
-            elif any(marker in normalized for marker in ("建筑", "佛教", "文化", "朝圣")):
-                selected = pick("历史", "文化")
-            elif any(marker in normalized for marker in ("自然", "风景", "免费")):
-                selected = pick("自然")
-            elif any(marker in normalized for marker in ("老人", "省力", "半天", "3个小时", "三个小时")):
-                selected = pick("亲子", "自然")
-            # 关键词未命中时，交由后端预设路线引擎按游客偏好选路（时长 / 避峰 / 人群 / 兴趣）。
-            if selected is None:
-                selected = await self._select_preset_route(routes, request)
-            selected = selected or routes[0]
-
-            route_plan = selected.route_plan
-            if any(marker in normalized for marker in ("3个小时", "三个小时")):
-                stops = [item.strip() for item in route_plan.split("→") if item.strip()]
-                route_plan = " → ".join(stops[:4])
-                answer = (
-                    f"可参考路线中的前几个景点：{route_plan}。"
-                    "时间紧时优先看核心景点，其余景点可根据现场时间灵活取舍。"
-                )
-            elif "半天" in normalized:
-                answer = (
-                    f"半天可参考{selected.title}（{selected.duration_label}）：{route_plan}。"
-                    "建议提前入园，并按现场演出时间和体力情况删减停留点。"
-                )
-            elif "一日" in normalized or "全天" in normalized:
-                answer = (
-                    f"一日游建议以{selected.title}为主线：{route_plan}。"
-                    "上午安排核心景点，下午可继续游览沿线文化场馆与特色建筑，并预留休息与用餐时间。"
-                )
-            else:
-                answer = f"推荐{selected.title}（{selected.duration_label}）：{route_plan}。"
-
-        if no_known_fit:
-            answer = f"暂无标注时长符合{budget}小时预算的预设路线。以下仅供调整参考：{answer}"
-        elif budget is None and ("小时" in normalized or "半天" in normalized):
-            answer = "未能确定具体时间预算，请核对可用时间后再选择。" + answer
-        answer += " 这是预设路线，未结合实时路况或客流，实际时长和开放情况请以现场信息为准。"
-        sources = [{
-            "evidence_id": "路线1",
-            "title": selected.title,
-            "snippet": selected.route_plan,
-            "source": selected.source,
-        }]
-        return answer, sources
-    async def _select_preset_route(self, routes, request: ChatRequest):
-        """按游客偏好从预设路线模板中选择主推路线，复用 RecommendEngine 的规则。"""
-        if self.route_repository is None:
-            return None
-        selection = request.selection
-        requested_hours = selection.available_hours if selection and selection.available_hours else 4
-        recommend_request = RecommendRequest(
-            session_id=request.session_id,
-            interests=_extract_interests(request),
-            available_hours=min(max(int(requested_hours), 1), 12),
-            audience_type=_infer_audience_type(request),
-            avoid_crowded=bool(selection.avoid_crowded) if selection else False,
-        )
-        response = await RecommendEngine(self.route_repository).generate(recommend_request)
-        if not response.routes:
-            return None
-        target_id = response.routes[0].route_id
-        return next((route for route in routes if route.id == target_id), None)
+        """保留旧调用入口，将静态路线回答委托给独立业务节点。"""
+        return await self.route_fast_path.build_answer(request)
 
     @staticmethod
     def _take_speakable_sentences(buffer: str) -> tuple[list[str], str]:
