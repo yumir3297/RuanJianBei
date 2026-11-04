@@ -1,3 +1,5 @@
+2026-11-04：隔离文件 SQLite 测试验证真实知识发布服务在状态写锁持有时等待，释放后完成发布，专项 1 passed；使用 fake embedder/vector store，持锁模拟确认事务，未调用确认 API、PostgreSQL 或真实模型。
+
 2026-11-04：隔离 PostgreSQL ASGI 实测目录状态行锁超时：事务设置 100ms lock_timeout，接口返回 503、无新增修订；释放锁后同幂等键成功，专项 1 passed。使用临时 Unix socket、metadata 建表和合成数据，服务已停止；不证明死锁、提交断连或真实部署的行为。
 
 2026-11-03：提案确认对 SQLite BUSY/LOCKED 及指定 PostgreSQL 锁/事务冲突码回滚并返回可重试 503，提示同请求重试；其他数据库异常不归类。文件 SQLite 真实锁超时测试先复现 500，修复后验证无新修订、释放后同键成功；后端全套 530 passed、9 skipped、7 warnings。PostgreSQL 实际锁超时/死锁映射及提交断连不确定性尚未实测。
