@@ -171,3 +171,85 @@ def test_postgres_publication_first_rejects_old_proposal(monkeypatch):
         finally:
             await engine.dispose()
     asyncio.run(scenario())
+
+
+@pytest.mark.skipif(not os.getenv("GUIDE_TEST_POSTGRES_URL"), reason="requires disposable PostgreSQL")
+def test_postgres_inflight_publication_fences_old_proposal(monkeypatch):
+    url = make_url(os.environ["GUIDE_TEST_POSTGRES_URL"])
+    assert url.drivername == "postgresql+asyncpg"
+    assert (url.database or "").startswith("guide_test_")
+    assert not url.host and url.query.get("host", "").startswith("/private/tmp/")
+
+    async def scenario():
+        engine = create_async_engine(url)
+        sessions = async_sessionmaker(engine, expire_on_commit=False)
+        try:
+            async with sessions() as seed:
+                assert await seed.get(KnowledgeState, 1) is not None
+                metadata = json.dumps({"attraction_id": str(uuid4())})
+                entry = KnowledgeEntry(title="测试景点", category="景点信息", content="资料", source="测试", metadata_json=metadata)
+                owner = TourIdentity(id=str(uuid4()), credential_digest=uuid4().hex * 2, expires_at=datetime.now(UTC) + timedelta(days=1))
+                seed.add_all([entry, owner]); await seed.flush()
+                revision = KnowledgeRevision(id=str(uuid4()), knowledge_entry_id=entry.id, title=entry.title, category=entry.category, content=entry.content, source=entry.source, metadata_json=metadata)
+                seed.add(revision); await seed.flush(); entry.draft_revision_id = revision.id
+                await seed.commit()
+                snapshot = {'schema_version': 2, 'constraints': {'available_minutes': 60}, 'stops': [{'stop_id': str(uuid4()), 'kind': 'rest', 'name': '休息', 'duration_minutes': 10, 'duration_basis': 'user'}], 'legs': []}
+                repo = TourSessionRepository(seed)
+                tour = await repo.create_session(owner.id, 'site', '行程', snapshot, 'create')
+                catalog = await PublishedAttractionCatalog(K01PublishedAttractionSource(seed, site_id='site')).list_for_site('site')
+                generated = {'status': 'ready', 'base_snapshot': snapshot, 'operations': [], 'candidate': snapshot, 'diff': [], 'validation': {'status': 'pass', 'conflicts': []}, 'clarification': None}
+                proposal = await repo.create_proposal(owner.id, tour['id'], 1, 0, 'a' * 64, catalog.digest, '调整', generated, 'proposal')
+                entry_id, revision_id = entry.id, revision.id
+            publisher = sessions()
+            service = KnowledgePublicationService(publisher, FakeEmbedder(), FakeVectorStore())
+            job = await service.create_publication([{'entry_id': entry_id, 'revision_id': revision_id, 'expected_version': 1}], idempotency_key=str(uuid4()))
+            locked = asyncio.Event()
+            release = asyncio.Event()
+            original_execute = publisher.execute
+            async def gate_execute(statement, *args, **kwargs):
+                result = await original_execute(statement, *args, **kwargs)
+                if str(statement).lstrip().upper().startswith('UPDATE KNOWLEDGE_STATE'):
+                    locked.set()
+                    await asyncio.wait_for(release.wait(), 5)
+                return result
+            monkeypatch.setattr(publisher, 'execute', gate_execute)
+            publication = asyncio.create_task(service.run_publication(job.id))
+            await asyncio.wait_for(locked.wait(), 5)
+            app = FastAPI(); app.include_router(tour_sessions.router, prefix='/api/tour-sessions')
+            async def session_dep():
+                async with sessions() as session:
+                    yield session
+            app.dependency_overrides[get_db_session] = session_dep
+            app.dependency_overrides[get_app_settings] = lambda: Settings(site_id='site')
+            app.dependency_overrides[tour_sessions.get_tour_identity] = lambda: owner
+            monkeypatch.setattr(tour_sessions, '_protect_write', lambda *_: None)
+            try:
+                async with AsyncClient(transport=ASGITransport(app=app), base_url='http://test') as client:
+                    pending = asyncio.create_task(client.post(f"/api/tour-sessions/{tour['id']}/proposals/{proposal['id']}/apply", headers={'Idempotency-Key': 'apply'}, json={'expected_version': 1, 'progress_version': 0, 'draft_digest': 'a' * 64}))
+                    blocked = False
+                    for _ in range(300):
+                        if pending.done():
+                            raise AssertionError('confirmation completed while publication held the lock')
+                        async with sessions() as observer:
+                            count = await observer.scalar(text("SELECT count(*) FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock' AND query LIKE '%knowledge_state%'"))
+                        if count:
+                            blocked = True
+                            break
+                        await asyncio.sleep(.01)
+                    assert blocked, 'confirmation did not reach a lock wait'
+                    release.set()
+                    await asyncio.wait_for(publication, 5)
+                    assert (await service.get_publication(job.id)).state == 'succeeded'
+                    response = await asyncio.wait_for(pending, 5)
+                    assert response.status_code == 409, response.text
+                async with sessions() as check:
+                    assert len(await TourSessionRepository(check).list_revisions(owner.id, tour['id'])) == 1
+            finally:
+                release.set()
+                if not publication.done():
+                    publication.cancel()
+                    await asyncio.gather(publication, return_exceptions=True)
+                await publisher.close()
+        finally:
+            await engine.dispose()
+    asyncio.run(scenario())
