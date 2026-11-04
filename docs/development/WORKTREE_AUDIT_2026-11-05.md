@@ -8,6 +8,8 @@
 
 在集成分支 `f6f5921` 后复核：原 checkout 95 个状态路径、V01 49、W02 35、W02/V01 集成 39；当前集成树已推进 mux epoch fence helper，详细提交见 `PROGRESS.md`。`sources/` 无状态变化。不得据此推断所有路径已语义合并；下表中明确标注的迁移/schema、行程 API/模型、文档/前端差异仍需逐项决策。
 
+2026-11-05 后续复核：原 checkout 仍 `672a104` / 95 状态路径；集成树与原仓库同名引用在 `4ad111e` 后同步，V01/W02/W02-V01 状态路径仍为 49/35/39。快照分支仍存在，`/private/tmp/ai-guide-phase3` 仍 prunable 未清理，`sources/` 无状态变化。
+
 | 状态 | 路径 | 判定 | 证据 |
 |---|---|---|---|
 | ` M` | `AGENTS.md` | 已合并（当前内容与集成树逐字节相同） | 快照含该文件；集成树含该文件 |
@@ -172,11 +174,11 @@
 
 | 状态 | 路径 | 分类 | 对照证据 |
 |---|---|---|---|
-| ` M` | `backend/alembic/env.py` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `backend/app/api/router.py` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `backend/alembic/env.py` | 仅 SQLAlchemy 模型导入换行/折行，不改变 Alembic metadata 内容 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/api/router.py` | 集成版后续登记 itinerary 与 knowledge import/publication 路由；W02 旧行路由在当前集成树保留，旧文件不可覆盖 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/api/tour_sessions.py` | 后续实现替代候选：现集成测试覆盖源测试并新增提案回放/目录过期用例；保留快照，不覆盖 | snapshot=yes; integration=yes |
-| ` M` | `backend/app/models/__init__.py` | 已被集成模型注册扩展替代；保留源版本用于核对迁移引用 | snapshot=yes; integration=yes |
-| ` M` | `backend/app/models/tour_session.py` | 被后续模型/版本约束实现替代候选；具体 schema 迁移仍需审计 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/models/__init__.py` | 集成版扩展注册知识 workspace、V01 progress/proposal 模型和 tool execution 模型；后续模型注册实现替代，保留源版本 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/models/tour_session.py` | 集成版在 ItineraryProposal 增加 `base_snapshot_json` 与 `execution_job_id`；对应 merge/W02 migration 和 proposal recovery 测试覆盖字段用途；DB migration upgrade 仍未实跑 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/repositories/tour_session.py` | 后续仓储包含提案 reservation、锁和版本 fence；不以旧文件覆盖 | snapshot=yes; integration=yes |
 | ` M` | `docs/ARCHITECTURE.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `docs/COMPATIBILITY.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
@@ -221,17 +223,22 @@
 - 集成 repository 增加 progress version 校验、目标 progress fence、锁及 unknown 外部结果路径。`test_changed_target_invalidates_running_lease...`、错误 fence、取消竞态、unknown retry 和 W02 runtime review 分别覆盖任务目标、lease/fence、取消/外部结果及 worker 恢复。此前未发现 stale progress 的直接测试；本轮新增 `test_create_job_rejects_stale_tour_progress_version`（提交时拒绝旧版本且无 ToolJob）与 `test_queued_job_is_fenced_when_tour_progress_changes_before_worker_claim`（已排队后进度更新不发 lease，维护后标记 `target_progress_changed`），两个隔离 SQLite 测试均通过。claim 与 progress 提交真正同时竞争的时序仍未专项覆盖。
 - `worker.py` 的 `_run_cli` finally dispose 由 `test_worker_cli_once_reads_explicit_isolated_database` 的 dispose/no-dispose 子进程路径覆盖。Migration 分叉仍按上文不可单独 cherry-pick 处理。
 
+### W02 schema / router 差异补充核验
+
+- W02 `models/tour_session.py` 与集成版唯一业务字段差异是 `ItineraryProposal.base_snapshot_json` 与 `execution_job_id`。前者用于恢复/核对 proposal 原始行程，后者链接持久任务；`test_tour_progress_and_proposals.py` 覆盖损坏 base snapshot 时 `diff_verifiable=False` 且拒绝 apply，`test_tool_execution_acceptance.py` 覆盖 proposal API 重放时 job ID 稳定。这些字段由集成版 f1 migration 补入，旧 W02 f1 migration 不含字段且父 revision 不同，所以标记为“被合并迁移及后续集成实现替代”，不能 cherry-pick 覆盖。
+- W02 `alembic/env.py` 仅导入列表格式差异；`api/router.py` 在集成版增加 itinerary 与 knowledge import/publication 路由；`models/__init__.py` 注册 V01/knowledge/tool execution 模型。对应行为/注册属于已合并的后续子项目，不把 W02 文件覆盖到当前集成版。真实 Alembic upgrade/downgrade 仍因当前临时环境缺 Alembic command API 未验证。
+
 ### W02/V01 集成副本（`code/w02-integration`）
 
 当前 HEAD `098553f`，39 个 porcelain 状态路径；保全快照 `w02-integration-preserved-snapshot`。分类统计：29 同路径存在但内容不同；需语义审查；8 已合并（当前内容与集成树相同）；2 目录内有相同/不同/新增文件，需逐项核验.
 
 | 状态 | 路径 | 分类 | 对照证据 |
 |---|---|---|---|
-| ` M` | `backend/alembic/env.py` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `backend/alembic/env.py` | 仅 SQLAlchemy 模型导入换行/折行，不改变 Alembic metadata 内容 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/api/router.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | ` M` | `backend/app/api/tour_sessions.py` | 后续实现替代候选：现集成测试覆盖源测试并新增提案回放/目录过期用例；保留快照，不覆盖 | snapshot=yes; integration=yes |
-| ` M` | `backend/app/models/__init__.py` | 已被集成模型注册扩展替代；保留源版本用于核对迁移引用 | snapshot=yes; integration=yes |
-| ` M` | `backend/app/models/tour_session.py` | 被后续模型/版本约束实现替代候选；具体 schema 迁移仍需审计 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/models/__init__.py` | 集成版扩展注册知识 workspace、V01 progress/proposal 模型和 tool execution 模型；后续模型注册实现替代，保留源版本 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/models/tour_session.py` | 集成版在 ItineraryProposal 增加 `base_snapshot_json` 与 `execution_job_id`；对应 merge/W02 migration 和 proposal recovery 测试覆盖字段用途；DB migration upgrade 仍未实跑 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/repositories/tour_session.py` | 后续仓储包含提案 reservation、锁和版本 fence；不以旧文件覆盖 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/schemas/itinerary.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | ` M` | `backend/app/services/itinerary/progress.py` | 后续进度版本及状态 fence 实现不同；相关行为由集成回归覆盖 | snapshot=yes; integration=yes |
@@ -249,7 +256,7 @@
 | ` M` | `frontend/src/views/tourist/MapView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/views/tourist/RouteView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | `??` | `backend/alembic/versions/5c81a1e74f2b_add_tour_progress_and_proposals.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
-| `??` | `backend/alembic/versions/f1b4c9d76e20_add_tool_execution.py` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `backend/alembic/versions/f1b4c9d76e20_add_tool_execution.py` | 被集成 migration merge 替代，不能单独移植：源父 revision=`e9f4c2b8016a`，集成父 revision=`8ab42c17d3e9`；集成版同时添加 proposal execution 字段 | snapshot=yes; integration=yes |
 | `??` | `backend/app/api/tool_execution.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | `??` | `backend/app/models/tool_execution.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | `??` | `backend/app/repositories/tool_execution.py` | 后续实现扩展旧 repository：幂等回放、lease/fence、取消、同事务持久化和 progress version 保护；两项隔离 SQLite stale progress 行为测试已补，真正同时 claim/进度提交的 race 未专项验证 | snapshot=yes; integration=yes |
