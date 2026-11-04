@@ -643,6 +643,52 @@ def test_non_neutral_audio_context_does_not_reuse_neutral_cached_generation():
     asyncio.run(scenario())
 
 
+def test_shared_pipeline_keeps_emotion_state_isolated_between_concurrent_requests():
+    from app.schemas.chat import EmotionContext
+
+    gate = asyncio.Event()
+
+    class GatedSelector(DummyGuidedSelector):
+        def __init__(self):
+            self.arrivals = 0
+
+        async def resolve(self, query, selection, context):
+            result = await super().resolve(query, selection, context)
+            self.arrivals += 1
+            if self.arrivals == 2:
+                gate.set()
+            await gate.wait()
+            return result
+
+    pipeline = _build_test_pipeline(guided_selector=GatedSelector())
+
+    async def collect(emotion):
+        return [
+            event
+            async for event in pipeline.stream_chat(ChatRequest(
+                query="介绍景点",
+                session_id=f"emotion-{emotion}",
+                text_only=True,
+                emotion_context=EmotionContext(
+                    audio_emotion=emotion,
+                    audio_confidence=1,
+                    audio_source="audio",
+                ),
+            ))
+        ]
+
+    async def scenario():
+        anxious, positive = await asyncio.gather(collect("anxious"), collect("positive"))
+        anxious_event = next(event.data for event in anxious if event.type == "emotion")
+        positive_event = next(event.data for event in positive if event.type == "emotion")
+        assert anxious_event["label"] == "anxious"
+        assert anxious_event["avatar_emotion"] == "sad"
+        assert positive_event["label"] == "positive"
+        assert positive_event["avatar_emotion"] == "happy"
+
+    asyncio.run(scenario())
+
+
 def _run_turn(pipeline, **request_overrides):
     request_kwargs = {
         "query": "有什么特色",

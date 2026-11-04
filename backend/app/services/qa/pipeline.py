@@ -5,9 +5,11 @@ import base64
 import json
 import logging
 import re
+from contextvars import ContextVar, Token
+from dataclasses import dataclass
 from asyncio import QueueEmpty
 from time import perf_counter
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 # ── 拼音导入缓存 ──
 _PINYIN_FN = None
@@ -83,6 +85,15 @@ if TYPE_CHECKING:  # pragma: no cover
     )
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class _PipelineRequestState:
+    active_emotion: Any
+    active_response_policy: Any
+    active_text_emotion: Any = None
+    active_audio_emotion: Any = None
+    memory_prompt: str | None = None
 
 _LINGSHAN_ATTRACTIONS = [
     "灵山大佛", "大佛", "灵山梵宫", "梵宫", "九龙灌浴", "五印坛城",
@@ -232,14 +243,72 @@ class QAPipeline:
         self.vision_site_id = vision_site_id
         self.text_emotion_analyzer = TextEmotionAnalyzer()
         self.emotion_fusion = MultimodalEmotionFusion()
-        self._active_emotion = self.emotion_fusion.fuse(None, None)
-        self._active_response_policy = response_policy_for(self._active_emotion)
-        self._active_text_emotion = None
-        self._active_audio_emotion = None
-        # 由 stream_chat 开头的记忆加载填充；Phase B 之前恒为 None。
-        self._memory_prompt: str | None = None
+        default_emotion = self.emotion_fusion.fuse(None, None)
+        self._default_request_state = _PipelineRequestState(
+            active_emotion=default_emotion,
+            active_response_policy=response_policy_for(default_emotion),
+        )
+        self._request_state: ContextVar[_PipelineRequestState | None] = ContextVar(
+            f"qa_pipeline_request_state_{id(self)}", default=None
+        )
+
+    def _current_request_state(self) -> _PipelineRequestState:
+        return self._request_state.get() or self._default_request_state
+
+    @property
+    def _active_emotion(self):
+        return self._current_request_state().active_emotion
+
+    @_active_emotion.setter
+    def _active_emotion(self, value):
+        self._current_request_state().active_emotion = value
+
+    @property
+    def _active_response_policy(self):
+        return self._current_request_state().active_response_policy
+
+    @_active_response_policy.setter
+    def _active_response_policy(self, value):
+        self._current_request_state().active_response_policy = value
+
+    @property
+    def _active_text_emotion(self):
+        return self._current_request_state().active_text_emotion
+
+    @_active_text_emotion.setter
+    def _active_text_emotion(self, value):
+        self._current_request_state().active_text_emotion = value
+
+    @property
+    def _active_audio_emotion(self):
+        return self._current_request_state().active_audio_emotion
+
+    @_active_audio_emotion.setter
+    def _active_audio_emotion(self, value):
+        self._current_request_state().active_audio_emotion = value
+
+    @property
+    def _memory_prompt(self) -> str | None:
+        return self._current_request_state().memory_prompt
+
+    @_memory_prompt.setter
+    def _memory_prompt(self, value: str | None) -> None:
+        self._current_request_state().memory_prompt = value
 
     async def stream_chat(self, request: ChatRequest):
+        token: Token[_PipelineRequestState | None] = self._request_state.set(
+            _PipelineRequestState(
+                active_emotion=self._default_request_state.active_emotion,
+                active_response_policy=self._default_request_state.active_response_policy,
+            )
+        )
+        try:
+            async for event in self._stream_chat(request):
+                yield event
+        finally:
+            self._request_state.reset(token)
+
+    async def _stream_chat(self, request: ChatRequest):
         start = perf_counter()
         request_epoch = await self.visibility_service.read_epoch() if self.visibility_service is not None else None
         faq_epoch = getattr(self.faq_matcher, "knowledge_epoch", None)
