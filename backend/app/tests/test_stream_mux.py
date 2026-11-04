@@ -1,6 +1,10 @@
 from types import SimpleNamespace
 
-from app.services.qa.stream_mux import StreamMuxState
+import asyncio
+
+import pytest
+
+from app.services.qa.stream_mux import StreamMuxState, get_epoch_guarded_message
 from app.services.qa.streaming_tts_buffer import StreamingTTSBuffer
 
 
@@ -53,3 +57,27 @@ def test_streaming_tts_buffer_drains_unfinished_tail_once():
 
     assert buffer.drain() == "尾部未完成"
     assert buffer.drain() is None
+
+
+@pytest.mark.asyncio
+async def test_epoch_guarded_mux_read_drops_message_if_epoch_changes_during_wait():
+    queue = asyncio.Queue()
+    await queue.put(("llm", "stale token"))
+    checks = iter([True, False])
+
+    async def epoch_is_current():
+        return next(checks)
+
+    assert await get_epoch_guarded_message(queue, epoch_is_current) is None
+    assert queue.empty()
+
+
+@pytest.mark.asyncio
+async def test_epoch_guarded_mux_read_does_not_wait_when_epoch_is_already_stale():
+    queue = asyncio.Queue()
+
+    async def epoch_is_current():
+        return False
+
+    assert await get_epoch_guarded_message(queue, epoch_is_current) is None
+    assert queue.empty()

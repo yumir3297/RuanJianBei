@@ -1,6 +1,21 @@
 from __future__ import annotations
 
+import asyncio
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+
+
+async def get_epoch_guarded_message(
+    queue: asyncio.Queue[tuple[str, object | None]],
+    epoch_is_current: Callable[[], Awaitable[bool]],
+) -> tuple[str, object | None] | None:
+    """Read one mux message only while its request knowledge epoch stays current."""
+    if not await epoch_is_current():
+        return None
+    message = await queue.get()
+    if not await epoch_is_current():
+        return None
+    return message
 
 
 @dataclass

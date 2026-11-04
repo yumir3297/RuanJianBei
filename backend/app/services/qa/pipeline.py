@@ -62,7 +62,7 @@ from app.services.qa.stream_events import StreamEvent
 from app.services.qa.queued_stream_events import QueuedStreamEvents
 from app.services.qa.stream_answer import StreamAnswerBuffer
 from app.services.qa.stream_lifecycle import AudioTaskGroup, StreamProducerGroup
-from app.services.qa.stream_mux import StreamMuxState
+from app.services.qa.stream_mux import StreamMuxState, get_epoch_guarded_message
 from app.services.qa.streaming_tts_buffer import StreamingTTSBuffer
 from app.services.qa.streaming_tts_controller import StreamingTTSController
 from app.services.qa.vision_evidence import resolve_vision_evidence
@@ -529,13 +529,14 @@ class QAPipeline:
 
         try:
             while not mux_state.llm_done or not mux_state.tts_done:
-                if not await self._epoch_is_current(request_epoch):
+                message = await get_epoch_guarded_message(
+                    mux_queue,
+                    lambda: self._epoch_is_current(request_epoch),
+                )
+                if message is None:
                     visibility_changed = True
                     break
-                kind, payload = await mux_queue.get()
-                if not await self._epoch_is_current(request_epoch):
-                    visibility_changed = True
-                    break
+                kind, payload = message
 
                 delivery = mux_state.consume(kind, payload)
                 if kind == "tts_connected":
