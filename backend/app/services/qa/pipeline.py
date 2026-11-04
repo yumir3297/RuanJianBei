@@ -61,6 +61,7 @@ from app.services.qa.speech_event_adapter import (
 from app.services.qa.stream_events import StreamEvent
 from app.services.qa.queued_stream_events import QueuedStreamEvents
 from app.services.qa.stream_answer import StreamAnswerBuffer
+from app.services.qa.stream_completion import final_audio_segments
 from app.services.qa.stream_lifecycle import AudioTaskGroup, StreamProducerGroup
 from app.services.qa.stream_mux import StreamMuxState
 from app.services.qa.stream_mux_consumer import StreamMuxConsumer
@@ -574,15 +575,15 @@ class QAPipeline:
         if faq_text_sent:
             yield StreamEvent(type="text", data={"text": answer_stream.full_answer, "is_complete": True})
 
-        if faq_documents is not None and not request.text_only:
-            if answer_stream.full_answer.strip():
-                schedule_audio(answer_stream.full_answer.strip())
-        elif streaming_requested and mux_state.tts_failed and not request.text_only:
-            remaining_text = answer_stream.full_answer[mux_state.tts_confirmed_chars:].strip()
-            if remaining_text:
-                schedule_audio(remaining_text)
-        elif not streaming_requested and answer_stream.sentence_buffer.strip() and not request.text_only:
-            schedule_audio(answer_stream.sentence_buffer.strip())
+        for text in final_audio_segments(
+            answer_stream,
+            faq_documents_present=faq_documents is not None,
+            text_only=request.text_only,
+            streaming_requested=streaming_requested,
+            streaming_tts_failed=mux_state.tts_failed,
+            tts_confirmed_chars=mux_state.tts_confirmed_chars,
+        ):
+            schedule_audio(text)
 
         try:
             for task in audio_group.tasks:
