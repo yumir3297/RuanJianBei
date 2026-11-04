@@ -4,7 +4,6 @@ import asyncio
 import base64
 import json
 import logging
-import re
 from contextvars import ContextVar, Token
 from dataclasses import dataclass
 from asyncio import QueueEmpty
@@ -73,6 +72,7 @@ from app.services.qa.guided_selector import (
     build_selection_cache_key,
 )
 from app.services.qa.intent_router import IntentRouter
+from app.services.qa.route_constraints import explicit_route_hours as _explicit_route_hours
 from app.services.qa.stream_events import StreamEvent
 from app.services.qa.answer_styler import polish_answer, no_evidence_reply
 from app.services.recommend.engine import RecommendEngine
@@ -122,19 +122,6 @@ _TOPIC_AUDIENCE_HINTS = {
     "dining": "leisure",
     "practical": "general",
 }
-
-
-def _explicit_route_hours(query: str) -> int | None:
-    """Recognize only unambiguous whole-hour expressions; never round a duration."""
-    numerals = {"一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5,
-                "六": 6, "七": 7, "八": 8, "九": 9, "十": 10}
-    if re.search(r"至少|不少于|多于|(?<!不)超过|小时\s*(?:以?后|之后|以上|(?:又\s*)?[\d一二两三四五六七八九十]+\s*分)", query):
-        return None
-    if re.search(r"\d+\.\d+\s*(?:个)?小时|(?:\d+|[一二两三四五六七八九十])\s*(?:个)?小时半|(?:\d+|[一二两三四五六七八九十])\s*[-–—~～至到或]\s*(?:\d+|[一二两三四五六七八九十])\s*(?:个)?小时|[一二两三四五六七八九十]{2,}\s*(?:个)?小时", query):
-        return None
-    values = [numerals.get(token, int(token) if token.isdigit() else 0)
-              for token in re.findall(r"(?<![\d.一二两三四五六七八九十])(\d{1,2}|[一二两三四五六七八九十])\s*(?:个)?小时", query)]
-    return values[0] if values and all(value == values[0] for value in values) and 1 <= values[0] <= 12 else None
 
 
 def _infer_audience_type(request: ChatRequest) -> str:
