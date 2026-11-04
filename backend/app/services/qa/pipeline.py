@@ -62,7 +62,8 @@ from app.services.qa.speech_event_adapter import (
 from app.services.qa.stream_events import StreamEvent
 from app.services.qa.vision_evidence import resolve_vision_evidence
 from app.services.qa.answer_styler import polish_answer, no_evidence_reply
-from app.services.rag.base import BaseRAGService, RetrievedDocument, RetrievalScope
+from app.services.qa.evidence_retrieval import retrieve_evidence
+from app.services.rag.base import BaseRAGService
 from app.services.rag.query_rewriter import QueryRewriter
 from app.services.tts.base import BaseTTSService
 
@@ -408,15 +409,14 @@ class QAPipeline:
                 yield StreamEvent(type="sources", data={"docs": faq_sources})
         else:
             yield StreamEvent(type="status", data={"text": "正在检索景区知识..."})
-            documents = await self.rag_service.retrieve(
-                retrieval_query,
+            evidence = await retrieve_evidence(
+                self.rag_service,
+                query=retrieval_query,
                 normalized_query=normalized_query,
                 scope=resolved.scope,
             )
-            sources = [
-                self._doc_to_source(document, evidence_id=f"证据{index}")
-                for index, document in enumerate(documents, start=1)
-            ]
+            documents = evidence.documents
+            sources = evidence.sources
             if not await self._epoch_is_current(request_epoch):
                 yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
                 return
@@ -1096,19 +1096,6 @@ class QAPipeline:
             f"[服务表达要求：{self._active_response_policy.prompt_guidance} "
             "只调整表达和信息优先级，不要声称看见或诊断了游客情绪。]"
         )
-
-    @staticmethod
-    def _doc_to_source(document: RetrievedDocument, *, evidence_id: str) -> dict:
-        return {
-            "evidence_id": evidence_id,
-            "title": document.title,
-            "snippet": document.snippet,
-            "source": document.source,
-            "score": document.score,
-            "entry_id": document.entry_id,
-            "revision_id": document.revision_id,
-            "chunk_id": document.chunk_id,
-        }
 
     @staticmethod
     def _coerce_llm_event(item: LLMStreamEvent | str) -> LLMStreamEvent:

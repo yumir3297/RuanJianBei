@@ -49,3 +49,13 @@
 验证：新增 5 个节点测试覆盖默认受众零文档直答、儿童受众唯一 FAQ 证据、共享缓存隔离和开放时间/票价匹配边界。完整指定 AI 回归集合 138 passed、1 条 Starlette 弃用警告。测试未测量真实 LLM 延迟，也不证明 TTS Provider 或设备体验。
 
 回滚：若默认受众 FAQ 新增模型调用、非默认受众不再以 FAQ 为唯一证据，或个性化上下文进入共享缓存，恢复 Pipeline 内联判定并保留复现回归。
+
+## 2026-11-04：将检索结果与来源记录作为同一证据束返回
+
+问题：Pipeline 在 RAG 返回后临时将片段编号并复制标题、来源、得分和知识修订/分块标识；检索到答案证据与传给前端、聊天日志的引用字段分处两个步骤，容易在重构时失配。
+
+选择：新增 `qa/evidence_retrieval.py`，统一调用既有 RAG scope，并按返回顺序生成 `RetrievedEvidence(documents, sources)`；FAQ 受众改写继续使用 FAQ 唯一证据，视觉目录确认仍由 `vision_evidence.py` 负责。Pipeline 仍负责 epoch fence、SSE 事件、空证据拒答和 LLM 生命周期。
+
+验证：新增节点测试确认 query、normalized_query 和 scope 原样传入，来源证据 ID 与 entry/revision/chunk ID 对应。完整指定 AI 回归集合 139 passed、1 条 Starlette 弃用警告；真实知识源和在线引用忠实度尚未验证。
+
+回滚：如果来源事件或聊天日志丢失、重排或错绑片段，恢复 Pipeline 原有映射逻辑并保留节点契约测试。
