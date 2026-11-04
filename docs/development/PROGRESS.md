@@ -6,6 +6,8 @@
 
 2026-11-04：新增 `qa/evidence_retrieval.py`，以 `RetrievedEvidence` 成对返回 RAG 文档和来源记录，来源记录包含证据序号及知识条目、修订和分块 ID；检索 query、normalized query 和 scope 原样透传，Pipeline 继续负责 epoch 校验和 SSE。节点、Pipeline、视觉和 knowledge-stream 相关测试 56 passed；完整指定 AI 回归集合 139 passed、1 条 Starlette 弃用警告，compileall 与 diff 检查通过。测试未证明真实资料授权或答案对证据的事实忠实度。
 
+2026-11-04：同步 `architecture/TARGET.md` 工作流图，明确开放时间/票价核验拦截、FAQ 直答/分众证据、共享缓存资格、RAG 来源绑定和 SSE/TTS 事件适配；选型仍为显式业务节点与 Pipeline，不表示最终性能收益或真实模型/设备已验证。
+
 2026-11-04：为主工作区未提交内容建立只读保全检查点 `codex/preserved-uncommitted-2026-11-04`（`4acaa53`，父提交 `672a104`），使用独立临时 Git 索引捕获 115 个路径，明确排除 `frontend/node_modules`。原工作区索引、文件和 95 项状态记录保持不变；检查点已取入集成仓库供后续逐项比较，不等于已合入功能分支。
 
 2026-11-04：在集成分支运行前端聊天流、SSE 与 PCM 错误专项 `node --test`，23 passed。覆盖服务端 `completion=incomplete` 的前端处理、部分回答保留与重试、迟到请求隔离、SSE heartbeat/超时和 PCM 错误回退；此为本地模拟测试，不验证真实浏览器或设备。
