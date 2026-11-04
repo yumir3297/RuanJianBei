@@ -60,7 +60,7 @@ from app.services.qa.speech_event_adapter import (
     words_to_viseme_timeline as build_words_viseme_timeline,
 )
 from app.services.qa.stream_events import StreamEvent
-from app.services.qa.stream_lifecycle import cancel_and_join
+from app.services.qa.stream_lifecycle import cancel_and_join, forward_events
 from app.services.qa.vision_evidence import resolve_vision_evidence
 from app.services.qa.answer_styler import polish_answer, no_evidence_reply
 from app.services.qa.evidence_retrieval import retrieve_evidence
@@ -493,37 +493,30 @@ class QAPipeline:
         mux_queue: asyncio.Queue[tuple[str, object | None]] = asyncio.Queue()
         tts_finish_requested = asyncio.Event()
 
-        async def produce_llm_events() -> None:
-            try:
-                generation_query = request.query
-                if confirmed_visual_title is not None:
-                    # Catalog title is data, not an instruction; JSON escaping
-                    # prevents its content from changing this context's shape.
-                    title_data = json.dumps(confirmed_visual_title, ensure_ascii=False)
-                    generation_query = (
-                        "游客已从已发布目录确认本次讲解的景点名称（JSON字符串）："
-                        f"{title_data}。图片识别线索未经确认，仅用于检索，不得作为事实；"
-                        "回答只能根据参考资料，资料不足时明确说明。\n"
-                        f"游客原始问题：{request.query}"
-                    )
-                elif vision is not None:
-                    generation_query = (
-                        "图片识别线索未经确认，仅用于检索；不要断言照片中的景点身份。"
-                        "只能依据参考资料提供有条件的说明，身份不明确时请游客选择或确认景点。\n"
-                        f"游客原始问题：{request.query}"
-                    )
-                async for item in self.llm_service.stream_generate(
-                    self._emotion_aware_query(generation_query),
-                    documents,
-                    persona=request.persona,
-                    audience=audience,
-                    memory=self._memory_prompt,
-                ):
-                    await mux_queue.put(("llm", item))
-            except Exception as exc:
-                await mux_queue.put(("llm_error", exc))
-            finally:
-                await mux_queue.put(("llm_done", None))
+        generation_query = request.query
+        if confirmed_visual_title is not None:
+            # Catalog title is data, not an instruction; JSON escaping
+            # prevents its content from changing this context's shape.
+            title_data = json.dumps(confirmed_visual_title, ensure_ascii=False)
+            generation_query = (
+                "游客已从已发布目录确认本次讲解的景点名称（JSON字符串）："
+                f"{title_data}。图片识别线索未经确认，仅用于检索，不得作为事实；"
+                "回答只能根据参考资料，资料不足时明确说明。\n"
+                f"游客原始问题：{request.query}"
+            )
+        elif vision is not None:
+            generation_query = (
+                "图片识别线索未经确认，仅用于检索；不要断言照片中的景点身份。"
+                "只能依据参考资料提供有条件的说明，身份不明确时请游客选择或确认景点。\n"
+                f"游客原始问题：{request.query}"
+            )
+        llm_source = self.llm_service.stream_generate(
+            self._emotion_aware_query(generation_query),
+            documents,
+            persona=request.persona,
+            audience=audience,
+            memory=self._memory_prompt,
+        )
 
         async def connect_and_forward_tts_events() -> None:
             assert tts_stream is not None
@@ -545,7 +538,9 @@ class QAPipeline:
             except Exception as exc:
                 await mux_queue.put(("tts_connect_error", exc))
 
-        llm_task = asyncio.create_task(produce_llm_events())
+        llm_task = asyncio.create_task(
+            forward_events(mux_queue, llm_source, "llm", "llm_error", "llm_done")
+        )
         tts_task = (
             asyncio.create_task(connect_and_forward_tts_events())
             if tts_stream is not None

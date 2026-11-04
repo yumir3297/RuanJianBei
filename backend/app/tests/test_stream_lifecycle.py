@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from app.services.qa.stream_lifecycle import cancel_and_join
+from app.services.qa.stream_lifecycle import cancel_and_join, forward_events
 
 
 @pytest.mark.asyncio
@@ -24,3 +24,21 @@ async def test_cancel_and_join_waits_for_cancelled_stream_tasks():
 
     assert task.cancelled()
     assert cleaned.is_set()
+
+
+@pytest.mark.asyncio
+async def test_forward_events_always_sends_done_after_source_failure():
+    queue = asyncio.Queue()
+
+    async def source():
+        yield "partial"
+        raise RuntimeError("provider disconnected")
+
+    await forward_events(queue, source(), "llm", "llm_error", "llm_done")
+
+    assert await queue.get() == ("llm", "partial")
+    kind, error = await queue.get()
+    assert kind == "llm_error"
+    assert isinstance(error, RuntimeError)
+    assert str(error) == "provider disconnected"
+    assert await queue.get() == ("llm_done", None)
