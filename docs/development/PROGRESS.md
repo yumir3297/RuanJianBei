@@ -1,4 +1,4 @@
-2026-11-04：Worktree 状态复核：集成分支 `codex/competition-integration` 已到 `14e5def`；V01/W01/K01 与 W02 durable execution 的功能提交（含 `e7dca5c` 后续修复）在历史中。W02 原始 worktree 仍有未提交内容，其保存检查点 `48ef626`、`5433557` 保留；与集成分支对照显示集成版在提案目录校验、幂等回放、锁冲突和 worker 生命周期上已有更新实现，未把旧快照覆盖进来。原主工作区仍有 95 个未提交路径，保存快照 `4acaa53`、`e115eab` 可查，未触碰；尚未将 integration 分支合回原 checkout。V01/W02 原 worktree 均未删除。详情见 [当前架构索引](../architecture/CURRENT.md)。
+2026-11-04：Worktree 状态复核：集成分支 `codex/competition-integration` 当时为 `14e5def`；V01/W01/K01 与 W02 durable execution 的功能提交（含 `e7dca5c` 后续修复）在历史中。V01 与两个 W02 原始 worktree 仍有未提交内容，其保存检查点 `3805943`、`48ef626`、`5433557` 保留；与集成分支对照显示集成版在提案目录校验、幂等回放、锁冲突和 worker 生命周期上已有更新实现，未把旧快照覆盖进来。`/private/tmp/ai-guide-phase3` 路径不存在但登记仍在，本次未 prune；对应分支已整合。原主工作区仍有 95 个未提交路径，保存快照 `4acaa53`、`e115eab` 可查，未触碰；尚未将 integration 分支合回原 checkout。任何源 worktree 均未删除。详情见 [当前架构索引](../architecture/CURRENT.md)。
 
 2026-11-04：抽取 `qa/answer_fast_paths.py`，将 FAQ 结果解析为默认受众直答或非默认受众唯一证据，并集中判断视觉、游客记忆和非中性情绪是否允许共享缓存；Pipeline 继续控制 epoch 检查、缓存 IO、SSE、RAG 与 LLM 时序。新增 3 项节点测试；AI 指定回归集合 136 passed、1 条 Starlette 弃用警告，compileall 与 diff 检查通过。未声称延迟改善，模型调用规则由既有 Pipeline 回归覆盖。
 
