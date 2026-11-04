@@ -2,7 +2,13 @@ import asyncio
 
 import pytest
 
-from app.services.qa.stream_lifecycle import AudioTaskGroup, cancel_and_join, forward_events, forward_tts_events
+from app.services.qa.stream_lifecycle import (
+    AudioTaskGroup,
+    StreamProducerGroup,
+    cancel_and_join,
+    forward_events,
+    forward_tts_events,
+)
 
 
 @pytest.mark.asyncio
@@ -96,3 +102,41 @@ async def test_audio_task_group_cancels_and_joins_scheduled_audio():
 
     assert cleaned.is_set()
     assert tasks.pending == ()
+
+
+@pytest.mark.asyncio
+async def test_stream_producer_group_cancels_workers_and_closes_tts_session():
+    queue = asyncio.Queue()
+    started = asyncio.Event()
+    cleaned = asyncio.Event()
+    closed = asyncio.Event()
+    connected = asyncio.Event()
+
+    class Session:
+        async def connect(self):
+            connected.set()
+
+        async def receive(self, timeout=None):
+            del timeout
+            await asyncio.Event().wait()
+
+        async def close(self):
+            closed.set()
+
+    async def source():
+        started.set()
+        try:
+            await asyncio.Event().wait()
+            yield None
+        finally:
+            cleaned.set()
+
+    producers = StreamProducerGroup(queue)
+    producers.start_llm(source())
+    producers.start_tts(Session(), asyncio.Event())
+    await started.wait()
+    await connected.wait()
+    await producers.close()
+
+    assert cleaned.is_set()
+    assert closed.is_set()

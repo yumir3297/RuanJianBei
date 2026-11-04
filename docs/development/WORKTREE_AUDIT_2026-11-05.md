@@ -2,7 +2,7 @@
 
 基线：原工作树 `code/RuanJianBei` 分支 `codex/repository-map`，HEAD `672a104`；集成树 `integration-work/v01` 分支引用由本地 fetch 同步。扫描到 95 个 porcelain 状态路径。未读取或修改 `sources/`，未执行合并、清理或 prune。
 
-2026-11-05 复核：原工作树仍在 `672a104` 且 porcelain 数仍为 95；原仓库本地 `codex/competition-integration` 引用与集成树 `codex/competition-integration@0ec66ef` 相同。活动 V01/W02/W02-V01 worktree HEAD 和路径数量仍分别为 `098553f`/49、`a8c2837`/35、`098553f`/39；已不存在的 `/private/tmp/ai-guide-phase3` 仍是 prunable 登记，未 prune。集成树新增的唯一源码外修改为架构索引和进度记录；`frontend/node_modules` 本机依赖链接仍未跟踪。原 checkout 的 95 条未提交内容与此核对前相同。
+2026-11-05 复核：原工作树仍在 `672a104` 且 porcelain 数仍为 95；原仓库本地 `codex/competition-integration` 引用与集成树 `codex/competition-integration@0ec66ef` 相同（架构索引更新后提交为 `f4d9f47`，其后续推进见开发进度）。活动 V01/W02/W02-V01 worktree HEAD 和路径数量仍分别为 `098553f`/49、`a8c2837`/35、`098553f`/39；已不存在的 `/private/tmp/ai-guide-phase3` 仍是 prunable 登记，未 prune。原 checkout 的 95 条未提交内容与此核对前相同；集成树的 `frontend/node_modules` 本机依赖链接仍未跟踪。
 
 判定规则：当前文件字节与集成树对象一致才标记“已合并”；同路径内容不同时不推断语义等价；目录状态行递归比较当前文件集合。快照命中仅证明保全，不证明已集成。
 

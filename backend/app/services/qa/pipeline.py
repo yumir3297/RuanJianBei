@@ -61,7 +61,7 @@ from app.services.qa.speech_event_adapter import (
 from app.services.qa.stream_events import StreamEvent
 from app.services.qa.queued_stream_events import QueuedStreamEvents
 from app.services.qa.stream_answer import StreamAnswerBuffer
-from app.services.qa.stream_lifecycle import AudioTaskGroup, cancel_and_join, forward_events, forward_tts_events
+from app.services.qa.stream_lifecycle import AudioTaskGroup, StreamProducerGroup
 from app.services.qa.stream_mux import StreamMuxState
 from app.services.qa.streaming_tts_buffer import StreamingTTSBuffer
 from app.services.qa.streaming_tts_controller import StreamingTTSController
@@ -516,14 +516,10 @@ class QAPipeline:
             memory=self._memory_prompt,
         )
 
-        llm_task = asyncio.create_task(
-            forward_events(mux_queue, llm_source, "llm", "llm_error", "llm_done")
-        )
-        tts_task = (
-            asyncio.create_task(forward_tts_events(tts_stream, mux_queue, tts_finish_requested))
-            if tts_stream is not None
-            else None
-        )
+        stream_producers = StreamProducerGroup(mux_queue)
+        stream_producers.start_llm(llm_source)
+        if tts_stream is not None:
+            stream_producers.start_tts(tts_stream, tts_finish_requested)
         mux_state = StreamMuxState(streaming_requested=streaming_requested)
         streaming_tts_buffer = StreamingTTSBuffer()
         streaming_tts_controller = StreamingTTSController(
@@ -594,12 +590,7 @@ class QAPipeline:
             await cancel_audio()
             raise
         finally:
-            await cancel_and_join(llm_task, tts_task)
-            if tts_stream is not None:
-                try:
-                    await tts_stream.close()
-                except Exception:
-                    logger.exception("Failed to close streaming TTS session")
+            await stream_producers.close()
 
         if mux_state.llm_error is not None:
             await cancel_audio()

@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncIterable, Callable
+import logging
 from time import monotonic
+
+logger = logging.getLogger(__name__)
 
 
 class AudioTaskGroup:
@@ -45,6 +48,38 @@ async def cancel_and_join(*tasks: asyncio.Task[object] | None) -> None:
             task.cancel()
     if active:
         await asyncio.gather(*active, return_exceptions=True)
+
+
+class StreamProducerGroup:
+    """Own the LLM/TTS producer tasks and streaming TTS session for one response."""
+
+    def __init__(self, queue: asyncio.Queue[tuple[str, object | None]]) -> None:
+        self._queue = queue
+        self._tasks: list[asyncio.Task[None]] = []
+        self._tts_session = None
+
+    def start_llm(self, source: AsyncIterable[object]) -> asyncio.Task[None]:
+        task = asyncio.create_task(
+            forward_events(self._queue, source, "llm", "llm_error", "llm_done")
+        )
+        self._tasks.append(task)
+        return task
+
+    def start_tts(self, session, finish_requested: asyncio.Event) -> asyncio.Task[None]:
+        self._tts_session = session
+        task = asyncio.create_task(forward_tts_events(session, self._queue, finish_requested))
+        self._tasks.append(task)
+        return task
+
+    async def close(self) -> None:
+        await cancel_and_join(*self._tasks)
+        if self._tts_session is not None:
+            try:
+                await self._tts_session.close()
+            except Exception:
+                logger.exception("Failed to close streaming TTS session")
+            finally:
+                self._tts_session = None
 
 
 async def forward_events(
