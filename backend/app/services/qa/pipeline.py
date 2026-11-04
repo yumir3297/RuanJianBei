@@ -60,6 +60,7 @@ from app.services.qa.speech_event_adapter import (
 )
 from app.services.qa.stream_events import StreamEvent
 from app.services.qa.queued_stream_events import QueuedStreamEvents
+from app.services.qa.stream_answer import StreamAnswerBuffer
 from app.services.qa.stream_lifecycle import AudioTaskGroup, cancel_and_join, forward_events, forward_tts_events
 from app.services.qa.stream_mux import StreamMuxState
 from app.services.qa.streaming_tts_buffer import StreamingTTSBuffer
@@ -460,8 +461,7 @@ class QAPipeline:
         llm_hit_level = faq_path.hit_level if faq_documents is not None and faq_path is not None else "rag"
         llm_fallback_hit_level = f"{llm_hit_level}_llm_fallback"
 
-        full_answer = ""
-        sentence_buffer = ""
+        answer_stream = StreamAnswerBuffer()
         llm_usage = LLMUsage()
         llm_finish_reason: str | None = None
         audio_events = QueuedStreamEvents()
@@ -568,8 +568,7 @@ class QAPipeline:
                     token = event.text
                     if not token:
                         continue
-                    full_answer += token
-                    sentence_buffer += token
+                    answer_stream.append(token)
                     if faq_documents is None:
                         yield StreamEvent(type="text_chunk", data={"token": token})
 
@@ -578,7 +577,7 @@ class QAPipeline:
                             streaming_tts_buffer.append(token)
                     elif faq_documents is None:
                         # HTTP TTS：句子级别缓冲
-                        sentences, sentence_buffer = self._take_speakable_sentences(sentence_buffer)
+                        sentences = answer_stream.take_speakable_sentences()
                         for sentence in sentences:
                             if not request.text_only:
                                 schedule_audio(sentence)
@@ -619,21 +618,21 @@ class QAPipeline:
         )
         if degraded_llm and faq_documents is not None:
             # Do not speak a partial rewrite that will be replaced by the FAQ.
-            full_answer = polish_answer(faq_result.answer, request.persona, faq_sources)
+            answer_stream.full_answer = polish_answer(faq_result.answer, request.persona, faq_sources)
 
         faq_text_sent = faq_documents is not None
         if faq_text_sent:
-            yield StreamEvent(type="text", data={"text": full_answer, "is_complete": True})
+            yield StreamEvent(type="text", data={"text": answer_stream.full_answer, "is_complete": True})
 
         if faq_documents is not None and not request.text_only:
-            if full_answer.strip():
-                schedule_audio(full_answer.strip())
+            if answer_stream.full_answer.strip():
+                schedule_audio(answer_stream.full_answer.strip())
         elif streaming_requested and mux_state.tts_failed and not request.text_only:
-            remaining_text = full_answer[mux_state.tts_confirmed_chars:].strip()
+            remaining_text = answer_stream.full_answer[mux_state.tts_confirmed_chars:].strip()
             if remaining_text:
                 schedule_audio(remaining_text)
-        elif not streaming_requested and sentence_buffer.strip() and not request.text_only:
-            schedule_audio(sentence_buffer.strip())
+        elif not streaming_requested and answer_stream.sentence_buffer.strip() and not request.text_only:
+            schedule_audio(answer_stream.sentence_buffer.strip())
 
         try:
             for task in audio_group.tasks:
@@ -663,18 +662,18 @@ class QAPipeline:
             # FAQ 原文本身权威且完整，直接回落原文——风格没换成，但内容正确。
             # 刻意保持 degraded_llm=True，避免把未改写的答案写进受众专属缓存，
             # 否则一次 LLM 抖动就会长期污染该受众的缓存。
-            full_answer = polish_answer(faq_result.answer, request.persona, faq_sources)
+            answer_stream.full_answer = polish_answer(faq_result.answer, request.persona, faq_sources)
         if not await self._epoch_is_current(request_epoch):
             yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
             return
         if cache_allowed and not degraded_llm:
-            await self.qa_cache.set(cache_key, full_answer, sources, epoch=request_epoch)
+            await self.qa_cache.set(cache_key, answer_stream.full_answer, sources, epoch=request_epoch)
         latency_ms = int((perf_counter() - start) * 1000)
         chat_log_id = await self._persist_interaction(
             session_id=request.session_id,
             raw_query=request.query,
             normalized_query=normalized_query,
-            answer=full_answer,
+            answer=answer_stream.full_answer,
             sources=sources,
             hit_level=llm_fallback_hit_level if degraded_llm else llm_hit_level,
             latency_ms=latency_ms,
@@ -696,7 +695,7 @@ class QAPipeline:
             llm_finish_reason and llm_finish_reason.startswith("interrupted_") and faq_documents is None
         )
         if not faq_text_sent:
-            yield StreamEvent(type="text", data={"text": full_answer, "is_complete": not incomplete})
+            yield StreamEvent(type="text", data={"text": answer_stream.full_answer, "is_complete": not incomplete})
         yield self._followup_event(resolved)
         yield self._done_event(
             chat_log_id=chat_log_id,
@@ -710,18 +709,6 @@ class QAPipeline:
     async def _build_static_route_answer(self, request: ChatRequest) -> tuple[str, list[dict]] | None:
         """保留旧调用入口，将静态路线回答委托给独立业务节点。"""
         return await self.route_fast_path.build_answer(request)
-
-    @staticmethod
-    def _take_speakable_sentences(buffer: str) -> tuple[list[str], str]:
-        sentences: list[str] = []
-        start = 0
-        for index, char in enumerate(buffer):
-            if char in "。！？!?；;\n" or (char in "，、," and index - start + 1 >= 8):
-                sentence = buffer[start:index + 1].strip()
-                if sentence:
-                    sentences.append(sentence)
-                start = index + 1
-        return sentences, buffer[start:]
 
     async def _emit_final_answer(
         self,
