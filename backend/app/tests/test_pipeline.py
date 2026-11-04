@@ -689,6 +689,30 @@ def test_shared_pipeline_keeps_emotion_state_isolated_between_concurrent_request
     asyncio.run(scenario())
 
 
+def test_closing_chat_stream_resets_request_local_emotion_state():
+    from app.schemas.chat import EmotionContext
+    from app.services.emotion import EmotionLabel
+
+    pipeline = _build_test_pipeline()
+
+    async def scenario():
+        stream = pipeline.stream_chat(ChatRequest(
+            query="介绍景点",
+            session_id="cancel-emotion",
+            text_only=True,
+            emotion_context=EmotionContext(
+                audio_emotion="anxious",
+                audio_confidence=1,
+                audio_source="audio",
+            ),
+        ))
+        await anext(stream)
+        await stream.aclose()
+        assert pipeline._active_emotion.label == EmotionLabel.NEUTRAL
+
+    asyncio.run(scenario())
+
+
 def _run_turn(pipeline, **request_overrides):
     request_kwargs = {
         "query": "有什么特色",

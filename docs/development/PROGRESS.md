@@ -4,7 +4,7 @@
 
 2026-11-04：只读对照主工作区未提交 AI/SSE/TTS 改动与集成分支，纠正“应整体移植”的初步判断。TTS 有界并发/取消、FAQ 降级文本、部分回答完成状态、SSE heartbeat、PCM 采样率及前端状态消费已在集成版找到实现和针对性回归；主工作区的 `pipeline.py`、测试及 chat store 基于较早基线，覆盖会丢失请求状态隔离、知识 epoch fence、确认景点核验和路线时长约束。故未复制或合并该批差异；只保留集成分支增量提交。详见 [当前架构索引](../architecture/CURRENT.md)。
 
-2026-11-04：AI 架构增量改造将 QAPipeline 的情绪、表达策略和游客记忆状态从共享实例字段隔离到每次 `stream_chat` 的 ContextVar 请求上下文，并在流结束、异常或取消时恢复上下文。并发回归用屏障强制两个共享 Pipeline 请求交错：旧实现按预期以情绪错配断言失败，新实现通过；Pipeline、聊天 SSE 与游客记忆相关测试共 55 passed、1 warning。测试依赖仅安装于 `/private/tmp/guide-ai-arch-venv`。未触及原主工作区的未提交改动。Worktree 核对显示 V01、W02、K01 整合分支为 `codex/competition-integration` 祖先；仍需逐文件复核主工作区未提交开发成果。
+2026-11-04：AI 架构增量改造将 QAPipeline 的情绪、表达策略和游客记忆状态从共享实例字段隔离到每次 `stream_chat` 的 ContextVar 请求上下文，并在流结束、异常或取消时恢复上下文。并发回归用屏障强制两个共享 Pipeline 请求交错：旧实现按预期以情绪错配断言失败，新实现通过；另显式关闭聊天流，确认默认请求状态恢复。Pipeline、聊天 SSE 与游客记忆相关测试共 56 passed、1 warning。测试依赖仅安装于 `/private/tmp/guide-ai-arch-venv`。未触及原主工作区的未提交改动。Worktree 核对显示 V01、W02、K01 整合分支为 `codex/competition-integration` 祖先；已建立主工作区保全检查点供后续选择性比较。
 
 2026-11-04：隔离 PostgreSQL ASGI 测试在提案确认持锁后取消请求，另一会话成功下架且行程未新增修订，专项 1 passed；使用合成数据及身份保护替身、metadata 建表，实例已停止。未覆盖真实浏览器断网或提交期间取消。
 

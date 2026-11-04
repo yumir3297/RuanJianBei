@@ -2,7 +2,7 @@
 
 当前以实际代码和 OpenAPI 为准；下列是集成核对提纲，不是已统一的新协议。
 
-- Pipeline 生命周期：情绪、表达策略、音频/文本情绪和游客记忆保存在 `stream_chat` 的请求上下文中（`ContextVar`），并在流结束、异常或取消时恢复上下文；这些字段不会跨请求共享。模型、FAQ matcher、缓存及其他注入依赖仍须分别评估线程与并发安全，因此共享整个 Pipeline 仍须经过回归验证。并发情绪状态专项已证明旧实现会串用、新实现隔离通过；完整 Pipeline、聊天 SSE 与游客记忆相关测试合计 55 项通过。
+- Pipeline 生命周期：情绪、表达策略、音频/文本情绪和游客记忆保存在 `stream_chat` 的请求上下文中（`ContextVar`），并在流结束、异常或取消时恢复上下文；这些字段不会跨请求共享。模型、FAQ matcher、缓存及其他注入依赖仍须分别评估线程与并发安全，因此共享整个 Pipeline 仍须经过回归验证。并发情绪状态专项已证明旧实现会串用、新实现隔离通过；显式关闭聊天流后默认请求状态恢复；Pipeline、聊天 SSE 与游客记忆相关测试合计 56 项通过。
 - 问答：`backend/app/api/chat.py`、`services/qa/stream_events.py` 定义 SSE；消费者是 `frontend/src/composables/useSSEStream.js` 和 `stores/chat.js`。协议修改要同时核对服务端、解析及消费者，保留停止、重试与迟到结果隔离。
 - 路线预算冲突以 `hit_level=route_clarification`、`provider=local` 标识；`done.completion=complete` 仅表示本轮消息结束，不表示行程规划任务完成。普通预设路线亦标为本地处理，未知事件值的消费者应按兼容策略处理。
 - 游览：`api/tour_sessions.py`、`repositories/tour_session.py` 管理 owner/site、修订和游览进度；客户端 `stores/tourSessions.js` 维护手动草稿与服务端版本，不能让提案恢复覆盖用户编辑。
