@@ -14,6 +14,8 @@
 
 2026-11-04：刷新开源框架调研，交叉检查官方 GitHub release、PyPI 元数据和文档；记录 LangGraph、Pydantic AI、OpenAI Agents SDK、Langfuse、Ragas 的版本、许可、Python 下限和当前取舍。结论仍为保留显式 Pipeline、暂不加运行时框架；这只是源码与官方资料对照，没有框架性能 PoC，也没有安装候选包。
 
+2026-11-04：更新 `architecture/TARGET.md` 的工作流图，使其对应当前代码路径：视觉确认绑定发布目录，FAQ/缓存/RAG 走轻量问答，复杂行程由持久 worker 执行。图描述的是当前增量目标，不表示真实视觉设备链路或框架性能已验收。
+
 2026-11-04：扩大 AI 回归范围：Pipeline、Pipeline audience、FAQ 系列、RAG 系列、IntentRouter、OpenAI-compatible LLM、guide narration API、chat SSE、visitor memory、selection cache key 和 knowledge-stream integration 共 121 passed、1 warning。只覆盖列明测试文件，不代表全后端或真实模型/设备通过。
 
 2026-11-04：AI 架构增量改造将 QAPipeline 的情绪、表达策略和游客记忆状态从共享实例字段隔离到每次 `stream_chat` 的 ContextVar 请求上下文，并在流结束、异常或取消时恢复上下文。强制交错的共享 Pipeline 回归分别验证情绪/数字人策略和两个游客的记忆提示：旧实现按预期错配失败，新实现通过；另显式关闭聊天流，确认默认状态恢复。Pipeline、聊天 SSE 与游客记忆相关测试共 57 passed、1 warning。测试依赖仅安装于 `/private/tmp/guide-ai-arch-venv`。未触及原主工作区的未提交改动。Worktree 核对显示 V01、W02、K01 整合分支为 `codex/competition-integration` 祖先；已建立主工作区保全检查点供后续选择性比较。
