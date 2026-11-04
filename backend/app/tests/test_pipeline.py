@@ -689,6 +689,52 @@ def test_shared_pipeline_keeps_emotion_state_isolated_between_concurrent_request
     asyncio.run(scenario())
 
 
+def test_shared_pipeline_keeps_visitor_memory_isolated_between_concurrent_requests():
+    gate = asyncio.Event()
+
+    class PerVisitorMemoryRepo:
+        def __init__(self):
+            self.arrivals = 0
+            self.rows = {
+                "visitor-a": _memory_row(visitor_id="visitor-a", visited_attractions='["灵山大佛"]'),
+                "visitor-b": _memory_row(visitor_id="visitor-b", visited_attractions='["梵宫"]'),
+            }
+
+        async def get(self, visitor_id, *, site_id="default"):
+            self.arrivals += 1
+            if self.arrivals == 2:
+                gate.set()
+            await gate.wait()
+            return self.rows[visitor_id]
+
+        async def record_visit(self, **kwargs):
+            return self.rows[kwargs["visitor_id"]]
+
+    llm_service = DummyLLMService()
+    pipeline = _build_test_pipeline(visitor_memory_repository=PerVisitorMemoryRepo(), llm_service=llm_service)
+
+    async def collect(visitor_id):
+        return [
+            event
+            async for event in pipeline.stream_chat(ChatRequest(
+                query=f"介绍景点给{visitor_id}",
+                session_id=f"session-{visitor_id}",
+                visitor_id=visitor_id,
+                text_only=True,
+            ))
+        ]
+
+    async def scenario():
+        await asyncio.gather(collect("visitor-a"), collect("visitor-b"))
+        received_by_query = {item["query"]: item["memory"] for item in llm_service.received}
+        assert "灵山大佛" in received_by_query["介绍景点给visitor-a"]
+        assert "梵宫" not in received_by_query["介绍景点给visitor-a"]
+        assert "梵宫" in received_by_query["介绍景点给visitor-b"]
+        assert "灵山大佛" not in received_by_query["介绍景点给visitor-b"]
+
+    asyncio.run(scenario())
+
+
 def test_closing_chat_stream_resets_request_local_emotion_state():
     from app.schemas.chat import EmotionContext
     from app.services.emotion import EmotionLabel
