@@ -194,11 +194,11 @@
 | `??` | `backend/alembic/versions/f1b4c9d76e20_add_tool_execution.py` | 被集成 migration merge 替代，不能单独移植：源父 revision=`e9f4c2b8016a`，集成父 revision=`8ab42c17d3e9`；集成版同时添加 itinerary proposal execution 字段 | snapshot=yes; integration=yes |
 | `??` | `backend/app/api/tool_execution.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | `??` | `backend/app/models/tool_execution.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
-| `??` | `backend/app/repositories/tool_execution.py` | 后续 repository 实现不同；集成树含幂等回放、lease/fence 与取消处理测试，未覆盖旧文件 | snapshot=yes; integration=yes |
+| `??` | `backend/app/repositories/tool_execution.py` | 后续实现扩展旧 repository：加入任务创建时 progress_version 检查、progress fence、事务内 flush/commit 选项和 unknown 外部结果处理；新增隔离 SQLite 测试覆盖创建时拒绝旧 progress 以及排队后进度更新时 claim 不发放 lease，真正同时 claim/进度提交的 race 仍未专项验证 | snapshot=yes; integration=yes |
 | `??` | `backend/app/schemas/itinerary.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | `??` | `backend/app/schemas/tool_execution.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | `??` | `backend/app/services/itinerary/` | 目录内有相同/不同/新增文件，需逐项核验 | 4 个源码/资料文件；相同=1、不同=3、集成缺少=0、集成额外=3（排除 Python cache） |
-| `??` | `backend/app/services/tool_execution/` | 目录内有相同/不同/新增文件，需逐项核验 | 6 个源码/资料文件；相同=0、不同=6、集成缺少=0、集成额外=0（排除 Python cache） |
+| `??` | `backend/app/services/tool_execution/` | 六个文件已逐项比较：`commands.py`/`registry.py`/`runner.py` 扩展 `commit=False` 下的同事务结果持久化，`handlers.py` 注册持久 itinerary proposal worker，`worker.py` 在 CLI event loop 退出前 dispose engine；`__init__.py` 仅空白差异。已有回滚、proposal 重放、未知外部结果、worker CLI 生命周期覆盖；旧目录不覆盖集成目录 | 6 个源码/资料文件；相同=0、不同=6、集成缺少=0、集成额外=0（排除 Python cache） |
 | `??` | `docs/research/` | 目录内有相同/不同/新增文件，需逐项核验 | 1 个源码/资料文件；相同=0、不同=1、集成缺少=0、集成额外=1（排除 Python cache） |
 | `??` | `docs/selling-points/` | 目录内有相同/不同/新增文件，需逐项核验 | 1 个源码/资料文件；相同=0、不同=1、集成缺少=0、集成额外=2（排除 Python cache） |
 | `??` | `docs/superpowers/plans/2026-10-29-v01-editable-itinerary.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
@@ -213,6 +213,13 @@
 - V01 `5c81a1e74f2b_add_tour_progress_and_proposals.py` 在源与集成树字节相同；集成 revision `8ab42c17d3e9` 将它与 speech metadata migration `c3b7e1d9a62f` 合并。
 - W02 快照 revision `f1b4c9d76e20` 的父为 `e9f4c2b8016a`，且不添加 `itinerary_proposals.base_snapshot_json` / `execution_job_id`。集成树同 revision 改为父 `8ab42c17d3e9`，并增加这两列及索引；之后 `6e1a4c7d9b20` 检查/补齐遗失的 speech metadata，`7d2e93a5b601` 与 `91a0c5e2f347` 分别拒绝已知不完整的 W02/knowledge schema。此为有意处理分叉迁移历史的后续实现，旧 W02 migration 必须保留在快照，不得单独 cherry-pick。
 - 临时 Python 环境没有 Alembic `command` API（`test_speech_metadata_migration.py` 收集时报 `ImportError`），故没有声称本轮实跑 Alembic 升级。该迁移链真实数据库往返仍待具备 Alembic 的隔离环境；此限制不影响单独运行的 W02 执行验收/worker 测试。
+
+### W02 execution 源码差异核验
+
+- 对照 `code/w02-worktree/backend/app/services/tool_execution/` 与集成目录的 6 个源码文件。集成版通过 `commit=False`、handler `persist_result` 和 runner 在完成 job 前调用 persister，将 proposal 完成与 execution 结果放在同一事务；`test_proposal_api_replays_same_request_and_conflicts_on_changed_payload` 还注入 enqueue 后失败并断言 proposal/job 回滚。旧 registry/runner 无这条事务回调路径，标为“已被后续实现扩展”，不复制覆盖。
+- 集成 repository 增加 progress version 校验、目标 progress fence、锁及 unknown 外部结果路径。`test_changed_target_invalidates_running_lease...`、错误 fence、取消竞态、unknown retry 和 W02 runtime review 分别覆盖任务目标、lease/fence、取消/外部结果及 worker 恢复。此前未发现 create_job stale progress 的直接测试；本轮新增 `test_create_job_rejects_stale_tour_progress_version`，隔离 SQLite 验证进度已从 0 到 1 时拒绝旧 version 并不留下 ToolJob（1 passed）。claim 阶段恰逢 progress 改变的单独并发 race 仍需补测，因此 repository 差异只部分完成验证。
+- 集成 repository 增加 progress version 校验、目标 progress fence、锁及 unknown 外部结果路径。`test_changed_target_invalidates_running_lease...`、错误 fence、取消竞态、unknown retry 和 W02 runtime review 分别覆盖任务目标、lease/fence、取消/外部结果及 worker 恢复。此前未发现 stale progress 的直接测试；本轮新增 `test_create_job_rejects_stale_tour_progress_version`（提交时拒绝旧版本且无 ToolJob）与 `test_queued_job_is_fenced_when_tour_progress_changes_before_worker_claim`（已排队后进度更新不发 lease，维护后标记 `target_progress_changed`），两个隔离 SQLite 测试均通过。claim 与 progress 提交真正同时竞争的时序仍未专项覆盖。
+- `worker.py` 的 `_run_cli` finally dispose 由 `test_worker_cli_once_reads_explicit_isolated_database` 的 dispose/no-dispose 子进程路径覆盖。Migration 分叉仍按上文不可单独 cherry-pick 处理。
 
 ### W02/V01 集成副本（`code/w02-integration`）
 
@@ -245,12 +252,12 @@
 | `??` | `backend/alembic/versions/f1b4c9d76e20_add_tool_execution.py` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | `??` | `backend/app/api/tool_execution.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | `??` | `backend/app/models/tool_execution.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
-| `??` | `backend/app/repositories/tool_execution.py` | 后续 repository 实现不同；集成树含幂等回放、lease/fence 与取消处理测试，未覆盖旧文件 | snapshot=yes; integration=yes |
+| `??` | `backend/app/repositories/tool_execution.py` | 后续实现扩展旧 repository：幂等回放、lease/fence、取消、同事务持久化和 progress version 保护；两项隔离 SQLite stale progress 行为测试已补，真正同时 claim/进度提交的 race 未专项验证 | snapshot=yes; integration=yes |
 | `??` | `backend/app/schemas/tool_execution.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | `??` | `backend/app/services/itinerary/candidates.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | `??` | `backend/app/services/itinerary/intent.py` | 源实现被后续实现替代：集成版基于规范化后的 candidate 计算 diff；没有移植旧文件 | snapshot=yes; integration=yes |
 | `??` | `backend/app/services/itinerary/provenance.py` | 源实现被后续实现替代并扩展：集成版处理景点替换、目录修订变更、AI 时长归属和受影响路线段证据失效；没有移植旧文件 | snapshot=yes; integration=yes |
-| `??` | `backend/app/services/tool_execution/` | 目录内有相同/不同/新增文件，需逐项核验 | 6 个源码/资料文件；相同=4、不同=2、集成缺少=0、集成额外=0（排除 Python cache） |
+| `??` | `backend/app/services/tool_execution/` | 后续执行目录已扩展同事务 proposal persistence、正式 handler 和 worker engine 生命周期；与 W02 表中六文件语义审计一致，未覆盖旧目录 | 6 个源码/资料文件；相同=4、不同=2、集成缺少=0、集成额外=0（排除 Python cache） |
 | `??` | `backend/app/tests/test_tool_execution_acceptance.py` | 原 W02 工作树无此文件；测试仅见于后续 W02/V01 快照并扩充于当前集成树 | snapshot=yes; integration=yes |
 | `??` | `docs/research/2026-10-29-w02-durable-execution-research.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | `??` | `docs/selling-points/` | 目录内有相同/不同/新增文件，需逐项核验 | 1 个源码/资料文件；相同=0、不同=1、集成缺少=0、集成额外=2（排除 Python cache） |
