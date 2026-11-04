@@ -199,3 +199,70 @@ def test_w02_postgres_candidate_full_recovery_rollback_and_retry():
                 await conn.commit()
         await engine.dispose()
     asyncio.run(scenario())
+
+
+@pytest.mark.skipif(not os.getenv('GUIDE_TEST_POSTGRES_FRESH_URL'), reason='requires separate fresh test database')
+def test_w02_candidate_schema_matches_fresh_migrated_database():
+    from sqlalchemy import inspect
+    import re
+    old_url = make_url(os.environ['GUIDE_TEST_POSTGRES_URL'])
+    fresh_url = make_url(os.environ['GUIDE_TEST_POSTGRES_FRESH_URL'])
+    for url in (old_url, fresh_url):
+        assert url.drivername == 'postgresql+asyncpg'
+        assert (url.database or '').startswith('guide_test_')
+        assert not url.host and url.query.get('host', '').startswith('/private/tmp/')
+    assert old_url.database != fresh_url.database
+    source = subprocess.check_output(['git', 'show', 'codex/w02-preserved-snapshot:backend/alembic/versions/f1b4c9d76e20_add_tool_execution.py'], cwd=os.environ['GUIDE_TEST_W02_REPO'])
+    assert hashlib.sha1(b'blob ' + str(len(source)).encode() + b'\0' + source).hexdigest() == '9fa9e78f05c452c9a35238bec347017f3550d499'
+    versions = ROOT / 'alembic' / 'versions'
+    def load(code, label):
+        namespace = {}
+        exec(compile(code, label, 'exec'), namespace)
+        return namespace['upgrade']
+    base = ['b667a1ecf225_initial_schema.py', 'a1c7f2d9b4e0_add_visitor_memories.py', 'd7c4a81e5f20_add_tour_sessions.py', 'e9f4c2b8016a_add_tour_session_events.py']
+    recovery = ['c84d0f1a7b92_add_knowledge_workspace.py', 'd12a77c0e40e_add_knowledge_import_batches.py', '5c81a1e74f2b_add_tour_progress_and_proposals.py']
+    schema = 'w02_compare_' + uuid4().hex
+    def collect(sync, schema_name):
+        inspector = inspect(sync)
+        result = {}
+        for table in sorted(set(inspector.get_table_names(schema=schema_name)) - {'alembic_version'}):
+            def normalize_default(value):
+                if value is None:
+                    return None
+                # Only strip the inspected schema from sequence regclass references;
+                # retain the sequence name and all non-sequence defaults verbatim.
+                return re.sub(r"(nextval\(')(?:\"?" + re.escape(schema_name) + r"\"?\.)([^']+'::regclass\))", r"\1\2", value)
+            columns = {c['name']: (str(c['type']), c['nullable'], normalize_default(c['default'])) for c in inspector.get_columns(table, schema=schema_name)}
+            indexes = {i['name']: (tuple(i['column_names']), i['unique']) for i in inspector.get_indexes(table, schema=schema_name)}
+            foreign = sorted((tuple(f['constrained_columns']), f['referred_table'], tuple(f['referred_columns']), str(f.get('options', {}))) for f in inspector.get_foreign_keys(table, schema=schema_name))
+            unique = sorted(tuple(u['column_names']) for u in inspector.get_unique_constraints(table, schema=schema_name))
+            checks = sorted(c['sqltext'] for c in inspector.get_check_constraints(table, schema=schema_name))
+            pk = tuple(inspector.get_pk_constraint(table, schema=schema_name)['constrained_columns'])
+            result[table] = {'columns': columns, 'indexes': indexes, 'foreign': foreign, 'unique': unique, 'checks': checks, 'pk': pk}
+        return result
+    async def run():
+        old_engine, fresh_engine = create_async_engine(old_url), create_async_engine(fresh_url)
+        try:
+            async with old_engine.connect() as conn, fresh_engine.connect() as fresh:
+                try:
+                    await conn.execute(text(f'CREATE SCHEMA "{schema}"'))
+                    await conn.execute(text(f'SET search_path TO "{schema}"'))
+                    await conn.commit()
+                    def invoke(sync, funcs):
+                        with Operations.context(MigrationContext.configure(sync)):
+                            for fn in funcs: fn()
+                    funcs = [load((versions / n).read_text(), n) for n in base] + [load(source, 'original-w02-f1')] + [load((versions / n).read_text(), n) for n in recovery]
+                    await conn.run_sync(invoke, funcs)
+                    for sql in ["ALTER TABLE itinerary_proposals ADD COLUMN base_snapshot_json TEXT NOT NULL DEFAULT '{}'", 'ALTER TABLE itinerary_proposals ADD COLUMN execution_job_id VARCHAR(36)', 'CREATE INDEX ix_itinerary_proposals_execution_job_id ON itinerary_proposals (execution_job_id)', 'ALTER TABLE chat_logs ADD COLUMN speech_metadata TEXT']:
+                        await conn.execute(text(sql))
+                    candidate = await conn.run_sync(collect, schema)
+                    reference = await fresh.run_sync(collect, 'public')
+                    differences = {name: {'candidate': candidate.get(name), 'fresh': reference.get(name)} for name in sorted(candidate.keys() | reference.keys()) if candidate.get(name) != reference.get(name)}
+                    assert not differences, f'candidate schema differences: {differences}'
+                finally:
+                    await conn.rollback()
+                    await conn.execute(text(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE'))
+                    await conn.commit()
+        finally:
+            await old_engine.dispose(); await fresh_engine.dispose()
+    asyncio.run(run())
