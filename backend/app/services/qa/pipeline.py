@@ -5,7 +5,6 @@ import json
 import logging
 from contextvars import ContextVar, Token
 from dataclasses import dataclass
-from asyncio import QueueEmpty
 from time import perf_counter
 from typing import TYPE_CHECKING
 
@@ -60,6 +59,7 @@ from app.services.qa.speech_event_adapter import (
     words_to_viseme_timeline as build_words_viseme_timeline,
 )
 from app.services.qa.stream_events import StreamEvent
+from app.services.qa.queued_stream_events import QueuedStreamEvents
 from app.services.qa.stream_lifecycle import AudioTaskGroup, cancel_and_join, forward_events, forward_tts_events
 from app.services.qa.stream_mux import StreamMuxState
 from app.services.qa.streaming_tts_buffer import StreamingTTSBuffer
@@ -464,9 +464,9 @@ class QAPipeline:
         sentence_buffer = ""
         llm_usage = LLMUsage()
         llm_finish_reason: str | None = None
-        audio_queue: asyncio.Queue[StreamEvent] = asyncio.Queue()
+        audio_events = QueuedStreamEvents()
         audio_group = AudioTaskGroup(
-            lambda sentence, **kwargs: self._queue_audio(sentence, audio_queue, **kwargs)
+            lambda sentence, **kwargs: self._queue_audio(sentence, audio_events, **kwargs)
         )
 
         def schedule_audio(sentence: str) -> None:
@@ -554,11 +554,8 @@ class QAPipeline:
                     for sse in self._handle_streaming_tts_event(delivery.tts_payload):
                         yield sse
                 if delivery.drain_audio:
-                    while True:
-                        try:
-                            yield audio_queue.get_nowait()
-                        except QueueEmpty:
-                            break
+                    for audio_event in audio_events.drain():
+                        yield audio_event
                 event = self._coerce_llm_event(delivery.llm_payload) if delivery.has_llm_payload else None
 
                 if event is not None:
@@ -586,11 +583,8 @@ class QAPipeline:
                             if not request.text_only:
                                 schedule_audio(sentence)
 
-                        while True:
-                            try:
-                                yield audio_queue.get_nowait()
-                            except QueueEmpty:
-                                break
+                        for audio_event in audio_events.drain():
+                            yield audio_event
 
                 await streaming_tts_controller.flush_ready()
                 await streaming_tts_controller.finish_if_ready()
@@ -648,11 +642,8 @@ class QAPipeline:
                     await cancel_audio()
                     yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
                     return
-                while True:
-                    try:
-                        yield audio_queue.get_nowait()
-                    except QueueEmpty:
-                        break
+                for audio_event in audio_events.drain():
+                    yield audio_event
         except BaseException:
             await cancel_audio()
             raise
@@ -910,7 +901,7 @@ class QAPipeline:
         )
 
     async def _queue_audio(
-        self, sentence: str, queue: asyncio.Queue[StreamEvent], *,
+        self, sentence: str, queue: QueuedStreamEvents, *,
         previous: asyncio.Task[None] | None = None, semaphore: asyncio.Semaphore | None = None,
         notify=None,
     ) -> None:
@@ -930,20 +921,21 @@ class QAPipeline:
         avatar = await self.avatar_service.drive(sentence)
         if previous is not None:
             await previous
-        await queue.put(StreamEvent(type="avatar", data={
-            "viseme_text": avatar.viseme_text,
-            "emotion": self._active_response_policy.avatar_emotion,
-        }))
-        await queue.put(
-            self._build_audio_event(
-                sentence,
-                audio.base64_audio,
-                audio.duration_ms,
-                audio.provider,
-            )
+        await queue.publish(
+            (
+                StreamEvent(type="avatar", data={
+                    "viseme_text": avatar.viseme_text,
+                    "emotion": self._active_response_policy.avatar_emotion,
+                }),
+                self._build_audio_event(
+                    sentence,
+                    audio.base64_audio,
+                    audio.duration_ms,
+                    audio.provider,
+                ),
+            ),
+            notify=notify,
         )
-        if notify is not None:
-            await notify()
 
     @staticmethod
     def _build_audio_event(
