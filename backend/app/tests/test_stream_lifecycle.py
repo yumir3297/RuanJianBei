@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from app.services.qa.stream_lifecycle import cancel_and_join, forward_events
+from app.services.qa.stream_lifecycle import cancel_and_join, forward_events, forward_tts_events
 
 
 @pytest.mark.asyncio
@@ -42,3 +42,34 @@ async def test_forward_events_always_sends_done_after_source_failure():
     assert isinstance(error, RuntimeError)
     assert str(error) == "provider disconnected"
     assert await queue.get() == ("llm_done", None)
+
+
+@pytest.mark.asyncio
+async def test_forward_tts_events_marks_connection_and_forwards_terminal_event():
+    queue = asyncio.Queue()
+
+    class Session:
+        def __init__(self):
+            self.events = iter([SimpleEvent("audio_chunk"), SimpleEvent("done")])
+
+        async def connect(self):
+            return None
+
+        async def receive(self, timeout=None):
+            del timeout
+            return next(self.events)
+
+    await forward_tts_events(Session(), queue, asyncio.Event())
+
+    assert await queue.get() == ("tts_connected", None)
+    kind, event = await queue.get()
+    assert kind == "tts"
+    assert event.type == "audio_chunk"
+    kind, event = await queue.get()
+    assert kind == "tts"
+    assert event.type == "done"
+
+
+class SimpleEvent:
+    def __init__(self, event_type):
+        self.type = event_type

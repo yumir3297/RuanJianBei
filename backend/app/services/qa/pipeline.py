@@ -60,7 +60,7 @@ from app.services.qa.speech_event_adapter import (
     words_to_viseme_timeline as build_words_viseme_timeline,
 )
 from app.services.qa.stream_events import StreamEvent
-from app.services.qa.stream_lifecycle import cancel_and_join, forward_events
+from app.services.qa.stream_lifecycle import cancel_and_join, forward_events, forward_tts_events
 from app.services.qa.vision_evidence import resolve_vision_evidence
 from app.services.qa.answer_styler import polish_answer, no_evidence_reply
 from app.services.qa.evidence_retrieval import retrieve_evidence
@@ -518,31 +518,11 @@ class QAPipeline:
             memory=self._memory_prompt,
         )
 
-        async def connect_and_forward_tts_events() -> None:
-            assert tts_stream is not None
-            try:
-                await tts_stream.connect()
-                await mux_queue.put(("tts_connected", None))
-                finish_wait_started: float | None = None
-                while True:
-                    event = await tts_stream.receive(timeout=1.0)
-                    if event is None:
-                        if tts_finish_requested.is_set():
-                            finish_wait_started = finish_wait_started or asyncio.get_running_loop().time()
-                            if asyncio.get_running_loop().time() - finish_wait_started >= 12.0:
-                                raise TimeoutError("流式 TTS 完成事件等待超时")
-                        continue
-                    await mux_queue.put(("tts", event))
-                    if event.type in {"done", "error"}:
-                        break
-            except Exception as exc:
-                await mux_queue.put(("tts_connect_error", exc))
-
         llm_task = asyncio.create_task(
             forward_events(mux_queue, llm_source, "llm", "llm_error", "llm_done")
         )
         tts_task = (
-            asyncio.create_task(connect_and_forward_tts_events())
+            asyncio.create_task(forward_tts_events(tts_stream, mux_queue, tts_finish_requested))
             if tts_stream is not None
             else None
         )
