@@ -1,6 +1,6 @@
 2026-11-05：集成分支在提交 `dc4b1c8` 后经本地 fetch 同步到原仓库 Git 元数据中的 `refs/heads/codex/competition-integration`；原活动 checkout 仍为 `672a104`，95 个未提交路径逐项仍显示未提交，没有切换或合并。复核时 V01 (`098553f`) 与 W02 (`a8c2837`) 活动 worktree 的未提交文件仍存在；V01 的进度/提案服务和 W02 的工具执行相关文件在集成树中已有对应实现及后续修复，分类为“后续实现已整合/替代”；两边尚有修改版迁移、模型/API/前端和测试差异，不能仅按路径判定等价，本次未复制。快照 `3805943`、`48ef626`、`5433557` 在各自 worktree 数据库中可读取；`/private/tmp/ai-guide-phase3` 在原仓库 worktree 列表仍为 prunable，本次未 prune。原仓库工作区完整路径清单与快照差异尚未逐条完成，仍是整合未完成项。
 
-2026-11-05：将 LLM 异步生成流的转发、异常信号和完成信号收敛到 `qa/stream_lifecycle.forward_events`；request query 的视觉证据约束、模型参数和主 mux 消费逻辑不变。新增生产流失败时仍发出 done 的 asyncio 行为测试；stream lifecycle、Pipeline、chat SSE、knowledge epoch、语音事件和 FAQ fallback 回归 67 passed、1 条 Starlette 弃用警告；compileall 与 diff --check 通过。此次不覆盖 TTS producer、真实供应商或设备。
+2026-11-05：将 LLM 异步生成流的转发、异常信号和完成信号收敛到 `qa/stream_lifecycle.forward_events`；request query 的视觉证据约束、模型参数和主 mux 消费逻辑不变。新增生产流失败时仍发出 done 的 asyncio 行为测试；完整指定 AI 回归子集在此拆分后重跑为 102 passed、1 条 Starlette 弃用警告（较上次多 1 项生命周期测试）；compileall 与 diff --check 通过。此次不覆盖 TTS producer、真实供应商或设备。
 
 2026-11-05：提交 `a6461de` 后重跑 AI 回归集合（Pipeline、受众、FAQ 降级/语义索引、RAG、IntentRouter、兼容 LLM、讲解 API、聊天 SSE、游客记忆、缓存键、知识 epoch、语音事件适配及新生命周期测试），101 passed、1 条 Starlette 弃用警告；compileall、diff --check 通过。首次回归命令引用了不存在的 `test_rag_pipeline.py`，未执行测试，改用实际存在的 `test_rag.py` 后成功。该当前测试集不同于历史 139 passed 集合。未验证真实模型、TTS 供应商或设备。
 
