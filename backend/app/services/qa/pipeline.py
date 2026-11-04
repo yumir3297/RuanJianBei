@@ -17,7 +17,6 @@ from app.repositories.visitor_memory import VisitorMemoryRepository
 from app.schemas.chat import ChatRequest, ConversationContext
 from app.services.avatar.base import BaseAvatarService
 from app.services.llm.base import BaseLLMService
-from app.services.llm.prompt_builder import get_audience_style
 from app.services.llm.types import LLMStreamEvent, LLMUsage
 from app.services.emotion import (
     EmotionLabel,
@@ -33,7 +32,8 @@ from app.services.emotion import (
 from app.services.memory.profile import build_memory_prompt
 from app.services.qa.cache import QACache
 from app.services.qa.blind_spot_tracker import BlindSpotTracker
-from app.services.qa.faq_matcher import FAQMatchResult, FAQMatcher
+from app.services.qa.faq_matcher import FAQMatcher
+from app.services.qa.answer_fast_paths import resolve_faq_path, shared_cache_allowed
 from app.services.qa.followup_suggestions import FollowUpSuggestionService
 from app.services.qa.guided_selector import (
     GuidedSelectionResolver,
@@ -78,21 +78,6 @@ class _PipelineRequestState:
     active_text_emotion: EmotionSignal | None = None
     active_audio_emotion: EmotionSignal | None = None
     memory_prompt: str | None = None
-
-def _faq_evidence_document(match: FAQMatchResult) -> RetrievedDocument:
-    """把 FAQ 答复包装成一条检索资料。
-
-    用途：受众非默认时，让 LLM 基于这条唯一证据换说法（分众化），
-    事实仍完全来自 FAQ 原文，不引入任何新资料。
-    """
-    return RetrievedDocument(
-        title="常见问题资料",
-        content=match.answer,
-        snippet=match.answer,
-        source="、".join(match.sources) or "常见问题资料（未标注来源）",
-        score=1.0,
-    )
-
 
 class QAPipeline:
     def __init__(
@@ -358,48 +343,38 @@ class QAPipeline:
         # question must use scoped retrieval rather than a potentially general FAQ.
         scoped_attraction = resolved.scope is not None and resolved.scope.source_entry_id is not None
         faq_result = self.faq_matcher.match(normalized_query) if vision is None and not scoped_attraction else None
-        faq_documents: list[RetrievedDocument] | None = None
-        faq_sources: list[dict] = []
-        if faq_result is not None and faq_result.is_hit:
-            faq_sources = [
-                {
-                    "evidence_id": f"证据{index}",
-                    "title": "FAQ",
-                    "snippet": faq_result.answer[:80],
-                    "source": source,
-                }
-                for index, source in enumerate(faq_result.sources, start=1)
-            ]
-            if get_audience_style(audience):
-                # 受众非默认（child/expert）：不能直接吐 FAQ 原文，否则"切讲解方式没反应"。
-                # 改为把 FAQ 原文当作唯一证据交给 LLM 换风格——只换说法、不动事实。
-                # adult/未指定仍走零延迟的原文快路径（get_audience_style 返回空串）。
-                faq_documents = [_faq_evidence_document(faq_result)]
-            else:
-                styled_answer = polish_answer(faq_result.answer, request.persona, faq_sources)
-                if not await self._epoch_is_current(request_epoch):
-                    yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
-                    return
-                async for event in self._emit_final_answer(
-                    request=request,
-                    normalized_query=normalized_query,
-                    answer=styled_answer,
-                    sources=faq_sources,
-                    hit_level=f"faq_{faq_result.level}",
-                    start=start,
-                    resolved=resolved,
-                    expected_epoch=request_epoch,
-                ):
-                    yield event
+        faq_path = resolve_faq_path(
+            faq_result,
+            audience=audience,
+            persona=request.persona,
+        )
+        faq_documents = faq_path.documents if faq_path is not None else None
+        faq_sources = faq_path.sources if faq_path is not None else []
+        if faq_path is not None and faq_path.answer is not None:
+            if not await self._epoch_is_current(request_epoch):
+                yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
                 return
+            async for event in self._emit_final_answer(
+                request=request,
+                normalized_query=normalized_query,
+                answer=faq_path.answer,
+                sources=faq_path.sources,
+                hit_level=faq_path.hit_level,
+                start=start,
+                resolved=resolved,
+                expected_epoch=request_epoch,
+            ):
+                yield event
+            return
 
         # Visitor memory influences generated wording and must never cross the
         # shared cache boundary or be bypassed by a generic cached answer.
-        shared_cache_allowed = (
-            vision is None and self._memory_prompt is None
-            and self._active_emotion.label == EmotionLabel.NEUTRAL
+        cache_allowed = shared_cache_allowed(
+            vision_present=vision is not None,
+            memory_prompt=self._memory_prompt,
+            neutral=self._active_emotion.label == EmotionLabel.NEUTRAL,
         )
-        cached = await self.qa_cache.get(cache_key, epoch=request_epoch) if shared_cache_allowed else None
+        cached = await self.qa_cache.get(cache_key, epoch=request_epoch) if cache_allowed else None
         if cached:
             if not await self._epoch_is_current(request_epoch):
                 yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
@@ -474,7 +449,7 @@ class QAPipeline:
             return
 
         # FAQ 走 LLM 改写时保留可观测的命中来源，便于与纯 FAQ 快路径区分。
-        llm_hit_level = f"faq_{faq_result.level}_styled" if faq_documents is not None else "rag"
+        llm_hit_level = faq_path.hit_level if faq_documents is not None and faq_path is not None else "rag"
         llm_fallback_hit_level = f"{llm_hit_level}_llm_fallback"
 
         full_answer = ""
@@ -783,7 +758,7 @@ class QAPipeline:
         if not await self._epoch_is_current(request_epoch):
             yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
             return
-        if shared_cache_allowed and not degraded_llm:
+        if cache_allowed and not degraded_llm:
             await self.qa_cache.set(cache_key, full_answer, sources, epoch=request_epoch)
         latency_ms = int((perf_counter() - start) * 1000)
         chat_log_id = await self._persist_interaction(

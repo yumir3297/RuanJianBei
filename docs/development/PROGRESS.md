@@ -1,3 +1,7 @@
+2026-11-04：Worktree 状态复核：集成分支 `codex/competition-integration` 已到 `14e5def`；V01/W01/K01 与 W02 durable execution 的功能提交（含 `e7dca5c` 后续修复）在历史中。W02 原始 worktree 仍有未提交内容，其保存检查点 `48ef626`、`5433557` 保留；与集成分支对照显示集成版在提案目录校验、幂等回放、锁冲突和 worker 生命周期上已有更新实现，未把旧快照覆盖进来。原主工作区仍有 95 个未提交路径，保存快照 `4acaa53`、`e115eab` 可查，未触碰；尚未将 integration 分支合回原 checkout。V01/W02 原 worktree 均未删除。详情见 [当前架构索引](../architecture/CURRENT.md)。
+
+2026-11-04：抽取 `qa/answer_fast_paths.py`，将 FAQ 结果解析为默认受众直答或非默认受众唯一证据，并集中判断视觉、游客记忆和非中性情绪是否允许共享缓存；Pipeline 继续控制 epoch 检查、缓存 IO、SSE、RAG 与 LLM 时序。新增 3 项节点测试；AI 指定回归集合 136 passed、1 条 Starlette 弃用警告，compileall 与 diff 检查通过。未声称延迟改善，模型调用规则由既有 Pipeline 回归覆盖。
+
 2026-11-04：为主工作区未提交内容建立只读保全检查点 `codex/preserved-uncommitted-2026-11-04`（`4acaa53`，父提交 `672a104`），使用独立临时 Git 索引捕获 115 个路径，明确排除 `frontend/node_modules`。原工作区索引、文件和 95 项状态记录保持不变；检查点已取入集成仓库供后续逐项比较，不等于已合入功能分支。
 
 2026-11-04：在集成分支运行前端聊天流、SSE 与 PCM 错误专项 `node --test`，23 passed。覆盖服务端 `completion=incomplete` 的前端处理、部分回答保留与重试、迟到请求隔离、SSE heartbeat/超时和 PCM 错误回退；此为本地模拟测试，不验证真实浏览器或设备。
