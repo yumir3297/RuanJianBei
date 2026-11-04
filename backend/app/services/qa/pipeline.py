@@ -61,6 +61,7 @@ from app.services.qa.speech_event_adapter import (
 )
 from app.services.qa.stream_events import StreamEvent
 from app.services.qa.stream_lifecycle import AudioTaskGroup, cancel_and_join, forward_events, forward_tts_events
+from app.services.qa.stream_mux import StreamMuxState
 from app.services.qa.vision_evidence import resolve_vision_evidence
 from app.services.qa.answer_styler import polish_answer, no_evidence_reply
 from app.services.qa.evidence_retrieval import retrieve_evidence
@@ -521,18 +522,11 @@ class QAPipeline:
             if tts_stream is not None
             else None
         )
-        llm_done = False
+        mux_state = StreamMuxState(streaming_requested=streaming_requested)
         visibility_changed = False
-        llm_error: Exception | None = None
-        tts_connected = False
-        tts_done = not streaming_requested
-        tts_failed = False
-        tts_finish_sent = False
-        tts_text_buffer = ""
-        tts_confirmed_chars = 0
 
         try:
-            while not llm_done or not tts_done:
+            while not mux_state.llm_done or not mux_state.tts_done:
                 if not await self._epoch_is_current(request_epoch):
                     visibility_changed = True
                     break
@@ -541,51 +535,25 @@ class QAPipeline:
                     visibility_changed = True
                     break
 
-                if kind == "llm":
-                    event = self._coerce_llm_event(payload)
-                elif kind == "llm_error":
-                    llm_error = payload if isinstance(payload, Exception) else RuntimeError("LLM stream failed")
-                    continue
-                elif kind == "llm_done":
-                    llm_done = True
-                    event = None
-                elif kind == "tts_connected":
-                    tts_connected = True
+                delivery = mux_state.consume(kind, payload)
+                if kind == "tts_connected":
                     logger.info("Streaming TTS session started for chat")
-                    event = None
-                elif kind == "tts_connect_error":
-                    tts_failed = True
-                    tts_done = True
+                if delivery.warning == "connect":
                     logger.warning("Streaming TTS unavailable; HTTP fallback will synthesize remaining text: %s", type(payload).__name__)
-                    event = None
-                elif kind == "tts":
-                    tts_event = payload
-                    if getattr(tts_event, "type", "") == "word_timestamps":
-                        timestamp_data = getattr(tts_event, "data", {}) or {}
-                        if isinstance(timestamp_data, dict):
-                            tts_confirmed_chars = max(
-                                tts_confirmed_chars,
-                                int(timestamp_data.get("characters", 0) or 0),
-                            )
-                    if getattr(tts_event, "type", "") == "error":
-                        tts_failed = True
-                        tts_done = True
-                        logger.warning("Streaming TTS failed mid-response; HTTP fallback will synthesize remaining text")
-                    elif getattr(tts_event, "type", "") == "done":
-                        tts_done = True
-                    else:
-                        for sse in self._handle_streaming_tts_event(tts_event):
-                            yield sse
-                    event = None
-                elif kind == "audio_ready":
+                elif delivery.warning == "mid_response":
+                    logger.warning("Streaming TTS failed mid-response; HTTP fallback will synthesize remaining text")
+                if delivery.llm_error is not None:
+                    continue
+                if delivery.tts_payload is not None:
+                    for sse in self._handle_streaming_tts_event(delivery.tts_payload):
+                        yield sse
+                if delivery.drain_audio:
                     while True:
                         try:
                             yield audio_queue.get_nowait()
                         except QueueEmpty:
                             break
-                    event = None
-                else:
-                    event = None
+                event = self._coerce_llm_event(delivery.llm_payload) if delivery.has_llm_payload else None
 
                 if event is not None:
                     if event.type == "usage":
@@ -603,8 +571,8 @@ class QAPipeline:
                         yield StreamEvent(type="text_chunk", data={"token": token})
 
                     if streaming_requested:
-                        if not tts_failed:
-                            tts_text_buffer += token
+                        if not mux_state.tts_failed:
+                            mux_state.tts_text_buffer += token
                     elif faq_documents is None:
                         # HTTP TTS：句子级别缓冲
                         sentences, sentence_buffer = self._take_speakable_sentences(sentence_buffer)
@@ -619,35 +587,35 @@ class QAPipeline:
                                 break
 
                 if (
-                    tts_connected
-                    and not tts_failed
+                    mux_state.tts_connected
+                    and not mux_state.tts_failed
                     and tts_stream is not None
-                    and self._should_flush_streaming_tts(tts_text_buffer)
+                    and self._should_flush_streaming_tts(mux_state.tts_text_buffer)
                 ):
-                    chunk = tts_text_buffer
-                    tts_text_buffer = ""
+                    chunk = mux_state.tts_text_buffer
+                    mux_state.tts_text_buffer = ""
                     try:
                         await tts_stream.send_text(chunk)
                     except Exception:
                         logger.exception("Streaming TTS send failed; switching to HTTP fallback")
-                        tts_failed = True
-                        tts_done = True
+                        mux_state.tts_failed = True
+                        mux_state.tts_done = True
 
-                if llm_done and tts_connected and not tts_failed and not tts_finish_sent and tts_stream is not None:
+                if mux_state.llm_done and mux_state.tts_connected and not mux_state.tts_failed and not mux_state.tts_finish_sent and tts_stream is not None:
                     try:
-                        if tts_text_buffer:
-                            await tts_stream.send_text(tts_text_buffer)
-                            tts_text_buffer = ""
+                        if mux_state.tts_text_buffer:
+                            await tts_stream.send_text(mux_state.tts_text_buffer)
+                            mux_state.tts_text_buffer = ""
                         await tts_stream.finish()
                         tts_finish_requested.set()
-                        tts_finish_sent = True
+                        mux_state.tts_finish_sent = True
                     except Exception:
                         logger.exception("Streaming TTS finish failed; switching to HTTP fallback")
-                        tts_failed = True
-                        tts_done = True
+                        mux_state.tts_failed = True
+                        mux_state.tts_done = True
 
-                if llm_done and streaming_requested and not tts_connected and tts_failed:
-                    tts_done = True
+                if mux_state.llm_done and streaming_requested and not mux_state.tts_connected and mux_state.tts_failed:
+                    mux_state.tts_done = True
         except BaseException:
             await cancel_audio()
             raise
@@ -659,9 +627,9 @@ class QAPipeline:
                 except Exception:
                     logger.exception("Failed to close streaming TTS session")
 
-        if llm_error is not None:
+        if mux_state.llm_error is not None:
             await cancel_audio()
-            raise llm_error
+            raise mux_state.llm_error
         if visibility_changed:
             await cancel_audio()
             yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
@@ -685,8 +653,8 @@ class QAPipeline:
         if faq_documents is not None and not request.text_only:
             if full_answer.strip():
                 schedule_audio(full_answer.strip())
-        elif streaming_requested and tts_failed and not request.text_only:
-            remaining_text = full_answer[tts_confirmed_chars:].strip()
+        elif streaming_requested and mux_state.tts_failed and not request.text_only:
+            remaining_text = full_answer[mux_state.tts_confirmed_chars:].strip()
             if remaining_text:
                 schedule_audio(remaining_text)
         elif not streaming_requested and sentence_buffer.strip() and not request.text_only:
