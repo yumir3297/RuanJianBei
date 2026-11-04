@@ -140,10 +140,10 @@
 | ` M` | `frontend/src/views/tourist/RouteView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | `??` | `backend/alembic/versions/5c81a1e74f2b_add_tour_progress_and_proposals.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | `??` | `backend/app/services/itinerary/candidates.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
-| `??` | `backend/app/services/itinerary/intent.py` | 后续实现不同；需逐项核验意图覆盖，暂不移植 | snapshot=yes; integration=yes |
-| `??` | `backend/app/services/itinerary/provenance.py` | 后续来源校验实现不同；需逐项核验约束覆盖，暂不移植 | snapshot=yes; integration=yes |
-| `??` | `backend/app/tests/test_itinerary_intent.py` | 9 个源测试、10 个集成测试；名称不完全相同，具体断言待审 | snapshot=yes; integration=yes |
-| `??` | `backend/app/tests/test_itinerary_provenance.py` | 2 个源测试、6 个集成测试；需核对具体断言后确认替代关系 | snapshot=yes; integration=yes |
+| `??` | `backend/app/services/itinerary/intent.py` | 源实现被后续实现替代：集成版基于规范化后的 candidate 计算 diff；没有移植旧文件 | snapshot=yes; integration=yes |
+| `??` | `backend/app/services/itinerary/provenance.py` | 源实现被后续实现替代并扩展：集成版处理景点替换、目录修订变更、AI 时长归属和受影响路线段证据失效；没有移植旧文件 | snapshot=yes; integration=yes |
+| `??` | `backend/app/tests/test_itinerary_intent.py` | 后续测试覆盖源用例并增加候选规范名/diff 断言；额外行为由集成实现覆盖 | snapshot=yes; integration=yes |
+| `??` | `backend/app/tests/test_itinerary_provenance.py` | 后续测试保留源覆盖并增加 4 个来源/替换场景，且强化旧来源 revision 变化时的时长降级断言 | snapshot=yes; integration=yes |
 | `??` | `backend/app/tests/test_tour_budget_api.py` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | `??` | `backend/app/tests/test_tour_progress_and_proposals.py` | 20 个集成测试包含源 10 个用例并新增恢复/预算/来源校验场景；后续实现替代 | snapshot=yes; integration=yes |
 | `??` | `backend/app/tests/test_tour_proposal_catalog_staleness.py` | 后续目录版本验证实现不同；保留快照，语义由集成 staleness 测试验证 | snapshot=yes; integration=yes |
@@ -248,8 +248,8 @@
 | `??` | `backend/app/repositories/tool_execution.py` | 后续 repository 实现不同；集成树含幂等回放、lease/fence 与取消处理测试，未覆盖旧文件 | snapshot=yes; integration=yes |
 | `??` | `backend/app/schemas/tool_execution.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | `??` | `backend/app/services/itinerary/candidates.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
-| `??` | `backend/app/services/itinerary/intent.py` | 后续实现不同；需逐项核验意图覆盖，暂不移植 | snapshot=yes; integration=yes |
-| `??` | `backend/app/services/itinerary/provenance.py` | 后续来源校验实现不同；需逐项核验约束覆盖，暂不移植 | snapshot=yes; integration=yes |
+| `??` | `backend/app/services/itinerary/intent.py` | 源实现被后续实现替代：集成版基于规范化后的 candidate 计算 diff；没有移植旧文件 | snapshot=yes; integration=yes |
+| `??` | `backend/app/services/itinerary/provenance.py` | 源实现被后续实现替代并扩展：集成版处理景点替换、目录修订变更、AI 时长归属和受影响路线段证据失效；没有移植旧文件 | snapshot=yes; integration=yes |
 | `??` | `backend/app/services/tool_execution/` | 目录内有相同/不同/新增文件，需逐项核验 | 6 个源码/资料文件；相同=4、不同=2、集成缺少=0、集成额外=0（排除 Python cache） |
 | `??` | `backend/app/tests/test_tool_execution_acceptance.py` | 原 W02 工作树无此文件；测试仅见于后续 W02/V01 快照并扩充于当前集成树 | snapshot=yes; integration=yes |
 | `??` | `docs/research/2026-10-29-w02-durable-execution-research.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
