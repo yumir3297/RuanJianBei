@@ -60,7 +60,7 @@ from app.services.qa.speech_event_adapter import (
     words_to_viseme_timeline as build_words_viseme_timeline,
 )
 from app.services.qa.stream_events import StreamEvent
-from app.services.qa.stream_lifecycle import cancel_and_join, forward_events, forward_tts_events
+from app.services.qa.stream_lifecycle import AudioTaskGroup, cancel_and_join, forward_events, forward_tts_events
 from app.services.qa.vision_evidence import resolve_vision_evidence
 from app.services.qa.answer_styler import polish_answer, no_evidence_reply
 from app.services.qa.evidence_retrieval import retrieve_evidence
@@ -462,23 +462,18 @@ class QAPipeline:
         llm_usage = LLMUsage()
         llm_finish_reason: str | None = None
         audio_queue: asyncio.Queue[StreamEvent] = asyncio.Queue()
-        audio_tasks: list[asyncio.Task[None]] = []
-        audio_concurrency = asyncio.Semaphore(3)
+        audio_group = AudioTaskGroup(
+            lambda sentence, **kwargs: self._queue_audio(sentence, audio_queue, **kwargs)
+        )
 
         def schedule_audio(sentence: str) -> None:
-            previous = audio_tasks[-1] if audio_tasks else None
-            audio_tasks.append(asyncio.create_task(
-                self._queue_audio(sentence, audio_queue, previous=previous, semaphore=audio_concurrency, notify=notify_audio)
-            ))
+            audio_group.schedule(sentence, notify=notify_audio)
 
         async def notify_audio() -> None:
             await mux_queue.put(("audio_ready", None))
 
         async def cancel_audio() -> None:
-            for task in audio_tasks:
-                if not task.done():
-                    task.cancel()
-            await asyncio.gather(*audio_tasks, return_exceptions=True)
+            await audio_group.cancel()
 
         # ── 流式 TTS 路径 ──
         tts_stream: StreamingTTSSession | VolcengineStreamingTTSSession | None = None
@@ -698,7 +693,7 @@ class QAPipeline:
             schedule_audio(sentence_buffer.strip())
 
         try:
-            for task in audio_tasks:
+            for task in audio_group.tasks:
                 await task
                 if not await self._epoch_is_current(request_epoch):
                     await cancel_audio()

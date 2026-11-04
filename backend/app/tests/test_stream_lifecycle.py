@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from app.services.qa.stream_lifecycle import cancel_and_join, forward_events, forward_tts_events
+from app.services.qa.stream_lifecycle import AudioTaskGroup, cancel_and_join, forward_events, forward_tts_events
 
 
 @pytest.mark.asyncio
@@ -73,3 +73,26 @@ async def test_forward_tts_events_marks_connection_and_forwards_terminal_event()
 class SimpleEvent:
     def __init__(self, event_type):
         self.type = event_type
+
+
+@pytest.mark.asyncio
+async def test_audio_task_group_cancels_and_joins_scheduled_audio():
+    started = asyncio.Event()
+    cleaned = asyncio.Event()
+
+    async def worker(sentence, *, previous, semaphore, notify):
+        del sentence, previous, semaphore, notify
+        started.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cleaned.set()
+
+    tasks = AudioTaskGroup(worker)
+    tasks.schedule("一句话")
+    await started.wait()
+
+    await tasks.cancel()
+
+    assert cleaned.is_set()
+    assert tasks.pending == ()

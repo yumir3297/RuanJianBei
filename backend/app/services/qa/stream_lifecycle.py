@@ -1,8 +1,40 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterable
+from collections.abc import AsyncIterable, Callable
 from time import monotonic
+
+
+class AudioTaskGroup:
+    """Schedule bounded audio work and cancel/join it as one request scope."""
+
+    def __init__(self, worker: Callable[..., object], concurrency: int = 3) -> None:
+        self._worker = worker
+        self._semaphore = asyncio.Semaphore(concurrency)
+        self._tasks: list[asyncio.Task[None]] = []
+
+    @property
+    def tasks(self) -> tuple[asyncio.Task[None], ...]:
+        return tuple(self._tasks)
+
+    @property
+    def pending(self) -> tuple[asyncio.Task[None], ...]:
+        return tuple(task for task in self._tasks if not task.done())
+
+    def schedule(self, sentence: str, *, notify=None) -> asyncio.Task[None]:
+        previous = self._tasks[-1] if self._tasks else None
+        task = asyncio.create_task(
+            self._worker(sentence, previous=previous, semaphore=self._semaphore, notify=notify)
+        )
+        self._tasks.append(task)
+        return task
+
+    async def cancel(self) -> None:
+        for task in self._tasks:
+            if not task.done():
+                task.cancel()
+        if self._tasks:
+            await asyncio.gather(*self._tasks, return_exceptions=True)
 
 
 async def cancel_and_join(*tasks: asyncio.Task[object] | None) -> None:
