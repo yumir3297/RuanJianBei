@@ -16,6 +16,8 @@
 
 2026-11-04：更新 `architecture/TARGET.md` 的工作流图，使其对应当前代码路径：视觉确认绑定发布目录，FAQ/缓存/RAG 走轻量问答，复杂行程由持久 worker 执行。图描述的是当前增量目标，不表示真实视觉设备链路或框架性能已验收。
 
+2026-11-04：将 PCM、逐字时间戳、文本口型和数字人句首事件的 SSE 转换迁至 `qa/speech_event_adapter.py`；`QAPipeline` 保留旧方法并委托适配器，TTS 调度与原事件字段不变。适配器新增 4 项协议测试，联合现有 Pipeline/TTS AI 回归共 133 passed、1 条 Starlette 弃用警告。测试为本地事件和替身流，不代表真实 TTS 音质或移动设备同步验收。
+
 2026-11-04：扩大 AI 回归范围：Pipeline、Pipeline audience、FAQ 系列、RAG 系列、IntentRouter、OpenAI-compatible LLM、guide narration API、chat SSE、visitor memory、selection cache key 和 knowledge-stream integration 共 121 passed、1 warning。只覆盖列明测试文件，不代表全后端或真实模型/设备通过。
 
 2026-11-04：AI 架构增量改造将 QAPipeline 的情绪、表达策略和游客记忆状态从共享实例字段隔离到每次 `stream_chat` 的 ContextVar 请求上下文，并在流结束、异常或取消时恢复上下文。强制交错的共享 Pipeline 回归分别验证情绪/数字人策略和两个游客的记忆提示：旧实现按预期错配失败，新实现通过；另显式关闭聊天流，确认默认状态恢复。Pipeline、聊天 SSE 与游客记忆相关测试共 57 passed、1 warning。测试依赖仅安装于 `/private/tmp/guide-ai-arch-venv`。未触及原主工作区的未提交改动。Worktree 核对显示 V01、W02、K01 整合分支为 `codex/competition-integration` 祖先；已建立主工作区保全检查点供后续选择性比较。

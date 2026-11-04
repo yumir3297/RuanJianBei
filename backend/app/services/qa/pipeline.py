@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import base64
 import json
 import logging
 from contextvars import ContextVar, Token
@@ -10,34 +9,6 @@ from asyncio import QueueEmpty
 from time import perf_counter
 from typing import TYPE_CHECKING
 
-# ── 拼音导入缓存 ──
-_PINYIN_FN = None
-_PINYIN_CHECKED = False
-_FINALS_STYLE = None
-
-
-def _get_pinyin():
-    global _PINYIN_FN, _PINYIN_CHECKED
-    if not _PINYIN_CHECKED:
-        _PINYIN_CHECKED = True
-        try:
-            from pypinyin import pinyin as _p
-            _PINYIN_FN = _p
-        except ImportError:
-            pass
-    return _PINYIN_FN
-
-
-def _get_finals_style():
-    global _FINALS_STYLE
-    if _FINALS_STYLE is None:
-        try:
-            from pypinyin import Style
-            _FINALS_STYLE = Style.FINALS
-        except ImportError:
-            _FINALS_STYLE = -1
-    return _FINALS_STYLE
-
 from app.repositories.chat_log import ChatLogRepository
 from app.repositories.knowledge import KnowledgeRepository
 from app.repositories.route import RouteRepository
@@ -45,7 +16,6 @@ from app.repositories.visitor import VisitorRepository
 from app.repositories.visitor_memory import VisitorMemoryRepository
 from app.schemas.chat import ChatRequest, ConversationContext
 from app.services.avatar.base import BaseAvatarService
-from app.services.avatar.viseme import build_viseme_timeline, build_viseme_timeline_fallback
 from app.services.llm.base import BaseLLMService
 from app.services.llm.prompt_builder import get_audience_style
 from app.services.llm.types import LLMStreamEvent, LLMUsage
@@ -78,6 +48,12 @@ from app.services.qa.request_profile import (
     resolve_narration_audience as _resolve_narration_audience,
 )
 from app.services.qa.route_fast_path import StaticRouteAnswerBuilder
+from app.services.qa.speech_event_adapter import (
+    build_audio_event as build_speech_audio_event,
+    build_viseme_timeline as build_speech_viseme_timeline,
+    handle_streaming_tts_event as adapt_streaming_tts_event,
+    words_to_viseme_timeline as build_words_viseme_timeline,
+)
 from app.services.qa.stream_events import StreamEvent
 from app.services.qa.vision_evidence import resolve_vision_evidence
 from app.services.qa.answer_styler import polish_answer, no_evidence_reply
@@ -1087,110 +1063,35 @@ class QAPipeline:
         if notify is not None:
             await notify()
 
-    @classmethod
+    @staticmethod
     def _build_audio_event(
-        cls,
         text: str,
         base64_audio: str,
         duration_ms: int,
         provider: str = "unknown",
     ) -> StreamEvent:
-        safe_duration = max(duration_ms, int(len(text.replace(" ", "")) * 180), 800)
-        return StreamEvent(
-            type="audio",
-            data={
-                "base64": base64_audio,
-                "duration_ms": safe_duration,
-                "text": text,
-                "provider": provider,
-                "viseme_timeline": cls._build_viseme_timeline(text, safe_duration),
-            },
+        return build_speech_audio_event(
+            text,
+            base64_audio,
+            duration_ms,
+            provider,
+            viseme_timeline_builder=build_speech_viseme_timeline,
         )
 
     @staticmethod
     def _build_viseme_timeline(text: str, duration_ms: int) -> list[dict]:
-        """基于拼音的口型时间线——pypinyin 可用时走音素映射，否则走增强版降级。"""
-        pinyin_fn = _get_pinyin()
-        if pinyin_fn is not None:
-            return build_viseme_timeline(text, duration_ms, pinyin_fn=pinyin_fn)
-        return build_viseme_timeline_fallback(text, duration_ms)
+        return build_speech_viseme_timeline(text, duration_ms)
 
     @staticmethod
     def _words_to_viseme_timeline(words: list[dict]) -> list[dict]:
-        """将 TTS 字级别时间戳转换为 viseme 时间线（结合 pypinyin 开口度）。"""
-        from app.services.avatar.viseme import (
-            get_viseme_openness,
-            get_viseme_roundness,
-            get_duration_weight,
-            is_closed_initial,
-        )
-        pinyin_fn = _get_pinyin()
-        finals_style = _get_finals_style()
-        timeline: list[dict] = []
-        for word in words:
-            char = word.get("text", "")
-            begin = word.get("begin_time", 0)
-            end = word.get("end_time", begin + 100)
-
-            openness = 0.38  # 默认中等开口
-            roundness = 0.15
-            if pinyin_fn is not None and finals_style is not None and finals_style >= 0 and char and not char.isspace():
-                final = ""
-                try:
-                    results = pinyin_fn(char, heteronym=False, style=finals_style)
-                    if results:
-                        final = str(results[0][0]) if isinstance(results[0], list) else str(results[0])
-                except Exception:
-                    pass
-                if final:
-                    openness = get_viseme_openness(final)
-                    roundness = get_viseme_roundness(final)
-
-            timeline.append({
-                "start": begin,
-                "end": end,
-                "value": round(openness, 3),
-                "form": round(roundness, 3),
-            })
-        return timeline
+        return build_words_viseme_timeline(words)
 
     def _handle_streaming_tts_event(self, tts_event) -> list[StreamEvent]:
-        """将 StreamingTTSEvent 转换为 SSE StreamEvent 列表。"""
-        results: list[StreamEvent] = []
-        if tts_event.type == "audio_chunk":
-            # PCM 音频块，base64 编码后下发
-            b64 = base64.b64encode(tts_event.data).decode("ascii")
-            results.append(StreamEvent(type="audio_chunk", data={
-                "base64": b64,
-                "sample_rate": tts_event.sample_rate,
-                "channels": 1,
-                "bits": 16,
-            }))
-        elif tts_event.type == "word_timestamps":
-            # 字级别时间戳 → viseme 时间线 + 原始逐字时间（前端字幕逐字同步用）
-            timestamp_data = tts_event.data if isinstance(tts_event.data, dict) else {"words": tts_event.data}
-            raw_words = timestamp_data.get("words", [])
-            viseme_timeline = self._words_to_viseme_timeline(raw_words)
-            if viseme_timeline:
-                results.append(StreamEvent(type="audio_chunk", data={
-                    "viseme_timeline": viseme_timeline,
-                    "sentence_index": timestamp_data.get("sentence_index", 0),
-                    "word_timeline": [
-                        {
-                            "text": word.get("text", ""),
-                            "begin_time": word.get("begin_time", 0),
-                            "end_time": word.get("end_time", 0),
-                        }
-                        for word in raw_words
-                    ],
-                }))
-        elif tts_event.type == "sentence_begin":
-            # 通知前端新句子开始
-            results.append(StreamEvent(type="avatar", data={
-                "viseme_text": tts_event.data,
-                "emotion": self._active_response_policy.avatar_emotion,
-            }))
-        return results
+        return adapt_streaming_tts_event(
+            tts_event,
+            avatar_emotion=self._active_response_policy.avatar_emotion,
+            word_viseme_timeline_builder=build_words_viseme_timeline,
+        )
 
     def _answer_emotion(self, hit_level: str | None, source_count: int) -> str:
         """根据回答路径决定数字人情感"""
