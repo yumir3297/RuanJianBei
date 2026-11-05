@@ -63,6 +63,7 @@ from app.services.qa.final_answer_speech_emitter import FinalAnswerSpeechEmitter
 from app.services.qa.queued_stream_events import QueuedStreamEvents
 from app.services.qa.stream_answer import StreamAnswerBuffer
 from app.services.qa.stream_completion import AudioTaskDrainer, final_audio_segments
+from app.services.qa.stream_finalization import resolve_final_answer
 from app.services.qa.stream_lifecycle import AudioTaskGroup, StreamProducerGroup
 from app.services.qa.stream_mux import StreamMuxState
 from app.services.qa.stream_mux_consumer import StreamMuxConsumer
@@ -575,9 +576,14 @@ class QAPipeline:
                 or llm_finish_reason.startswith("interrupted_")
             )
         )
-        if degraded_llm and faq_documents is not None:
-            # Do not speak a partial rewrite that will be replaced by the FAQ.
-            answer_stream.full_answer = polish_answer(faq_result.answer, request.persona, faq_sources)
+        answer_stream.full_answer = resolve_final_answer(
+            generated_answer=answer_stream.full_answer,
+            degraded=degraded_llm,
+            faq_documents_present=faq_documents is not None,
+            faq_answer=faq_result.answer if faq_result is not None else "",
+            persona=request.persona,
+            faq_sources=faq_sources,
+        )
 
         faq_text_sent = faq_documents is not None
         if faq_text_sent:
@@ -619,12 +625,6 @@ class QAPipeline:
                 logger.info("Blind spot recorded (LLM degraded)")
             except Exception:
                 logger.exception("Knowledge blind spot recording failed")
-        if degraded_llm and faq_documents is not None:
-            # FAQ 按受众改写失败时，不能把"AI讲解服务暂时不可用"甩给游客：
-            # FAQ 原文本身权威且完整，直接回落原文——风格没换成，但内容正确。
-            # 刻意保持 degraded_llm=True，避免把未改写的答案写进受众专属缓存，
-            # 否则一次 LLM 抖动就会长期污染该受众的缓存。
-            answer_stream.full_answer = polish_answer(faq_result.answer, request.persona, faq_sources)
         if not await self._epoch_is_current(request_epoch):
             yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
             return

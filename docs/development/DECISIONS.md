@@ -1,5 +1,11 @@
 # 技术决策
 
+## 2026-11-05：在音频排队前统一选择流式答案
+
+FAQ 改写失败时必须在最终 text 和音频补播前恢复权威 FAQ 答案；如果等到音频 drain 后才决定，语音与持久化可能读取不同文本。新增纯策略 `qa/stream_finalization.resolve_final_answer`，将这个判断收拢，并移除 drain 后重复的回退赋值。Pipeline 仍负责降级标记、缓存禁写、epoch fence、持久化和 done 顺序。
+
+验证：定向 59 passed；扩展 AI/Worktree 集合 226 passed、1 条 Starlette 弃用警告；compileall/diff check 通过。仅用替身；真实供应商/设备和完整 RAG 依赖未验收。
+
 ## 2026-11-05：将快速答案的语音尾段移出 Pipeline
 
 问题：FAQ、缓存和确定性路径共享最终答案发射入口，但非 text-only 请求还要并发合成 TTS/数字人、复核知识 epoch，并保持 SSE 事件次序。若这段继续内联，会让快路径决策和音频表现生命周期耦合。
