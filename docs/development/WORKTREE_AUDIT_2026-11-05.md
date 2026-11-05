@@ -2,6 +2,7 @@
 
 ## 最新状态复核（2026-11-05）
 
+- 复核基线更新至集成 checkout/ref `6c71296`。原活动 checkout `code/RuanJianBei` 仍为 `codex/repository-map@672a104`、95 个状态路径；V01/W02/W02-V01 仍为 `098553f`/49、`a8c2837`/35、`098553f`/39。原仓库 Git 元数据中五个保护快照 refs `4acaa53`、`e115eab`、`3805943`、`48ef626`、`5433557` 全部可解析。`/private/tmp/ai-guide-phase3` 仍登记 prunable 且未清理；集成 checkout 的 `frontend/node_modules` 仍为软链接且未跟踪；`sources/` 无状态。所有活动 checkout/worktree 和快照保持原样，未将集成分支合入原 checkout。
 - 从集成 `7156d1c` 开始的 SSE 关闭传播阶段：当前改动仅涉及 Pipeline 异步迭代器生命周期、行为测试和架构进度记录。集成分支与原仓库同名 ref 起点均为 `7156d1c`；原 checkout `672a104` 保持 95 个状态路径，V01/W02/W02-V01 为 `098553f`/49、`a8c2837`/35、`098553f`/39。五个保全快照仍存在；phase3 仍 prunable 且未 prune；集成 node_modules 未跟踪；`sources/` 无状态。没有把任何快照覆盖到集成树，也未将集成合入原活动 checkout。
 - 行为测试复现 `stream_chat().aclose()` 返回时 LLM 源尚未清理；显式 aclose 传播后定向与扩展 AI/stream 回归 220 passed、1 条 Starlette/httpx 弃用警告，compileall/diff check 通过。验证由本地替身构成，不代表真实 provider/设备。
 - 本轮从集成 `ab1604f` 开始，仅改动 AI 快路径尾段资源清理和对应测试/契约；修复提交 `4f4b56a` 已同步到原仓库同名集成 ref。原 checkout `672a104`/95 个状态路径，V01/W02/W02-V01 为 `098553f`/49、`a8c2837`/35、`098553f`/39；五个快照 refs 仍在；phase3 worktree 仍登记为 prunable，未 prune；`sources/` 无状态。源 worktree 的路径级差异沿用下方逐项分类，本轮未覆盖快照、未合入原 checkout。
