@@ -1,6 +1,6 @@
 # 当前架构索引
 
-代码核对基线为 `codex/competition-integration` 分支（核对于 2026-11-05）；具体提交以 Git 历史和 [开发进度](../development/PROGRESS.md) 为准。问答仍由显式 `QAPipeline` 驱动，FAQ/缓存/RAG 快速通道与 SSE、HTTP/流式 TTS 并行调度；情绪、表达策略和游客记忆是每次流请求的 ContextVar 状态。`pipeline.py` 当前约 935 行，负责请求/知识流程、产流设置、FAQ/RAG/cache 决策、持久化与降级；事件消费、最终答案选择和快路径语音尾段已拆到专用组件。答案补读、最终音频片段选择、HTTP TTS drain 与快速答案的语音事件组装在辅助节点中；缓存资格及消息落库仍在 Pipeline。此索引描述源码结构，不代表真实供应商或设备已验收。完整入口见 [功能地图](../REPO_MAP.md)。
+代码核对基线为 `codex/competition-integration` 分支（核对于 2026-11-05）；具体提交以 Git 历史和 [开发进度](../development/PROGRESS.md) 为准。问答仍由显式 `QAPipeline` 驱动，FAQ/缓存/RAG 快速通道与 SSE、HTTP/流式 TTS 并行调度；情绪、表达策略和游客记忆是每次流请求的 ContextVar 状态。Pipeline 当前 939 行，负责请求/知识流程、产流设置、FAQ/RAG/cache 决策、持久化与降级；事件消费、最终答案选择、终态策略和快路径语音尾段已拆到专用组件。音频补读、HTTP TTS drain 与快速答案语音事件组装也在辅助节点中；SSE 与 epoch fence 时机仍由 Pipeline 控制。此索引描述源码结构，不代表真实供应商或设备已验收。完整入口见 [功能地图](../REPO_MAP.md)。
 
 ```mermaid
 flowchart LR

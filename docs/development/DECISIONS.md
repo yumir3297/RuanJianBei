@@ -1,5 +1,11 @@
 # 技术决策
 
+## 2026-11-05：集中计算流式终态策略
+
+LLM finish reason 影响 degraded 标记、FAQ interruption 是否完整、done 的 hit level/provider，以及共享缓存是否允许写入。新增纯函数 `qa/stream_terminal_policy.resolve_terminal_policy` 一次计算这些字段；Pipeline 仍控制 epoch 检查和事件/持久化顺序。这样可单独检验降级语义并降低主流程重复条件。
+
+验证：终态/Pipeline/epoch 子集 54 passed；扩展 AI/Worktree 集合 228 passed、1 条 Starlette 弃用警告。使用替身，不代表真实 provider 或设备验收。
+
 ## 2026-11-05：在音频排队前统一选择流式答案
 
 FAQ 改写失败时必须在最终 text 和音频补播前恢复权威 FAQ 答案；如果等到音频 drain 后才决定，语音与持久化可能读取不同文本。新增纯策略 `qa/stream_finalization.resolve_final_answer`，将这个判断收拢，并移除 drain 后重复的回退赋值。Pipeline 仍负责降级标记、缓存禁写、epoch fence、持久化和 done 顺序。

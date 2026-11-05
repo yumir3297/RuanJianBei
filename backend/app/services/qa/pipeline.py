@@ -64,6 +64,7 @@ from app.services.qa.queued_stream_events import QueuedStreamEvents
 from app.services.qa.stream_answer import StreamAnswerBuffer
 from app.services.qa.stream_completion import AudioTaskDrainer, final_audio_segments
 from app.services.qa.stream_finalization import resolve_final_answer
+from app.services.qa.stream_terminal_policy import resolve_terminal_policy
 from app.services.qa.stream_lifecycle import AudioTaskGroup, StreamProducerGroup
 from app.services.qa.stream_mux import StreamMuxState
 from app.services.qa.stream_mux_consumer import StreamMuxConsumer
@@ -569,13 +570,15 @@ class QAPipeline:
             yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
             return
 
-        degraded_llm = bool(
-            llm_finish_reason
-            and (
-                llm_finish_reason.startswith("fallback_")
-                or llm_finish_reason.startswith("interrupted_")
-            )
+        terminal_policy = resolve_terminal_policy(
+            finish_reason=llm_finish_reason,
+            faq_documents_present=faq_documents is not None,
+            cache_allowed=cache_allowed,
+            llm_hit_level=llm_hit_level,
+            fallback_hit_level=llm_fallback_hit_level,
+            llm_provider=self.llm_provider_name,
         )
+        degraded_llm = terminal_policy.degraded
         answer_stream.full_answer = resolve_final_answer(
             generated_answer=answer_stream.full_answer,
             degraded=degraded_llm,
@@ -628,7 +631,7 @@ class QAPipeline:
         if not await self._epoch_is_current(request_epoch):
             yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
             return
-        if cache_allowed and not degraded_llm:
+        if terminal_policy.should_cache:
             await self.qa_cache.set(cache_key, answer_stream.full_answer, sources, epoch=request_epoch)
         latency_ms = int((perf_counter() - start) * 1000)
         chat_log_id = await self._persist_interaction(
@@ -637,7 +640,7 @@ class QAPipeline:
             normalized_query=normalized_query,
             answer=answer_stream.full_answer,
             sources=sources,
-            hit_level=llm_fallback_hit_level if degraded_llm else llm_hit_level,
+            hit_level=terminal_policy.hit_level,
             latency_ms=latency_ms,
             request=request,
             active_subject=resolved.active_subject,
@@ -653,19 +656,16 @@ class QAPipeline:
             llm_usage.total_tokens,
             llm_usage.cached_tokens,
         )
-        incomplete = bool(
-            llm_finish_reason and llm_finish_reason.startswith("interrupted_") and faq_documents is None
-        )
         if not faq_text_sent:
-            yield StreamEvent(type="text", data={"text": answer_stream.full_answer, "is_complete": not incomplete})
+            yield StreamEvent(type="text", data={"text": answer_stream.full_answer, "is_complete": not terminal_policy.incomplete})
         yield self._followup_event(resolved)
         yield self._done_event(
             chat_log_id=chat_log_id,
-            hit_level=llm_fallback_hit_level if degraded_llm else llm_hit_level,
+            hit_level=terminal_policy.hit_level,
             total_ms=latency_ms,
             degraded=degraded_llm,
-            provider=self.llm_provider_name if not degraded_llm else "evidence_fallback",
-            completion="incomplete" if incomplete else "complete",
+            provider=terminal_policy.provider,
+            completion=terminal_policy.completion,
         )
 
     async def _build_static_route_answer(self, request: ChatRequest) -> tuple[str, list[dict]] | None:
