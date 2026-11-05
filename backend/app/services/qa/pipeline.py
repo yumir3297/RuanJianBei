@@ -59,6 +59,7 @@ from app.services.qa.speech_event_adapter import (
     words_to_viseme_timeline as build_words_viseme_timeline,
 )
 from app.services.qa.stream_events import StreamEvent
+from app.services.qa.final_answer_speech_emitter import FinalAnswerSpeechEmitter
 from app.services.qa.queued_stream_events import QueuedStreamEvents
 from app.services.qa.stream_answer import StreamAnswerBuffer
 from app.services.qa.stream_completion import AudioTaskDrainer, final_audio_segments
@@ -153,6 +154,13 @@ class QAPipeline:
         )
         self._request_state: ContextVar[_PipelineRequestState | None] = ContextVar(
             f"qa_pipeline_request_state_{id(self)}", default=None
+        )
+        self.final_answer_speech_emitter = FinalAnswerSpeechEmitter(
+            tts_service=self.tts_service,
+            avatar_service=self.avatar_service,
+            audio_event_builder=self._build_audio_event,
+            emotion_resolver=self._answer_emotion,
+            epoch_is_current=self._epoch_is_current,
         )
 
     def _current_request_state(self) -> _PipelineRequestState:
@@ -688,37 +696,16 @@ class QAPipeline:
             return
         yield StreamEvent(type="text", data={"text": answer, "is_complete": True})
         if not request.text_only:
-            # 景点讲解（FAQ路径）用简短摘要做 TTS，避免长文本合成慢
-            tts_text = answer
-            if hit_level.startswith("faq_") and len(answer) > 150:
-                # 截断到前 150 字，在句号处断开
-                tts_text = answer[:150]
-                last_period = tts_text.rfind("。")
-                if last_period > 80:
-                    tts_text = tts_text[: last_period + 1]
-                else:
-                    tts_text = tts_text.rstrip() + "……"
-
-            # TTS 和数字人驱动并行执行
-            audio_task = self.tts_service.synthesize(tts_text)
-            avatar_task = self.avatar_service.drive(tts_text)
-            audio, avatar = await asyncio.gather(audio_task, avatar_task)
-
-            if not await self._epoch_is_current(expected_epoch):
-                yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
-                return
-
-            emotion = self._answer_emotion(hit_level, len(sources))
-            avatar_data = {"viseme_text": avatar.viseme_text, "emotion": emotion}
-            if avatar.action:
-                avatar_data["action"] = avatar.action
-            yield StreamEvent(type="avatar", data=avatar_data)
-            yield self._build_audio_event(
-                tts_text,
-                audio.base64_audio,
-                audio.duration_ms,
-                audio.provider,
+            speech_events = await self.final_answer_speech_emitter.render(
+                answer=answer,
+                hit_level=hit_level,
+                sources=sources,
+                expected_epoch=expected_epoch,
             )
+            for event in speech_events:
+                yield event
+            if any(event.type == "error" for event in speech_events):
+                return
 
         latency_ms = int((perf_counter() - start) * 1000)
         chat_log_id = await self._persist_interaction(

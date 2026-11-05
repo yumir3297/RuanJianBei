@@ -4,6 +4,7 @@
 
 - Pipeline 生命周期：情绪、表达策略、音频/文本情绪和游客记忆保存在 `stream_chat` 的请求上下文中（`ContextVar`），并在流结束、异常或取消时恢复上下文；这些字段不会跨请求共享。模型、FAQ matcher、缓存及其他注入依赖仍须分别评估线程与并发安全，因此共享整个 Pipeline 仍须经过回归验证。并发情绪与游客记忆专项均证明旧实现会串用、新实现隔离通过；显式关闭聊天流后默认请求状态恢复；Pipeline、聊天 SSE 与游客记忆相关测试合计 57 项通过。
 - 问答：`backend/app/api/chat.py`、`services/qa/stream_events.py` 定义 SSE；消费者是 `frontend/src/composables/useSSEStream.js` 和 `stores/chat.js`。协议修改要同时核对服务端、解析及消费者，保留停止、重试与迟到结果隔离。
+- 快速答案语音尾段：`FinalAnswerSpeechEmitter` 接收已补引用的答案，只在 `text_only=false` 时由 Pipeline 调用；TTS 与数字人合成并发，成功且 epoch 仍相同时按 `avatar` 后 `audio` 发出。epoch 变化时只发 `error`，Pipeline 必须停止该分支后续持久化/follow-up/`done`。长 FAQ 的语音文本可截短，SSE 可见答案仍为完整内容；合成失败行为由注入服务及其既有兜底契约决定。
 - 路线预算冲突以 `hit_level=route_clarification`、`provider=local` 标识；`done.completion=complete` 仅表示本轮消息结束，不表示行程规划任务完成。普通预设路线亦标为本地处理，未知事件值的消费者应按兼容策略处理。
 - 游览：`api/tour_sessions.py`、`repositories/tour_session.py` 管理 owner/site、修订和游览进度；客户端 `stores/tourSessions.js` 维护手动草稿与服务端版本，不能让提案恢复覆盖用户编辑。
 - 剩余时间：进行中的游客可通过 `set_remaining_budget` 进度命令明确确认 1–720 分钟；新截止时间以服务端接收时间为锚，进度版本与事件同时更新，幂等重放不重置锚点。它不同于行程草稿的总时长；自然语言提案与此命令的联合确认尚未实现。

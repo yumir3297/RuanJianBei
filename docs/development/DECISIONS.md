@@ -1,5 +1,13 @@
 # 技术决策
 
+## 2026-11-05：将快速答案的语音尾段移出 Pipeline
+
+问题：FAQ、缓存和确定性路径共享最终答案发射入口，但非 text-only 请求还要并发合成 TTS/数字人、复核知识 epoch，并保持 SSE 事件次序。若这段继续内联，会让快路径决策和音频表现生命周期耦合。
+
+选择：新增 `qa/final_answer_speech_emitter.py`，只接收已修饰答案、命中级别、来源数量和期望 epoch，返回 `avatar`、`audio` 或过期错误事件。Pipeline 继续拥有答案引用与来源、事件前检查、持久化、follow-up 和 `done`；FAQ 文本截短规则与后合成 epoch fence 保持在 emitter 内。没有引入 Agent 运行时。
+
+验证：定向 Pipeline/stream/knowledge 集合 55 passed；扩展 AI 与 V01/W02 相关集合 224 passed、1 条 Starlette 弃用警告。整库测试收集另有 6 个导入错误，分别是旧证据测试引用已迁出的 helper，以及 Alembic 包导入问题；真实 provider、设备和 migration 往返未验证。
+
 ## 2026-10-30：先保留现有问答流水线
 
 问题：需要提升复杂任务编排，同时保护 FAQ、缓存、SSE 和语音快速路径。候选为现有 pipeline 增量分层、LangGraph 最小图、其他轻量 Agent SDK。当前选择前者作为对照基线，并复用既有 W02 持久执行器。
