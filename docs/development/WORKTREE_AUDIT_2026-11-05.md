@@ -2,7 +2,7 @@
 
 ## 最新状态复核（2026-11-05）
 
-- 本轮路径覆盖复核开始时，集成 checkout 与原仓库同名 ref 均为 `0616bb6`；最近的 Pipeline 快路径 SSE 边界提交 `85e62f0` 已纳入该分支；集成工作树仅有未跟踪 `frontend/node_modules` 本机链接。四个活动树的 porcelain 项均在对应审计章节中找到，无漏项；该结果不证明语义等价。pytest 包安装受包源 DNS 阻断，局部 asyncio/unittest 结果见 `PROGRESS.md`。
+- 最新复核：集成 checkout 与原仓库同名 ref 起始均为 `009fbda`；本轮补充 W02 `claim_next` 后、`start_attempt` 前 progress 版本变化的行为测试，定向 stream/W02 集合 34 passed，compileall/diff check 通过。回归结果与测试边界见 `PROGRESS.md`。
 - 原活动 checkout `codex/repository-map@672a104` 仍有 95 个未提交状态路径。V01/W02/W02-V01 worktree 分别为 `098553f`/49、`a8c2837`/35、`098553f`/39。五个保全快照 refs 均存在；`/private/tmp/ai-guide-phase3` 仍为 prunable，未 prune；`sources/` 无状态。未合并到原活动 checkout。
 - 当前 Alembic `command` API 可用；三组迁移/恢复测试在合成 SQLite 上 6 passed、6 warnings。覆盖升级/回退和 lineage guard，不覆盖 PostgreSQL、部署数据库或真实旧库。
 - 当前 AI 流重构已包括 `StreamTurn`、`StreamCompletionCoordinator`、生成结果错误收尾和取消传播。完整后端最近一次为 597 passed、19 skipped、3 failed，失败来自临时 venv 缺 `numpy`/`rank_bm25`；真实模型、provider 和设备验收未完成。
@@ -214,7 +214,7 @@
 | `??` | `backend/alembic/versions/f1b4c9d76e20_add_tool_execution.py` | 被集成 migration merge 替代，不能单独移植：源父 revision=`e9f4c2b8016a`，集成父 revision=`8ab42c17d3e9`；集成版同时添加 itinerary proposal execution 字段 | snapshot=yes; integration=yes |
 | `??` | `backend/app/api/tool_execution.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | `??` | `backend/app/models/tool_execution.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
-| `??` | `backend/app/repositories/tool_execution.py` | 后续实现扩展旧 repository：加入任务创建时 progress_version 检查、progress fence、事务内 flush/commit 选项和 unknown 外部结果处理；新增隔离 SQLite 测试覆盖创建时拒绝旧 progress 以及排队后进度更新时 claim 不发放 lease，真正同时 claim/进度提交的 race 仍未专项验证 | snapshot=yes; integration=yes |
+| `??` | `backend/app/repositories/tool_execution.py` | 后续实现扩展旧 repository：加入任务创建时 progress_version 检查、progress fence、事务内 flush/commit 选项和 unknown 外部结果处理；隔离 SQLite 覆盖创建时拒绝旧 progress、排队后进度更新时 claim 不发 lease，以及领取后/开始 attempt 前进度变化时阻止 worker 建立 attempt。真正同时 claim/进度提交的 PostgreSQL 竞争仍未实测；源码显示 start_attempt 与 mark_external_call 校验并锁定 TourSession，progress command 更新同一行 | snapshot=yes; integration=yes |
 | `??` | `backend/app/schemas/itinerary.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | `??` | `backend/app/schemas/tool_execution.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | `??` | `backend/app/services/itinerary/` | 已逐项核验：`candidates.py` 与集成版逐字节相同；旧 `intent.py` 的 `result.diff` 被集成版按规范化 candidate 重算 diff 替代；`progress.py` 后续增加剩余预算命令、估算时长/过期截止时间判定；`provenance.py` 后续增加景点替换、目录修订及受影响路线段证据失效和 AI 时长归属。对应测试覆盖 `test_itinerary_intent.py`、`test_itinerary_progress.py`、`test_tour_budget_api.py`、`test_itinerary_provenance.py`；W02 旧差异保留在快照，不覆盖当前实现 | 4 个源文件；相同=1、不同=3、集成缺少=0；集成另有 `catalog.py`、`mutations.py`（排除 Python cache） |

@@ -131,6 +131,53 @@ def test_queued_job_is_fenced_when_tour_progress_changes_before_worker_claim():
     asyncio.run(scenario())
 
 
+def test_claimed_job_is_fenced_when_tour_progress_changes_before_worker_start():
+    async def scenario():
+        from app.repositories.tool_execution import ToolExecutionRepository
+        from app.repositories.tour_session import TourSessionRepository
+
+        engine, db = await open_test_session()
+        try:
+            tours = TourSessionRepository(db)
+            tour = await tours.create_session(
+                "owner-a", "site", "领取后进度 fence 验收",
+                {"schema_version": 2, "constraints": {}, "stops": [{
+                    "stop_id": "00000000-0000-0000-0000-000000000003",
+                    "kind": "visit", "spot_code": "A", "name": "验收景点",
+                    "duration_minutes": 15, "duration_basis": "user",
+                }], "legs": [], "source": "manual", "source_references": []},
+                "session-create",
+            )
+            tools = ToolExecutionRepository(db)
+            job = await tools.create_job(
+                principal_type="tourist", principal_id="owner-a", site_id="site",
+                tool_name="smoke.handler", tool_version="1", workflow_schema_version="1",
+                recovery_mode="manual_retry", retry_safe=False,
+                target={"type": "tour_session", "id": tour["id"], "base_revision": 1,
+                        "progress_version": 0},
+                payload={"request": "must be fenced"}, idempotency_key="stale-after-claim",
+                deadline_seconds=300, max_attempts=1,
+            )
+
+            lease = await tools.claim_next("stale-after-claim-worker")
+            assert lease is not None and lease.job_id == job["id"]
+
+            await tours.start_progress("owner-a", tour["id"], 1, "start-progress")
+            assert await tools.start_attempt(lease, max_attempts=1) is False
+
+            current = await tools.get_job("tourist", "owner-a", "site", tour["id"], job["id"])
+            assert current["status"] == "stale"
+            assert current["reason"] == "target_progress_changed"
+            assert len(current["steps"]) == 1
+            assert current["steps"][0]["status"] == "stale"
+            assert current["steps"][0]["attempt_count"] == 0
+        finally:
+            await db.close()
+            await engine.dispose()
+
+    asyncio.run(scenario())
+
+
 def test_proposal_api_replays_same_request_and_conflicts_on_changed_payload(monkeypatch):
     async def scenario():
         from fastapi import FastAPI
