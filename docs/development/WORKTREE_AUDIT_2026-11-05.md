@@ -2,7 +2,7 @@
 
 ## 最新状态复核（2026-11-05）
 
-- 本轮从集成 `ab1604f` 开始，仅改动 AI 快路径尾段资源清理和对应测试/契约。当前尚未提交；原 checkout `672a104`/95 个状态路径，V01/W02/W02-V01 为 `098553f`/49、`a8c2837`/35、`098553f`/39；原仓库集成 ref 与集成 checkout 起始均为 `ab1604f`。五个快照 refs 仍在；phase3 worktree 仍登记为 prunable，未 prune；`sources/` 无状态。源 worktree 的路径级差异沿用下方逐项分类，本轮未覆盖快照、未合入原 checkout。
+- 本轮从集成 `ab1604f` 开始，仅改动 AI 快路径尾段资源清理和对应测试/契约；修复提交 `4f4b56a` 已同步到原仓库同名集成 ref。原 checkout `672a104`/95 个状态路径，V01/W02/W02-V01 为 `098553f`/49、`a8c2837`/35、`098553f`/39；五个快照 refs 仍在；phase3 worktree 仍登记为 prunable，未 prune；`sources/` 无状态。源 worktree 的路径级差异沿用下方逐项分类，本轮未覆盖快照、未合入原 checkout。
 - 本阶段验证：定向 61 passed；扩展 AI/stream/FAQ/RAG/epoch/TTS 219 passed、1 条 Starlette/httpx 弃用警告。全量 `app/tests` 因临时 venv 缺 `python-multipart` 在 3 个 API 模块收集时报错；本轮未安装依赖。替身测试不代表真实 provider/设备验收。
 - 最新复核：集成 checkout 与原仓库同名 ref 起始均为 `009fbda`；本轮补充 W02 `claim_next` 后、`start_attempt` 前 progress 版本变化的行为测试，定向 stream/W02 集合 34 passed，compileall/diff check 通过。回归结果与测试边界见 `PROGRESS.md`。
 - 原活动 checkout `codex/repository-map@672a104` 仍有 95 个未提交状态路径。V01/W02/W02-V01 worktree 分别为 `098553f`/49、`a8c2837`/35、`098553f`/39。五个保全快照 refs 均存在；`/private/tmp/ai-guide-phase3` 仍为 prunable，未 prune；`sources/` 无状态。未合并到原活动 checkout。
