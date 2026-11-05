@@ -1,5 +1,15 @@
 # 技术决策
 
+## 2026-11-05：独立绑定定稿答案与完成期 effects
+
+问题：`StreamAnswerRun` 已拥有 generation 与 completion 两段事件流，但 Pipeline 仍内联把 canonical outcome 转为 `StreamCompletionEffects` 和 coordinator 参数，包含 cache 准入、FAQ 文本、TTS、fallback 记录及终态元数据映射。
+
+选择：新增 `StreamAnswerCompletionFactory`，将单个 finalized outcome 和当前请求上下文绑定为 completion event iterator。factory 只按 terminal policy 配置 cache callback，不执行完成期副作用；`StreamCompletionCoordinator` 继续唯一控制音频 drain、epoch fence、cache/persist、followups/done 顺序。Pipeline 继续提供 cache/persist 与请求级业务回调。
+
+验证：工厂行为测试覆盖 canonical answer 传递、FAQ/TTS 参数、cache write/persist 参数、degraded 请求禁用缓存及 fallback blind spot 记录。AI/stream/FAQ/cache/RAG/evidence/epoch/TTS/SSE 指定集合 147 passed；Python 3.12 compileall 与 diff check 通过。使用本地替身，不是生产 provider/设备验收。
+
+回滚：若 terminal policy 与 cache callback 准入不一致、FAQ/TTS 标志或 fallback 记录改变，恢复 Pipeline 原有 `StreamCompletionEffects` 装配，保留测试，并确认未改变 `StreamCompletionCoordinator` 的副作用和 epoch 检查顺序。
+
 ## 2026-11-05：统一拥有生成到完成的 SSE 流生命周期
 
 问题：Pipeline 分别 drain `StreamGenerationRun.events()`、检查 outcome/error、构造完成期副作用并 drain `StreamCompletionCoordinator.events()`；两段流的资源关闭协议由主流程手动衔接，容易在取消/错误分支留下不一致行为。

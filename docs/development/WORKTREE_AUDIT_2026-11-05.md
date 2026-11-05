@@ -1,5 +1,11 @@
 # Worktree 改动逐路径核对（2026-11-05）
 
+## 本轮状态复核（completion effects factory 阶段，2026-11-05）
+
+- 起始集成 checkout 与原仓库 `codex/competition-integration` ref 均为 `880ec46`。原 checkout `codex/repository-map@672a104`/95 路径；V01/W02/W02-V01 仍 `098553f`/49、`a8c2837`/35、`098553f`/39；五个保护快照 refs 均存在，phase3 worktree 仍 prunable 且未清理。
+- 本阶段只在集成副本修改 Pipeline 的 completion 装配、增加完成期 factory 与行为测试，并更新进度/架构文档。其余工作树没有改变；集成 `frontend/node_modules` 仍是唯一未跟踪链接，`sources/` 无 Git 状态。
+- 下方各活动 worktree 的逐路径差异分类不变；本轮未用快照覆盖集成树，也未合入原活动 checkout。提交后同步同名集成 ref。
+
 ## 本轮状态复核（生成/完成 SSE owner 阶段，2026-11-05）
 
 - 起始集成 checkout 与原仓库 `codex/competition-integration` ref 均为 `002c77a`。原活动 checkout 仍 `codex/repository-map@672a104`/95 路径；V01/W02/W02-V01 仍 `098553f`/49、`a8c2837`/35、`098553f`/39。五个保护快照 refs 继续可解析；phase3 仍登记 prunable，未 prune。

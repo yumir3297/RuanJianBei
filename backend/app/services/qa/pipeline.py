@@ -64,7 +64,7 @@ from app.services.qa.final_answer_speech_emitter import FinalAnswerSpeechEmitter
 from app.services.qa.fast_path_answer_coordinator import FastPathAnswerCoordinator
 from app.services.qa.queued_stream_events import QueuedStreamEvents
 from app.services.qa.stream_completion import StreamCompletionCoordinator
-from app.services.qa.stream_completion_effects import StreamCompletionEffects
+from app.services.qa.stream_answer_completion_factory import StreamAnswerCompletionFactory
 from app.services.qa.cached_answer_path import resolve_cached_answer
 from app.services.qa.stream_generation_run import StreamGenerationRun
 from app.services.qa.stream_answer_run import StreamAnswerRun
@@ -520,53 +520,28 @@ class QAPipeline:
                 "faq_sources": faq_sources,
             },
         )
-        def build_completion_events(outcome):
-            stream_turn = outcome.stream_turn
-            finalized = outcome.finalized
-            terminal_policy = finalized.policy
-            answer_stream = stream_turn.answer_buffer
-            answer_stream.full_answer = finalized.answer
-            completion_effects = StreamCompletionEffects(
-                cache_writer=lambda answer, bound_sources, epoch: self.qa_cache.set(
-                    cache_key, answer, bound_sources, epoch=epoch
-                ),
-                persist_interaction=self._persist_interaction,
-                blind_spot_tracker=self.blind_spot_tracker,
-                request=request,
-                normalized_query=normalized_query,
-                answer=answer_stream.full_answer,
-                sources=sources,
-                hit_level=terminal_policy.hit_level,
-                expected_epoch=request_epoch,
-                start=start,
-                llm_usage=stream_turn.llm_usage,
-                llm_finish_reason=stream_turn.llm_finish_reason,
-                degraded=terminal_policy.degraded,
-                provider=terminal_policy.provider,
-                completion=terminal_policy.completion,
-                active_subject=resolved.active_subject,
-                followup_event=lambda: self._followup_event(resolved),
-                done_event_builder=self._done_event,
-            )
-            return self.stream_completion.events(
-                stream_turn=stream_turn,
-                answer=answer_stream.full_answer,
-                faq_text_sent=faq_documents is not None,
-                incomplete=terminal_policy.incomplete,
-                faq_documents_present=faq_documents is not None,
-                text_only=request.text_only,
-                streaming_requested=outcome.streaming_requested,
-                epoch_is_current=lambda: self._epoch_is_current(request_epoch),
-                cache_answer=completion_effects.cache_answer if terminal_policy.should_cache else None,
-                persist_answer=completion_effects.persist_answer,
-                followups_event=completion_effects.followups_event,
-                done_event=completion_effects.done_event,
-                after_audio=completion_effects.after_audio,
-            )
-
+        completion_factory = StreamAnswerCompletionFactory(
+            completion=self.stream_completion,
+            cache_writer=lambda answer, bound_sources, epoch: self.qa_cache.set(
+                cache_key, answer, bound_sources, epoch=epoch
+            ),
+            persist_interaction=self._persist_interaction,
+            blind_spot_tracker=self.blind_spot_tracker,
+            request=request,
+            normalized_query=normalized_query,
+            sources=sources,
+            expected_epoch=request_epoch,
+            start=start,
+            active_subject=resolved.active_subject,
+            followup_event=lambda: self._followup_event(resolved),
+            done_event_builder=self._done_event,
+            faq_documents_present=faq_documents is not None,
+            text_only=request.text_only,
+            epoch_is_current=lambda: self._epoch_is_current(request_epoch),
+        )
         answer_run = StreamAnswerRun(
             generation_run=generation_run,
-            completion_factory=build_completion_events,
+            completion_factory=completion_factory.build,
         )
         async with aclosing(answer_run.events()) as answer_events:
             async for event in answer_events:
