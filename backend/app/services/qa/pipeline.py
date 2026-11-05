@@ -63,8 +63,7 @@ from app.services.qa.final_answer_speech_emitter import FinalAnswerSpeechEmitter
 from app.services.qa.fast_path_answer_coordinator import FastPathAnswerCoordinator
 from app.services.qa.queued_stream_events import QueuedStreamEvents
 from app.services.qa.stream_completion import StreamCompletionCoordinator
-from app.services.qa.stream_finalization import resolve_final_answer
-from app.services.qa.stream_terminal_policy import resolve_terminal_policy
+from app.services.qa.stream_generation_finalizer import finalize_stream_generation
 from app.services.qa.stream_turn_factory import StreamTurnFactory
 from app.services.qa.vision_evidence import resolve_vision_evidence
 from app.services.qa.answer_styler import polish_answer, no_evidence_reply
@@ -507,23 +506,21 @@ class QAPipeline:
         llm_usage = stream_turn.llm_usage
         llm_finish_reason = stream_turn.llm_finish_reason
 
-        terminal_policy = resolve_terminal_policy(
+        finalized = finalize_stream_generation(
+            generated_answer=answer_stream.full_answer,
             finish_reason=llm_finish_reason,
             faq_documents_present=faq_documents is not None,
             cache_allowed=cache_allowed,
             llm_hit_level=llm_hit_level,
             fallback_hit_level=llm_fallback_hit_level,
             llm_provider=self.llm_provider_name,
-        )
-        degraded_llm = terminal_policy.degraded
-        answer_stream.full_answer = resolve_final_answer(
-            generated_answer=answer_stream.full_answer,
-            degraded=degraded_llm,
-            faq_documents_present=faq_documents is not None,
             faq_answer=faq_result.answer if faq_result is not None else "",
             persona=request.persona,
             faq_sources=faq_sources,
         )
+        terminal_policy = finalized.policy
+        degraded_llm = terminal_policy.degraded
+        answer_stream.full_answer = finalized.answer
 
         faq_text_sent = faq_documents is not None
         latency_state = {"value": 0}
