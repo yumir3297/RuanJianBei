@@ -51,7 +51,14 @@ class FastPathAnswerCoordinator:
             if any(event.type == "error" for event in speech_events):
                 return
 
+        if not await self.epoch_is_current(expected_epoch):
+            yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
+            return
+
         latency_ms = int((perf_counter() - start) * 1000)
         chat_log_id = await persist_answer(answer, latency_ms)
+        if not await self.epoch_is_current(expected_epoch):
+            yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
+            return
         yield followups_event()
         yield done_event(chat_log_id, latency_ms)
