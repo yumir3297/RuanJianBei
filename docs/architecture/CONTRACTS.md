@@ -42,3 +42,6 @@
 
 
 `QueuedSpeechPublisher` 拥有单句 HTTP TTS 与 avatar 渲染后发布的事件对：TTS 异常降级为空音频事件以保留文本与 avatar 输出；取消必须向上传播且不得发布部分事件；`previous` 音频任务完成前不得发布当前句，队列内 avatar 事件必须先于 audio 事件。并发上限由 `StreamTurn` 提供的 semaphore 控制，发布通知仍由队列接收方传入。
+
+
+`DeterministicAnswerResolver` 保持早答决策优先级：不可核实开放/演出时间先于不可核实票价，二者均先于静态路线；静态路线只允许在无 vision 且 intent 为 `static_route` 时调用，builder 未命中则回到后续 FAQ/cache/RAG 流程。该 resolver 只返回决策和可选 status 文本，不发送 SSE、不读写缓存/知识、不持久化；Pipeline 对早答仍执行原 epoch fence、引用准备、语音、持久化和终态顺序。

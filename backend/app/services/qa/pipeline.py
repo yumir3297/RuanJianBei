@@ -33,10 +33,9 @@ from app.services.qa.cache import QACache
 from app.services.qa.blind_spot_tracker import BlindSpotTracker
 from app.services.qa.faq_matcher import FAQMatcher
 from app.services.qa.answer_fast_paths import (
-    resolve_ticket_answer,
-    resolve_unverified_schedule_answer,
     shared_cache_allowed,
 )
+from app.services.qa.deterministic_answer_resolver import DeterministicAnswerResolver
 from app.services.qa.faq_path_resolver import resolve_faq_path_for_request
 from app.services.qa.followup_suggestions import FollowUpSuggestionService
 from app.services.qa.guided_selector import (
@@ -142,6 +141,9 @@ class QAPipeline:
         self.knowledge_repository = knowledge_repository
         self.route_repository = route_repository
         self.route_fast_path = StaticRouteAnswerBuilder(route_repository)
+        self.deterministic_answer_resolver = DeterministicAnswerResolver(
+            route_builder=self.route_fast_path
+        )
         self.visibility_service = visibility_service
         self.speech_profile = speech_profile
         self.vision_catalog = vision_catalog
@@ -325,53 +327,28 @@ class QAPipeline:
             },
         )
 
-        # No verified live schedule is connected. Do not present static FAQ,
-        # cached answers, or retrieved schedules as current opening hours.
-        schedule_answer = resolve_unverified_schedule_answer(request.query)
-        if schedule_answer is not None:
+        deterministic_answer = await self.deterministic_answer_resolver.resolve(
+            request,
+            vision_present=vision is not None,
+            intent=intent_decision.intent,
+        )
+        if deterministic_answer is not None:
+            if deterministic_answer.status_text is not None:
+                yield StreamEvent(type="status", data={"text": deterministic_answer.status_text})
             answer_events = self._emit_final_answer(
-                request=request, normalized_query=normalized_query,
-                answer=schedule_answer,
-                sources=[], hit_level="schedule_unverified", start=start,
-                resolved=resolved, expected_epoch=request_epoch,
+                request=request,
+                normalized_query=normalized_query,
+                answer=deterministic_answer.answer,
+                sources=deterministic_answer.sources,
+                hit_level=deterministic_answer.hit_level,
+                start=start,
+                resolved=resolved,
+                expected_epoch=request_epoch,
             )
             async with aclosing(answer_events) as events:
                 async for event in events:
                     yield event
             return
-
-        ticket_answer = resolve_ticket_answer(request.query)
-        if ticket_answer is not None:
-            answer_events = self._emit_final_answer(
-                request=request, normalized_query=normalized_query,
-                answer=ticket_answer,
-                sources=[], hit_level="ticket_unverified", start=start,
-                resolved=resolved, expected_epoch=request_epoch,
-            )
-            async with aclosing(answer_events) as events:
-                async for event in events:
-                    yield event
-            return
-
-        if vision is None and intent_decision.intent == "static_route":
-            static_route = await self._build_static_route_answer(request)
-            if static_route is not None:
-                answer, route_sources = static_route
-                yield StreamEvent(type="status", data={"text": "正在整理游览路线..."})
-                answer_events = self._emit_final_answer(
-                    request=request,
-                    normalized_query=normalized_query,
-                    answer=answer,
-                    sources=route_sources,
-                    hit_level="static_route" if route_sources else "route_clarification",
-                    start=start,
-                    resolved=resolved,
-                    expected_epoch=request_epoch,
-                )
-                async with aclosing(answer_events) as events:
-                    async for event in events:
-                        yield event
-                return
         cache_key = build_selection_cache_key(
             normalized_query,
             resolved.selection,

@@ -1,5 +1,15 @@
 # 技术决策
 
+## 2026-11-05：隔离确定性早答路由优先级
+
+问题：Pipeline 依次应用“无实时开放时间不可核实”“票价不可核实”和“静态路线”决策。内联判断容易使静态路线覆盖受限制的当前营业信息，或让带 vision 的问题误入路线快路径。
+
+选择：新增 `DeterministicAnswerResolver`，只负责返回早答决策，不承担 SSE、epoch、缓存、RAG 或持久化。保持开放时间→票价→静态路线优先级；路线只有在无 vision 且 intent 为 `static_route` 时运行；builder miss 时让 Pipeline 继续 FAQ/cache/RAG。
+
+验证：四项行为测试覆盖两个不可核实规则优先级、vision/intent 门控和 route miss 回退；测试先因模块缺失失败。定向 Pipeline/route/fast-path 集 66 passed，指定 AI/流式集合 161 passed；Python 3.12 compileall 与 diff check 通过。测试为本地替身，不代表真实时刻表、票务、模型/provider 或设备验收。
+
+回滚：若输出或路由顺序不符，可将 `resolve()` 逻辑内联回 `_stream_chat`，保持 resolver 行为测试为回归契约；不得移除最终答案 epoch fence。
+
 ## 2026-11-05：将逐句 HTTP TTS/avatar SSE 发布从 Pipeline 中拆出
 
 问题：`QAPipeline._queue_audio()` 同时处理 TTS 降级、avatar 生成、上一句音频等待和 avatar/audio 队列发布，生命周期较难与 `StreamTurn` 的取消及并发上限职责对照审查。

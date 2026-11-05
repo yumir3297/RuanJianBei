@@ -1,5 +1,12 @@
 # Worktree 改动逐路径核对（2026-11-05）
 
+## 本轮复核（确定性早答优先级阶段，2026-11-05）
+
+- 起始集成 checkout/ref 与原仓库同名集成 ref 均为 `11c28f1`；原 checkout 仍为 `codex/repository-map@672a104`/95 路径；V01/W02/W02-V01 仍 49/35/39。五个保护快照保留，phase3 仍登记 prunable 未清理。
+- 本轮只改集成副本 QA Pipeline、确定性早答 resolver/行为测试和状态/架构文档；未改原 checkout、V01/W02 worktree、快照或 `sources/`。集成 `frontend/node_modules` 仍为唯一未跟踪项。
+- 四项新行为测试验证 schedule/ticket/static-route 优先级、vision/intent 门控与 route miss 回退；指定 AI/流式回归 161 passed，Python 3.12 compileall 和 diff check 通过。既有逐路径分类未变化；路径覆盖结论不替代分类语义的持续复查。
+- 本轮未做 worktree 合并、覆盖或清理。提交后同步集成 ref。
+
 ## 本轮复核（逐句 TTS/avatar SSE 发布器阶段，2026-11-05）
 
 - 起始集成 checkout 为 `3a4afdc`；提交后集成 checkout 与原仓库同名集成分支 ref 均为 `c2497a3`。原 checkout 仍为 `codex/repository-map@672a104`/95 个状态路径；V01/W02/W02-V01 为 49/35/39。五个保护快照 refs 均可解析；phase3 仍登记 prunable，未 prune。
