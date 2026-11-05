@@ -60,6 +60,7 @@ from app.services.qa.speech_event_adapter import (
 )
 from app.services.qa.stream_events import StreamEvent
 from app.services.qa.final_answer_speech_emitter import FinalAnswerSpeechEmitter
+from app.services.qa.fast_path_answer_coordinator import FastPathAnswerCoordinator
 from app.services.qa.queued_stream_events import QueuedStreamEvents
 from app.services.qa.stream_completion import StreamCompletionCoordinator
 from app.services.qa.stream_finalization import resolve_final_answer
@@ -157,6 +158,10 @@ class QAPipeline:
             avatar_service=self.avatar_service,
             audio_event_builder=self._build_audio_event,
             emotion_resolver=self._answer_emotion,
+            epoch_is_current=self._epoch_is_current,
+        )
+        self.fast_path_answer_coordinator = FastPathAnswerCoordinator(
+            speech_emitter=self.final_answer_speech_emitter,
             epoch_is_current=self._epoch_is_current,
         )
         self.stream_completion = StreamCompletionCoordinator()
@@ -603,49 +608,46 @@ class QAPipeline:
         resolved: ResolvedInteraction,
         expected_epoch: int | None = None,
     ):
-        if not await self._epoch_is_current(expected_epoch):
-            yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
-            return
-        answer = apply_answer_prefix(answer, self._active_response_policy)
-        answer = self._ensure_inline_citations(answer, sources)
-        if sources:
-            yield StreamEvent(type="sources", data={"docs": sources})
-        if not await self._epoch_is_current(expected_epoch):
-            yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
-            return
-        yield StreamEvent(type="text", data={"text": answer, "is_complete": True})
-        if not request.text_only:
-            speech_events = await self.final_answer_speech_emitter.render(
-                answer=answer,
-                hit_level=hit_level,
-                sources=sources,
-                expected_epoch=expected_epoch,
+        def prepare_answer(value: str, bound_sources: list[dict]) -> str:
+            return self._ensure_inline_citations(
+                apply_answer_prefix(value, self._active_response_policy), bound_sources
             )
-            for event in speech_events:
-                yield event
-            if any(event.type == "error" for event in speech_events):
-                return
 
-        latency_ms = int((perf_counter() - start) * 1000)
-        chat_log_id = await self._persist_interaction(
-            session_id=request.session_id,
-            raw_query=request.query,
-            normalized_query=normalized_query,
+        async def persist_answer(value: str, latency_ms: int) -> int:
+            return await self._persist_interaction(
+                session_id=request.session_id,
+                raw_query=request.query,
+                normalized_query=normalized_query,
+                answer=value,
+                sources=sources,
+                hit_level=hit_level,
+                latency_ms=latency_ms,
+                request=request,
+                active_subject=resolved.active_subject,
+            )
+
+        def done_event(chat_log_id: int | None, latency_ms: int) -> StreamEvent:
+            return self._done_event(
+                chat_log_id=chat_log_id,
+                hit_level=hit_level,
+                total_ms=latency_ms,
+                degraded=hit_level in {"rag_insufficient", "rag_llm_fallback", "schedule_unverified", "ticket_unverified"},
+                provider="local" if hit_level.startswith("faq_") or hit_level in {"cache", "schedule_unverified", "ticket_unverified", "static_route", "route_clarification"} else "rag",
+            )
+
+        async for event in self.fast_path_answer_coordinator.events(
             answer=answer,
             sources=sources,
             hit_level=hit_level,
-            latency_ms=latency_ms,
-            request=request,
-            active_subject=resolved.active_subject,
-        )
-        yield self._followup_event(resolved)
-        yield self._done_event(
-            chat_log_id=chat_log_id,
-            hit_level=hit_level,
-            total_ms=latency_ms,
-            degraded=hit_level in {"rag_insufficient", "rag_llm_fallback", "schedule_unverified", "ticket_unverified"},
-            provider="local" if hit_level.startswith("faq_") or hit_level in {"cache", "schedule_unverified", "ticket_unverified", "static_route", "route_clarification"} else "rag",
-        )
+            text_only=request.text_only,
+            expected_epoch=expected_epoch,
+            start=start,
+            prepare_answer=prepare_answer,
+            persist_answer=persist_answer,
+            followups_event=lambda: self._followup_event(resolved),
+            done_event=done_event,
+        ):
+            yield event
 
     async def _epoch_is_current(self, expected_epoch: int | None) -> bool:
         if expected_epoch is None or self.visibility_service is None:
