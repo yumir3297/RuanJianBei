@@ -61,16 +61,11 @@ from app.services.qa.speech_event_adapter import (
 from app.services.qa.stream_events import StreamEvent
 from app.services.qa.final_answer_speech_emitter import FinalAnswerSpeechEmitter
 from app.services.qa.queued_stream_events import QueuedStreamEvents
-from app.services.qa.stream_answer import StreamAnswerBuffer
 from app.services.qa.stream_completion import AudioTaskDrainer, final_audio_segments
 from app.services.qa.audio_event_delivery import AudioEventDelivery
 from app.services.qa.stream_finalization import resolve_final_answer
 from app.services.qa.stream_terminal_policy import resolve_terminal_policy
-from app.services.qa.stream_lifecycle import AudioTaskGroup, StreamProducerGroup, stream_response_scope
-from app.services.qa.stream_mux import StreamMuxState
-from app.services.qa.stream_mux_consumer import StreamMuxConsumer
-from app.services.qa.streaming_tts_buffer import StreamingTTSBuffer
-from app.services.qa.streaming_tts_controller import StreamingTTSController
+from app.services.qa.stream_turn import StreamTurn
 from app.services.qa.vision_evidence import resolve_vision_evidence
 from app.services.qa.answer_styler import polish_answer, no_evidence_reply
 from app.services.qa.evidence_retrieval import retrieve_evidence
@@ -474,21 +469,6 @@ class QAPipeline:
         llm_hit_level = faq_path.hit_level if faq_documents is not None and faq_path is not None else "rag"
         llm_fallback_hit_level = f"{llm_hit_level}_llm_fallback"
 
-        answer_stream = StreamAnswerBuffer()
-        audio_events = QueuedStreamEvents()
-        audio_group = AudioTaskGroup(
-            lambda sentence, **kwargs: self._queue_audio(sentence, audio_events, **kwargs)
-        )
-
-        def schedule_audio(sentence: str) -> None:
-            audio_group.schedule(sentence, notify=notify_audio)
-
-        async def notify_audio() -> None:
-            await mux_queue.put(("audio_ready", None))
-
-        async def cancel_audio() -> None:
-            await audio_group.cancel()
-
         # ── 流式 TTS 路径 ──
         tts_stream: StreamingTTSSession | VolcengineStreamingTTSSession | None = None
         streaming_requested = (
@@ -498,9 +478,6 @@ class QAPipeline:
         )
         if streaming_requested and self.streaming_tts_service is not None:
             tts_stream = self.streaming_tts_service.create_session()
-
-        mux_queue: asyncio.Queue[tuple[str, object | None]] = asyncio.Queue()
-        tts_finish_requested = asyncio.Event()
 
         generation_query = request.query
         if confirmed_visual_title is not None:
@@ -526,42 +503,33 @@ class QAPipeline:
             audience=audience,
             memory=self._memory_prompt,
         )
-
-        stream_producers = StreamProducerGroup(mux_queue)
-        stream_producers.start_llm(llm_source)
-        if tts_stream is not None:
-            stream_producers.start_tts(tts_stream, tts_finish_requested)
-        mux_state = StreamMuxState(streaming_requested=streaming_requested)
-        streaming_tts_buffer = StreamingTTSBuffer()
-        streaming_tts_controller = StreamingTTSController(
-            tts_stream, mux_state, streaming_tts_buffer, tts_finish_requested
-        )
-        stream_consumer = StreamMuxConsumer(
-            queue=mux_queue,
-            mux_state=mux_state,
-            epoch_is_current=lambda: self._epoch_is_current(request_epoch),
-            answer_buffer=answer_stream,
-            audio_events=audio_events,
-            schedule_audio=schedule_audio,
-            streaming_tts_buffer=streaming_tts_buffer,
-            streaming_tts_controller=streaming_tts_controller,
+        stream_turn = StreamTurn(
+            llm_source=llm_source,
+            tts_session=tts_stream,
             streaming_requested=streaming_requested,
             text_only=request.text_only,
             faq_documents_present=faq_documents is not None,
+            epoch_is_current=lambda: self._epoch_is_current(request_epoch),
+            audio_worker=self._queue_audio,
             adapt_tts_event=self._handle_streaming_tts_event,
             coerce_llm_event=self._coerce_llm_event,
         )
+        answer_stream = stream_turn.answer_buffer
+        audio_events = stream_turn.audio_events
+        audio_group = stream_turn.audio_group
+        mux_state = stream_turn.mux_state
+        schedule_audio = stream_turn.schedule_audio
+        cancel_audio = stream_turn.cancel_audio
 
-        async with stream_response_scope(stream_producers, cancel_audio):
-            async for event in stream_consumer.events():
-                yield event
+        async for event in stream_turn.events():
+            yield event
 
-        llm_usage = stream_consumer.llm_usage
-        llm_finish_reason = stream_consumer.llm_finish_reason
-        if mux_state.llm_error is not None:
+        llm_usage = stream_turn.llm_usage
+        llm_finish_reason = stream_turn.llm_finish_reason
+        if stream_turn.llm_error is not None:
             await cancel_audio()
-            raise mux_state.llm_error
-        if stream_consumer.visibility_changed:
+            raise stream_turn.llm_error
+        if stream_turn.visibility_changed:
             await cancel_audio()
             yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
             return

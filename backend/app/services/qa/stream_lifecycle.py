@@ -17,6 +17,10 @@ async def stream_response_scope(
     """Cancel queued speech on failed consumption and always close producers."""
     try:
         yield
+    except GeneratorExit:
+        # Closing an SSE async generator injects GeneratorExit at its yield;
+        # let this async context manager finish normally after cleanup.
+        await cancel_audio()
     except BaseException:
         await cancel_audio()
         raise

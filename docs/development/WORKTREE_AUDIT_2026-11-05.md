@@ -1,5 +1,7 @@
 # Worktree 改动逐路径核对（2026-11-05）
 
+2026-11-05 后续 AI 架构阶段：本阶段从集成 `7adb18c` 开始，完成 StreamTurn 装配/清理边界和 GeneratorExit 行为测试；最新验证结果、Pipeline 剩余职责及源码文件行数见 `PROGRESS.md`。Worktree 基线重新确认后原 checkout 95 路径、V01/W02/W02-V01 49/35/39，5 个快照保持；阶段提交同步原仓库同名集成 ref，不合入原活动 checkout。
+
 基线：原工作树 `code/RuanJianBei` 分支 `codex/repository-map`，HEAD `672a104`；集成树 `integration-work/v01` 分支引用由本地 fetch 同步。扫描到 95 个 porcelain 状态路径。未读取或修改 `sources/`，未执行合并、清理或 prune。
 
 2026-11-05 最新复核：原 checkout 仍为 `672a104` / 95 个未提交路径；V01、W02、W02/V01 集成分别为 `098553f`/49、`a8c2837`/35、`098553f`/39。保全快照 refs `codex/preserved-uncommitted-2026-11-04@4acaa53`、`codex/main-preserved-snapshot@e115eab`、`codex/v01-preserved-snapshot@3805943`、`codex/w02-preserved-snapshot@48ef626`、`codex/w02-integration-preserved-snapshot@5433557` 均存在。集成 HEAD 与原仓库同名集成 ref 目前均为 `6015817`；集成副本仅有未跟踪的 `frontend/node_modules` 本机链接。`/private/tmp/ai-guide-phase3` 仍 prunable 且未清理；`sources/` 无 Git 状态。本轮扩展回归 257 passed、1 条 Starlette 弃用警告，compileall 和 diff check 通过。逐路径分类见下表；所有活动 worktree 与快照均保留。
