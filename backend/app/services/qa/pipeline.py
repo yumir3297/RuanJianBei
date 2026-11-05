@@ -64,7 +64,7 @@ from app.services.qa.queued_stream_events import QueuedStreamEvents
 from app.services.qa.stream_completion import StreamCompletionCoordinator
 from app.services.qa.stream_finalization import resolve_final_answer
 from app.services.qa.stream_terminal_policy import resolve_terminal_policy
-from app.services.qa.stream_turn import StreamTurn
+from app.services.qa.stream_turn_factory import StreamTurnFactory
 from app.services.qa.vision_evidence import resolve_vision_evidence
 from app.services.qa.answer_styler import polish_answer, no_evidence_reply
 from app.services.qa.evidence_retrieval import retrieve_evidence
@@ -160,6 +160,13 @@ class QAPipeline:
             epoch_is_current=self._epoch_is_current,
         )
         self.stream_completion = StreamCompletionCoordinator()
+        self.stream_turn_factory = StreamTurnFactory(
+            llm_service=self.llm_service,
+            streaming_tts_service=self.streaming_tts_service,
+            audio_worker=self._queue_audio,
+            adapt_tts_event=self._handle_streaming_tts_event,
+            coerce_llm_event=self._coerce_llm_event,
+        )
 
     def _current_request_state(self) -> _PipelineRequestState:
         return self._request_state.get() or self._default_request_state
@@ -469,50 +476,18 @@ class QAPipeline:
         llm_hit_level = faq_path.hit_level if faq_documents is not None and faq_path is not None else "rag"
         llm_fallback_hit_level = f"{llm_hit_level}_llm_fallback"
 
-        # ── 流式 TTS 路径 ──
-        tts_stream: StreamingTTSSession | VolcengineStreamingTTSSession | None = None
-        streaming_requested = (
-            self.streaming_tts_service is not None
-            and not request.text_only
-            and faq_documents is None
-        )
-        if streaming_requested and self.streaming_tts_service is not None:
-            tts_stream = self.streaming_tts_service.create_session()
-
-        generation_query = request.query
-        if confirmed_visual_title is not None:
-            # Catalog title is data, not an instruction; JSON escaping
-            # prevents its content from changing this context's shape.
-            title_data = json.dumps(confirmed_visual_title, ensure_ascii=False)
-            generation_query = (
-                "游客已从已发布目录确认本次讲解的景点名称（JSON字符串）："
-                f"{title_data}。图片识别线索未经确认，仅用于检索，不得作为事实；"
-                "回答只能根据参考资料，资料不足时明确说明。\n"
-                f"游客原始问题：{request.query}"
-            )
-        elif vision is not None:
-            generation_query = (
-                "图片识别线索未经确认，仅用于检索；不要断言照片中的景点身份。"
-                "只能依据参考资料提供有条件的说明，身份不明确时请游客选择或确认景点。\n"
-                f"游客原始问题：{request.query}"
-            )
-        llm_source = self.llm_service.stream_generate(
-            self._emotion_aware_query(generation_query),
-            documents,
+        stream_turn, streaming_requested = self.stream_turn_factory.create(
+            query=request.query,
+            documents=documents,
             persona=request.persona,
             audience=audience,
             memory=self._memory_prompt,
-        )
-        stream_turn = StreamTurn(
-            llm_source=llm_source,
-            tts_session=tts_stream,
-            streaming_requested=streaming_requested,
-            text_only=request.text_only,
+            confirmed_visual_title=confirmed_visual_title,
+            vision_context_present=vision is not None,
             faq_documents_present=faq_documents is not None,
+            text_only=request.text_only,
             epoch_is_current=lambda: self._epoch_is_current(request_epoch),
-            audio_worker=self._queue_audio,
-            adapt_tts_event=self._handle_streaming_tts_event,
-            coerce_llm_event=self._coerce_llm_event,
+            emotion_aware_query=self._emotion_aware_query,
         )
         answer_stream = stream_turn.answer_buffer
 
