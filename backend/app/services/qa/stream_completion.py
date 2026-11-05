@@ -105,6 +105,9 @@ class StreamCompletionCoordinator:
                 return
             if cache_answer is not None:
                 await cache_answer()
+                if not await epoch_is_current():
+                    yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
+                    return
             chat_log_id = await persist_answer()
             if not await epoch_is_current():
                 yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})

@@ -41,7 +41,44 @@ async def test_completion_coordinator_drains_audio_before_cache_and_terminal_eve
     )]
 
     assert [event.type for event in events] == ["audio", "text", "followups", "done"]
-    assert order == ["audio-start", "audio-finished", "epoch", "cache", "persist", "epoch"]
+    assert order == [
+        "audio-start", "audio-finished", "epoch", "cache", "epoch", "persist", "epoch"
+    ]
+
+
+@pytest.mark.asyncio
+async def test_completion_coordinator_does_not_persist_if_epoch_changes_during_cache_write():
+    calls = []
+    epoch_checks = iter([True, False])
+
+    class Turn:
+        audio_visibility_changed = False
+
+        async def final_audio_events(self, **kwargs):
+            if False:
+                yield StreamEvent(type="audio")
+
+    async def epoch_is_current():
+        return next(epoch_checks)
+
+    async def cache_answer():
+        calls.append("cache")
+
+    async def persist_answer():
+        calls.append("persist")
+        return "log-stale"
+
+    events = [event async for event in StreamCompletionCoordinator().events(
+        stream_turn=Turn(), answer="基于旧知识的回答", faq_text_sent=False,
+        incomplete=False, faq_documents_present=False, text_only=True,
+        streaming_requested=False, epoch_is_current=epoch_is_current,
+        cache_answer=cache_answer, persist_answer=persist_answer,
+        followups_event=lambda: StreamEvent(type="followups"),
+        done_event=lambda _: StreamEvent(type="done"),
+    )]
+
+    assert [event.type for event in events] == ["error"]
+    assert calls == ["cache"]
 
 
 @pytest.mark.asyncio
