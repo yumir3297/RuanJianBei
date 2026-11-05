@@ -137,7 +137,7 @@
 | ` M` | `docs/REPO_MAP.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `docs/plans/2026-10-28-ai-workbench-backlog.md` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | ` M` | `docs/superpowers/plans/2026-10-29-v01-editable-itinerary.md` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
-| ` M` | `frontend/src/api/tourSessions.js` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/api/tourSessions.js` | 已合并（与集成树逐字节相同） | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/assets/guide-page.css` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/assets/guide-tools.css` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/composables/useAudioPlayer.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
@@ -155,7 +155,7 @@
 | `??` | `backend/app/tests/test_tour_budget_api.py` | 已被集成版覆盖并扩展：保留预算查询/显式剩余时长 API 用例，并增加剩余时间命令的幂等重放、progress_version 和无效值校验 | snapshot=yes; integration=yes |
 | `??` | `backend/app/tests/test_tour_progress_and_proposals.py` | 20 个集成测试包含源 10 个用例并新增恢复/预算/来源校验场景；后续实现替代 | snapshot=yes; integration=yes |
 | `??` | `backend/app/tests/test_tour_proposal_catalog_staleness.py` | 后续目录版本验证实现不同；保留快照，语义由集成 staleness 测试验证 | snapshot=yes; integration=yes |
-| `??` | `frontend/src/api/itinerary.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `frontend/src/api/itinerary.js` | 快照只含提案创建/读取/应用；集成版增加持久 proposal 列表和 execution retry API，以 `Idempotency-Key`、CSRF token 和显式重复调用风险确认连接 durable worker；backend 当前提供对应 endpoints，worker 测试覆盖未知外部结果只能人工确认后重试。归类为后续 W02 集成扩展，不迁回旧客户端 | snapshot=yes; integration=yes |
 | `??` | `frontend/src/utils/cloneJson.js` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | `??` | `frontend/src/utils/itineraryIntent.js` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | `??` | `frontend/src/utils/itineraryProposalDiff.js` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
@@ -190,7 +190,7 @@
 | ` M` | `docs/COMPATIBILITY.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `docs/REPO_MAP.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `docs/plans/2026-10-28-ai-workbench-backlog.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `frontend/src/api/tourSessions.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/api/tourSessions.js` | W02/W02-V01 版本未传当前站点剩余分钟；集成版通过 `buildTourBudgetParams` 仅在有值时传 `current_stop_remaining_minutes`，保留显式 0。后端 Query 接受 `ge=0`，现有 Node 行为测试验证 null/undefined 省略及 0/正值保留（1 passed）；归类为与已集成剩余预算 API 对齐的后续扩展 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/assets/guide-tools.css` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/composables/useAudioPlayer.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/stores/chat.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
@@ -213,7 +213,7 @@
 | `??` | `docs/superpowers/plans/2026-10-29-w02-durable-execution.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | `??` | `docs/superpowers/plans/2026-10-29-w02-execution-ledger.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | `??` | `docs/superpowers/specs/2026-10-29-w02-durable-execution-design.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| `??` | `frontend/src/api/itinerary.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `frontend/src/api/itinerary.js` | W02 快照尚无 proposal list/retry 客户端；集成版增加 durable worker 列表和重试调用，服务端及 `test_unknown_external_result_requires_explicit_retry_confirmation` 覆盖风险确认。该功能属于 W02 集成后的持久任务能力，不从旧快照覆盖 | snapshot=yes; integration=yes |
 | `??` | `frontend/src/utils/requestGeneration.js` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 
 ### Migration lineage 语义核验
@@ -253,7 +253,7 @@
 | ` M` | `docs/REPO_MAP.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `docs/plans/2026-10-28-ai-workbench-backlog.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `docs/superpowers/plans/2026-10-29-v01-editable-itinerary.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `frontend/src/api/tourSessions.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/api/tourSessions.js` | 与 W02 旧客户端相同，缺少当前站点剩余分钟查询参数；集成版补入可省略空值且保留 0 的 `current_stop_remaining_minutes`，后端 Query 与 Node 测试（1 passed）覆盖契约 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/assets/guide-tools.css` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/composables/useAudioPlayer.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/stores/chat.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
@@ -277,5 +277,5 @@
 | `??` | `docs/superpowers/plans/2026-10-29-w02-durable-execution.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | `??` | `docs/superpowers/plans/2026-10-29-w02-execution-ledger.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | `??` | `docs/superpowers/specs/2026-10-29-w02-durable-execution-design.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| `??` | `frontend/src/api/itinerary.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `frontend/src/api/itinerary.js` | W02/V01 副本已有 proposal list/retry API；集成版再增加 request `AbortSignal` 传递，并在客户端强制 `confirmDuplicateRisk === true` 后才发送 retry。后端 retry schema/repository 和未知外部结果人工确认测试与之对应；归类为集成增强，不是未合并功能 | snapshot=yes; integration=yes |
 | `??` | `frontend/src/utils/requestGeneration.js` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
