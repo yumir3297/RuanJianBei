@@ -34,7 +34,7 @@
 | ` M` | `backend/app/services/tts/streaming.py` | 已合并（当前内容与集成树逐字节相同） | 快照含该文件；集成树含该文件 |
 | ` M` | `backend/app/services/tts/volcengine.py` | 已合并（当前内容与集成树逐字节相同） | 快照含该文件；集成树含该文件 |
 | ` M` | `backend/app/tests/test_chat_stream_api.py` | 已合并（当前内容与集成树逐字节相同） | 快照含该文件；集成树含该文件 |
-| ` M` | `backend/app/tests/test_pipeline.py` | 旧基线测试不同于当前集成测试；未移植以免替换 epoch/FAQ/RAG 回归 | 快照含该文件；集成树含该文件 |
+| ` M` | `backend/app/tests/test_pipeline.py` | 保留两侧测试版本；主 checkout 的 `test_direct_answer_appends_inline_citation_when_sources_exist` 期待按 retrieval `evidence_id` 自动拼接 `[证据1]`，集成版对应测试改为 `test_direct_answer_preserves_text_when_sources_exist`。当前 `_ensure_inline_citations` 不添加该标记，CONTRACTS 明确 source IDs 只追踪知识版本、不证明片段支持回答或已完成逐句引用核验；分类为后续证据契约替代，未移植旧断言。集成版另增加 FAQ/RAG/epoch/画像/路由回归 | 快照含该文件；集成树含该文件；集成对应行为测试 1 passed |
 | ` M` | `backend/app/tests/test_tts_factory.py` | 已合并（当前内容与集成树逐字节相同） | 快照含该文件；集成树含该文件 |
 | ` M` | `backend/app/tests/test_vision_api.py` | 已合并（当前内容与集成树逐字节相同） | 快照含该文件；集成树含该文件 |
 | ` M` | `backend/app/tests/test_visitor_memory_api.py` | 已合并（当前内容与集成树逐字节相同） | 快照含该文件；集成树含该文件 |
