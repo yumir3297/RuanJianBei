@@ -1,5 +1,15 @@
 # 技术决策
 
+## 2026-11-05：合并 FAQ 与共享缓存的请求路径决策
+
+问题：Pipeline 分别调用 FAQ resolver、决定共享 cache eligibility、调用 cache resolver；顺序错误可能让直接 FAQ 进入通用 cache，或让 vision/personalized request 读到共享答案。
+
+选择：新增 `AnswerKnowledgePathResolver` 负责 FAQ-before-cache 顺序和资格读取；直接 FAQ answer 即停止，FAQ rewrite documents/source answer 保留并可继续 cache read，cache eligibility 仍由 `shared_cache_allowed()` 计算。最终 FAQ epoch fence、cache stale error、SSE、RAG 和 generation 控制继续由 Pipeline 管理。
+
+验证：三项行为测试覆盖 direct FAQ 不查 cache、FAQ rewrite evidence 与 cache result 同存、vision/personalized request 同时跳过无绑定 FAQ 与共享 cache。首次测试因 resolver 缺失失败；修复 persona 润色断言后定向集 71 passed，指定 AI/流式回归 166 passed；Python 3.12 compileall 与 diff check 通过。测试使用本地替身，不代表真实索引/cache/provider 验收。
+
+回滚：可将 resolver 顺序恢复为 `_stream_chat` 内联代码，保留行为测试；不得绕过 `resolve_cached_answer()` 的 epoch 检查或直接 FAQ 的发送前 fence。
+
 ## 2026-11-05：将回答持久化与游客聚合更新移出 Pipeline
 
 问题：`_persist_interaction()` 同时组装聊天日志、按 provider 条件记录情绪字段和语音缓存元数据，并在主记录成功后 best-effort 更新 visitor profile 与 visitor memory；它是 completion 的关键副作用边界。

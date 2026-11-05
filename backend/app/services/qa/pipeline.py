@@ -32,11 +32,8 @@ from app.services.memory.profile import build_memory_prompt
 from app.services.qa.cache import QACache
 from app.services.qa.blind_spot_tracker import BlindSpotTracker
 from app.services.qa.faq_matcher import FAQMatcher
-from app.services.qa.answer_fast_paths import (
-    shared_cache_allowed,
-)
+from app.services.qa.answer_knowledge_path_resolver import AnswerKnowledgePathResolver
 from app.services.qa.deterministic_answer_resolver import DeterministicAnswerResolver
-from app.services.qa.faq_path_resolver import resolve_faq_path_for_request
 from app.services.qa.followup_suggestions import FollowUpSuggestionService
 from app.services.qa.guided_selector import (
     GuidedSelectionResolver,
@@ -59,7 +56,6 @@ from app.services.qa.final_answer_speech_emitter import FinalAnswerSpeechEmitter
 from app.services.qa.fast_path_answer_coordinator import FastPathAnswerCoordinator
 from app.services.qa.stream_completion import StreamCompletionCoordinator
 from app.services.qa.stream_answer_completion_factory import StreamAnswerCompletionFactory
-from app.services.qa.cached_answer_path import resolve_cached_answer
 from app.services.qa.stream_answer_generation_factory import StreamAnswerGenerationFactory
 from app.services.qa.stream_answer_run import StreamAnswerRun
 from app.services.qa.stream_turn_factory import StreamTurnFactory
@@ -121,6 +117,10 @@ class QAPipeline:
         self.query_rewriter = query_rewriter
         self.faq_matcher = faq_matcher
         self.qa_cache = qa_cache
+        self.answer_knowledge_path_resolver = AnswerKnowledgePathResolver(
+            faq_matcher=self.faq_matcher,
+            cache=self.qa_cache,
+        )
         self.rag_service = rag_service
         self.llm_service = llm_service
         self.tts_service = tts_service
@@ -363,14 +363,19 @@ class QAPipeline:
         yield StreamEvent(type="status", data={"text": "正在查找答案..."})
 
         scoped_attraction = resolved.scope is not None and resolved.scope.source_entry_id is not None
-        faq_path = resolve_faq_path_for_request(
-            self.faq_matcher,
-            normalized_query,
+        knowledge_path = await self.answer_knowledge_path_resolver.resolve(
+            normalized_query=normalized_query,
             audience=audience,
             persona=request.persona,
             vision_present=vision is not None,
             scoped_attraction=scoped_attraction,
+            memory_prompt=self._memory_prompt,
+            neutral=self._active_emotion.label == EmotionLabel.NEUTRAL,
+            cache_key=cache_key,
+            epoch=request_epoch,
+            epoch_is_current=lambda: self._epoch_is_current(request_epoch),
         )
+        faq_path = knowledge_path.faq_path
         faq_documents = faq_path.documents if faq_path is not None else None
         faq_sources = faq_path.sources if faq_path is not None else []
         if faq_path is not None and faq_path.answer is not None:
@@ -392,21 +397,10 @@ class QAPipeline:
                     yield event
             return
 
-        # Visitor memory influences generated wording and must never cross the
-        # shared cache boundary or be bypassed by a generic cached answer.
-        cache_allowed = shared_cache_allowed(
-            vision_present=vision is not None,
-            memory_prompt=self._memory_prompt,
-            neutral=self._active_emotion.label == EmotionLabel.NEUTRAL,
-        )
-        cached = await resolve_cached_answer(
-            cache=self.qa_cache,
-            cache_key=cache_key,
-            allowed=cache_allowed,
-            epoch=request_epoch,
-            epoch_is_current=lambda: self._epoch_is_current(request_epoch),
-            persona=request.persona,
-        )
+        if knowledge_path.cache_allowed is None:
+            raise RuntimeError("direct FAQ answers must finish before cache routing")
+        cache_allowed = knowledge_path.cache_allowed
+        cached = knowledge_path.cached_answer
         if cached is not None and cached.stale:
             yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
             return

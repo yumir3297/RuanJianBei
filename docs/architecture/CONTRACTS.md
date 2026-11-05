@@ -48,3 +48,6 @@
 
 
 `ChatInteractionPersister` 先创建 chat log，再尽力更新 visitor profile 与 visitor memory；后两项失败只能记录异常，不能使已完成回答的持久化调用失败。speech profile metadata 只附在非 text-only 回答；emotional fields 只在 `ChatLogRepository` 路径写入，保留 request-scoped emotion values。缓存写入仍由 completion terminal policy 控制，此 persister 不访问答案缓存或 RAG。
+
+
+`AnswerKnowledgePathResolver` 先解析 FAQ，再尝试共享 cache：直接 FAQ 命中必须短路 cache；需 LLM 改写的 FAQ 保留 `source_answer`、FAQ documents 和 sources 后再计算 cache 资格；vision/scoped-attraction 跳过无景点绑定的 FAQ；vision、memory prompt 或非 neutral emotion 不得读取共享 cache。cache 读取通过 `resolve_cached_answer()` 执行，继续校验 epoch 并按 persona 润色。该 resolver 不发送 SSE、不触发 RAG/generation，也不改变 direct FAQ 的 Pipeline epoch fence。
