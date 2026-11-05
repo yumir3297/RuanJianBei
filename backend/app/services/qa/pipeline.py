@@ -63,6 +63,7 @@ from app.services.qa.final_answer_speech_emitter import FinalAnswerSpeechEmitter
 from app.services.qa.queued_stream_events import QueuedStreamEvents
 from app.services.qa.stream_answer import StreamAnswerBuffer
 from app.services.qa.stream_completion import AudioTaskDrainer, final_audio_segments
+from app.services.qa.audio_event_delivery import AudioEventDelivery
 from app.services.qa.stream_finalization import resolve_final_answer
 from app.services.qa.stream_terminal_policy import resolve_terminal_policy
 from app.services.qa.stream_lifecycle import AudioTaskGroup, StreamProducerGroup, stream_response_scope
@@ -603,14 +604,10 @@ class QAPipeline:
             epoch_is_current=lambda: self._epoch_is_current(request_epoch),
             cancel_audio=cancel_audio,
         )
-        try:
-            async for audio_event in audio_drainer.events():
-                yield audio_event
-        except BaseException:
-            await cancel_audio()
-            raise
-        if audio_drainer.visibility_changed:
-            yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
+        audio_delivery = AudioEventDelivery(audio_drainer, cancel_audio)
+        async for audio_event in audio_delivery.events():
+            yield audio_event
+        if audio_delivery.visibility_changed:
             return
 
         if degraded_llm and self.blind_spot_tracker is not None:
