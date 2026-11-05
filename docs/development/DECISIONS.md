@@ -1,5 +1,15 @@
 # 技术决策
 
+## 2026-11-05：将流生成定稿作为单一输出
+
+问题：Pipeline 分别调用 terminal policy 和 final answer 解析。两项结果共同决定 SSE 是否 incomplete、答案是否回退为权威 FAQ、hit level/provider 与能否缓存；分开调用容易让最终语音、缓存和持久化基于不一致的答案或策略。
+
+选择：新增 `qa/stream_generation_finalizer.py`，一次返回 canonical answer 与不可变 terminal policy。FAQ 降级仍恢复已审核 FAQ 答案，其他中断保留当前生成文本；后续 `StreamCompletionCoordinator` 继续唯一负责音频、epoch fence、缓存/持久化及终态 SSE 次序。保留原有两个纯策略函数，避免不必要的兼容面变化。
+
+验证：行为测试覆盖 FAQ provider fallback 禁止缓存、RAG network interruption 保留部分文本并设置 incomplete；Pipeline/FAQ/RAG/epoch/TTS/SSE 扩展集合 164 passed、1 条 Starlette 弃用警告，compileall 与 diff check 通过。测试用 stub，不代表真实 LLM、provider、TTS 或设备验收。
+
+回滚：若 canonical answer 与 hit level/cache policy 不匹配，或 FAQ 降级/中断回归失败，将 Pipeline 恢复为直接调用两个纯策略函数；保留失败案例测试和 StreamCompletionCoordinator 的事件顺序契约。
+
 ## 2026-11-05：让 StreamTurn 校验生成完成状态并取消不完整语音
 
 `QAPipeline` 曾在 `StreamTurn.events()` 结束后检查 LLM producer 错误和知识可见性变化，并在两条分支里分别取消音频；这使流生成的资源收尾散落在业务主流程。新增 `StreamTurn.check_generation_result()` 统一处理：producer 错误时先取消并等待句级音频任务，再原样重抛错误；epoch/visibility 失效时取消剩余音频并返回同一 SSE 错误事件；无错误时返回空值。Pipeline 仍负责是否返回 SSE 错误以及后续 FAQ/cache/RAG 业务。
