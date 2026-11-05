@@ -1,5 +1,11 @@
 # Worktree 改动逐路径核对（2026-11-05）
 
+## 本轮状态复核（generation request mapping 阶段，2026-11-05）
+
+- 起始集成 checkout 与原仓库同名引用均为 `d14000e`。原活动 checkout 保持 `codex/repository-map@672a104`/95 状态路径；V01/W02/W02-V01 为 `098553f`/49、`a8c2837`/35、`098553f`/39。五个快照 refs 仍存在；phase3 worktree 继续登记 prunable，未 prune。
+- 本阶段仅新增生成参数 factory/行为测试并修改集成副本 Pipeline 及架构/进度记录。原 checkout、V01/W02 源 worktree 和保护快照未改动；`frontend/node_modules` 仍是集成副本唯一未跟踪项，`sources/` 无状态。
+- 下方逐路径分类仍适用；本轮没有将集成分支合入原 checkout，也没有用快照覆盖集成树。提交后同步同名集成 ref。
+
 ## 本轮状态复核（completion effects factory 阶段，2026-11-05）
 
 - 起始集成 checkout 与原仓库 `codex/competition-integration` ref 均为 `880ec46`。原 checkout `codex/repository-map@672a104`/95 路径；V01/W02/W02-V01 仍 `098553f`/49、`a8c2837`/35、`098553f`/39；五个保护快照 refs 均存在，phase3 worktree 仍 prunable 且未清理。

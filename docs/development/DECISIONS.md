@@ -1,5 +1,15 @@
 # 技术决策
 
+## 2026-11-05：将请求与证据到生成配置的映射收进 generation factory
+
+问题：Pipeline 在事件主流程中手工构造 `StreamGenerationRun` 的两组字典，将请求 persona/audience、游客记忆、视觉确认标题、FAQ 原文、cache eligibility、hit level/provider 和 epoch callback 映射到 StreamTurn 与最终定稿参数。此处字段缺失会影响证据或降级语义。
+
+选择：新增 `StreamAnswerGenerationFactory`，显式接收当前 ChatRequest、已选文档和请求上下文，将配置映射成既有 `StreamGenerationRun`。factory 不重新计算 cache eligibility、不修改证据/FAQ 路由，也不承担底层 producer/TTS；这些仍分别由 Pipeline 与 `StreamTurnFactory` 负责。
+
+验证：两项行为测试覆盖受众/游客记忆/确认视觉标题、FAQ 原始答案/fallback metadata、缓存资格、RAG 空上下文以及 text-only 标志。与 StreamAnswerRun/completion factory/Pipeline/FAQ/RAG/epoch/TTS/SSE 指定集合 149 passed；compileall 与 diff check 通过。用本地替身，非真实 provider/设备验收。
+
+回滚：若 factory 传参改变 FAQ 降级答案、缓存准入、epoch check、视觉证据或 TTS 资格，恢复 Pipeline 内的 `StreamGenerationRun` 构造并保留映射测试；不要把业务路由推入此 factory。
+
 ## 2026-11-05：独立绑定定稿答案与完成期 effects
 
 问题：`StreamAnswerRun` 已拥有 generation 与 completion 两段事件流，但 Pipeline 仍内联把 canonical outcome 转为 `StreamCompletionEffects` 和 coordinator 参数，包含 cache 准入、FAQ 文本、TTS、fallback 记录及终态元数据映射。

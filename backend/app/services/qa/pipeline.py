@@ -66,7 +66,7 @@ from app.services.qa.queued_stream_events import QueuedStreamEvents
 from app.services.qa.stream_completion import StreamCompletionCoordinator
 from app.services.qa.stream_answer_completion_factory import StreamAnswerCompletionFactory
 from app.services.qa.cached_answer_path import resolve_cached_answer
-from app.services.qa.stream_generation_run import StreamGenerationRun
+from app.services.qa.stream_answer_generation_factory import StreamAnswerGenerationFactory
 from app.services.qa.stream_answer_run import StreamAnswerRun
 from app.services.qa.stream_turn_factory import StreamTurnFactory
 from app.services.qa.vision_evidence import resolve_vision_evidence
@@ -494,31 +494,24 @@ class QAPipeline:
 
         # FAQ 走 LLM 改写时保留可观测的命中来源，便于与纯 FAQ 快路径区分。
         llm_hit_level = faq_path.hit_level if faq_documents is not None and faq_path is not None else "rag"
-        generation_run = StreamGenerationRun(
+        generation_run = StreamAnswerGenerationFactory(
             turn_factory=self.stream_turn_factory,
-            turn_kwargs={
-                "query": request.query,
-                "documents": documents,
-                "persona": request.persona,
-                "audience": audience,
-                "memory": self._memory_prompt,
-                "confirmed_visual_title": confirmed_visual_title,
-                "vision_context_present": vision is not None,
-                "faq_documents_present": faq_documents is not None,
-                "text_only": request.text_only,
-                "epoch_is_current": lambda: self._epoch_is_current(request_epoch),
-                "emotion_aware_query": self._emotion_aware_query,
-            },
-            finalization_kwargs={
-                "faq_documents_present": faq_documents is not None,
-                "cache_allowed": cache_allowed,
-                "llm_hit_level": llm_hit_level,
-                "fallback_hit_level": f"{llm_hit_level}_llm_fallback",
-                "llm_provider": self.llm_provider_name,
-                "faq_answer": faq_path.source_answer if faq_path is not None else "",
-                "persona": request.persona,
-                "faq_sources": faq_sources,
-            },
+            llm_provider_name=self.llm_provider_name,
+            emotion_aware_query=self._emotion_aware_query,
+            epoch_is_current=lambda: self._epoch_is_current(request_epoch),
+        ).build(
+            request=request,
+            documents=documents,
+            audience=audience,
+            memory=self._memory_prompt,
+            confirmed_visual_title=confirmed_visual_title,
+            vision_context_present=vision is not None,
+            faq_documents_present=faq_documents is not None,
+            cache_allowed=cache_allowed,
+            llm_hit_level=llm_hit_level,
+            fallback_hit_level=f"{llm_hit_level}_llm_fallback",
+            faq_answer=faq_path.source_answer if faq_path is not None else "",
+            faq_sources=faq_sources,
         )
         completion_factory = StreamAnswerCompletionFactory(
             completion=self.stream_completion,
