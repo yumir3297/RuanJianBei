@@ -65,10 +65,11 @@ from app.services.qa.fast_path_answer_coordinator import FastPathAnswerCoordinat
 from app.services.qa.queued_stream_events import QueuedStreamEvents
 from app.services.qa.stream_completion import StreamCompletionCoordinator
 from app.services.qa.stream_completion_effects import StreamCompletionEffects
+from app.services.qa.cached_answer_path import resolve_cached_answer
 from app.services.qa.stream_generation_run import StreamGenerationRun
 from app.services.qa.stream_turn_factory import StreamTurnFactory
 from app.services.qa.vision_evidence import resolve_vision_evidence
-from app.services.qa.answer_styler import polish_answer, no_evidence_reply
+from app.services.qa.answer_styler import no_evidence_reply
 from app.services.qa.evidence_retrieval import retrieve_evidence
 from app.services.rag.base import BaseRAGService
 from app.services.rag.query_rewriter import QueryRewriter
@@ -414,16 +415,24 @@ class QAPipeline:
             memory_prompt=self._memory_prompt,
             neutral=self._active_emotion.label == EmotionLabel.NEUTRAL,
         )
-        cached = await self.qa_cache.get(cache_key, epoch=request_epoch) if cache_allowed else None
-        if cached:
-            if not await self._epoch_is_current(request_epoch):
-                yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
-                return
-            styled_answer = polish_answer(cached.answer, request.persona, cached.sources)
+        cached = await resolve_cached_answer(
+            cache=self.qa_cache,
+            cache_key=cache_key,
+            allowed=cache_allowed,
+            epoch=request_epoch,
+            epoch_is_current=lambda: self._epoch_is_current(request_epoch),
+            persona=request.persona,
+        )
+        if cached is not None and cached.stale:
+            yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
+            return
+        if cached is not None:
+            if cached.answer is None:
+                raise RuntimeError("current cached answer is missing its resolved text")
             answer_events = self._emit_final_answer(
                 request=request,
                 normalized_query=normalized_query,
-                answer=styled_answer,
+                answer=cached.answer,
                 sources=cached.sources,
                 hit_level="cache",
                 start=start,
