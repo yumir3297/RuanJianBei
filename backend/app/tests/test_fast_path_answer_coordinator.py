@@ -96,6 +96,38 @@ class FastPathAnswerCoordinatorTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([event.type for event in events], ["text", "error"])
         self.assertEqual(calls, [])
 
+    async def test_text_only_answer_skips_speech_and_still_completes(self):
+        calls = []
+
+        class Speech:
+            async def render(self, **kwargs):
+                raise AssertionError("text-only answer must not synthesize speech")
+
+        async def epoch_is_current(expected_epoch):
+            return True
+
+        async def persist(answer, latency_ms):
+            calls.append(("persist", answer))
+            return 11
+
+        coordinator = FastPathAnswerCoordinator(
+            speech_emitter=Speech(), epoch_is_current=epoch_is_current
+        )
+        events = [event async for event in coordinator.events(
+            answer="文字答案", sources=[], hit_level="faq_direct", text_only=True,
+            expected_epoch=3, start=0.0,
+            prepare_answer=lambda answer, sources: answer,
+            persist_answer=persist,
+            followups_event=lambda: StreamEvent(type="followups"),
+            done_event=lambda chat_log_id, latency_ms: StreamEvent(
+                type="done", data={"chat_log_id": chat_log_id}
+            ),
+        )]
+
+        self.assertEqual([event.type for event in events], ["text", "followups", "done"])
+        self.assertEqual(events[-1].data, {"chat_log_id": 11})
+        self.assertEqual(calls, [("persist", "文字答案")])
+
 
 if __name__ == "__main__":
     unittest.main()
