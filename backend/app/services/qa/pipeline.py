@@ -515,21 +515,17 @@ class QAPipeline:
             coerce_llm_event=self._coerce_llm_event,
         )
         answer_stream = stream_turn.answer_buffer
-        mux_state = stream_turn.mux_state
-        cancel_audio = stream_turn.cancel_audio
 
         async for event in stream_turn.events():
             yield event
 
+        generation_error = await stream_turn.check_generation_result()
+        if generation_error is not None:
+            yield generation_error
+            return
+
         llm_usage = stream_turn.llm_usage
         llm_finish_reason = stream_turn.llm_finish_reason
-        if stream_turn.llm_error is not None:
-            await cancel_audio()
-            raise stream_turn.llm_error
-        if stream_turn.visibility_changed:
-            await cancel_audio()
-            yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
-            return
 
         terminal_policy = resolve_terminal_policy(
             finish_reason=llm_finish_reason,

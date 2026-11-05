@@ -149,6 +149,35 @@ async def test_closing_final_audio_delivery_cancels_later_scheduled_audio():
 
 
 @pytest.mark.asyncio
+async def test_stream_turn_completion_check_cancels_audio_and_reraises_llm_error():
+    audio_started = asyncio.Event()
+    audio_cancelled = asyncio.Event()
+
+    async def source():
+        yield LLMStreamEvent(type="content", text="第一句。")
+        raise RuntimeError("LLM stream failed")
+
+    async def audio_worker(sentence, queue, **kwargs):
+        del sentence, queue, kwargs
+        audio_started.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            audio_cancelled.set()
+
+    turn = create_turn(source(), audio_worker, text_only=False)
+    events = [event async for event in turn.events()]
+    await asyncio.wait_for(audio_started.wait(), timeout=1)
+
+    with pytest.raises(RuntimeError, match="LLM stream failed"):
+        await turn.check_generation_result()
+
+    await asyncio.wait_for(audio_cancelled.wait(), timeout=1)
+    assert any(event.type == "text_chunk" for event in events)
+    assert turn.audio_group.pending == ()
+
+
+@pytest.mark.asyncio
 async def test_closing_stream_turn_cancels_speech_and_closes_llm_source():
     audio_started = asyncio.Event()
     audio_closed = asyncio.Event()

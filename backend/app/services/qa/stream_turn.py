@@ -77,6 +77,16 @@ class StreamTurn:
     async def cancel_audio(self) -> None:
         await self.audio_group.cancel()
 
+    async def check_generation_result(self) -> StreamEvent | None:
+        """Stop queued speech on failed or stale generation before returning control."""
+        if self.llm_error is not None:
+            await self.cancel_audio()
+            raise self.llm_error
+        if self.visibility_changed:
+            await self.cancel_audio()
+            return StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
+        return None
+
     async def events(self) -> AsyncIterator[StreamEvent]:
         async with stream_response_scope(self.producers, self.cancel_audio):
             async for event in self.consumer.events():

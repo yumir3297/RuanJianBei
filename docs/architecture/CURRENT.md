@@ -1,6 +1,6 @@
 # 当前架构索引
 
-代码核对基线为 `codex/competition-integration` 分支（核对于 2026-11-05）；具体提交以 Git 历史和 [开发进度](../development/PROGRESS.md) 为准。问答仍由显式 `QAPipeline` 驱动，FAQ/缓存/RAG 快速通道与 SSE、HTTP/流式 TTS 并行调度；情绪、表达策略和游客记忆是每次流请求的 ContextVar 状态。Pipeline 当前 887 行，负责请求/知识流程、FAQ/RAG/cache 决策、来源绑定及协调器装配；`stream_turn.py` 组装并拥有单次流请求的 producer、mux consumer、TTS controller、句级音频任务及最终 HTTP 音频尾段/FIFO drain/epoch 检查，`stream_completion.py` 还包含 `StreamCompletionCoordinator`，按序协调 FAQ 文本/音频、完成后 epoch 检查、缓存/持久化以及最终 text/followups/done。producer 生命周期、音频事件交付、最终答案选择、终态策略和快路径语音尾段也已拆到专用组件。此索引描述源码结构，不代表真实供应商或设备已验收。完整入口见 [功能地图](../REPO_MAP.md)。
+代码核对基线为 `codex/competition-integration` 分支（核对于 2026-11-05）；具体提交以 Git 历史和 [开发进度](../development/PROGRESS.md) 为准。问答仍由显式 `QAPipeline` 驱动，FAQ/缓存/RAG 快速通道与 SSE、HTTP/流式 TTS 并行调度；情绪、表达策略和游客记忆是每次流请求的 ContextVar 状态。Pipeline 当前 883 行，负责请求/知识流程、FAQ/RAG/cache 决策、来源绑定及协调器装配；`stream_turn.py` 组装并拥有单次流请求的 producer、mux consumer、TTS controller、句级音频任务及最终 HTTP 音频尾段/FIFO drain/epoch 检查，还通过 `check_generation_result()` 统一处理 producer 错误和知识失效；`stream_completion.py` 还包含 `StreamCompletionCoordinator`，按序协调 FAQ 文本/音频、完成后 epoch 检查、缓存/持久化以及最终 text/followups/done，并在外层 SSE 关闭时关闭内层音频事件流和取消剩余音频。producer 生命周期、音频事件交付、最终答案选择、终态策略和快路径语音尾段也已拆到专用组件。此索引描述源码结构，不代表真实供应商或设备已验收。完整入口见 [功能地图](../REPO_MAP.md)。
 
 ```mermaid
 flowchart LR

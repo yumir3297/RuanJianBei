@@ -1,5 +1,11 @@
 # 技术决策
 
+## 2026-11-05：让 StreamTurn 校验生成完成状态并取消不完整语音
+
+`QAPipeline` 曾在 `StreamTurn.events()` 结束后检查 LLM producer 错误和知识可见性变化，并在两条分支里分别取消音频；这使流生成的资源收尾散落在业务主流程。新增 `StreamTurn.check_generation_result()` 统一处理：producer 错误时先取消并等待句级音频任务，再原样重抛错误；epoch/visibility 失效时取消剩余音频并返回同一 SSE 错误事件；无错误时返回空值。Pipeline 仍负责是否返回 SSE 错误以及后续 FAQ/cache/RAG 业务。
+
+验证：真实 producer 异常后有挂起音频任务的行为测试先因缺少方法失败，修复后确认异常原样传播且任务取消；StreamTurn/完成协调器/音频事件/Pipeline/chat SSE 定向集合 72 passed、1 条 Starlette 弃用警告。完整后端测试 597 passed、19 skipped、3 failed，失败为本地环境缺 `numpy` 和 `rank_bm25`；compileall/diff check 通过。Pipeline 从 887 降至 883 行。仅为本地替身回归，不代表真实 Provider 或设备验收。
+
 ## 2026-11-05：将生成完成后的 SSE 与提交顺序移入协调器
 
 生成回答后的主流程仍把音频尾段交付、过期 epoch 检查、fallback 盲点记录、缓存、聊天记录持久化及最终 `text/followups/done` 顺序写在 `QAPipeline.stream_chat`。新增 `StreamCompletionCoordinator` 负责协调这些已有步骤：FAQ 完整文本仍先于语音发出；HTTP 音频按 `StreamTurn` 顺序 drain；音频交付失效时停止；随后检查 epoch，再按原策略缓存与持久化，并在持久化后再次检查 epoch，才发送最终文本和终态事件。FAQ/RAG/cache 资格决策、答案降级策略、来源证据、请求构造仍留在 Pipeline。

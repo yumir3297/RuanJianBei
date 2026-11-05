@@ -39,7 +39,7 @@ flowchart TD
 
 对所有快速路径保留知识版本检查、缓存资格判断、来源 ID 及失败回退。共享答案缓存只允许无图片上下文、无游客记忆且情绪中性的请求使用。图片候选和模型自报置信度不建立事实范围；只有游客确认且目录中的景点版本仍为当前发布版本时，才使用条目 ID 限定 RAG。RAG 来源保留知识条目、修订和分块 ID，并绑定具体回答。无实时路况或客流数据时，路线仅基于预设路线，不宣称动态最优。
 
-流式职责按行为边界拆分：`StreamTurn` 组装每请求 producer、mux consumer、TTS controller 与句级音频任务，选择最终未发送音频尾段并负责 FIFO drain/epoch fence 及请求退出；`StreamCompletionCoordinator` 管理音频完成后的 FAQ 文本/音频顺序、epoch 检查、cache/persist 与最终 text/followups/done，并在外层 SSE 被关闭时关闭内层事件迭代器和取消剩余音频。producer 生命周期、mux 消费与 epoch fence、答案累计与句切分、TTS buffer/controller、HTTP 音频交付、最终快路径语音尾段和终态协调各自可单测。`QAPipeline` 仍是明确的业务请求编排入口，保留 FAQ/cache/RAG 路由、证据绑定与终态降级策略；后续拆分需维持事件顺序和取消语义，避免只为缩短文件而迁移隐式状态。
+流式职责按行为边界拆分：`StreamTurn` 组装每请求 producer、mux consumer、TTS controller 与句级音频任务，选择最终未发送音频尾段并负责 FIFO drain/epoch fence、生成结果错误/失效处理及请求退出；`StreamCompletionCoordinator` 管理音频完成后的 FAQ 文本/音频顺序、epoch 检查、cache/persist 与最终 text/followups/done，并在外层 SSE 被关闭时关闭内层事件迭代器和取消剩余音频。producer 生命周期、mux 消费与 epoch fence、答案累计与句切分、TTS buffer/controller、HTTP 音频交付、最终快路径语音尾段和终态协调各自可单测。`QAPipeline` 仍是明确的业务请求编排入口，保留 FAQ/cache/RAG 路由、证据绑定与终态降级策略；后续拆分需维持事件顺序和取消语义，避免只为缩短文件而迁移隐式状态。
 
 对比候选：A 保留现有 Pipeline 并明确节点/契约；B 局部引入 LangGraph；C 使用其他轻量 Agent 框架。当前选 A，因为现有复杂行程任务已经有持久执行器，尚无实测证明 B/C 能提升正确率、恢复率、延迟或成本。若后续出现现有 worker 难以维护的多分支或跨请求恢复任务，再用固定任务集做隔离 PoC；简单 FAQ/缓存路径需保持不变。选型证据见[框架调研](FRAMEWORK_RESEARCH.md)。
 
