@@ -1,5 +1,13 @@
 # 技术决策
 
+## 2026-11-05：显式验证 generation/completion 两阶段的任务取消
+
+问题：已有 GeneratorExit/`aclose()` 测试分别覆盖关闭 generation 和 completion iterator，但 SSE 请求也可能在等待其中一个阶段时被任务取消；必须证明 `CancelledError` 不会吞掉，并且底层异步生成器的 `finally` 清理已执行。
+
+选择：保持 `StreamAnswerRun` 的异步 `aclosing` owner 实现，新增两项独立 task cancellation 测试，分别在 generation source 和 completion source await 中取消消费者。取消需向调用方传播，关闭当前 source，generation 取消时不得调用 completion factory。
+
+验证：扩展 FAQ/cache/RAG/evidence/epoch/generation/completion/TTS/SSE 指定集合 151 passed；Python 3.12 compileall 与 diff check 通过。上述均为本地异步替身，不代表真实 ASGI 客户端断开或供应商取消验收。
+
 ## 2026-11-05：将请求与证据到生成配置的映射收进 generation factory
 
 问题：Pipeline 在事件主流程中手工构造 `StreamGenerationRun` 的两组字典，将请求 persona/audience、游客记忆、视觉确认标题、FAQ 原文、cache eligibility、hit level/provider 和 epoch callback 映射到 StreamTurn 与最终定稿参数。此处字段缺失会影响证据或降级语义。

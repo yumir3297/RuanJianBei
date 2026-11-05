@@ -10,7 +10,7 @@
 
 `StreamEvidenceRun` 负责 FAQ/RAG 证据进入生成阶段前的事件顺序。RAG 分支必须将当前已解析 scope 传入 `retrieve_evidence()`，保持来源中的 `entry_id`、`revision_id`、`chunk_id` 与返回片段绑定；FAQ 证据不再发起 RAG 检索。两条路径均须在 source SSE 前验证请求 epoch，source 事件交付后再验证一次；任一道 fence 失败都不得把证据 outcome 交给 LLM 生成。若客户端关闭证据事件流，关闭必须传播到底层检索协程。
 
-`StreamAnswerRun` 拥有 `StreamGenerationRun` 到 `StreamCompletionCoordinator` 的单请求 SSE 生命周期：必须先 drain 并关闭 generation event iterator；generation error 事件原样转发并短路，不得构造 completion 或触发 cache/persist/followups/done；正常 outcome 必须带 canonical finalization 后才启动 completion；外部关闭时必须关闭当前 generation 或 completion iterator。completion 的音频 drain、epoch fence、副作用与终态事件顺序仍由 `StreamCompletionCoordinator` 实现。
+`StreamAnswerRun` 拥有 `StreamGenerationRun` 到 `StreamCompletionCoordinator` 的单请求 SSE 生命周期：必须先 drain 并关闭 generation event iterator；generation error 事件原样转发并短路，不得构造 completion 或触发 cache/persist/followups/done；正常 outcome 必须带 canonical finalization 后才启动 completion；外部 GeneratorExit 或 task cancellation 时必须关闭当前 generation 或 completion iterator，且将取消传播给调用方。completion 的音频 drain、epoch fence、副作用与终态事件顺序仍由 `StreamCompletionCoordinator` 实现。
 
 `StreamAnswerCompletionFactory` 只从 finalized generation outcome 构造本轮 completion effects 和 coordinator 参数。应使用 canonical answer；只有 terminal policy `should_cache` 为真时才传入 cache callback；保留 FAQ 完整文本、streaming TTS 状态、degraded blind spot、persist 参数和 done 元数据。该 factory 不自行执行副作用，最终顺序仍归 `StreamCompletionCoordinator`，epoch fence 不得绕过。
 

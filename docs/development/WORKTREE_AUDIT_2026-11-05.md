@@ -1,5 +1,11 @@
 # Worktree 改动逐路径核对（2026-11-05）
 
+## 本轮复核（path coverage 与 StreamAnswerRun cancellation，2026-11-05）
+
+- 集成 checkout 与原仓库同名集成引用当前均指向 `8085379`；原 checkout 仍 `672a104`/95 路径，V01/W02/W02-V01 分别 49/35/39；集成只有 `frontend/node_modules` 未跟踪。五个保护快照 refs 均在，phase3 仍登记 prunable，未 prune。
+- 使用当前四个 worktree 的 `git status --porcelain -z` 路径集合复验本审计表分段，主 checkout、V01、W02 和 W02/V01 集成分别 95/49/35/39 项，全部命中逐路径或目录汇总行，无遗漏。此结果仅证明 audit coverage，不等于分类语义已完成。
+- `StreamAnswerRun` task cancellation 测试及扩展 151 项回归通过；本轮只修改集成副本的测试/架构/进度记录，未变更源 worktree、快照或原 checkout。
+
 ## 本轮状态复核（generation request mapping 阶段，2026-11-05）
 
 - 起始集成 checkout 与原仓库同名引用均为 `d14000e`。原活动 checkout 保持 `codex/repository-map@672a104`/95 状态路径；V01/W02/W02-V01 为 `098553f`/49、`a8c2837`/35、`098553f`/39。五个快照 refs 仍存在；phase3 worktree 继续登记 prunable，未 prune。
