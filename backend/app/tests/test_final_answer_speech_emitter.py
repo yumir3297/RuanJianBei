@@ -90,3 +90,87 @@ def test_epoch_change_after_render_suppresses_stale_speech_events():
 
     assert [event.type for event in events] == ["error"]
     assert events[0].data["message"] == "知识内容已更新，已停止继续输出。"
+
+
+def test_render_cancels_and_awaits_sibling_when_one_renderer_fails():
+    class FailingTTS:
+        async def synthesize(self, text):
+            await asyncio.sleep(0)
+            raise RuntimeError("tts failed")
+
+    class BlockingAvatar:
+        def __init__(self):
+            self.cancelled = asyncio.Event()
+
+        async def drive(self, text):
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                self.cancelled.set()
+                raise
+
+    avatar = BlockingAvatar()
+    emitter = FinalAnswerSpeechEmitter(
+        tts_service=FailingTTS(),
+        avatar_service=avatar,
+        audio_event_builder=lambda *args: StreamEvent("audio", {}),
+        emotion_resolver=lambda *_: "neutral",
+        epoch_is_current=lambda _: asyncio.sleep(0, result=True),
+    )
+
+    async def render_and_check():
+        try:
+            await emitter.render(answer="说明。", hit_level="cache", sources=[], expected_epoch=None)
+        except RuntimeError as exc:
+            assert str(exc) == "tts failed"
+        else:
+            raise AssertionError("the renderer failure should propagate")
+        assert avatar.cancelled.is_set()
+
+    _run(render_and_check())
+
+
+def test_render_cancellation_cleans_up_both_renderers_and_propagates():
+    class BlockingRenderer:
+        def __init__(self, ready, starts):
+            self.ready = ready
+            self.starts = starts
+            self.cancelled = asyncio.Event()
+
+        async def render(self, text):
+            self.starts[0] += 1
+            if self.starts[0] == 2:
+                self.ready.set()
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                self.cancelled.set()
+                raise
+
+    async def run():
+        ready = asyncio.Event()
+        starts = [0]
+        tts = BlockingRenderer(ready, starts)
+        avatar = BlockingRenderer(ready, starts)
+        emitter = FinalAnswerSpeechEmitter(
+            tts_service=SimpleNamespace(synthesize=tts.render),
+            avatar_service=SimpleNamespace(drive=avatar.render),
+            audio_event_builder=lambda *args: StreamEvent("audio", {}),
+            emotion_resolver=lambda *_: "neutral",
+            epoch_is_current=lambda _: asyncio.sleep(0, result=True),
+        )
+        task = asyncio.create_task(
+            emitter.render(answer="说明。", hit_level="cache", sources=[], expected_epoch=None)
+        )
+        await ready.wait()
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        else:
+            raise AssertionError("caller cancellation should propagate")
+        assert tts.cancelled.is_set()
+        assert avatar.cancelled.is_set()
+
+    _run(run())

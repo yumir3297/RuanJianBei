@@ -33,10 +33,18 @@ class FinalAnswerSpeechEmitter:
         expected_epoch: int | None,
     ) -> list[StreamEvent]:
         tts_text = self._speech_text(answer, hit_level)
-        audio, avatar = await asyncio.gather(
-            self.tts_service.synthesize(tts_text),
-            self.avatar_service.drive(tts_text),
-        )
+        render_tasks = [
+            asyncio.create_task(self.tts_service.synthesize(tts_text)),
+            asyncio.create_task(self.avatar_service.drive(tts_text)),
+        ]
+        try:
+            audio, avatar = await asyncio.gather(*render_tasks)
+        except BaseException:
+            for task in render_tasks:
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(*render_tasks, return_exceptions=True)
+            raise
         if not await self.epoch_is_current(expected_epoch):
             return [StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})]
 
