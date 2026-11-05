@@ -8,6 +8,7 @@ from app.services.qa.stream_lifecycle import (
     cancel_and_join,
     forward_events,
     forward_tts_events,
+    stream_response_scope,
 )
 
 
@@ -30,6 +31,41 @@ async def test_cancel_and_join_waits_for_cancelled_stream_tasks():
 
     assert task.cancelled()
     assert cleaned.is_set()
+
+
+@pytest.mark.asyncio
+async def test_response_scope_closes_producers_on_normal_completion_without_cancelling_audio():
+    state = {"closed": False, "audio_cancelled": False}
+
+    class Producers:
+        async def close(self):
+            state["closed"] = True
+
+    async def cancel_audio():
+        state["audio_cancelled"] = True
+
+    async with stream_response_scope(Producers(), cancel_audio):
+        pass
+
+    assert state == {"closed": True, "audio_cancelled": False}
+
+
+@pytest.mark.asyncio
+async def test_response_scope_cancels_audio_and_closes_producers_after_consumer_error():
+    state = {"closed": False, "audio_cancelled": False}
+
+    class Producers:
+        async def close(self):
+            state["closed"] = True
+
+    async def cancel_audio():
+        state["audio_cancelled"] = True
+
+    with pytest.raises(RuntimeError, match="consumer failed"):
+        async with stream_response_scope(Producers(), cancel_audio):
+            raise RuntimeError("consumer failed")
+
+    assert state == {"closed": True, "audio_cancelled": True}
 
 
 @pytest.mark.asyncio

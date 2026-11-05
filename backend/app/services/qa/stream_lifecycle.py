@@ -1,11 +1,27 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterable, Callable
+from collections.abc import AsyncIterable, AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
 import logging
 from time import monotonic
 
 logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def stream_response_scope(
+    producers: "StreamProducerGroup",
+    cancel_audio: Callable[[], Awaitable[None]],
+) -> AsyncIterator[None]:
+    """Cancel queued speech on failed consumption and always close producers."""
+    try:
+        yield
+    except BaseException:
+        await cancel_audio()
+        raise
+    finally:
+        await producers.close()
 
 
 class AudioTaskGroup:

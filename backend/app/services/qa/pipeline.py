@@ -65,7 +65,7 @@ from app.services.qa.stream_answer import StreamAnswerBuffer
 from app.services.qa.stream_completion import AudioTaskDrainer, final_audio_segments
 from app.services.qa.stream_finalization import resolve_final_answer
 from app.services.qa.stream_terminal_policy import resolve_terminal_policy
-from app.services.qa.stream_lifecycle import AudioTaskGroup, StreamProducerGroup
+from app.services.qa.stream_lifecycle import AudioTaskGroup, StreamProducerGroup, stream_response_scope
 from app.services.qa.stream_mux import StreamMuxState
 from app.services.qa.stream_mux_consumer import StreamMuxConsumer
 from app.services.qa.streaming_tts_buffer import StreamingTTSBuffer
@@ -551,14 +551,9 @@ class QAPipeline:
             coerce_llm_event=self._coerce_llm_event,
         )
 
-        try:
+        async with stream_response_scope(stream_producers, cancel_audio):
             async for event in stream_consumer.events():
                 yield event
-        except BaseException:
-            await cancel_audio()
-            raise
-        finally:
-            await stream_producers.close()
 
         llm_usage = stream_consumer.llm_usage
         llm_finish_reason = stream_consumer.llm_finish_reason

@@ -1,5 +1,9 @@
 # 技术决策
 
+## 2026-11-05：用作用域管理流式消费的取消清理
+
+流式 mux 消费期间，异常或客户端关闭必须取消并等待句级 HTTP TTS；正常结束、异常或取消都必须关闭 producer task 与 streaming TTS session。新增 `stream_response_scope` async context manager 承担这项清理协议；Pipeline 继续产出 SSE，并在后续处理 mux/epoch 状态。验证覆盖正常结束与消费异常，定向 59 passed，扩展集合 230 passed、1 条 Starlette 弃用警告。
+
 ## 2026-11-05：集中计算流式终态策略
 
 LLM finish reason 影响 degraded 标记、FAQ interruption 是否完整、done 的 hit level/provider，以及共享缓存是否允许写入。新增纯函数 `qa/stream_terminal_policy.resolve_terminal_policy` 一次计算这些字段；Pipeline 仍控制 epoch 检查和事件/持久化顺序。这样可单独检验降级语义并降低主流程重复条件。
