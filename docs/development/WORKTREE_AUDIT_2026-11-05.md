@@ -4,7 +4,7 @@
 
 - 最新复核：集成 checkout 与原仓库同名 ref 起始均为 `009fbda`；本轮补充 W02 `claim_next` 后、`start_attempt` 前 progress 版本变化的行为测试，定向 stream/W02 集合 34 passed，compileall/diff check 通过。回归结果与测试边界见 `PROGRESS.md`。
 - 原活动 checkout `codex/repository-map@672a104` 仍有 95 个未提交状态路径。V01/W02/W02-V01 worktree 分别为 `098553f`/49、`a8c2837`/35、`098553f`/39。五个保全快照 refs 均存在；`/private/tmp/ai-guide-phase3` 仍为 prunable，未 prune；`sources/` 无状态。未合并到原活动 checkout。
-- 最新重跑三组 migration/recovery 测试在合成 SQLite 上 6 passed、19 条 Alembic/SQLite 弃用警告。覆盖升级/回退和 lineage guard，不覆盖 PostgreSQL、部署数据库或真实旧库。
+- 最新联合回归在扩展 AI 与三组 migration/recovery 测试中 170 passed、20 warnings；其中 migration 专项在合成 SQLite 上 6 passed，覆盖升级/回退和 lineage guard。未覆盖 PostgreSQL、部署数据库或真实旧库。
 - 当前 AI 流重构已包括 `StreamTurn`、`StreamCompletionCoordinator`、生成结果错误收尾和取消传播。完整后端最近一次为 597 passed、19 skipped、3 failed，失败来自临时 venv 缺 `numpy`/`rank_bm25`；真实模型、provider 和设备验收未完成。
 - 审计表逐条保留源 worktree/snapshot 的未提交差异；范围外的 UI/材料明确留存，尚需继续审查范围内迁移/schema 与并发竞态差异。禁止按祖先关系推断所有脏改动已合入。
 
