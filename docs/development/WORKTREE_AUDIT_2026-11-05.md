@@ -2,7 +2,7 @@
 
 ## 本轮复核（逐句 TTS/avatar SSE 发布器阶段，2026-11-05）
 
-- 起始集成 checkout 为 `3a4afdc`；原仓库同名集成分支 ref 已同步到该提交。原 checkout 仍为 `codex/repository-map@672a104`/95 个状态路径；V01/W02/W02-V01 为 49/35/39。五个保护快照 refs 均可解析；phase3 仍登记 prunable，未 prune。
+- 起始集成 checkout 为 `3a4afdc`；提交后集成 checkout 与原仓库同名集成分支 ref 均为 `c2497a3`。原 checkout 仍为 `codex/repository-map@672a104`/95 个状态路径；V01/W02/W02-V01 为 49/35/39。五个保护快照 refs 均可解析；phase3 仍登记 prunable，未 prune。
 - 仅在集成副本修改 QA Pipeline、增加 `QueuedSpeechPublisher` 与行为测试并更新进度/架构文档；原 checkout、V01/W02 worktree、快照和 `sources/` 未改。集成副本 `frontend/node_modules` 仍是唯一未跟踪软链接。
 - 本轮新增行为：TTS 普通错误保留文本/avatar 并发布空音频；任务取消传播且不发布部分事件；当前句须等待上一句任务后再按 avatar→audio 发布。指定 AI/流式回归 156 passed，Python 3.12 compileall 和 diff check 通过。既有逐路径状态分类不变；此前按 porcelain 路径复核的 95/49/35/39 项全部有审计记录，但该覆盖证明不替代各项内容语义比较。
 - 本轮未用快照覆盖集成树，未合并集成分支到原始活动 checkout，也未删除或 prune worktree。
