@@ -6,8 +6,9 @@ import pytest
 from app.core.config import Settings
 from app.services.llm.openai_compatible import OpenAICompatibleLLMService
 from app.services.qa.faq_matcher import FAQEntry, FAQMatchResult
-from app.services.qa.pipeline import QAPipeline, _faq_evidence_document
+from app.services.qa.pipeline import QAPipeline
 from app.services.qa.answer_styler import polish_answer, no_evidence_reply
+from app.services.qa.answer_fast_paths import resolve_faq_path
 from app.services.rag.base import RetrievedDocument
 
 
@@ -28,7 +29,9 @@ def test_faq_wrapper_preserves_provided_source_without_inventing_official_status
     match = FAQMatchResult(is_hit=True, entry=FAQEntry(
         id="test", category="test", aliases=[], answer="资料内容", sources=sources,
     ))
-    document = _faq_evidence_document(match)
+    decision = resolve_faq_path(match, audience="child", persona="guide")
+    assert decision is not None
+    document = (decision.documents or [])[0]
     assert "官方" not in document.title
     assert "官方" not in document.source
     if sources:
