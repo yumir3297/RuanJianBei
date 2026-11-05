@@ -30,6 +30,8 @@
 
 **限定范围进度重估：约 77%（阶段性估算，不是验收结论）**。Worktree 保全与逐路径审计约 85%：原 95 路径、V01/W02 两源差异及快照均记录，尚无合回原活动 checkout 的安全迁移窗口；个别语义等价仍须结合后续源码/测试确认。AI 架构拆分约 79%：流生成、完成、取消、TTS/SSE、请求上下文、早答优先级、FAQ/cache/RAG、证据选择和 epoch fence 已有独立 owner/factory；Pipeline 现 677 行，主流程仍控制关键业务路由，流式生成、取消、TTS 调度和 SSE 生命周期的局部职责尚可继续收拢。验证约 77%：本轮扩展指定 AI/流式集合 196 passed，compileall 与 diff check 通过；不是全后端 pytest，真实模型/provider/设备、PostgreSQL 与部署库仍未验收。该估算基于当前源码、测试和迁移审计，不沿用此前百分比或初始 60% 评估。
 
+本阶段原子提交 `f3ed6d1`（`refactor: extract request context resolver`）已从集成副本同步到原仓库 `codex/competition-integration` ref；两处引用均指向 `f3ed6d1`。原活动 checkout 仍为 95 个状态路径，未合并集成分支。
+
 2026-11-05：在 `StreamGenerationRun` 提交 `292612f` 后补做 Python 3.12 直接行为检查：关闭 run 的事件生成器时，底层 `StreamTurn` 源的 `finally` 在 `aclose()` 返回前完成；检查通过。系统 Python 和临时 venv 均没有 pytest，新增的 `test_stream_generation_run.py` pytest 用例尚未执行；对应 FAQ 降级、epoch error 不定稿和取消清理由等价标准库脚本覆盖，但不能替代项目 pytest 回归。工作树当前集成/ref 为 `67bd5e6`，原 checkout 仍 `672a104`/95 路径，所有活动 worktree 状态数、保护 refs 及 phase3 prunable 情况已复核且未改变。
 
 2026-11-05：恢复 `/private/tmp/guide-ai-arch-venv` 并安装 pytest 与 Pipeline 测试所需轻量依赖（未安装完整 RAG/模型栈）。`test_pipeline.py`、`test_pipeline_audience.py`、`test_stream_generation_run.py` 定向集合 58 passed；Python 3.12 compileall 与 diff check 通过。第一次收集时缺 pydantic/websockets，安装后有一个 SQLite persistence 用例因缺 aiosqlite 失败；补齐后同一集合 58 项全部通过。此前直接行为脚本结果仍有效。此结果不等于完整 220 项 AI 回归，也不代表真实 provider/设备验收。工作树集成 checkout/ref 起点 `d3916cf`，原 checkout仍 95 个未提交路径，未触及来源目录、未改其他 worktree。

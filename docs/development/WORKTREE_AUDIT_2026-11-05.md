@@ -6,6 +6,7 @@
 - Git worktree 登记仍包括原 checkout、V01、W02、W02/V01 集成及 `/private/tmp/ai-guide-phase3`；最后一项仍标记 prunable，本轮没有 prune。集成 checkout `sources/` 无状态，`frontend/node_modules` 仍为未跟踪本机链接。所有源 worktree 与快照均保持原状，未将集成分支合入原 checkout。
 - 本轮只改集成副本 QA Pipeline、请求上下文 resolver、行为测试及状态/架构文档。此前逐路径内容判定未改；本轮核对只确认工作树、分支引用和保全对象，未以祖先关系推断未提交差异已合并。
 - Resolver/Pipeline/选择/视觉/查询定向集合 71 passed；扩展 FAQ/cache/RAG/evidence/epoch/记忆/生成与取消/TTS/SSE 集合 196 passed。Python 3.12 compileall 和 diff check 通过。全后端套件未运行；替身与隔离 SQLite 测试不代表真实模型/provider/设备验收。
+- 原子提交 `f3ed6d1` 已同步到原仓库同名集成 ref；同步只更新该分支引用，没有改动原活动 checkout 的工作文件或 95 个状态路径。
 
 ## 本轮复核（目录差异计数复验，2026-11-05）
 
