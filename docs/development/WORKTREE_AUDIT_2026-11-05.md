@@ -1,5 +1,11 @@
 # Worktree 改动逐路径核对（2026-11-05）
 
+## 本轮状态复核（流式证据边界阶段，2026-11-05）
+
+- 起始集成 checkout 与原仓库 `codex/competition-integration` ref 均为 `a97c302`。原活动 checkout 仍为 `codex/repository-map@672a104`、95 个状态路径；集成副本本轮只改 QA pipeline/证据协调器/行为测试和进度、架构文档，未改原 checkout。集成 `frontend/node_modules` 仍为唯一未跟踪软链接。
+- V01/W02/W02-V01 仍分别为 `098553f`/49、`a8c2837`/35、`098553f`/39。保护快照 refs `4acaa53`、`e115eab`、`3805943`、`48ef626`、`5433557` 均可解析。phase3 worktree 继续登记为 prunable，未 prune。`sources/` 无 Git 状态。
+- 当前阶段仍依据本文件下方逐路径表判断已合并、后续实现替代、快照保留或尚未合并；本轮架构改动未改变任何 V01/W02/主 checkout 差异的既有分类。没有用快照覆盖集成树，没有把集成分支合回原 checkout。
+
 ## 本轮状态复核（FAQ 路径拆分阶段，2026-11-05）
 
 - 起始集成 checkout 与原仓库 `codex/competition-integration` ref 均为 `b6db5c2`；本轮只在集成副本新增 FAQ resolver、行为测试和架构记录，原 checkout 保持 `codex/repository-map@672a104` 与 95 个状态路径。集成 worktree 本轮自身改动限定为两个 QA 源文件、一个测试文件和五份进度/架构/审计文档；`frontend/node_modules` 仍是唯一既有未跟踪链接。

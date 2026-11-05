@@ -70,7 +70,7 @@ from app.services.qa.stream_generation_run import StreamGenerationRun
 from app.services.qa.stream_turn_factory import StreamTurnFactory
 from app.services.qa.vision_evidence import resolve_vision_evidence
 from app.services.qa.answer_styler import no_evidence_reply
-from app.services.qa.evidence_retrieval import retrieve_evidence
+from app.services.qa.stream_evidence_run import StreamEvidenceRun
 from app.services.rag.base import BaseRAGService
 from app.services.rag.query_rewriter import QueryRewriter
 from app.services.tts.base import BaseTTSService
@@ -444,34 +444,25 @@ class QAPipeline:
                     yield event
             return
 
-        if faq_documents is not None:
-            yield StreamEvent(type="status", data={"text": "正在按你的讲解方式改写..."})
-            documents = faq_documents
-            sources = faq_sources
-            if not await self._epoch_is_current(request_epoch):
-                yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
-                return
-            if faq_sources:
-                yield StreamEvent(type="sources", data={"docs": faq_sources})
-        else:
-            yield StreamEvent(type="status", data={"text": "正在检索景区知识..."})
-            evidence = await retrieve_evidence(
-                self.rag_service,
-                query=retrieval_query,
-                normalized_query=normalized_query,
-                scope=resolved.scope,
-            )
-            documents = evidence.documents
-            sources = evidence.sources
-            if not await self._epoch_is_current(request_epoch):
-                yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
-                return
-            if sources:
-                yield StreamEvent(type="sources", data={"docs": sources})
-
-        if not await self._epoch_is_current(request_epoch):
-            yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
+        evidence_run = StreamEvidenceRun(
+            rag_service=self.rag_service,
+            query=retrieval_query,
+            normalized_query=normalized_query,
+            scope=resolved.scope,
+            faq_documents=faq_documents,
+            faq_sources=faq_sources,
+            epoch_is_current=lambda: self._epoch_is_current(request_epoch),
+        )
+        async with aclosing(evidence_run.events()) as evidence_events:
+            async for event in evidence_events:
+                yield event
+        evidence_outcome = evidence_run.outcome
+        if evidence_outcome is None:
+            raise RuntimeError("evidence selection ended without an outcome")
+        if evidence_outcome.error_event is not None:
             return
+        documents = evidence_outcome.documents
+        sources = evidence_outcome.sources
 
         if not documents:
             if self.blind_spot_tracker is not None:

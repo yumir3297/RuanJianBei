@@ -1,5 +1,15 @@
 # 技术决策
 
+## 2026-11-05：隔离流式证据选择与来源事件的 epoch 边界
+
+问题：FAQ 证据与 RAG 证据都要先生成来源 SSE，再进入同一 LLM 生成路径；Pipeline 内联两种来源选择、source 事件及 epoch 检查，容易在拆分时遗漏 scope、来源修订绑定或 source yield 后的可见性变化。
+
+选择：新增请求级 `StreamEvidenceRun`，封装 FAQ/RAG evidence selection、既有 `retrieve_evidence()` 调用与 sources/status 事件。FAQ 分支不触碰 RAG；RAG 保持原查询和 scope 参数及 revision/chunk source binding。两条分支均在来源事件发布前检查 epoch，发布后再检查；任一 stale 返回错误 outcome，不让生成阶段获得证据。缓存资格、FAQ 命中判定、无证据回答和后续 StreamGenerationRun 不迁入此组件。
+
+验证：新增行为测试覆盖 FAQ 不触发 RAG、RAG scope/修订/分块证据保留、检索后 epoch stale 阻止 source SSE、source SSE 交付期间 epoch 改变后阻止证据进入生成，以及取消证据流时关闭进行中的 RAG 检索。Pipeline/FAQ/cache/RAG/evidence/epoch/stream/TTS/SSE 指定集合 142 passed；Python 3.12 compileall 和 diff check 通过。使用本地替身，不是生产知识库或真实模型验收。
+
+回滚：若 source event 顺序、FAQ 快速路径、检索 scope/source identity 或 epoch stale 行为发生改变，恢复 Pipeline 原有 FAQ/RAG 分支并保留 `retrieve_evidence()`，保留新测试覆盖其中已明确的边界；不要移除检索来源绑定或 post-source epoch fence。
+
 ## 2026-11-05：将 FAQ 匹配门控移出 Pipeline，保留 epoch 所有权
 
 问题：FAQ答案转换此前已位于 `answer_fast_paths.py`，但 Pipeline 仍直接完成 matcher 调用、视觉/景点范围排除和 FAQ 路径解析；这些条件与后续 epoch 检查及 FAQ 降级原文传递交织在主生成流程中。
