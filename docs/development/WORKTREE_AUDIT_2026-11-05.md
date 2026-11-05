@@ -1,5 +1,13 @@
 # Worktree 改动逐路径核对（2026-11-05）
 
+## 最新状态复核（2026-11-05）
+
+- 集成 checkout `codex/competition-integration` 与原仓库同名 branch ref 均为 `d1fdf8a`；集成工作树仅有未跟踪 `frontend/node_modules` 本机链接。
+- 原活动 checkout `codex/repository-map@672a104` 仍有 95 个未提交状态路径。V01/W02/W02-V01 worktree 分别为 `098553f`/49、`a8c2837`/35、`098553f`/39。五个保全快照 refs 均存在；`/private/tmp/ai-guide-phase3` 仍为 prunable，未 prune；`sources/` 无状态。未合并到原活动 checkout。
+- 当前 Alembic `command` API 可用；三组迁移/恢复测试在合成 SQLite 上 6 passed、6 warnings。覆盖升级/回退和 lineage guard，不覆盖 PostgreSQL、部署数据库或真实旧库。
+- 当前 AI 流重构已包括 `StreamTurn`、`StreamCompletionCoordinator`、生成结果错误收尾和取消传播。完整后端最近一次为 597 passed、19 skipped、3 failed，失败来自临时 venv 缺 `numpy`/`rank_bm25`；真实模型、provider 和设备验收未完成。
+- 审计表逐条保留源 worktree/snapshot 的未提交差异；范围外的 UI/材料明确留存，尚需继续审查范围内迁移/schema 与并发竞态差异。禁止按祖先关系推断所有脏改动已合入。
+
 最新复核（`59adabf`）：集成 checkout 与原仓库 `codex/competition-integration` 引用一致；原 checkout 为 `672a104`/95 个脏路径，V01/W02/W02-V01 为 `098553f`/49、`a8c2837`/35、`098553f`/39 个脏路径。逐工作树用 porcelain 路径清单校验本审计表覆盖范围：95、49、35、39 个脏路径均被对应行或目录汇总行覆盖，未发现漏记。五个快照 refs 均在，phase3 登记仍 prunable 且未清理，`sources/` 无状态；范围外前端及旧材料差异明确标为未合并并保留源 worktree/快照。此项只证明路径审计表覆盖，不证明每项功能已合并；各表分类栏给出实际状态。
 
 2026-11-05 后续 AI 架构阶段：从集成 `83d342a` 将最终 HTTP TTS 尾段选择、FIFO drain 与 epoch gate 收入 `StreamTurn`；指定回归 261 passed、compileall/diff check 通过，详情见 `PROGRESS.md`。本阶段不改变原 checkout 或 worktree 的 Git 状态；原始未提交路径和保全快照继续保留。
@@ -130,7 +138,7 @@
 |---|---|---|---|
 | ` M` | `backend/app/api/tour_sessions.py` | 旧 API 内联同步调用 `ItineraryIntentService`；集成版改为同事务创建 proposal reservation 与 `itinerary.proposal` durable job，返回 202，测试覆盖 replay/stale progress；属于后续实现替代，不覆盖快照 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/models/__init__.py` | 已被集成模型注册扩展替代；保留源版本用于核对迁移引用 | snapshot=yes; integration=yes |
-| ` M` | `backend/app/models/tour_session.py` | 已由 durable proposal schema 替代：集成版增加 `base_snapshot_json`/`execution_job_id`，merge migration 与 recovery/replay 测试证明用途；Alembic upgrade/downgrade 仍未实跑 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/models/tour_session.py` | 已由 durable proposal schema 替代：集成版增加 `base_snapshot_json`/`execution_job_id`，merge migration 与 recovery/replay 测试证明用途；合成 SQLite migration upgrade/downgrade 已实跑，真实部署库仍未验证 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/repositories/tour_session.py` | 后续仓储包含提案 reservation、锁和版本 fence；不以旧文件覆盖 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/schemas/itinerary.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | ` M` | `backend/app/services/itinerary/progress.py` | 后续进度版本及状态 fence 实现不同；相关行为由集成回归覆盖 | snapshot=yes; integration=yes |
@@ -224,7 +232,7 @@
 
 - V01 `5c81a1e74f2b_add_tour_progress_and_proposals.py` 在源与集成树字节相同；集成 revision `8ab42c17d3e9` 将它与 speech metadata migration `c3b7e1d9a62f` 合并。
 - W02 快照 revision `f1b4c9d76e20` 的父为 `e9f4c2b8016a`，且不添加 `itinerary_proposals.base_snapshot_json` / `execution_job_id`。集成树同 revision 改为父 `8ab42c17d3e9`，并增加这两列及索引；之后 `6e1a4c7d9b20` 检查/补齐遗失的 speech metadata，`7d2e93a5b601` 与 `91a0c5e2f347` 分别拒绝已知不完整的 W02/knowledge schema。此为有意处理分叉迁移历史的后续实现，旧 W02 migration 必须保留在快照，不得单独 cherry-pick。
-- 临时 Python 环境没有 Alembic `command` API（`test_speech_metadata_migration.py` 收集时报 `ImportError`），故没有声称本轮实跑 Alembic 升级。该迁移链真实数据库往返仍待具备 Alembic 的隔离环境；此限制不影响单独运行的 W02 执行验收/worker 测试。
+- 早先临时环境确实缺少 Alembic `command` API，导致迁移测试收集失败；当前 `/private/tmp/guide-ai-arch-venv` 已可导入该 API。2026-11-05 在集成版 backend 执行 `test_speech_metadata_migration.py`、`test_knowledge_workspace_migration.py`、`test_w02_sqlite_recovery_experiment.py`，6 passed、6 warnings。此结果覆盖合成 SQLite upgrade/downgrade 与 W02 lineage guard；不代表 PostgreSQL、部署库或真实旧库验收。
 
 ### W02 execution 源码差异核验
 
@@ -236,7 +244,7 @@
 ### W02 schema / router 差异补充核验
 
 - W02 `models/tour_session.py` 与集成版唯一业务字段差异是 `ItineraryProposal.base_snapshot_json` 与 `execution_job_id`。前者用于恢复/核对 proposal 原始行程，后者链接持久任务；`test_tour_progress_and_proposals.py` 覆盖损坏 base snapshot 时 `diff_verifiable=False` 且拒绝 apply，`test_tool_execution_acceptance.py` 覆盖 proposal API 重放时 job ID 稳定。这些字段由集成版 f1 migration 补入，旧 W02 f1 migration 不含字段且父 revision 不同，所以标记为“被合并迁移及后续集成实现替代”，不能 cherry-pick 覆盖。
-- W02 `alembic/env.py` 仅导入列表格式差异；`api/router.py` 在集成版增加 itinerary 与 knowledge import/publication 路由；`models/__init__.py` 注册 V01/knowledge/tool execution 模型。对应行为/注册属于已合并的后续子项目，不把 W02 文件覆盖到当前集成版。真实 Alembic upgrade/downgrade 仍因当前临时环境缺 Alembic command API 未验证。
+- W02 `alembic/env.py` 仅导入列表格式差异；`api/router.py` 在集成版增加 itinerary 与 knowledge import/publication 路由；`models/__init__.py` 注册 V01/knowledge/tool execution 模型。对应行为/注册属于已合并的后续子项目，不把 W02 文件覆盖到当前集成版。合成 SQLite migration upgrade/downgrade 已在 2026-11-05 通过专项 6 项；PostgreSQL、部署库及真实旧库仍未验证。
 
 ### W02/V01 集成副本（`code/w02-integration`）
 
@@ -248,7 +256,7 @@
 | ` M` | `backend/app/api/router.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | ` M` | `backend/app/api/tour_sessions.py` | 旧 API 内联同步调用 `ItineraryIntentService`；集成版改为同事务创建 proposal reservation 与 `itinerary.proposal` durable job，返回 202，测试覆盖 replay/stale progress；属于后续实现替代，不覆盖快照 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/models/__init__.py` | 集成版扩展注册知识 workspace、V01 progress/proposal 模型和 tool execution 模型；后续模型注册实现替代，保留源版本 | snapshot=yes; integration=yes |
-| ` M` | `backend/app/models/tour_session.py` | 已由 durable proposal schema 替代：集成版增加 `base_snapshot_json`/`execution_job_id`，merge migration 与 recovery/replay 测试证明用途；Alembic upgrade/downgrade 仍未实跑 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/models/tour_session.py` | 已由 durable proposal schema 替代：集成版增加 `base_snapshot_json`/`execution_job_id`，merge migration 与 recovery/replay 测试证明用途；合成 SQLite migration upgrade/downgrade 已实跑，真实部署库仍未验证 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/repositories/tour_session.py` | 后续仓储包含提案 reservation、锁和版本 fence；不以旧文件覆盖 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/schemas/itinerary.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | ` M` | `backend/app/services/itinerary/progress.py` | 后续进度版本及状态 fence 实现不同；相关行为由集成回归覆盖 | snapshot=yes; integration=yes |
