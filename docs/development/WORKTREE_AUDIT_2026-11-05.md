@@ -2,7 +2,7 @@
 
 ## 最新状态复核（2026-11-05）
 
-- 最新集成 checkout `codex/competition-integration` 与原仓库同名 branch ref 均为 `cf8f741`；该工作树仅有未跟踪 `frontend/node_modules` 本机链接。
+- 最新集成 checkout `codex/competition-integration` 与原仓库同名 branch ref 均为 `2c0e146`；代码拆分提交 `cf8f741` 已纳入该分支；该工作树仅有未跟踪 `frontend/node_modules` 本机链接。
 - 原活动 checkout `codex/repository-map@672a104` 仍有 95 个未提交状态路径。V01/W02/W02-V01 worktree 分别为 `098553f`/49、`a8c2837`/35、`098553f`/39。五个保全快照 refs 均存在；`/private/tmp/ai-guide-phase3` 仍为 prunable，未 prune；`sources/` 无状态。未合并到原活动 checkout。
 - 当前 Alembic `command` API 可用；三组迁移/恢复测试在合成 SQLite 上 6 passed、6 warnings。覆盖升级/回退和 lineage guard，不覆盖 PostgreSQL、部署数据库或真实旧库。
 - 当前 AI 流重构已包括 `StreamTurn`、`StreamCompletionCoordinator`、生成结果错误收尾和取消传播。完整后端最近一次为 597 passed、19 skipped、3 failed，失败来自临时 venv 缺 `numpy`/`rank_bm25`；真实模型、provider 和设备验收未完成。
@@ -196,7 +196,7 @@
 | ` M` | `backend/app/api/router.py` | 集成版后续登记 itinerary 与 knowledge import/publication 路由；W02 旧行路由在当前集成树保留，旧文件不可覆盖 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/api/tour_sessions.py` | 旧 API 内联同步调用 `ItineraryIntentService`；集成版改为同事务创建 proposal reservation 与 `itinerary.proposal` durable job，返回 202，测试覆盖 replay/stale progress；属于后续实现替代，不覆盖快照 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/models/__init__.py` | 集成版扩展注册知识 workspace、V01 progress/proposal 模型和 tool execution 模型；后续模型注册实现替代，保留源版本 | snapshot=yes; integration=yes |
-| ` M` | `backend/app/models/tour_session.py` | 集成版在 ItineraryProposal 增加 `base_snapshot_json` 与 `execution_job_id`；对应 merge/W02 migration 和 proposal recovery 测试覆盖字段用途；DB migration upgrade 仍未实跑 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/models/tour_session.py` | 集成版在 ItineraryProposal 增加 `base_snapshot_json` 与 `execution_job_id`；对应 merge/W02 migration 和 proposal recovery 测试覆盖字段用途；合成 SQLite migration upgrade/downgrade 已实跑，真实部署库仍未验证 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/repositories/tour_session.py` | 后续仓储包含提案 reservation、锁和版本 fence；不以旧文件覆盖 | snapshot=yes; integration=yes |
 | ` M` | `docs/ARCHITECTURE.md` | 未合并；改动保留在源 worktree/快照中；本任务不清理、改写旧文档或制作相关材料 | snapshot=yes; integration=yes |
 | ` M` | `docs/COMPATIBILITY.md` | 未合并；改动保留在源 worktree/快照中；本任务不清理、改写旧文档或制作相关材料 | snapshot=yes; integration=yes |
