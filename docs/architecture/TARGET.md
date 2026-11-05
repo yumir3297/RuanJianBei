@@ -9,7 +9,7 @@
 ```mermaid
 flowchart TD
   Input[文字、语音转写或图片上下文] --> State[请求状态与游客上下文]
-  State --> Select[景点/路线/主题选择解析]
+  State --> Select[RequestContextResolver：情绪、受众、记忆、景点选择、视觉与查询上下文]
   Select --> Vision{包含图片上下文?}
   Vision -->|确认且匹配当前发布目录| Scope[绑定当前知识条目和检索范围]
   Vision -->|未确认| Unscoped[丢弃历史景点范围，标记需确认]

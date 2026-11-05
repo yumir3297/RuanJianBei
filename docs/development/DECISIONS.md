@@ -1,5 +1,17 @@
 # 技术决策
 
+## 2026-11-05：将请求画像与知识上下文准备拆出 Pipeline
+
+问题：`QAPipeline._stream_chat()` 在 FAQ/cache/RAG 路由之前同时计算情绪、解析显式景点选择、读取游客记忆、核验视觉确认并构造 retrieval/intent query。该准备阶段和主流生命周期、SSE/TTS 编排混在同一方法中，错误短路顺序也容易在继续拆分时变化。
+
+选择：新增 `RequestContextResolver` 作为无 SSE 的异步请求准备边界，返回情绪与表达策略、resolved interaction、受众、fail-soft 记忆提示、确认视觉标题、query context 或明确错误。`QAPipeline` 继续负责知识 epoch 前置检查、错误事件、context/emotion/intent 事件及后续 FAQ/cache/RAG/SSE/TTS 编排；暂不迁移到 LangGraph 或其他运行时 Agent 框架。
+
+必须保留的顺序：失效显式景点选择在记忆读取、视觉目录核验及 query rewrite 前停止；过期视觉确认在 intent 路由和检索前停止；记忆读取故障不阻断回答；视觉提示只进入检索 query，intent 使用原始游客 query；成功请求的 SSE 仍按 context、emotion、intent 顺序发出。Resolver 不决定 FAQ/cache/RAG、缓存资格或 epoch。
+
+验证：新 resolver 的三个行为测试覆盖失效选择短路、记忆 fail-soft 与 vision query/raw intent 分离、过期视觉确认早停。该测试与 Pipeline、受众、查询上下文、视觉证据、选择解析、FAQ/cache/RAG/evidence/epoch、流取消、TTS/SSE 指定回归共 196 passed；Python 3.12 compileall 和 `git diff --check` 通过。回归使用本地替身，不代表真实模型、知识服务、TTS provider 或设备验收。测试环境重建时项目固定的 `torch==2.12.0+cpu` wheel 不支持当前 macOS 架构，因此使用本机可装的轻量依赖完成所选集合；没有运行全后端套件。
+
+回滚：若选择/视觉错误码、事件顺序、原始 intent 或记忆故障降级行为改变，将 Pipeline 内联恢复到 resolver 前实现并保留行为测试。若后续继续拆分，请把流生成取消、TTS 调度及 SSE 迭代器所有权分别归入现有 stream owner，不要把它们塞入请求上下文 resolver。
+
 ## 2026-11-05：合并 FAQ 与共享缓存的请求路径决策
 
 问题：Pipeline 分别调用 FAQ resolver、决定共享 cache eligibility、调用 cache resolver；顺序错误可能让直接 FAQ 进入通用 cache，或让 vision/personalized request 读到共享答案。

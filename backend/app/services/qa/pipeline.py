@@ -25,10 +25,8 @@ from app.services.emotion import (
     MultimodalEmotionFusion,
     TextEmotionAnalyzer,
     apply_answer_prefix,
-    audio_emotion_signal,
     response_policy_for,
 )
-from app.services.memory.profile import build_memory_prompt
 from app.services.qa.cache import QACache
 from app.services.qa.blind_spot_tracker import BlindSpotTracker
 from app.services.qa.faq_matcher import FAQMatcher
@@ -43,7 +41,7 @@ from app.services.qa.guided_selector import (
 from app.services.qa.intent_router import IntentRouter
 from app.services.qa.route_constraints import explicit_route_hours as _explicit_route_hours
 from app.services.qa.request_profile import resolve_narration_audience as _resolve_narration_audience
-from app.services.qa.request_query_context import resolve_request_query_context
+from app.services.qa.request_context_resolver import RequestContextResolver
 from app.services.qa.route_fast_path import StaticRouteAnswerBuilder
 from app.services.qa.speech_event_adapter import (
     build_audio_event as build_speech_audio_event,
@@ -60,7 +58,6 @@ from app.services.qa.stream_answer_generation_factory import StreamAnswerGenerat
 from app.services.qa.stream_answer_run import StreamAnswerRun
 from app.services.qa.stream_turn_factory import StreamTurnFactory
 from app.services.qa.queued_speech_publisher import QueuedSpeechPublisher
-from app.services.qa.vision_evidence import resolve_vision_evidence
 from app.services.qa.answer_styler import no_evidence_reply
 from app.services.qa.stream_evidence_run import StreamEvidenceRun
 from app.services.qa.chat_interaction_persister import ChatInteractionPersister
@@ -153,6 +150,16 @@ class QAPipeline:
         self.vision_site_id = vision_site_id
         self.text_emotion_analyzer = TextEmotionAnalyzer()
         self.emotion_fusion = MultimodalEmotionFusion()
+        self.request_context_resolver = RequestContextResolver(
+            guided_selector=self.guided_selector,
+            query_rewriter=self.query_rewriter,
+            intent_router=self.intent_router,
+            visitor_memory_repository=self.visitor_memory_repository,
+            vision_catalog=self.vision_catalog,
+            vision_site_id=self.vision_site_id,
+            text_emotion_analyzer=self.text_emotion_analyzer,
+            emotion_fusion=self.emotion_fusion,
+        )
         default_emotion = self.emotion_fusion.fuse(None, None)
         self._default_request_state = _PipelineRequestState(
             active_emotion=default_emotion,
@@ -251,55 +258,24 @@ class QAPipeline:
         if request_epoch is not None and faq_epoch is not None and faq_epoch != request_epoch:
             yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
             return
-        text_emotion = self.text_emotion_analyzer.analyze(request.query)
-        audio_emotion = None
-        if request.emotion_context is not None:
-            audio_emotion = audio_emotion_signal(
-                request.emotion_context.audio_emotion,
-                request.emotion_context.audio_confidence,
-                source=request.emotion_context.audio_source or "audio",
-            )
-        self._active_emotion = self.emotion_fusion.fuse(text_emotion, audio_emotion)
-        self._active_response_policy = response_policy_for(self._active_emotion)
-        self._active_text_emotion = text_emotion
-        self._active_audio_emotion = audio_emotion
-        resolved = await self.guided_selector.resolve(request.query, request.selection, request.context)
-        if request.selection and request.selection.attraction_id is not None and "invalid_attraction_id" in resolved.warnings:
-            yield StreamEvent(type="error", data={"code": "attraction_selection_stale", "message": "所选景点已不可用或更新，请重新选择。"})
-            return
-        audience = _resolve_narration_audience(request)
-
-        # 跨会话记忆：仅当带了稳定 visitor_id 且仓储可用时读取。
-        # 读失败不能影响回答，故整体 try/except 兜底。
-        self._memory_prompt = None
-        if self.visitor_memory_repository is not None and request.visitor_id:
-            try:
-                memory = await self.visitor_memory_repository.get(request.visitor_id)
-                if memory is not None:
-                    self._memory_prompt = (
-                        build_memory_prompt(VisitorMemoryRepository.decode(memory)) or None
-                    )
-            except Exception:
-                logger.exception("Visitor memory read failed; continuing without memory.")
-                self._memory_prompt = None
-
-        # 识别候选尚未经游客确认，也不能用模型自报置信度当成校准概率。
-        # 避免将候选、旧选择或历史景点静默视为当前照片的事实。
-        vision = request.vision_context
-        vision_evidence = await resolve_vision_evidence(
-            vision,
-            resolved,
-            vision_catalog=self.vision_catalog,
-            vision_site_id=self.vision_site_id,
-        )
-        if vision_evidence.error_code is not None:
+        context = await self.request_context_resolver.resolve(request)
+        self._active_emotion = context.fused_emotion
+        self._active_response_policy = context.response_policy
+        self._active_text_emotion = context.text_emotion
+        self._active_audio_emotion = context.audio_emotion
+        self._memory_prompt = context.memory_prompt
+        if context.error_code is not None:
             yield StreamEvent(
                 type="error",
-                data={"code": vision_evidence.error_code, "message": vision_evidence.error_message},
+                data={"code": context.error_code, "message": context.error_message},
             )
             return
-        resolved = vision_evidence.resolved
-        confirmed_visual_title = vision_evidence.confirmed_title
+        resolved = context.resolved
+        audience = context.audience
+        confirmed_visual_title = context.confirmed_visual_title
+        query_context = context.query_context
+        assert query_context is not None
+        vision = request.vision_context
 
         yield StreamEvent(type="context", data=resolved.to_event_data())
         yield StreamEvent(
@@ -311,13 +287,6 @@ class QAPipeline:
             },
         )
 
-        query_context = resolve_request_query_context(
-            request,
-            resolved,
-            vision=vision,
-            query_rewriter=self.query_rewriter,
-            intent_router=self.intent_router,
-        )
         retrieval_query = query_context.retrieval_query
         normalized_query = query_context.normalized_query
         intent_decision = query_context.intent_decision
