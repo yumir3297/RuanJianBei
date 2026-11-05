@@ -1,5 +1,12 @@
 # Worktree 改动逐路径核对（2026-11-05）
 
+## 本轮复核（目录差异计数复验，2026-11-05）
+
+- 重新递归比较原主 checkout 的 `frontend/tests/`：16 个源文件中 15 个与集成树字节相同、1 个不同、集成缺少 0、集成额外 22；审计表计数准确，唯一不同为 `chat-stream.test.mjs`。
+- 重新递归比较 W02 `backend/app/services/itinerary/`：源 4 文件中 `candidates.py` 相同、`intent.py`/`progress.py`/`provenance.py` 不同，集成缺少 0；集成实际多 3 个 `__init__.py`、`catalog.py`、`mutations.py`。此前表格漏列 `__init__.py`，现已修正；它是集成包标记，无源文件对应。
+- 另递归复核 main checkout `tests/fixtures`、`docs/research`、`docs/selling-points` 均与集成目录逐字节一致；W02 `tool_execution/` 6 个文件均不同，W02/V01 `tool_execution/` 为 4 相同/2 不同。分类仍依据文件内容与行为证据，不按分支祖先关系推断。
+- 本轮只修正本审计文档，没有修改任何代码或源 worktree；原 checkout、快照及 `sources/` 状态保持。
+
 ## 本轮复核（FAQ/cache 请求路径阶段，2026-11-05）
 
 - 起始集成 checkout/ref 与原仓库同名集成 ref 均为 `ca577e8`；原 checkout `codex/repository-map@672a104`/95 状态路径，V01/W02/W02-V01 为 49/35/39。五个快照 refs 仍可解析，phase3 保持 prunable 未清理。
@@ -295,7 +302,7 @@
 | `??` | `backend/app/repositories/tool_execution.py` | 后续实现扩展旧 repository：加入任务创建时 progress_version 检查、progress fence、事务内 flush/commit 选项和 unknown 外部结果处理；隔离 SQLite 覆盖创建时拒绝旧 progress、排队后进度更新时 claim 不发 lease，以及领取后/开始 attempt 前进度变化时阻止 worker 建立 attempt。真正同时 claim/进度提交的 PostgreSQL 竞争仍未实测；源码显示 start_attempt 与 mark_external_call 校验并锁定 TourSession，progress command 更新同一行 | snapshot=yes; integration=yes |
 | `??` | `backend/app/schemas/itinerary.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | `??` | `backend/app/schemas/tool_execution.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
-| `??` | `backend/app/services/itinerary/` | 已逐项核验：`candidates.py` 与集成版逐字节相同；旧 `intent.py` 的 `result.diff` 被集成版按规范化 candidate 重算 diff 替代；`progress.py` 后续增加剩余预算命令、估算时长/过期截止时间判定；`provenance.py` 后续增加景点替换、目录修订及受影响路线段证据失效和 AI 时长归属。对应测试覆盖 `test_itinerary_intent.py`、`test_itinerary_progress.py`、`test_tour_budget_api.py`、`test_itinerary_provenance.py`；W02 旧差异保留在快照，不覆盖当前实现 | 4 个源文件；相同=1、不同=3、集成缺少=0；集成另有 `catalog.py`、`mutations.py`（排除 Python cache） |
+| `??` | `backend/app/services/itinerary/` | 已逐项核验：`candidates.py` 与集成版逐字节相同；旧 `intent.py` 的 `result.diff` 被集成版按规范化 candidate 重算 diff 替代；`progress.py` 后续增加剩余预算命令、估算时长/过期截止时间判定；`provenance.py` 后续增加景点替换、目录修订及受影响路线段证据失效和 AI 时长归属。对应测试覆盖 `test_itinerary_intent.py`、`test_itinerary_progress.py`、`test_tour_budget_api.py`、`test_itinerary_provenance.py`；W02 旧差异保留在快照，不覆盖当前实现 | 4 个源文件；相同=1、不同=3、集成缺少=0；集成额外 3 个：`__init__.py`（包标记）、`catalog.py`、`mutations.py`（排除 Python cache） |
 | `??` | `backend/app/services/tool_execution/` | 六个文件已逐项比较：`commands.py`/`registry.py`/`runner.py` 扩展 `commit=False` 下的同事务结果持久化，`handlers.py` 注册持久 itinerary proposal worker，`worker.py` 在 CLI event loop 退出前 dispose engine；`__init__.py` 仅空白差异。已有回滚、proposal 重放、未知外部结果、worker CLI 生命周期覆盖；旧目录不覆盖集成目录 | 6 个源码/资料文件；相同=0、不同=6、集成缺少=0、集成额外=0（排除 Python cache） |
 | `??` | `docs/research/` | 未合并；目录差异保留在源 worktree/快照中，属于研究/卖点材料，本任务不迁移或清理 | 1 个源码/资料文件；相同=0、不同=1、集成缺少=0、集成额外=1（排除 Python cache） |
 | `??` | `docs/selling-points/` | 未合并；目录差异保留在源 worktree/快照中，属于研究/卖点材料，本任务不迁移或清理 | 1 个源码/资料文件；相同=0、不同=1、集成缺少=0、集成额外=2（排除 Python cache） |
