@@ -1,5 +1,11 @@
 # Worktree 改动逐路径核对（2026-11-05）
 
+## 本轮状态复核（快速答案 effects factory 阶段，2026-11-05）
+
+- 起始集成 checkout 和原仓库同名 ref 均为 `9e04962`。原活动 checkout `codex/repository-map@672a104` 仍有 95 个状态路径；V01/W02/W02-V01 为 `098553f`/49、`a8c2837`/35、`098553f`/39。五个保护快照可解析，phase3 仍登记 prunable，未执行 prune。
+- 本阶段仅改集成副本 Pipeline、快速回答 factory/行为测试及架构和进度文档。原 checkout、V01/W02 worktree、快照和 `sources/` 未改；集成 `frontend/node_modules` 仍未跟踪。
+- Factory 及快速回答、Pipeline、FAQ/cache、stream/completion/TTS/SSE 扩展回归共 203 passed，Python 3.12 compileall/diff check 通过。提交并同步后需再次核对 ref 与 95 个原 checkout 状态路径。
+
 ## 本轮复核（请求上下文 resolver 阶段，2026-11-05）
 
 - 本轮起点集成 checkout 与原仓库 `codex/competition-integration` ref 均为 `a8f2928`。原活动 checkout 仍为 `codex/repository-map@672a104`，默认 porcelain 计数 95；V01/W02/W02-V01 分别为 `098553f`/49、`a8c2837`/35、`098553f`/39。五个保护快照 (`4acaa53`、`e115eab`、`3805943`、`48ef626`、`5433557`) 在原仓库均可解析。

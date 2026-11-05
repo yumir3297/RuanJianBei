@@ -34,6 +34,12 @@
 
 后续只读核对主 checkout 未提交的旧 `backend/app/services/qa/pipeline.py`：其 FAQ 禁流式 TTS、HTTP TTS 并发/FIFO、取消时任务回收、FAQ 降级原文和 incomplete 终态，已逐项映射到当前 `StreamTurnFactory`、`StreamTurn`/`AudioTaskGroup`、`StreamMuxConsumer`、`finalize_stream_generation()` 与 `StreamCompletionCoordinator`。相应 11 个流生命周期/TTS/完成测试 49 passed。该差异归为“被后续实现替代”，没有复制旧文件或变更原 worktree；逐项证据补入 [Worktree 审计](WORKTREE_AUDIT_2026-11-05.md)。真实 provider 与设备仍未验收。
 
+**2026-11-05 后续阶段：快速回答 effects factory。** 从集成基线 `9e04962` 新增 `FastPathAnswerFactory`，将确定性路线、直接 FAQ、cache 命中、无证据回答共用的答案前缀/来源处理、持久化参数、followups 和 done 元数据绑定移出 `QAPipeline`。`FastPathAnswerCoordinator` 仍唯一负责 sources/text/speech、epoch 检查、持久化及终态顺序；没有改 FAQ/cache/RAG 决策、缓存资格、来源证据或降级规则。Pipeline 从 677 行降至 633 行。
+
+新 factory 行为测试先因模块缺失失败，随后覆盖答案准备、持久化字段、provider/degraded 元数据绑定。新测试加原 fast-path coordinator、Pipeline、FAQ/cache、请求上下文、stream/completion、TTS/SSE 扩展回归共 203 passed；Python 3.12 compileall 与 diff check 通过。测试使用 stub/fake，不代表真实模型/provider/设备或生产数据库验收。起始 checkout/ref `9e04962`；原活动 checkout `672a104`/95 状态路径、V01/W02/W02-V01 `098553f`/49、`a8c2837`/35、`098553f`/39；保护快照 5 个仍存在，phase3 登记仍 prunable 未清理；sources 无状态，集成 node_modules 未跟踪。实现仅在集成副本，未改源 worktree或合入原 checkout。
+
+**限定范围进度重估：约 78%（阶段性估算，不是验收结论）**。Worktree 保全与逐路径审计约 86%：主 checkout、V01/W02 的范围内关键差异已有具体实现与测试映射，剩余迁移和数据库/部署验证未全部完成。AI 架构拆分约 80%：请求上下文、快速回答 effects、流生成/完成、取消与 TTS/SSE owner 已分离；Pipeline 现 633 行，FAQ/cache/RAG主路由和多种分支协调仍留在入口。验证约 80%：扩展指定 AI/流式集合 203 passed、compileall/diff check 通过；全后端 pytest、真实模型/provider/设备和生产数据库尚未验收。估算仍是阶段性工程判断，不代表项目验收。
+
 2026-11-05：在 `StreamGenerationRun` 提交 `292612f` 后补做 Python 3.12 直接行为检查：关闭 run 的事件生成器时，底层 `StreamTurn` 源的 `finally` 在 `aclose()` 返回前完成；检查通过。系统 Python 和临时 venv 均没有 pytest，新增的 `test_stream_generation_run.py` pytest 用例尚未执行；对应 FAQ 降级、epoch error 不定稿和取消清理由等价标准库脚本覆盖，但不能替代项目 pytest 回归。工作树当前集成/ref 为 `67bd5e6`，原 checkout 仍 `672a104`/95 路径，所有活动 worktree 状态数、保护 refs 及 phase3 prunable 情况已复核且未改变。
 
 2026-11-05：恢复 `/private/tmp/guide-ai-arch-venv` 并安装 pytest 与 Pipeline 测试所需轻量依赖（未安装完整 RAG/模型栈）。`test_pipeline.py`、`test_pipeline_audience.py`、`test_stream_generation_run.py` 定向集合 58 passed；Python 3.12 compileall 与 diff check 通过。第一次收集时缺 pydantic/websockets，安装后有一个 SQLite persistence 用例因缺 aiosqlite 失败；补齐后同一集合 58 项全部通过。此前直接行为脚本结果仍有效。此结果不等于完整 220 项 AI 回归，也不代表真实 provider/设备验收。工作树集成 checkout/ref 起点 `d3916cf`，原 checkout仍 95 个未提交路径，未触及来源目录、未改其他 worktree。

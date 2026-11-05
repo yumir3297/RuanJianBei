@@ -24,7 +24,6 @@ from app.services.emotion import (
     FusedEmotion,
     MultimodalEmotionFusion,
     TextEmotionAnalyzer,
-    apply_answer_prefix,
     response_policy_for,
 )
 from app.services.qa.cache import QACache
@@ -58,6 +57,7 @@ from app.services.qa.stream_answer_generation_factory import StreamAnswerGenerat
 from app.services.qa.stream_answer_run import StreamAnswerRun
 from app.services.qa.stream_turn_factory import StreamTurnFactory
 from app.services.qa.queued_speech_publisher import QueuedSpeechPublisher
+from app.services.qa.fast_path_answer_factory import FastPathAnswerFactory
 from app.services.qa.answer_styler import no_evidence_reply
 from app.services.qa.stream_evidence_run import StreamEvidenceRun
 from app.services.qa.chat_interaction_persister import ChatInteractionPersister
@@ -178,6 +178,13 @@ class QAPipeline:
         self.fast_path_answer_coordinator = FastPathAnswerCoordinator(
             speech_emitter=self.final_answer_speech_emitter,
             epoch_is_current=self._epoch_is_current,
+        )
+        self.fast_path_answer_factory = FastPathAnswerFactory(
+            coordinator=self.fast_path_answer_coordinator,
+            citation_binder=self._ensure_inline_citations,
+            persist_interaction=self._persist_interaction,
+            done_event_builder=self._done_event,
+            followup_event_builder=self._followup_event,
         )
         self.stream_completion = StreamCompletionCoordinator()
         self.queued_speech_publisher = QueuedSpeechPublisher(
@@ -307,7 +314,7 @@ class QAPipeline:
         if deterministic_answer is not None:
             if deterministic_answer.status_text is not None:
                 yield StreamEvent(type="status", data={"text": deterministic_answer.status_text})
-            answer_events = self._emit_final_answer(
+            answer_events = self.fast_path_answer_factory.events(
                 request=request,
                 normalized_query=normalized_query,
                 answer=deterministic_answer.answer,
@@ -315,6 +322,7 @@ class QAPipeline:
                 hit_level=deterministic_answer.hit_level,
                 start=start,
                 resolved=resolved,
+                response_policy=self._active_response_policy,
                 expected_epoch=request_epoch,
             )
             async with aclosing(answer_events) as events:
@@ -351,7 +359,7 @@ class QAPipeline:
             if not await self._epoch_is_current(request_epoch):
                 yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
                 return
-            answer_events = self._emit_final_answer(
+            answer_events = self.fast_path_answer_factory.events(
                 request=request,
                 normalized_query=normalized_query,
                 answer=faq_path.answer,
@@ -359,6 +367,7 @@ class QAPipeline:
                 hit_level=faq_path.hit_level,
                 start=start,
                 resolved=resolved,
+                response_policy=self._active_response_policy,
                 expected_epoch=request_epoch,
             )
             async with aclosing(answer_events) as events:
@@ -376,7 +385,7 @@ class QAPipeline:
         if cached is not None:
             if cached.answer is None:
                 raise RuntimeError("current cached answer is missing its resolved text")
-            answer_events = self._emit_final_answer(
+            answer_events = self.fast_path_answer_factory.events(
                 request=request,
                 normalized_query=normalized_query,
                 answer=cached.answer,
@@ -384,6 +393,7 @@ class QAPipeline:
                 hit_level="cache",
                 start=start,
                 resolved=resolved,
+                response_policy=self._active_response_policy,
                 expected_epoch=request_epoch,
             )
             async with aclosing(answer_events) as events:
@@ -423,7 +433,7 @@ class QAPipeline:
                 except Exception:
                     logger.exception("Knowledge blind spot recording failed")
             answer = no_evidence_reply(request.persona)
-            answer_events = self._emit_final_answer(
+            answer_events = self.fast_path_answer_factory.events(
                 request=request,
                 normalized_query=normalized_query,
                 answer=answer,
@@ -431,6 +441,7 @@ class QAPipeline:
                 hit_level="rag_insufficient",
                 start=start,
                 resolved=resolved,
+                response_policy=self._active_response_policy,
                 expected_epoch=request_epoch,
             )
             async with aclosing(answer_events) as events:
@@ -489,61 +500,6 @@ class QAPipeline:
     async def _build_static_route_answer(self, request: ChatRequest) -> tuple[str, list[dict]] | None:
         """保留旧调用入口，将静态路线回答委托给独立业务节点。"""
         return await self.route_fast_path.build_answer(request)
-
-    async def _emit_final_answer(
-        self,
-        *,
-        request: ChatRequest,
-        normalized_query: str,
-        answer: str,
-        sources: list[dict],
-        hit_level: str,
-        start: float,
-        resolved: ResolvedInteraction,
-        expected_epoch: int | None = None,
-    ):
-        def prepare_answer(value: str, bound_sources: list[dict]) -> str:
-            return self._ensure_inline_citations(
-                apply_answer_prefix(value, self._active_response_policy), bound_sources
-            )
-
-        async def persist_answer(value: str, latency_ms: int) -> int:
-            return await self._persist_interaction(
-                session_id=request.session_id,
-                raw_query=request.query,
-                normalized_query=normalized_query,
-                answer=value,
-                sources=sources,
-                hit_level=hit_level,
-                latency_ms=latency_ms,
-                request=request,
-                active_subject=resolved.active_subject,
-            )
-
-        def done_event(chat_log_id: int | None, latency_ms: int) -> StreamEvent:
-            return self._done_event(
-                chat_log_id=chat_log_id,
-                hit_level=hit_level,
-                total_ms=latency_ms,
-                degraded=hit_level in {"rag_insufficient", "rag_llm_fallback", "schedule_unverified", "ticket_unverified"},
-                provider="local" if hit_level.startswith("faq_") or hit_level in {"cache", "schedule_unverified", "ticket_unverified", "static_route", "route_clarification"} else "rag",
-            )
-
-        answer_events = self.fast_path_answer_coordinator.events(
-            answer=answer,
-            sources=sources,
-            hit_level=hit_level,
-            text_only=request.text_only,
-            expected_epoch=expected_epoch,
-            start=start,
-            prepare_answer=prepare_answer,
-            persist_answer=persist_answer,
-            followups_event=lambda: self._followup_event(resolved),
-            done_event=done_event,
-        )
-        async with aclosing(answer_events) as events:
-            async for event in events:
-                yield event
 
     async def _epoch_is_current(self, expected_epoch: int | None) -> bool:
         if expected_epoch is None or self.visibility_service is None:

@@ -1,5 +1,15 @@
 # 技术决策
 
+## 2026-11-05：分离快速答案的请求级副作用绑定
+
+问题：确定性路线、直接 FAQ、共享 cache 和无 RAG 证据等分支共用 `FastPathAnswerCoordinator` 的 SSE/语音/epoch 生命周期，但 `QAPipeline._emit_final_answer()` 仍在主流程内闭包绑定答案风格、来源处理、chat log 参数、followups 和 done 元数据。该配置与协调器的执行顺序职责混杂。
+
+选择：新增 `FastPathAnswerFactory`，按本轮 request、resolved interaction、response policy、来源和 hit level 创建 callback 并委托给现有 `FastPathAnswerCoordinator`。coordinator 继续拥有 `sources → text → speech → epoch gate → persist → epoch gate → followups → done` 次序；factory 不做 FAQ/cache/RAG 决策、epoch 判断或 SSE/TTS 执行。
+
+验证：新增行为测试检查答案前缀/证据绑定、持久化字段、快速答案 provider/degraded 元数据和 epoch/text_only 入参；原 fast-path coordinator 事件顺序/epoch 回归及 Pipeline、FAQ/cache、stream/completion、TTS/SSE 扩展集合共 203 passed。Python 3.12 compileall 和 diff check 通过。测试为本地替身，不代表真实模型/provider/设备验收。
+
+回滚：若任一早答分支的 sources/text/speech/persist/followups/done 顺序或 metadata 改变，恢复 `_emit_final_answer()` 内联绑定并保留 factory 行为测试；coordinator 的生命周期实现保持独立。
+
 ## 2026-11-05：将请求画像与知识上下文准备拆出 Pipeline
 
 问题：`QAPipeline._stream_chat()` 在 FAQ/cache/RAG 路由之前同时计算情绪、解析显式景点选择、读取游客记忆、核验视觉确认并构造 retrieval/intent query。该准备阶段和主流生命周期、SSE/TTS 编排混在同一方法中，错误短路顺序也容易在继续拆分时变化。
