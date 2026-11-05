@@ -5,7 +5,7 @@
 - 起始集成 checkout/ref 与原仓库同名集成 ref 均为 `ca577e8`；原 checkout `codex/repository-map@672a104`/95 状态路径，V01/W02/W02-V01 为 49/35/39。五个快照 refs 仍可解析，phase3 保持 prunable 未清理。
 - 本轮变更限于集成副本 QA Pipeline、FAQ/cache path resolver、行为测试及架构/进度记录；未改其他 worktree、快照、原 checkout 或 `sources/`；`frontend/node_modules` 仍唯一未跟踪链接。
 - 新 resolver 的顺序与隔离测试通过，指定 AI/流式集 166 passed，compileall/diff check 通过。逐路径分类未变，之前的审计覆盖证明不代表所有内容冲突均已获得最终迁移结论。
-- 本轮未合并、覆盖、清理或 prune worktree。
+- 提交 `330e6e6` 后原仓库同名集成 ref 已同步；本轮未合并、覆盖、清理或 prune worktree。
 
 ## 本轮复核（回答持久化边界阶段，2026-11-05）
 
