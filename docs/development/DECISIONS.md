@@ -1,5 +1,15 @@
 # 技术决策
 
+## 2026-11-05：将逐句 HTTP TTS/avatar SSE 发布从 Pipeline 中拆出
+
+问题：`QAPipeline._queue_audio()` 同时处理 TTS 降级、avatar 生成、上一句音频等待和 avatar/audio 队列发布，生命周期较难与 `StreamTurn` 的取消及并发上限职责对照审查。
+
+选择：新增 `QueuedSpeechPublisher` 作为注入 `StreamTurnFactory` 的 `audio_worker`。`StreamTurn` 继续拥有任务创建、semaphore、FIFO drain、取消和 epoch fence；publisher 只负责单句渲染与有序发布。TTS 普通异常仍改为空音频后继续文字/avatar 输出，task cancellation 仍传播且不发布未完整渲染的事件对。
+
+验证：新增行为测试覆盖渲染/前序任务/发布顺序、TTS 故障降级和取消无部分发布；新模块缺失时三项测试均按预期失败，抽取后均通过。指定 AI/流式回归 156 passed；Python 3.12 compileall 与 diff check 通过。测试使用替身，不代表真实 TTS/provider/设备验收。
+
+回滚：如果事件 FIFO、失败降级或取消行为改变，可将 `QueuedSpeechPublisher.__call__` 恢复为 Pipeline `_queue_audio` 并将该方法重新注入 StreamTurnFactory，保留三项契约测试。
+
 ## 2026-11-05：隔离 retrieval query 与原始 intent query 的上下文解析
 
 问题：Pipeline 同时准备视觉检索提示、active-subject/history rewrite context、归一化检索 query，并将意图路由留在 raw user query 上；内联逻辑容易把视觉候选文本误送给意图检测，或在确认范围变化时继承旧景点上下文。

@@ -39,3 +39,6 @@
 - 全量索引重建、新版发布和 processed-data 导入使用同一索引目录的跨进程写锁；旧版本进程未纳入锁，导入不自动更新向量索引，真实 Chroma/多进程及 Windows 仍未验收。重建时暂须停掉所有写入与发布 worker，细节见 `docs/development/PROGRESS.md`。
 - 图片问答：`vision_context.confirmation` 可携带游客明确选择的 `site_id`、`spot_code`、`published_revision_id`；服务端重新核验当前站点已发布目录后才限定检索。未确认时开放检索并提示；选项已更新、下架或跨站点时拒绝。选中景点不证明照片识别正确，且知识库当前仅支持单站点边界。
 - W02 迁移、启动和未验证边界见 [集成记录](../development/W02_INTEGRATION.md)。新增协议须说明版本、序列化、错误和取消语义，并增加兼容测试。
+
+
+`QueuedSpeechPublisher` 拥有单句 HTTP TTS 与 avatar 渲染后发布的事件对：TTS 异常降级为空音频事件以保留文本与 avatar 输出；取消必须向上传播且不得发布部分事件；`previous` 音频任务完成前不得发布当前句，队列内 avatar 事件必须先于 audio 事件。并发上限由 `StreamTurn` 提供的 semaphore 控制，发布通知仍由队列接收方传入。

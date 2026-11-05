@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 from contextlib import aclosing
@@ -63,13 +62,13 @@ from app.services.qa.speech_event_adapter import (
 from app.services.qa.stream_events import StreamEvent
 from app.services.qa.final_answer_speech_emitter import FinalAnswerSpeechEmitter
 from app.services.qa.fast_path_answer_coordinator import FastPathAnswerCoordinator
-from app.services.qa.queued_stream_events import QueuedStreamEvents
 from app.services.qa.stream_completion import StreamCompletionCoordinator
 from app.services.qa.stream_answer_completion_factory import StreamAnswerCompletionFactory
 from app.services.qa.cached_answer_path import resolve_cached_answer
 from app.services.qa.stream_answer_generation_factory import StreamAnswerGenerationFactory
 from app.services.qa.stream_answer_run import StreamAnswerRun
 from app.services.qa.stream_turn_factory import StreamTurnFactory
+from app.services.qa.queued_speech_publisher import QueuedSpeechPublisher
 from app.services.qa.vision_evidence import resolve_vision_evidence
 from app.services.qa.answer_styler import no_evidence_reply
 from app.services.qa.stream_evidence_run import StreamEvidenceRun
@@ -169,10 +168,16 @@ class QAPipeline:
             epoch_is_current=self._epoch_is_current,
         )
         self.stream_completion = StreamCompletionCoordinator()
+        self.queued_speech_publisher = QueuedSpeechPublisher(
+            tts_service=self.tts_service,
+            avatar_service=self.avatar_service,
+            audio_event_builder=self._build_audio_event,
+            emotion_resolver=lambda: self._active_response_policy.avatar_emotion,
+        )
         self.stream_turn_factory = StreamTurnFactory(
             llm_service=self.llm_service,
             streaming_tts_service=self.streaming_tts_service,
-            audio_worker=self._queue_audio,
+            audio_worker=self.queued_speech_publisher,
             adapt_tts_event=self._handle_streaming_tts_event,
             coerce_llm_event=self._coerce_llm_event,
         )
@@ -695,43 +700,6 @@ class QAPipeline:
                 "provider": provider,
                 "completion": completion,
             },
-        )
-
-    async def _queue_audio(
-        self, sentence: str, queue: QueuedStreamEvents, *,
-        previous: asyncio.Task[None] | None = None, semaphore: asyncio.Semaphore | None = None,
-        notify=None,
-    ) -> None:
-        async def synthesize():
-            try:
-                return await self.tts_service.synthesize(sentence)
-            except Exception:
-                logger.exception("TTS sentence synthesis failed; preserving text")
-                from app.services.tts.base import TTSAudio
-                return TTSAudio(base64_audio="", duration_ms=0, provider="tts_unavailable")
-
-        if semaphore is None:
-            audio = await synthesize()
-        else:
-            async with semaphore:
-                audio = await synthesize()
-        avatar = await self.avatar_service.drive(sentence)
-        if previous is not None:
-            await previous
-        await queue.publish(
-            (
-                StreamEvent(type="avatar", data={
-                    "viseme_text": avatar.viseme_text,
-                    "emotion": self._active_response_policy.avatar_emotion,
-                }),
-                self._build_audio_event(
-                    sentence,
-                    audio.base64_audio,
-                    audio.duration_ms,
-                    audio.provider,
-                ),
-            ),
-            notify=notify,
         )
 
     @staticmethod
