@@ -1,5 +1,15 @@
 # 技术决策
 
+## 2026-11-05：统一拥有生成到完成的 SSE 流生命周期
+
+问题：Pipeline 分别 drain `StreamGenerationRun.events()`、检查 outcome/error、构造完成期副作用并 drain `StreamCompletionCoordinator.events()`；两段流的资源关闭协议由主流程手动衔接，容易在取消/错误分支留下不一致行为。
+
+选择：新增请求级 `StreamAnswerRun` 作为生成与完成的流 owner。它先 drain 并关闭 generation iterator；error 原样发出并直接返回；正常结果必须有 canonical finalization，才调用 completion factory 并 drain/关闭 completion iterator。cache/persist/blind spot/followup/done 绑定留在 Pipeline 提供的 factory，事件顺序继续由 `StreamCompletionCoordinator` 控制；没有改变 FAQ、cache 资格、RAG evidence、epoch fence 或 terminal policy。
+
+验证：新增行为测试证明 generation error 短路 completion、关闭 generation 时关闭其 source 并不进入 completion、关闭 completion 时关闭嵌套 iterator。加入 FAQ/cache/RAG/evidence/epoch/TTS/SSE 集合后 145 passed；compileall 与 diff check 通过。测试是本地替身，不代表真实模型/provider/设备/数据库。
+
+回滚：若错误短路、canonical finalization 要求或任一层异步生成器关闭行为变化，恢复 Pipeline 对两段流的显式 drain 和 `aclosing`，保留新增生命周期测试；不要移动 cache/persist/terminal event 的次序或取消 completion epoch gate。
+
 ## 2026-11-05：隔离流式证据选择与来源事件的 epoch 边界
 
 问题：FAQ 证据与 RAG 证据都要先生成来源 SSE，再进入同一 LLM 生成路径；Pipeline 内联两种来源选择、source 事件及 epoch 检查，容易在拆分时遗漏 scope、来源修订绑定或 source yield 后的可见性变化。

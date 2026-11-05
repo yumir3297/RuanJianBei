@@ -1,5 +1,11 @@
 # Worktree 改动逐路径核对（2026-11-05）
 
+## 本轮状态复核（生成/完成 SSE owner 阶段，2026-11-05）
+
+- 起始集成 checkout 与原仓库 `codex/competition-integration` ref 均为 `002c77a`。原活动 checkout 仍 `codex/repository-map@672a104`/95 路径；V01/W02/W02-V01 仍 `098553f`/49、`a8c2837`/35、`098553f`/39。五个保护快照 refs 继续可解析；phase3 仍登记 prunable，未 prune。
+- 本阶段仅改集成副本中的 AI Pipeline、生成/完成生命周期组件、其行为测试及进度/架构文档。集成 `frontend/node_modules` 仍为唯一未跟踪软链接；`sources/` 无状态；原 checkout、V01/W02 worktree 和快照内容未改变。
+- 原有逐路径分类表仍适用；本阶段未将集成提交合入原 checkout，也未使用快照覆盖集成树。集成 ref 提交后重新同步核对。
+
 ## 本轮状态复核（流式证据边界阶段，2026-11-05）
 
 - 起始集成 checkout 与原仓库 `codex/competition-integration` ref 均为 `a97c302`。原活动 checkout 仍为 `codex/repository-map@672a104`、95 个状态路径；集成副本本轮只改 QA pipeline/证据协调器/行为测试和进度、架构文档，未改原 checkout。集成 `frontend/node_modules` 仍为唯一未跟踪软链接。

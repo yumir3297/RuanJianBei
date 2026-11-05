@@ -67,6 +67,7 @@ from app.services.qa.stream_completion import StreamCompletionCoordinator
 from app.services.qa.stream_completion_effects import StreamCompletionEffects
 from app.services.qa.cached_answer_path import resolve_cached_answer
 from app.services.qa.stream_generation_run import StreamGenerationRun
+from app.services.qa.stream_answer_run import StreamAnswerRun
 from app.services.qa.stream_turn_factory import StreamTurnFactory
 from app.services.qa.vision_evidence import resolve_vision_evidence
 from app.services.qa.answer_styler import no_evidence_reply
@@ -519,71 +520,57 @@ class QAPipeline:
                 "faq_sources": faq_sources,
             },
         )
-        async with aclosing(generation_run.events()) as events:
-            async for event in events:
+        def build_completion_events(outcome):
+            stream_turn = outcome.stream_turn
+            finalized = outcome.finalized
+            terminal_policy = finalized.policy
+            answer_stream = stream_turn.answer_buffer
+            answer_stream.full_answer = finalized.answer
+            completion_effects = StreamCompletionEffects(
+                cache_writer=lambda answer, bound_sources, epoch: self.qa_cache.set(
+                    cache_key, answer, bound_sources, epoch=epoch
+                ),
+                persist_interaction=self._persist_interaction,
+                blind_spot_tracker=self.blind_spot_tracker,
+                request=request,
+                normalized_query=normalized_query,
+                answer=answer_stream.full_answer,
+                sources=sources,
+                hit_level=terminal_policy.hit_level,
+                expected_epoch=request_epoch,
+                start=start,
+                llm_usage=stream_turn.llm_usage,
+                llm_finish_reason=stream_turn.llm_finish_reason,
+                degraded=terminal_policy.degraded,
+                provider=terminal_policy.provider,
+                completion=terminal_policy.completion,
+                active_subject=resolved.active_subject,
+                followup_event=lambda: self._followup_event(resolved),
+                done_event_builder=self._done_event,
+            )
+            return self.stream_completion.events(
+                stream_turn=stream_turn,
+                answer=answer_stream.full_answer,
+                faq_text_sent=faq_documents is not None,
+                incomplete=terminal_policy.incomplete,
+                faq_documents_present=faq_documents is not None,
+                text_only=request.text_only,
+                streaming_requested=outcome.streaming_requested,
+                epoch_is_current=lambda: self._epoch_is_current(request_epoch),
+                cache_answer=completion_effects.cache_answer if terminal_policy.should_cache else None,
+                persist_answer=completion_effects.persist_answer,
+                followups_event=completion_effects.followups_event,
+                done_event=completion_effects.done_event,
+                after_audio=completion_effects.after_audio,
+            )
+
+        answer_run = StreamAnswerRun(
+            generation_run=generation_run,
+            completion_factory=build_completion_events,
+        )
+        async with aclosing(answer_run.events()) as answer_events:
+            async for event in answer_events:
                 yield event
-
-        outcome = generation_run.outcome
-        if outcome is None:
-            raise RuntimeError("stream generation ended without an outcome")
-        stream_turn = outcome.stream_turn
-        streaming_requested = outcome.streaming_requested
-        if outcome.error_event is not None:
-            yield outcome.error_event
-            return
-
-        finalized = outcome.finalized
-        if finalized is None:
-            raise RuntimeError("stream generation completed without finalization")
-        answer_stream = stream_turn.answer_buffer
-        llm_usage = stream_turn.llm_usage
-        llm_finish_reason = stream_turn.llm_finish_reason
-        terminal_policy = finalized.policy
-        degraded_llm = terminal_policy.degraded
-        answer_stream.full_answer = finalized.answer
-
-        faq_text_sent = faq_documents is not None
-        completion_effects = StreamCompletionEffects(
-            cache_writer=lambda answer, bound_sources, epoch: self.qa_cache.set(
-                cache_key, answer, bound_sources, epoch=epoch
-            ),
-            persist_interaction=self._persist_interaction,
-            blind_spot_tracker=self.blind_spot_tracker,
-            request=request,
-            normalized_query=normalized_query,
-            answer=answer_stream.full_answer,
-            sources=sources,
-            hit_level=terminal_policy.hit_level,
-            expected_epoch=request_epoch,
-            start=start,
-            llm_usage=llm_usage,
-            llm_finish_reason=llm_finish_reason,
-            degraded=degraded_llm,
-            provider=terminal_policy.provider,
-            completion=terminal_policy.completion,
-            active_subject=resolved.active_subject,
-            followup_event=lambda: self._followup_event(resolved),
-            done_event_builder=self._done_event,
-        )
-
-        completion_events = self.stream_completion.events(
-            stream_turn=stream_turn,
-            answer=answer_stream.full_answer,
-            faq_text_sent=faq_text_sent,
-            incomplete=terminal_policy.incomplete,
-            faq_documents_present=faq_documents is not None,
-            text_only=request.text_only,
-            streaming_requested=streaming_requested,
-            epoch_is_current=lambda: self._epoch_is_current(request_epoch),
-            cache_answer=completion_effects.cache_answer if terminal_policy.should_cache else None,
-            persist_answer=completion_effects.persist_answer,
-            followups_event=completion_effects.followups_event,
-            done_event=completion_effects.done_event,
-            after_audio=completion_effects.after_audio,
-        )
-        async with aclosing(completion_events) as events:
-            async for completion_event in events:
-                yield completion_event
 
     async def _build_static_route_answer(self, request: ChatRequest) -> tuple[str, list[dict]] | None:
         """保留旧调用入口，将静态路线回答委托给独立业务节点。"""
