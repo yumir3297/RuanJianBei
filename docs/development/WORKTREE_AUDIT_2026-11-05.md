@@ -1,5 +1,7 @@
 # Worktree 改动逐路径核对（2026-11-05）
 
+最新复核（`59adabf`）：集成 checkout 与原仓库 `codex/competition-integration` 引用一致；原 checkout 为 `672a104`/95 个脏路径，V01/W02/W02-V01 为 `098553f`/49、`a8c2837`/35、`098553f`/39 个脏路径。逐工作树用 porcelain 路径清单校验本审计表覆盖范围：95、49、35、39 个脏路径均被对应行或目录汇总行覆盖，未发现漏记。五个快照 refs 均在，phase3 登记仍 prunable 且未清理，`sources/` 无状态；范围外前端及旧材料差异明确标为未合并并保留源 worktree/快照。此项只证明路径审计表覆盖，不证明每项功能已合并；各表分类栏给出实际状态。
+
 2026-11-05 后续 AI 架构阶段：从集成 `83d342a` 将最终 HTTP TTS 尾段选择、FIFO drain 与 epoch gate 收入 `StreamTurn`；指定回归 261 passed、compileall/diff check 通过，详情见 `PROGRESS.md`。本阶段不改变原 checkout 或 worktree 的 Git 状态；原始未提交路径和保全快照继续保留。
 
 2026-11-05 后续 AI 架构阶段：本阶段从集成 `7adb18c` 开始，完成 StreamTurn 装配/清理边界和 GeneratorExit 行为测试；最新验证结果、Pipeline 剩余职责及源码文件行数见 `PROGRESS.md`。Worktree 基线重新确认后原 checkout 95 路径、V01/W02/W02-V01 49/35/39，5 个快照保持；阶段提交同步原仓库同名集成 ref，不合入原活动 checkout。
