@@ -6,6 +6,8 @@ from collections.abc import AsyncIterable, AsyncIterator, Awaitable, Callable, I
 from app.services.llm.types import LLMStreamEvent, LLMUsage
 from app.services.qa.queued_stream_events import QueuedStreamEvents
 from app.services.qa.stream_answer import StreamAnswerBuffer
+from app.services.qa.stream_completion import AudioTaskDrainer, final_audio_segments
+from app.services.qa.audio_event_delivery import AudioEventDelivery
 from app.services.qa.stream_events import StreamEvent
 from app.services.qa.stream_lifecycle import AudioTaskGroup, StreamProducerGroup, stream_response_scope
 from app.services.qa.stream_mux import StreamMuxState
@@ -63,6 +65,8 @@ class StreamTurn:
             adapt_tts_event=adapt_tts_event,
             coerce_llm_event=coerce_llm_event,
         )
+        self._epoch_is_current = epoch_is_current
+        self.audio_visibility_changed = False
 
     def schedule_audio(self, sentence: str) -> None:
         self.audio_group.schedule(sentence, notify=self.notify_audio)
@@ -77,6 +81,35 @@ class StreamTurn:
         async with stream_response_scope(self.producers, self.cancel_audio):
             async for event in self.consumer.events():
                 yield event
+
+    async def final_audio_events(
+        self,
+        *,
+        faq_documents_present: bool,
+        text_only: bool,
+        streaming_requested: bool,
+    ) -> AsyncIterator[StreamEvent]:
+        """Queue only unsent answer text, drain FIFO audio, and enforce the epoch fence."""
+        for text in final_audio_segments(
+            self.answer_buffer,
+            faq_documents_present=faq_documents_present,
+            text_only=text_only,
+            streaming_requested=streaming_requested,
+            streaming_tts_failed=self.mux_state.tts_failed,
+            tts_confirmed_chars=self.mux_state.tts_confirmed_chars,
+        ):
+            self.schedule_audio(text)
+
+        drainer = AudioTaskDrainer(
+            tasks=self.audio_group.tasks,
+            audio_events=self.audio_events,
+            epoch_is_current=self._epoch_is_current,
+            cancel_audio=self.cancel_audio,
+        )
+        delivery = AudioEventDelivery(drainer, self.cancel_audio)
+        async for event in delivery.events():
+            yield event
+        self.audio_visibility_changed = delivery.visibility_changed
 
     @property
     def llm_usage(self) -> LLMUsage:

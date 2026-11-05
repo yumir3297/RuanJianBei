@@ -7,9 +7,10 @@ from app.services.qa.stream_events import StreamEvent
 from app.services.qa.stream_turn import StreamTurn
 
 
-def create_turn(llm_source, audio_worker, *, text_only=True):
-    async def epoch_is_current():
-        return True
+def create_turn(llm_source, audio_worker, *, text_only=True, epoch_is_current=None):
+    if epoch_is_current is None:
+        async def epoch_is_current():
+            return True
 
     return StreamTurn(
         llm_source=llm_source,
@@ -52,6 +53,62 @@ async def test_stream_turn_emits_tokens_and_exposes_terminal_metadata():
     assert turn.llm_finish_reason == "stop"
     assert turn.llm_usage.completion_tokens == 0
     assert source_closed.is_set()
+
+
+@pytest.mark.asyncio
+async def test_stream_turn_delivers_unsent_http_audio_tail_in_fifo_order():
+    spoken = []
+
+    async def source():
+        yield LLMStreamEvent(type="finish", finish_reason="stop")
+
+    async def audio_worker(sentence, queue, *, previous, semaphore, notify):
+        del semaphore
+        if previous is not None:
+            await previous
+        spoken.append(sentence)
+        await queue.publish([
+            StreamEvent("avatar", {"text": sentence}),
+            StreamEvent("audio", {"text": sentence}),
+        ], notify=notify)
+
+    turn = create_turn(source(), audio_worker, text_only=False)
+    _ = [event async for event in turn.events()]
+    turn.answer_buffer.append("未发送尾句。")
+
+    events = [event async for event in turn.final_audio_events(
+        faq_documents_present=False, text_only=False, streaming_requested=False,
+    )]
+
+    assert spoken == ["未发送尾句。"]
+    assert [event.type for event in events] == ["avatar", "audio"]
+    assert [event.data["text"] for event in events] == ["未发送尾句。", "未发送尾句。"]
+    assert turn.audio_visibility_changed is False
+
+
+@pytest.mark.asyncio
+async def test_stream_turn_withholds_stale_http_audio_after_epoch_change():
+    async def source():
+        yield LLMStreamEvent(type="finish", finish_reason="stop")
+
+    async def audio_worker(sentence, queue, *, previous, semaphore, notify):
+        del previous, semaphore, notify
+        await queue.publish([StreamEvent("audio", {"text": sentence})])
+
+    async def stale_epoch():
+        return False
+
+    turn = create_turn(source(), audio_worker, text_only=False, epoch_is_current=stale_epoch)
+    _ = [event async for event in turn.events()]
+    turn.answer_buffer.append("旧知识尾句。")
+
+    events = [event async for event in turn.final_audio_events(
+        faq_documents_present=False, text_only=False, streaming_requested=False,
+    )]
+
+    assert [event.type for event in events] == ["error"]
+    assert events[0].data["message"] == "知识内容已更新，已停止继续输出。"
+    assert turn.audio_visibility_changed is True
 
 
 @pytest.mark.asyncio

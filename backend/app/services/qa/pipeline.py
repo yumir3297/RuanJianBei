@@ -61,8 +61,6 @@ from app.services.qa.speech_event_adapter import (
 from app.services.qa.stream_events import StreamEvent
 from app.services.qa.final_answer_speech_emitter import FinalAnswerSpeechEmitter
 from app.services.qa.queued_stream_events import QueuedStreamEvents
-from app.services.qa.stream_completion import AudioTaskDrainer, final_audio_segments
-from app.services.qa.audio_event_delivery import AudioEventDelivery
 from app.services.qa.stream_finalization import resolve_final_answer
 from app.services.qa.stream_terminal_policy import resolve_terminal_policy
 from app.services.qa.stream_turn import StreamTurn
@@ -515,10 +513,7 @@ class QAPipeline:
             coerce_llm_event=self._coerce_llm_event,
         )
         answer_stream = stream_turn.answer_buffer
-        audio_events = stream_turn.audio_events
-        audio_group = stream_turn.audio_group
         mux_state = stream_turn.mux_state
-        schedule_audio = stream_turn.schedule_audio
         cancel_audio = stream_turn.cancel_audio
 
         async for event in stream_turn.events():
@@ -556,26 +551,13 @@ class QAPipeline:
         if faq_text_sent:
             yield StreamEvent(type="text", data={"text": answer_stream.full_answer, "is_complete": True})
 
-        for text in final_audio_segments(
-            answer_stream,
+        async for audio_event in stream_turn.final_audio_events(
             faq_documents_present=faq_documents is not None,
             text_only=request.text_only,
             streaming_requested=streaming_requested,
-            streaming_tts_failed=mux_state.tts_failed,
-            tts_confirmed_chars=mux_state.tts_confirmed_chars,
         ):
-            schedule_audio(text)
-
-        audio_drainer = AudioTaskDrainer(
-            tasks=audio_group.tasks,
-            audio_events=audio_events,
-            epoch_is_current=lambda: self._epoch_is_current(request_epoch),
-            cancel_audio=cancel_audio,
-        )
-        audio_delivery = AudioEventDelivery(audio_drainer, cancel_audio)
-        async for audio_event in audio_delivery.events():
             yield audio_event
-        if audio_delivery.visibility_changed:
+        if stream_turn.audio_visibility_changed:
             return
 
         if degraded_llm and self.blind_spot_tracker is not None:

@@ -1,5 +1,11 @@
 # 技术决策
 
+## 2026-11-05：由 StreamTurn 管理生成后的 HTTP 音频尾段与交付
+
+生成结束后的音频尾段选择、任务 drain、SSE FIFO 发布和 epoch 失效处理与 mux 消费共享同一请求的音频任务/队列。新增 `StreamTurn.final_audio_events()` 统一这些动作，避免 Pipeline 手动拼装 drainer/delivery；Pipeline 仍决定 FAQ 完整文本何时发出，并负责缓存、持久化、follow-up 与 done，不迁移 FAQ/RAG/cache 或终态策略。
+
+验证：StreamTurn/音频/Pipeline/epoch 定向集合 70 passed；AI/Worktree 指定回归 261 passed、1 条 Starlette 弃用警告；Python 3.12 compileall 与 diff check 通过。使用替身，不代表真实模型、TTS Provider 或设备验收。
+
 ## 2026-11-05：用作用域管理流式消费的取消清理
 
 流式 mux 消费期间，异常或客户端关闭必须取消并等待句级 HTTP TTS；正常结束、异常或取消都必须关闭 producer task 与 streaming TTS session。新增 `stream_response_scope` async context manager 承担这项清理协议；Pipeline 继续产出 SSE，并在后续处理 mux/epoch 状态。验证覆盖正常结束与消费异常，定向 59 passed，扩展集合 230 passed、1 条 Starlette 弃用警告。
