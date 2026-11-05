@@ -6,7 +6,7 @@
 - 原活动 checkout `codex/repository-map@672a104` 仍有 95 个未提交状态路径。V01/W02/W02-V01 worktree 分别为 `098553f`/49、`a8c2837`/35、`098553f`/39。五个保全快照 refs 均存在；`/private/tmp/ai-guide-phase3` 仍为 prunable，未 prune；`sources/` 无状态。未合并到原活动 checkout。
 - 最新联合回归在扩展 AI 与三组 migration/recovery 测试中 170 passed、20 warnings；其中 migration 专项在合成 SQLite 上 6 passed，覆盖升级/回退和 lineage guard。未覆盖 PostgreSQL、部署数据库或真实旧库。
 - 当前 AI 流重构已包括 `StreamTurn`、`StreamCompletionCoordinator`、生成结果错误收尾和取消传播。完整后端最近一次为 597 passed、19 skipped、3 failed，失败来自临时 venv 缺 `numpy`/`rank_bm25`；真实模型、provider 和设备验收未完成。
-- 审计表逐条保留源 worktree/snapshot 的未提交差异；范围外的 UI/材料明确留存，尚需继续审查范围内迁移/schema 与并发竞态差异。禁止按祖先关系推断所有脏改动已合入。
+- 审计表逐条保留源 worktree/snapshot 的未提交差异；范围外 UI/材料明确留存。范围内迁移差异已做逐字段 lineage 审查并在合成 SQLite 上复跑；剩余未验证项是 PostgreSQL 下 claim 与 progress 提交真正同时竞争的时序，以及部署/真实旧库 migration。禁止按祖先关系推断所有脏改动已合入。
 
 最新复核（`59adabf`）：集成 checkout 与原仓库 `codex/competition-integration` 引用一致；原 checkout 为 `672a104`/95 个脏路径，V01/W02/W02-V01 为 `098553f`/49、`a8c2837`/35、`098553f`/39 个脏路径。逐工作树用 porcelain 路径清单校验本审计表覆盖范围：95、49、35、39 个脏路径均被对应行或目录汇总行覆盖，未发现漏记。五个快照 refs 均在，phase3 登记仍 prunable 且未清理，`sources/` 无状态；范围外前端及旧材料差异明确标为未合并并保留源 worktree/快照。此项只证明路径审计表覆盖，不证明每项功能已合并；各表分类栏给出实际状态。
 
@@ -237,8 +237,8 @@
 ### W02 execution 源码差异核验
 
 - 对照 `code/w02-worktree/backend/app/services/tool_execution/` 与集成目录的 6 个源码文件。集成版通过 `commit=False`、handler `persist_result` 和 runner 在完成 job 前调用 persister，将 proposal 完成与 execution 结果放在同一事务；`test_proposal_api_replays_same_request_and_conflicts_on_changed_payload` 还注入 enqueue 后失败并断言 proposal/job 回滚。旧 registry/runner 无这条事务回调路径，标为“已被后续实现扩展”，不复制覆盖。
-- 集成 repository 增加 progress version 校验、目标 progress fence、锁及 unknown 外部结果路径。`test_changed_target_invalidates_running_lease...`、错误 fence、取消竞态、unknown retry 和 W02 runtime review 分别覆盖任务目标、lease/fence、取消/外部结果及 worker 恢复。此前未发现 create_job stale progress 的直接测试；本轮新增 `test_create_job_rejects_stale_tour_progress_version`，隔离 SQLite 验证进度已从 0 到 1 时拒绝旧 version 并不留下 ToolJob（1 passed）。claim 阶段恰逢 progress 改变的单独并发 race 仍需补测，因此 repository 差异只部分完成验证。
-- 集成 repository 增加 progress version 校验、目标 progress fence、锁及 unknown 外部结果路径。`test_changed_target_invalidates_running_lease...`、错误 fence、取消竞态、unknown retry 和 W02 runtime review 分别覆盖任务目标、lease/fence、取消/外部结果及 worker 恢复。此前未发现 stale progress 的直接测试；本轮新增 `test_create_job_rejects_stale_tour_progress_version`（提交时拒绝旧版本且无 ToolJob）与 `test_queued_job_is_fenced_when_tour_progress_changes_before_worker_claim`（已排队后进度更新不发 lease，维护后标记 `target_progress_changed`），两个隔离 SQLite 测试均通过。claim 与 progress 提交真正同时竞争的时序仍未专项覆盖。
+- 集成 repository 增加 progress version 校验、目标 progress fence、锁及 unknown 外部结果路径。`test_changed_target_invalidates_running_lease...`、错误 fence、取消竞态、unknown retry 和 W02 runtime review 分别覆盖任务目标、lease/fence、取消/外部结果及 worker 恢复。`test_create_job_rejects_stale_tour_progress_version` 验证创建时拒绝旧 progress 且不留下 ToolJob；新加 `test_claimed_job_is_fenced_when_tour_progress_changes_before_worker_start` 验证任务取得 lease 后、worker 开始 attempt 前 progress 变化会阻止 attempt 并 stale job/step。均为 SQLite 隔离交错；claim 与 progress commit 真正并行竞争的 PostgreSQL 时序仍未实测。
+- 集成 repository 增加 progress version 校验、目标 progress fence、锁及 unknown 外部结果路径。`test_create_job_rejects_stale_tour_progress_version`、`test_queued_job_is_fenced_when_tour_progress_changes_before_worker_claim` 与 `test_claimed_job_is_fenced_when_tour_progress_changes_before_worker_start` 分别覆盖创建拒绝旧版本、排队后更新不发 lease、领取后执行前更新时阻止 attempt；隔离 SQLite 测试均通过。真正并行的 PostgreSQL claim/progress 提交交错仍未实测。
 - `worker.py` 的 `_run_cli` finally dispose 由 `test_worker_cli_once_reads_explicit_isolated_database` 的 dispose/no-dispose 子进程路径覆盖。Migration 分叉仍按上文不可单独 cherry-pick 处理。
 
 ### W02 schema / router 差异补充核验
