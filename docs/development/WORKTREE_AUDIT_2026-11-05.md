@@ -126,7 +126,7 @@
 | ` M` | `backend/app/repositories/tour_session.py` | 后续仓储包含提案 reservation、锁和版本 fence；不以旧文件覆盖 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/schemas/itinerary.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | ` M` | `backend/app/services/itinerary/progress.py` | 后续进度版本及状态 fence 实现不同；相关行为由集成回归覆盖 | snapshot=yes; integration=yes |
-| ` M` | `backend/app/tests/test_itinerary_progress.py` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/tests/test_itinerary_progress.py` | 已被集成版覆盖并扩展：保留 V01 原有进度用例，另增加估算时长保持 unverified、当前剩余为 0 但已过截止时间仍冲突两项行为 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/tests/test_tour_session_api.py` | 集成测试包含源测试用例并增加覆盖；旧测试实现由后续用例替代 | snapshot=yes; integration=yes |
 | ` M` | `docs/ARCHITECTURE.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `docs/COMPATIBILITY.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
@@ -148,7 +148,7 @@
 | `??` | `backend/app/services/itinerary/provenance.py` | 源实现被后续实现替代并扩展：集成版处理景点替换、目录修订变更、AI 时长归属和受影响路线段证据失效；没有移植旧文件 | snapshot=yes; integration=yes |
 | `??` | `backend/app/tests/test_itinerary_intent.py` | 后续测试覆盖源用例并增加候选规范名/diff 断言；额外行为由集成实现覆盖 | snapshot=yes; integration=yes |
 | `??` | `backend/app/tests/test_itinerary_provenance.py` | 后续测试保留源覆盖并增加 4 个来源/替换场景，且强化旧来源 revision 变化时的时长降级断言 | snapshot=yes; integration=yes |
-| `??` | `backend/app/tests/test_tour_budget_api.py` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `backend/app/tests/test_tour_budget_api.py` | 已被集成版覆盖并扩展：保留预算查询/显式剩余时长 API 用例，并增加剩余时间命令的幂等重放、progress_version 和无效值校验 | snapshot=yes; integration=yes |
 | `??` | `backend/app/tests/test_tour_progress_and_proposals.py` | 20 个集成测试包含源 10 个用例并新增恢复/预算/来源校验场景；后续实现替代 | snapshot=yes; integration=yes |
 | `??` | `backend/app/tests/test_tour_proposal_catalog_staleness.py` | 后续目录版本验证实现不同；保留快照，语义由集成 staleness 测试验证 | snapshot=yes; integration=yes |
 | `??` | `frontend/src/api/itinerary.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
