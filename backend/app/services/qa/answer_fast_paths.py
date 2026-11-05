@@ -16,6 +16,7 @@ _TICKET_TERMS = ("门票价格", "门票多少钱", "票价", "半价票", "免�
 @dataclass(slots=True)
 class FAQPathDecision:
     answer: str | None
+    source_answer: str
     sources: list[dict]
     documents: list[RetrievedDocument] | None
     hit_level: str
@@ -50,6 +51,7 @@ def resolve_faq_path(
         )
         return FAQPathDecision(
             answer=None,
+            source_answer=match.answer,
             sources=sources,
             documents=[document],
             hit_level=f"faq_{match.level}_styled",
@@ -57,6 +59,7 @@ def resolve_faq_path(
 
     return FAQPathDecision(
         answer=polish_answer(match.answer, persona, sources),
+        source_answer=match.answer,
         sources=sources,
         documents=None,
         hit_level=f"faq_{match.level}",

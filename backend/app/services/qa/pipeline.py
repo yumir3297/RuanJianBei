@@ -34,11 +34,11 @@ from app.services.qa.cache import QACache
 from app.services.qa.blind_spot_tracker import BlindSpotTracker
 from app.services.qa.faq_matcher import FAQMatcher
 from app.services.qa.answer_fast_paths import (
-    resolve_faq_path,
     resolve_ticket_answer,
     resolve_unverified_schedule_answer,
     shared_cache_allowed,
 )
+from app.services.qa.faq_path_resolver import resolve_faq_path_for_request
 from app.services.qa.followup_suggestions import FollowUpSuggestionService
 from app.services.qa.guided_selector import (
     GuidedSelectionResolver,
@@ -378,14 +378,14 @@ class QAPipeline:
         )
         yield StreamEvent(type="status", data={"text": "正在查找答案..."})
 
-        # FAQ records do not carry a verifiable attraction binding. A scoped
-        # question must use scoped retrieval rather than a potentially general FAQ.
         scoped_attraction = resolved.scope is not None and resolved.scope.source_entry_id is not None
-        faq_result = self.faq_matcher.match(normalized_query) if vision is None and not scoped_attraction else None
-        faq_path = resolve_faq_path(
-            faq_result,
+        faq_path = resolve_faq_path_for_request(
+            self.faq_matcher,
+            normalized_query,
             audience=audience,
             persona=request.persona,
+            vision_present=vision is not None,
+            scoped_attraction=scoped_attraction,
         )
         faq_documents = faq_path.documents if faq_path is not None else None
         faq_sources = faq_path.sources if faq_path is not None else []
@@ -523,7 +523,7 @@ class QAPipeline:
                 "llm_hit_level": llm_hit_level,
                 "fallback_hit_level": f"{llm_hit_level}_llm_fallback",
                 "llm_provider": self.llm_provider_name,
-                "faq_answer": faq_result.answer if faq_result is not None else "",
+                "faq_answer": faq_path.source_answer if faq_path is not None else "",
                 "persona": request.persona,
                 "faq_sources": faq_sources,
             },

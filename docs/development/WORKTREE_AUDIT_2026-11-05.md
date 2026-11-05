@@ -1,5 +1,11 @@
 # Worktree 改动逐路径核对（2026-11-05）
 
+## 本轮状态复核（FAQ 路径拆分阶段，2026-11-05）
+
+- 起始集成 checkout 与原仓库 `codex/competition-integration` ref 均为 `b6db5c2`；本轮只在集成副本新增 FAQ resolver、行为测试和架构记录，原 checkout 保持 `codex/repository-map@672a104` 与 95 个状态路径。集成 worktree 本轮自身改动限定为两个 QA 源文件、一个测试文件和五份进度/架构/审计文档；`frontend/node_modules` 仍是唯一既有未跟踪链接。
+- V01/W02/W02-V01 仍分别为 `098553f`/49、`a8c2837`/35、`098553f`/39；五个保护快照 refs (`4acaa53`、`e115eab`、`3805943`、`48ef626`、`5433557`) 均可解析。phase3 worktree 仍登记为 prunable，未执行 prune。`sources/` 无 Git 状态。
+- 既有逐路径分类表未因本轮改变：表中“已合并”仅指文件字节与集成树相同；“后续实现替代”有当前行为测试/实现证据；快照命中只证明保全；旧文档/前端及不一致的模型、迁移仍保留源 worktree/快照，不从祖先关系推断合并。原 checkout 未接收集成提交。详见下方路径表及 [开发进度](PROGRESS.md)。
+
 ## 最新状态复核（2026-11-05）
 
 - 复核基线更新至集成 checkout/ref `292612f`。原 checkout `codex/repository-map@672a104` 仍为 95 个状态路径；V01/W02/W02-V01 分别 `098553f`/49、`a8c2837`/35、`098553f`/39。原仓库五个保护快照 refs 仍可解析；phase3 worktree 仍 prunable 且未清理。集成副本仅有未跟踪的 `frontend/node_modules` 软链接；`sources/` 无状态。`StreamGenerationRun` 阶段源码已提交；临时 pytest 环境不存在且系统 Python 无 pytest，本轮只做了 compileall 与直接行为脚本验证，限制详见 `PROGRESS.md`。未将集成分支合入原 checkout。

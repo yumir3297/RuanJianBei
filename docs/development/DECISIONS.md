@@ -1,5 +1,15 @@
 # 技术决策
 
+## 2026-11-05：将 FAQ 匹配门控移出 Pipeline，保留 epoch 所有权
+
+问题：FAQ答案转换此前已位于 `answer_fast_paths.py`，但 Pipeline 仍直接完成 matcher 调用、视觉/景点范围排除和 FAQ 路径解析；这些条件与后续 epoch 检查及 FAQ 降级原文传递交织在主生成流程中。
+
+选择：新增 `faq_path_resolver.py`，接收 matcher、标准化问题和请求范围标志，封装“是否允许匹配 FAQ”以及既有 `resolve_faq_path()` 决策。FAQ matcher 不在有视觉输入或已解析景点范围时调用。Pipeline 仍拥有请求 epoch 的读取与检查，并在发送直接答案或把 FAQ 证据交给生成前 fence；`FAQPathDecision.source_answer` 显式保留原始权威文本供 LLM 降级使用。未迁移 FAQ matcher 实例、知识 epoch、缓存资格、RAG 或来源绑定。
+
+验证：行为测试覆盖视觉/景点范围跳过、普通命中和未命中；第一次扩展回归发现拆分后遗漏原始 FAQ 答案传递，修复为 `source_answer` 后 FAQ fallback 与 Pipeline 行为回归通过。FAQ/Pipeline/cache/RAG/evidence/epoch/stream/TTS/SSE 指定集合 137 passed；将 chat SSE API 加入同次收集时因临时 venv 缺 `asyncpg` 无法收集，剔除该 API 模块后的指定回归通过。所有可执行测试使用本地替身，不代表真实模型/provider/设备。
+
+回滚：若直接 FAQ 快路径、景点范围排除、受众润色、FAQ 降级、来源、缓存资格或 epoch 检查行为变化，将 Pipeline 恢复为直接调用 matcher 与 `resolve_faq_path()`，保留新增行为测试并检查 `source_answer` 契约；暂不回退既有 FAQ path decision 组件。
+
 ## 2026-11-05：将流生成定稿作为单一输出
 
 问题：Pipeline 分别调用 terminal policy 和 final answer 解析。两项结果共同决定 SSE 是否 incomplete、答案是否回退为权威 FAQ、hit level/provider 与能否缓存；分开调用容易让最终语音、缓存和持久化基于不一致的答案或策略。
