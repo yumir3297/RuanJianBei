@@ -8,6 +8,12 @@
 - Resolver/Pipeline/选择/视觉/查询定向集合 71 passed；扩展 FAQ/cache/RAG/evidence/epoch/记忆/生成与取消/TTS/SSE 集合 196 passed。Python 3.12 compileall 和 diff check 通过。全后端套件未运行；替身与隔离 SQLite 测试不代表真实模型/provider/设备验收。
 - 原子提交 `f3ed6d1` 已同步到原仓库同名集成 ref；同步只更新该分支引用，没有改动原活动 checkout 的工作文件或 95 个状态路径。
 
+## 本轮复核（主 checkout 的旧 QA 流实现差异，2026-11-05）
+
+- 只读比较原 checkout `backend/app/services/qa/pipeline.py` 的未提交差异与集成现实现。旧代码的 FAQ 改写流式资格、请求内音频排队、并发 semaphore/FIFO、取消清理、degraded FAQ 回权威答案及 incomplete 终态均已由后续集成边界承担：`StreamTurnFactory` 根据 `faq_documents_present` 禁用 FAQ streaming TTS；`StreamTurn`/`AudioTaskGroup` 管理句级任务与并发，`StreamTurn` 的 exit scope 取消并 join 任务；`StreamMuxConsumer` 发布句级事件；`finalize_stream_generation()` 对 degraded FAQ 使用原始 FAQ answer，并禁止缓存，同时对非 FAQ interrupted 标记 incomplete；`StreamCompletionCoordinator` 按 FAQ 全文、音频、epoch fence、副作用及终态顺序完成请求。
+- 对应回归：`test_stream_turn.py`、`test_stream_turn_factory.py`、`test_stream_generation_finalizer.py`、`test_stream_generation_run.py`、`test_stream_lifecycle.py`、`test_stream_mux.py`、`test_streaming_tts_controller.py`、`test_stream_answer.py`、`test_stream_answer_run.py`、`test_stream_completion.py`、`test_stream_finalization.py` 共 49 passed。结论是旧 `pipeline.py` 整体属于后续实现替代；不把旧内联实现或快照覆盖到集成版。主 checkout 的旧 `test_direct_answer_appends_inline_citation_when_sources_exist` 仍按既有证据契约被替代，不能因流生命周期映射而一起移植。
+- 原 checkout 文件、95 个状态路径和源 worktree 均未改。本轮只扩充集成副本迁移审计文档；替身测试只证明当前实现覆盖这些调度/取消行为，不证明真实 provider/设备行为。
+
 ## 本轮复核（目录差异计数复验，2026-11-05）
 
 - 重新递归比较原主 checkout 的 `frontend/tests/`：16 个源文件中 15 个与集成树字节相同、1 个不同、集成缺少 0、集成额外 22；审计表计数准确，唯一不同为 `chat-stream.test.mjs`。

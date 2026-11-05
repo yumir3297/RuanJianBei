@@ -32,6 +32,8 @@
 
 本阶段原子提交 `f3ed6d1`（`refactor: extract request context resolver`）已从集成副本同步到原仓库 `codex/competition-integration` ref；两处引用均指向 `f3ed6d1`。原活动 checkout 仍为 95 个状态路径，未合并集成分支。
 
+后续只读核对主 checkout 未提交的旧 `backend/app/services/qa/pipeline.py`：其 FAQ 禁流式 TTS、HTTP TTS 并发/FIFO、取消时任务回收、FAQ 降级原文和 incomplete 终态，已逐项映射到当前 `StreamTurnFactory`、`StreamTurn`/`AudioTaskGroup`、`StreamMuxConsumer`、`finalize_stream_generation()` 与 `StreamCompletionCoordinator`。相应 11 个流生命周期/TTS/完成测试 49 passed。该差异归为“被后续实现替代”，没有复制旧文件或变更原 worktree；逐项证据补入 [Worktree 审计](WORKTREE_AUDIT_2026-11-05.md)。真实 provider 与设备仍未验收。
+
 2026-11-05：在 `StreamGenerationRun` 提交 `292612f` 后补做 Python 3.12 直接行为检查：关闭 run 的事件生成器时，底层 `StreamTurn` 源的 `finally` 在 `aclose()` 返回前完成；检查通过。系统 Python 和临时 venv 均没有 pytest，新增的 `test_stream_generation_run.py` pytest 用例尚未执行；对应 FAQ 降级、epoch error 不定稿和取消清理由等价标准库脚本覆盖，但不能替代项目 pytest 回归。工作树当前集成/ref 为 `67bd5e6`，原 checkout 仍 `672a104`/95 路径，所有活动 worktree 状态数、保护 refs 及 phase3 prunable 情况已复核且未改变。
 
 2026-11-05：恢复 `/private/tmp/guide-ai-arch-venv` 并安装 pytest 与 Pipeline 测试所需轻量依赖（未安装完整 RAG/模型栈）。`test_pipeline.py`、`test_pipeline_audience.py`、`test_stream_generation_run.py` 定向集合 58 passed；Python 3.12 compileall 与 diff check 通过。第一次收集时缺 pydantic/websockets，安装后有一个 SQLite persistence 用例因缺 aiosqlite 失败；补齐后同一集合 58 项全部通过。此前直接行为脚本结果仍有效。此结果不等于完整 220 项 AI 回归，也不代表真实 provider/设备验收。工作树集成 checkout/ref 起点 `d3916cf`，原 checkout仍 95 个未提交路径，未触及来源目录、未改其他 worktree。
