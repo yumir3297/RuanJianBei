@@ -109,6 +109,41 @@ async def test_completion_coordinator_stops_when_audio_epoch_is_stale():
 
 
 @pytest.mark.asyncio
+async def test_faq_completion_checks_epoch_before_emitting_complete_answer_or_audio():
+    calls = []
+
+    class Turn:
+        audio_visibility_changed = False
+
+        async def final_audio_events(self, **kwargs):
+            calls.append("audio")
+            yield StreamEvent(type="audio")
+
+        async def cancel_audio(self):
+            calls.append("cancel")
+
+    async def stale_epoch():
+        calls.append("epoch")
+        return False
+
+    async def forbidden():
+        calls.append("side-effect")
+
+    events = [event async for event in StreamCompletionCoordinator().events(
+        stream_turn=Turn(), answer="已撤回知识的 FAQ", faq_text_sent=True,
+        incomplete=False, faq_documents_present=True, text_only=False,
+        streaming_requested=False, epoch_is_current=stale_epoch,
+        cache_answer=forbidden, persist_answer=forbidden,
+        followups_event=lambda: StreamEvent(type="followups"),
+        done_event=lambda _: StreamEvent(type="done"),
+    )]
+
+    assert [event.type for event in events] == ["error"]
+    assert events[0].data["message"] == "知识内容已更新，已停止继续输出。"
+    assert calls == ["epoch", "cancel"]
+
+
+@pytest.mark.asyncio
 async def test_completion_coordinator_closes_audio_stream_and_cancels_tasks_on_client_close():
     state = {"audio_closed": False, "cancelled": False}
 

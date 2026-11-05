@@ -83,6 +83,10 @@ class StreamCompletionCoordinator:
     ) -> AsyncIterator[StreamEvent]:
         try:
             if faq_text_sent:
+                if not await epoch_is_current():
+                    await stream_turn.cancel_audio()
+                    yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
+                    return
                 yield StreamEvent(type="text", data={"text": answer, "is_complete": True})
 
             audio_events = stream_turn.final_audio_events(
