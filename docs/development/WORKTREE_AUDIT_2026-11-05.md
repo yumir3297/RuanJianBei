@@ -2,7 +2,7 @@
 
 ## 最新状态复核（2026-11-05）
 
-- 最新集成 checkout `codex/competition-integration` 与原仓库同名 branch ref 均为 `268d760`；该工作树仅有未跟踪 `frontend/node_modules` 本机链接。
+- 最新集成 checkout `codex/competition-integration` 与原仓库同名 branch ref 均为 `99387e8`（流 epoch fence 行为提交为 `268d760`）；该工作树仅有未跟踪 `frontend/node_modules` 本机链接。
 - 原活动 checkout `codex/repository-map@672a104` 仍有 95 个未提交状态路径。V01/W02/W02-V01 worktree 分别为 `098553f`/49、`a8c2837`/35、`098553f`/39。五个保全快照 refs 均存在；`/private/tmp/ai-guide-phase3` 仍为 prunable，未 prune；`sources/` 无状态。未合并到原活动 checkout。
 - 当前 Alembic `command` API 可用；三组迁移/恢复测试在合成 SQLite 上 6 passed、6 warnings。覆盖升级/回退和 lineage guard，不覆盖 PostgreSQL、部署数据库或真实旧库。
 - 当前 AI 流重构已包括 `StreamTurn`、`StreamCompletionCoordinator`、生成结果错误收尾和取消传播。完整后端最近一次为 597 passed、19 skipped、3 failed，失败来自临时 venv 缺 `numpy`/`rank_bm25`；真实模型、provider 和设备验收未完成。
