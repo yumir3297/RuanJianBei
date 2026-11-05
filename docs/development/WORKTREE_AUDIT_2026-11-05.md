@@ -120,9 +120,9 @@
 
 | 状态 | 路径 | 分类 | 对照证据 |
 |---|---|---|---|
-| ` M` | `backend/app/api/tour_sessions.py` | 后续实现替代候选：现集成测试覆盖源测试并新增提案回放/目录过期用例；保留快照，不覆盖 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/api/tour_sessions.py` | 旧 API 内联同步调用 `ItineraryIntentService`；集成版改为同事务创建 proposal reservation 与 `itinerary.proposal` durable job，返回 202，测试覆盖 replay/stale progress；属于后续实现替代，不覆盖快照 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/models/__init__.py` | 已被集成模型注册扩展替代；保留源版本用于核对迁移引用 | snapshot=yes; integration=yes |
-| ` M` | `backend/app/models/tour_session.py` | 被后续模型/版本约束实现替代候选；具体 schema 迁移仍需审计 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/models/tour_session.py` | 已由 durable proposal schema 替代：集成版增加 `base_snapshot_json`/`execution_job_id`，merge migration 与 recovery/replay 测试证明用途；Alembic upgrade/downgrade 仍未实跑 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/repositories/tour_session.py` | 后续仓储包含提案 reservation、锁和版本 fence；不以旧文件覆盖 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/schemas/itinerary.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | ` M` | `backend/app/services/itinerary/progress.py` | 后续进度版本及状态 fence 实现不同；相关行为由集成回归覆盖 | snapshot=yes; integration=yes |
@@ -178,7 +178,7 @@
 |---|---|---|---|
 | ` M` | `backend/alembic/env.py` | 仅 SQLAlchemy 模型导入换行/折行，不改变 Alembic metadata 内容 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/api/router.py` | 集成版后续登记 itinerary 与 knowledge import/publication 路由；W02 旧行路由在当前集成树保留，旧文件不可覆盖 | snapshot=yes; integration=yes |
-| ` M` | `backend/app/api/tour_sessions.py` | 后续实现替代候选：现集成测试覆盖源测试并新增提案回放/目录过期用例；保留快照，不覆盖 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/api/tour_sessions.py` | 旧 API 内联同步调用 `ItineraryIntentService`；集成版改为同事务创建 proposal reservation 与 `itinerary.proposal` durable job，返回 202，测试覆盖 replay/stale progress；属于后续实现替代，不覆盖快照 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/models/__init__.py` | 集成版扩展注册知识 workspace、V01 progress/proposal 模型和 tool execution 模型；后续模型注册实现替代，保留源版本 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/models/tour_session.py` | 集成版在 ItineraryProposal 增加 `base_snapshot_json` 与 `execution_job_id`；对应 merge/W02 migration 和 proposal recovery 测试覆盖字段用途；DB migration upgrade 仍未实跑 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/repositories/tour_session.py` | 后续仓储包含提案 reservation、锁和版本 fence；不以旧文件覆盖 | snapshot=yes; integration=yes |
@@ -238,9 +238,9 @@
 |---|---|---|---|
 | ` M` | `backend/alembic/env.py` | 仅 SQLAlchemy 模型导入换行/折行，不改变 Alembic metadata 内容 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/api/router.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
-| ` M` | `backend/app/api/tour_sessions.py` | 后续实现替代候选：现集成测试覆盖源测试并新增提案回放/目录过期用例；保留快照，不覆盖 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/api/tour_sessions.py` | 旧 API 内联同步调用 `ItineraryIntentService`；集成版改为同事务创建 proposal reservation 与 `itinerary.proposal` durable job，返回 202，测试覆盖 replay/stale progress；属于后续实现替代，不覆盖快照 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/models/__init__.py` | 集成版扩展注册知识 workspace、V01 progress/proposal 模型和 tool execution 模型；后续模型注册实现替代，保留源版本 | snapshot=yes; integration=yes |
-| ` M` | `backend/app/models/tour_session.py` | 集成版在 ItineraryProposal 增加 `base_snapshot_json` 与 `execution_job_id`；对应 merge/W02 migration 和 proposal recovery 测试覆盖字段用途；DB migration upgrade 仍未实跑 | snapshot=yes; integration=yes |
+| ` M` | `backend/app/models/tour_session.py` | 已由 durable proposal schema 替代：集成版增加 `base_snapshot_json`/`execution_job_id`，merge migration 与 recovery/replay 测试证明用途；Alembic upgrade/downgrade 仍未实跑 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/repositories/tour_session.py` | 后续仓储包含提案 reservation、锁和版本 fence；不以旧文件覆盖 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/schemas/itinerary.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | ` M` | `backend/app/services/itinerary/progress.py` | 后续进度版本及状态 fence 实现不同；相关行为由集成回归覆盖 | snapshot=yes; integration=yes |
