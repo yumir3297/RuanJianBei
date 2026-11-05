@@ -134,20 +134,20 @@
 | ` M` | `backend/app/services/itinerary/progress.py` | 后续进度版本及状态 fence 实现不同；相关行为由集成回归覆盖 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/tests/test_itinerary_progress.py` | 已被集成版覆盖并扩展：保留 V01 原有进度用例，另增加估算时长保持 unverified、当前剩余为 0 但已过截止时间仍冲突两项行为 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/tests/test_tour_session_api.py` | 集成测试包含源测试用例并增加覆盖；旧测试实现由后续用例替代 | snapshot=yes; integration=yes |
-| ` M` | `docs/ARCHITECTURE.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `docs/COMPATIBILITY.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `docs/REPO_MAP.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `docs/ARCHITECTURE.md` | 未合并；改动保留在源 worktree/快照中；本任务不清理、改写旧文档或制作相关材料 | snapshot=yes; integration=yes |
+| ` M` | `docs/COMPATIBILITY.md` | 未合并；改动保留在源 worktree/快照中；本任务不清理、改写旧文档或制作相关材料 | snapshot=yes; integration=yes |
+| ` M` | `docs/REPO_MAP.md` | 未合并；改动保留在源 worktree/快照中；本任务不清理、改写旧文档或制作相关材料 | snapshot=yes; integration=yes |
 | ` M` | `docs/plans/2026-10-28-ai-workbench-backlog.md` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | ` M` | `docs/superpowers/plans/2026-10-29-v01-editable-itinerary.md` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/api/tourSessions.js` | 已合并（与集成树逐字节相同） | snapshot=yes; integration=yes |
-| ` M` | `frontend/src/assets/guide-page.css` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/assets/guide-page.css` | 未合并；改动保留在源 worktree/快照中，属于前端视图、样式、播放器或 store 变化；本任务不开展前端改版 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/assets/guide-tools.css` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
-| ` M` | `frontend/src/composables/useAudioPlayer.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `frontend/src/stores/chat.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/composables/useAudioPlayer.js` | 未合并；改动保留在源 worktree/快照中，属于前端视图、样式、播放器或 store 变化；本任务不开展前端改版 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/stores/chat.js` | 未合并；改动保留在源 worktree/快照中，属于前端视图、样式、播放器或 store 变化；本任务不开展前端改版 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/stores/tourSessions.js` | V01 的行程编辑/提案 store 已扩展为 durable proposal 恢复与重试：从服务端恢复最新提案、并列时间戳显式选择、waiting_user 不自动重试；同时加入 open/save/progress/budget 请求代际保护及保存期间草稿并发编辑协调。差异与 durable worker/schema 后续实现一致；store/helper 定向 Node 行为集 43 passed，覆盖提案恢复/风险确认/迟到响应/并发草稿/进度预算刷新；归类为后续集成扩展，保留 V01 快照 | snapshot=yes; integration=yes |
-| ` M` | `frontend/src/views/tourist/ChatView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `frontend/src/views/tourist/MapView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `frontend/src/views/tourist/RouteView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/views/tourist/ChatView.vue` | 未合并；改动保留在源 worktree/快照中，属于前端视图、样式、播放器或 store 变化；本任务不开展前端改版 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/views/tourist/MapView.vue` | 未合并；改动保留在源 worktree/快照中，属于前端视图、样式、播放器或 store 变化；本任务不开展前端改版 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/views/tourist/RouteView.vue` | 未合并；改动保留在源 worktree/快照中，属于前端视图、样式、播放器或 store 变化；本任务不开展前端改版 | snapshot=yes; integration=yes |
 | `??` | `backend/alembic/versions/5c81a1e74f2b_add_tour_progress_and_proposals.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | `??` | `backend/app/services/itinerary/candidates.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | `??` | `backend/app/services/itinerary/intent.py` | 源实现被后续实现替代：集成版基于规范化后的 candidate 计算 diff；没有移植旧文件 | snapshot=yes; integration=yes |
@@ -188,18 +188,18 @@
 | ` M` | `backend/app/models/__init__.py` | 集成版扩展注册知识 workspace、V01 progress/proposal 模型和 tool execution 模型；后续模型注册实现替代，保留源版本 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/models/tour_session.py` | 集成版在 ItineraryProposal 增加 `base_snapshot_json` 与 `execution_job_id`；对应 merge/W02 migration 和 proposal recovery 测试覆盖字段用途；DB migration upgrade 仍未实跑 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/repositories/tour_session.py` | 后续仓储包含提案 reservation、锁和版本 fence；不以旧文件覆盖 | snapshot=yes; integration=yes |
-| ` M` | `docs/ARCHITECTURE.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `docs/COMPATIBILITY.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `docs/REPO_MAP.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `docs/plans/2026-10-28-ai-workbench-backlog.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `docs/ARCHITECTURE.md` | 未合并；改动保留在源 worktree/快照中；本任务不清理、改写旧文档或制作相关材料 | snapshot=yes; integration=yes |
+| ` M` | `docs/COMPATIBILITY.md` | 未合并；改动保留在源 worktree/快照中；本任务不清理、改写旧文档或制作相关材料 | snapshot=yes; integration=yes |
+| ` M` | `docs/REPO_MAP.md` | 未合并；改动保留在源 worktree/快照中；本任务不清理、改写旧文档或制作相关材料 | snapshot=yes; integration=yes |
+| ` M` | `docs/plans/2026-10-28-ai-workbench-backlog.md` | 未合并；改动保留在源 worktree/快照中；本任务不清理、改写旧文档或制作相关材料 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/api/tourSessions.js` | W02/W02-V01 版本未传当前站点剩余分钟；集成版通过 `buildTourBudgetParams` 仅在有值时传 `current_stop_remaining_minutes`，保留显式 0。后端 Query 接受 `ge=0`，现有 Node 行为测试验证 null/undefined 省略及 0/正值保留（1 passed）；归类为与已集成剩余预算 API 对齐的后续扩展 | snapshot=yes; integration=yes |
-| ` M` | `frontend/src/assets/guide-tools.css` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `frontend/src/composables/useAudioPlayer.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `frontend/src/stores/chat.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/assets/guide-tools.css` | 未合并；改动保留在源 worktree/快照中，属于前端视图、样式、播放器或 store 变化；本任务不开展前端改版 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/composables/useAudioPlayer.js` | 未合并；改动保留在源 worktree/快照中，属于前端视图、样式、播放器或 store 变化；本任务不开展前端改版 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/stores/chat.js` | 未合并；改动保留在源 worktree/快照中，属于前端视图、样式、播放器或 store 变化；本任务不开展前端改版 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/stores/tourSessions.js` | 集成版复用 `cloneJson`、proposal snapshot stale 检查、异步 apply 草稿协调和 progress refresh helpers；并加入 durable proposal 恢复/重试、open/save/progress/budget 请求代际保护、并发草稿保留。W02 store 与较新的 W02/V01 副本对比均没有这些最终协调边界；store/helper 定向 Node 行为集 43 passed，覆盖对应提案、迟到响应、保存与进度竞争 | snapshot=yes; integration=yes |
-| ` M` | `frontend/src/views/tourist/ChatView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `frontend/src/views/tourist/MapView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `frontend/src/views/tourist/RouteView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/views/tourist/ChatView.vue` | 未合并；改动保留在源 worktree/快照中，属于前端视图、样式、播放器或 store 变化；本任务不开展前端改版 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/views/tourist/MapView.vue` | 未合并；改动保留在源 worktree/快照中，属于前端视图、样式、播放器或 store 变化；本任务不开展前端改版 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/views/tourist/RouteView.vue` | 未合并；改动保留在源 worktree/快照中，属于前端视图、样式、播放器或 store 变化；本任务不开展前端改版 | snapshot=yes; integration=yes |
 | `??` | `backend/alembic/versions/5c81a1e74f2b_add_tour_progress_and_proposals.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | `??` | `backend/alembic/versions/f1b4c9d76e20_add_tool_execution.py` | 被集成 migration merge 替代，不能单独移植：源父 revision=`e9f4c2b8016a`，集成父 revision=`8ab42c17d3e9`；集成版同时添加 itinerary proposal execution 字段 | snapshot=yes; integration=yes |
 | `??` | `backend/app/api/tool_execution.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
@@ -209,12 +209,12 @@
 | `??` | `backend/app/schemas/tool_execution.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | `??` | `backend/app/services/itinerary/` | 已逐项核验：`candidates.py` 与集成版逐字节相同；旧 `intent.py` 的 `result.diff` 被集成版按规范化 candidate 重算 diff 替代；`progress.py` 后续增加剩余预算命令、估算时长/过期截止时间判定；`provenance.py` 后续增加景点替换、目录修订及受影响路线段证据失效和 AI 时长归属。对应测试覆盖 `test_itinerary_intent.py`、`test_itinerary_progress.py`、`test_tour_budget_api.py`、`test_itinerary_provenance.py`；W02 旧差异保留在快照，不覆盖当前实现 | 4 个源文件；相同=1、不同=3、集成缺少=0；集成另有 `catalog.py`、`mutations.py`（排除 Python cache） |
 | `??` | `backend/app/services/tool_execution/` | 六个文件已逐项比较：`commands.py`/`registry.py`/`runner.py` 扩展 `commit=False` 下的同事务结果持久化，`handlers.py` 注册持久 itinerary proposal worker，`worker.py` 在 CLI event loop 退出前 dispose engine；`__init__.py` 仅空白差异。已有回滚、proposal 重放、未知外部结果、worker CLI 生命周期覆盖；旧目录不覆盖集成目录 | 6 个源码/资料文件；相同=0、不同=6、集成缺少=0、集成额外=0（排除 Python cache） |
-| `??` | `docs/research/` | 目录内有相同/不同/新增文件，需逐项核验 | 1 个源码/资料文件；相同=0、不同=1、集成缺少=0、集成额外=1（排除 Python cache） |
-| `??` | `docs/selling-points/` | 目录内有相同/不同/新增文件，需逐项核验 | 1 个源码/资料文件；相同=0、不同=1、集成缺少=0、集成额外=2（排除 Python cache） |
-| `??` | `docs/superpowers/plans/2026-10-29-v01-editable-itinerary.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| `??` | `docs/superpowers/plans/2026-10-29-w02-durable-execution.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| `??` | `docs/superpowers/plans/2026-10-29-w02-execution-ledger.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| `??` | `docs/superpowers/specs/2026-10-29-w02-durable-execution-design.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `docs/research/` | 未合并；目录差异保留在源 worktree/快照中，属于研究/卖点材料，本任务不迁移或清理 | 1 个源码/资料文件；相同=0、不同=1、集成缺少=0、集成额外=1（排除 Python cache） |
+| `??` | `docs/selling-points/` | 未合并；目录差异保留在源 worktree/快照中，属于研究/卖点材料，本任务不迁移或清理 | 1 个源码/资料文件；相同=0、不同=1、集成缺少=0、集成额外=2（排除 Python cache） |
+| `??` | `docs/superpowers/plans/2026-10-29-v01-editable-itinerary.md` | 未合并；改动保留在源 worktree/快照中；本任务不清理、改写旧文档或制作相关材料 | snapshot=yes; integration=yes |
+| `??` | `docs/superpowers/plans/2026-10-29-w02-durable-execution.md` | 未合并；改动保留在源 worktree/快照中；本任务不清理、改写旧文档或制作相关材料 | snapshot=yes; integration=yes |
+| `??` | `docs/superpowers/plans/2026-10-29-w02-execution-ledger.md` | 未合并；改动保留在源 worktree/快照中；本任务不清理、改写旧文档或制作相关材料 | snapshot=yes; integration=yes |
+| `??` | `docs/superpowers/specs/2026-10-29-w02-durable-execution-design.md` | 未合并；改动保留在源 worktree/快照中；本任务不清理、改写旧文档或制作相关材料 | snapshot=yes; integration=yes |
 | `??` | `frontend/src/api/itinerary.js` | W02 快照尚无 proposal list/retry 客户端；集成版增加 durable worker 列表和重试调用，服务端及 `test_unknown_external_result_requires_explicit_retry_confirmation` 覆盖风险确认。该功能属于 W02 集成后的持久任务能力，不从旧快照覆盖 | snapshot=yes; integration=yes |
 | `??` | `frontend/src/utils/requestGeneration.js` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 
@@ -250,19 +250,19 @@
 | ` M` | `backend/app/repositories/tour_session.py` | 后续仓储包含提案 reservation、锁和版本 fence；不以旧文件覆盖 | snapshot=yes; integration=yes |
 | ` M` | `backend/app/schemas/itinerary.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | ` M` | `backend/app/services/itinerary/progress.py` | 后续进度版本及状态 fence 实现不同；相关行为由集成回归覆盖 | snapshot=yes; integration=yes |
-| ` M` | `docs/ARCHITECTURE.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `docs/COMPATIBILITY.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `docs/REPO_MAP.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `docs/plans/2026-10-28-ai-workbench-backlog.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `docs/superpowers/plans/2026-10-29-v01-editable-itinerary.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `docs/ARCHITECTURE.md` | 未合并；改动保留在源 worktree/快照中；本任务不清理、改写旧文档或制作相关材料 | snapshot=yes; integration=yes |
+| ` M` | `docs/COMPATIBILITY.md` | 未合并；改动保留在源 worktree/快照中；本任务不清理、改写旧文档或制作相关材料 | snapshot=yes; integration=yes |
+| ` M` | `docs/REPO_MAP.md` | 未合并；改动保留在源 worktree/快照中；本任务不清理、改写旧文档或制作相关材料 | snapshot=yes; integration=yes |
+| ` M` | `docs/plans/2026-10-28-ai-workbench-backlog.md` | 未合并；改动保留在源 worktree/快照中；本任务不清理、改写旧文档或制作相关材料 | snapshot=yes; integration=yes |
+| ` M` | `docs/superpowers/plans/2026-10-29-v01-editable-itinerary.md` | 未合并；改动保留在源 worktree/快照中；本任务不清理、改写旧文档或制作相关材料 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/api/tourSessions.js` | 与 W02 旧客户端相同，缺少当前站点剩余分钟查询参数；集成版补入可省略空值且保留 0 的 `current_stop_remaining_minutes`，后端 Query 与 Node 测试（1 passed）覆盖契约 | snapshot=yes; integration=yes |
-| ` M` | `frontend/src/assets/guide-tools.css` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `frontend/src/composables/useAudioPlayer.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `frontend/src/stores/chat.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/assets/guide-tools.css` | 未合并；改动保留在源 worktree/快照中，属于前端视图、样式、播放器或 store 变化；本任务不开展前端改版 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/composables/useAudioPlayer.js` | 未合并；改动保留在源 worktree/快照中，属于前端视图、样式、播放器或 store 变化；本任务不开展前端改版 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/stores/chat.js` | 未合并；改动保留在源 worktree/快照中，属于前端视图、样式、播放器或 store 变化；本任务不开展前端改版 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/stores/tourSessions.js` | 集成版在较新的 W02/V01 store 上增加 open/save/progress/budget 请求代际保护、重复时间戳提案选择、waiting_user 手动重试确认和异步编辑协调；43 项定向 Node 行为测试全部通过，覆盖迟到响应、草稿保留、进度刷新和提案恢复/重试边界 | snapshot=yes; integration=yes |
-| ` M` | `frontend/src/views/tourist/ChatView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `frontend/src/views/tourist/MapView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `frontend/src/views/tourist/RouteView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/views/tourist/ChatView.vue` | 未合并；改动保留在源 worktree/快照中，属于前端视图、样式、播放器或 store 变化；本任务不开展前端改版 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/views/tourist/MapView.vue` | 未合并；改动保留在源 worktree/快照中，属于前端视图、样式、播放器或 store 变化；本任务不开展前端改版 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/views/tourist/RouteView.vue` | 未合并；改动保留在源 worktree/快照中，属于前端视图、样式、播放器或 store 变化；本任务不开展前端改版 | snapshot=yes; integration=yes |
 | `??` | `backend/alembic/versions/5c81a1e74f2b_add_tour_progress_and_proposals.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | `??` | `backend/alembic/versions/f1b4c9d76e20_add_tool_execution.py` | 被集成 migration merge 替代，不能单独移植：源父 revision=`e9f4c2b8016a`，集成父 revision=`8ab42c17d3e9`；集成版同时添加 proposal execution 字段 | snapshot=yes; integration=yes |
 | `??` | `backend/app/api/tool_execution.py` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
@@ -274,10 +274,10 @@
 | `??` | `backend/app/services/itinerary/provenance.py` | 源实现被后续实现替代并扩展：集成版处理景点替换、目录修订变更、AI 时长归属和受影响路线段证据失效；没有移植旧文件 | snapshot=yes; integration=yes |
 | `??` | `backend/app/services/tool_execution/` | 后续执行目录已扩展同事务 proposal persistence、正式 handler 和 worker engine 生命周期；与 W02 表中六文件语义审计一致，未覆盖旧目录 | 6 个源码/资料文件；相同=4、不同=2、集成缺少=0、集成额外=0（排除 Python cache） |
 | `??` | `backend/app/tests/test_tool_execution_acceptance.py` | 原 W02 工作树无此文件；测试仅见于后续 W02/V01 快照并扩充于当前集成树 | snapshot=yes; integration=yes |
-| `??` | `docs/research/2026-10-29-w02-durable-execution-research.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| `??` | `docs/selling-points/` | 目录内有相同/不同/新增文件，需逐项核验 | 1 个源码/资料文件；相同=0、不同=1、集成缺少=0、集成额外=2（排除 Python cache） |
-| `??` | `docs/superpowers/plans/2026-10-29-w02-durable-execution.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| `??` | `docs/superpowers/plans/2026-10-29-w02-execution-ledger.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| `??` | `docs/superpowers/specs/2026-10-29-w02-durable-execution-design.md` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| `??` | `docs/research/2026-10-29-w02-durable-execution-research.md` | 未合并；改动保留在源 worktree/快照中；本任务不清理、改写旧文档或制作相关材料 | snapshot=yes; integration=yes |
+| `??` | `docs/selling-points/` | 未合并；目录差异保留在源 worktree/快照中，属于研究/卖点材料，本任务不迁移或清理 | 1 个源码/资料文件；相同=0、不同=1、集成缺少=0、集成额外=2（排除 Python cache） |
+| `??` | `docs/superpowers/plans/2026-10-29-w02-durable-execution.md` | 未合并；改动保留在源 worktree/快照中；本任务不清理、改写旧文档或制作相关材料 | snapshot=yes; integration=yes |
+| `??` | `docs/superpowers/plans/2026-10-29-w02-execution-ledger.md` | 未合并；改动保留在源 worktree/快照中；本任务不清理、改写旧文档或制作相关材料 | snapshot=yes; integration=yes |
+| `??` | `docs/superpowers/specs/2026-10-29-w02-durable-execution-design.md` | 未合并；改动保留在源 worktree/快照中；本任务不清理、改写旧文档或制作相关材料 | snapshot=yes; integration=yes |
 | `??` | `frontend/src/api/itinerary.js` | W02/V01 副本已有 proposal list/retry API；集成版再增加 request `AbortSignal` 传递，并在客户端强制 `confirmDuplicateRisk === true` 后才发送 retry。后端 retry schema/repository 和未知外部结果人工确认测试与之对应；归类为集成增强，不是未合并功能 | snapshot=yes; integration=yes |
 | `??` | `frontend/src/utils/requestGeneration.js` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
