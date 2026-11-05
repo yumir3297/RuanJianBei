@@ -120,7 +120,7 @@
 
 ### V01（`v01-worktree`）
 
-当前 HEAD `098553f`，49 个 porcelain 状态路径；保全快照 `v01-preserved-snapshot`。分类统计：25 同路径存在但内容不同；需语义审查；24 已合并（当前内容与集成树相同）.
+当前 HEAD `098553f`，49 个 porcelain 状态路径；保全快照 `v01-preserved-snapshot`。以下按每个路径列出字节比较和语义判定；未完成的审查保留明确标记，不以分支祖先关系推断已合入。
 
 | 状态 | 路径 | 分类 | 对照证据 |
 |---|---|---|---|
@@ -142,7 +142,7 @@
 | ` M` | `frontend/src/assets/guide-tools.css` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/composables/useAudioPlayer.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/stores/chat.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `frontend/src/stores/tourSessions.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/stores/tourSessions.js` | V01 的行程编辑/提案 store 已扩展为 durable proposal 恢复与重试：从服务端恢复最新提案、并列时间戳显式选择、waiting_user 不自动重试；同时加入 open/save/progress/budget 请求代际保护及保存期间草稿并发编辑协调。差异与 durable worker/schema 后续实现一致；store/helper 定向 Node 行为集 43 passed，覆盖提案恢复/风险确认/迟到响应/并发草稿/进度预算刷新；归类为后续集成扩展，保留 V01 快照 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/views/tourist/ChatView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/views/tourist/MapView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/views/tourist/RouteView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
@@ -176,7 +176,7 @@
 
 ### W02（`code/w02-worktree`）
 
-当前 HEAD `a8c2837`，35 个 porcelain 状态路径；保全快照 `w02-preserved-snapshot`。分类统计：25 同路径存在但内容不同；需语义审查；6 已合并（当前内容与集成树相同）；4 目录内有相同/不同/新增文件，需逐项核验.
+当前 HEAD `a8c2837`，35 个 porcelain 状态路径；保全快照 `w02-preserved-snapshot`。以下按每个路径列出字节比较和语义判定；未完成的审查保留明确标记，不以分支祖先关系推断已合入。
 
 | 状态 | 路径 | 分类 | 对照证据 |
 |---|---|---|---|
@@ -194,7 +194,7 @@
 | ` M` | `frontend/src/assets/guide-tools.css` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/composables/useAudioPlayer.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/stores/chat.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `frontend/src/stores/tourSessions.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/stores/tourSessions.js` | 集成版复用 `cloneJson`、proposal snapshot stale 检查、异步 apply 草稿协调和 progress refresh helpers；并加入 durable proposal 恢复/重试、open/save/progress/budget 请求代际保护、并发草稿保留。W02 store 与较新的 W02/V01 副本对比均没有这些最终协调边界；store/helper 定向 Node 行为集 43 passed，覆盖对应提案、迟到响应、保存与进度竞争 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/views/tourist/ChatView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/views/tourist/MapView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/views/tourist/RouteView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
@@ -236,7 +236,7 @@
 
 ### W02/V01 集成副本（`code/w02-integration`）
 
-当前 HEAD `098553f`，39 个 porcelain 状态路径；保全快照 `w02-integration-preserved-snapshot`。分类统计：29 同路径存在但内容不同；需语义审查；8 已合并（当前内容与集成树相同）；2 目录内有相同/不同/新增文件，需逐项核验.
+当前 HEAD `098553f`，39 个 porcelain 状态路径；保全快照 `w02-integration-preserved-snapshot`。以下按每个路径列出字节比较和语义判定；未完成的审查保留明确标记，不以分支祖先关系推断已合入。
 
 | 状态 | 路径 | 分类 | 对照证据 |
 |---|---|---|---|
@@ -257,7 +257,7 @@
 | ` M` | `frontend/src/assets/guide-tools.css` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/composables/useAudioPlayer.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/stores/chat.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
-| ` M` | `frontend/src/stores/tourSessions.js` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
+| ` M` | `frontend/src/stores/tourSessions.js` | 集成版在较新的 W02/V01 store 上增加 open/save/progress/budget 请求代际保护、重复时间戳提案选择、waiting_user 手动重试确认和异步编辑协调；43 项定向 Node 行为测试全部通过，覆盖迟到响应、草稿保留、进度刷新和提案恢复/重试边界 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/views/tourist/ChatView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/views/tourist/MapView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
 | ` M` | `frontend/src/views/tourist/RouteView.vue` | 同路径存在但内容不同；需语义审查 | snapshot=yes; integration=yes |
