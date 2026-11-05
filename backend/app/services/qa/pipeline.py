@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from contextlib import aclosing
 from contextvars import ContextVar, Token
 from dataclasses import dataclass
 from time import perf_counter
@@ -223,8 +224,9 @@ class QAPipeline:
             )
         )
         try:
-            async for event in self._stream_chat(request):
-                yield event
+            async with aclosing(self._stream_chat(request)) as events:
+                async for event in events:
+                    yield event
         finally:
             self._request_state.reset(token)
 
@@ -321,24 +323,28 @@ class QAPipeline:
         # cached answers, or retrieved schedules as current opening hours.
         schedule_answer = resolve_unverified_schedule_answer(request.query)
         if schedule_answer is not None:
-            async for event in self._emit_final_answer(
+            answer_events = self._emit_final_answer(
                 request=request, normalized_query=normalized_query,
                 answer=schedule_answer,
                 sources=[], hit_level="schedule_unverified", start=start,
                 resolved=resolved, expected_epoch=request_epoch,
-            ):
-                yield event
+            )
+            async with aclosing(answer_events) as events:
+                async for event in events:
+                    yield event
             return
 
         ticket_answer = resolve_ticket_answer(request.query)
         if ticket_answer is not None:
-            async for event in self._emit_final_answer(
+            answer_events = self._emit_final_answer(
                 request=request, normalized_query=normalized_query,
                 answer=ticket_answer,
                 sources=[], hit_level="ticket_unverified", start=start,
                 resolved=resolved, expected_epoch=request_epoch,
-            ):
-                yield event
+            )
+            async with aclosing(answer_events) as events:
+                async for event in events:
+                    yield event
             return
 
         if vision is None and intent_decision.intent == "static_route":
@@ -346,7 +352,7 @@ class QAPipeline:
             if static_route is not None:
                 answer, route_sources = static_route
                 yield StreamEvent(type="status", data={"text": "正在整理游览路线..."})
-                async for event in self._emit_final_answer(
+                answer_events = self._emit_final_answer(
                     request=request,
                     normalized_query=normalized_query,
                     answer=answer,
@@ -355,8 +361,10 @@ class QAPipeline:
                     start=start,
                     resolved=resolved,
                     expected_epoch=request_epoch,
-                ):
-                    yield event
+                )
+                async with aclosing(answer_events) as events:
+                    async for event in events:
+                        yield event
                 return
         cache_key = build_selection_cache_key(
             normalized_query,
@@ -383,7 +391,7 @@ class QAPipeline:
             if not await self._epoch_is_current(request_epoch):
                 yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
                 return
-            async for event in self._emit_final_answer(
+            answer_events = self._emit_final_answer(
                 request=request,
                 normalized_query=normalized_query,
                 answer=faq_path.answer,
@@ -392,8 +400,10 @@ class QAPipeline:
                 start=start,
                 resolved=resolved,
                 expected_epoch=request_epoch,
-            ):
-                yield event
+            )
+            async with aclosing(answer_events) as events:
+                async for event in events:
+                    yield event
             return
 
         # Visitor memory influences generated wording and must never cross the
@@ -409,7 +419,7 @@ class QAPipeline:
                 yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
                 return
             styled_answer = polish_answer(cached.answer, request.persona, cached.sources)
-            async for event in self._emit_final_answer(
+            answer_events = self._emit_final_answer(
                 request=request,
                 normalized_query=normalized_query,
                 answer=styled_answer,
@@ -418,8 +428,10 @@ class QAPipeline:
                 start=start,
                 resolved=resolved,
                 expected_epoch=request_epoch,
-            ):
-                yield event
+            )
+            async with aclosing(answer_events) as events:
+                async for event in events:
+                    yield event
             return
 
         if faq_documents is not None:
@@ -463,7 +475,7 @@ class QAPipeline:
                 except Exception:
                     logger.exception("Knowledge blind spot recording failed")
             answer = no_evidence_reply(request.persona)
-            async for event in self._emit_final_answer(
+            answer_events = self._emit_final_answer(
                 request=request,
                 normalized_query=normalized_query,
                 answer=answer,
@@ -472,8 +484,10 @@ class QAPipeline:
                 start=start,
                 resolved=resolved,
                 expected_epoch=request_epoch,
-            ):
-                yield event
+            )
+            async with aclosing(answer_events) as events:
+                async for event in events:
+                    yield event
             return
 
         # FAQ 走 LLM 改写时保留可观测的命中来源，便于与纯 FAQ 快路径区分。
@@ -495,8 +509,9 @@ class QAPipeline:
         )
         answer_stream = stream_turn.answer_buffer
 
-        async for event in stream_turn.events():
-            yield event
+        async with aclosing(stream_turn.events()) as events:
+            async for event in events:
+                yield event
 
         generation_error = await stream_turn.check_generation_result()
         if generation_error is not None:
@@ -572,7 +587,7 @@ class QAPipeline:
                 completion=terminal_policy.completion,
             )
 
-        async for completion_event in self.stream_completion.events(
+        completion_events = self.stream_completion.events(
             stream_turn=stream_turn,
             answer=answer_stream.full_answer,
             faq_text_sent=faq_text_sent,
@@ -586,8 +601,10 @@ class QAPipeline:
             followups_event=lambda: self._followup_event(resolved),
             done_event=done_event,
             after_audio=after_audio,
-        ):
-            yield completion_event
+        )
+        async with aclosing(completion_events) as events:
+            async for completion_event in events:
+                yield completion_event
 
     async def _build_static_route_answer(self, request: ChatRequest) -> tuple[str, list[dict]] | None:
         """保留旧调用入口，将静态路线回答委托给独立业务节点。"""
@@ -632,7 +649,7 @@ class QAPipeline:
                 provider="local" if hit_level.startswith("faq_") or hit_level in {"cache", "schedule_unverified", "ticket_unverified", "static_route", "route_clarification"} else "rag",
             )
 
-        async for event in self.fast_path_answer_coordinator.events(
+        answer_events = self.fast_path_answer_coordinator.events(
             answer=answer,
             sources=sources,
             hit_level=hit_level,
@@ -643,8 +660,10 @@ class QAPipeline:
             persist_answer=persist_answer,
             followups_event=lambda: self._followup_event(resolved),
             done_event=done_event,
-        ):
-            yield event
+        )
+        async with aclosing(answer_events) as events:
+            async for event in events:
+                yield event
 
     async def _epoch_is_current(self, expected_epoch: int | None) -> bool:
         if expected_epoch is None or self.visibility_service is None:

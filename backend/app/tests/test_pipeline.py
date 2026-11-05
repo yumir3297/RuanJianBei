@@ -759,6 +759,44 @@ def test_closing_chat_stream_resets_request_local_emotion_state():
     asyncio.run(scenario())
 
 
+def test_closing_chat_stream_closes_the_active_llm_source():
+    class BlockingLLMService:
+        def __init__(self):
+            self.started = asyncio.Event()
+            self.closed = asyncio.Event()
+
+        async def stream_generate(self, query, documents, *, persona=None, audience=None, memory=None):
+            del query, documents, persona, audience, memory
+            self.started.set()
+            try:
+                yield "部分回答"
+                await asyncio.Event().wait()
+            finally:
+                self.closed.set()
+
+    async def scenario():
+        llm = BlockingLLMService()
+        pipeline = _build_test_pipeline(llm_service=llm)
+        stream = pipeline.stream_chat(ChatRequest(
+            query="介绍一个没有 FAQ 快路径的问题",
+            session_id="cancel-active-llm",
+            text_only=True,
+        ))
+        async def advance_to_first_chunk():
+            async for event in stream:
+                if event.type == "text_chunk":
+                    return
+            raise AssertionError("the active LLM should emit a text chunk")
+
+        await asyncio.wait_for(advance_to_first_chunk(), timeout=1)
+        await asyncio.wait_for(llm.started.wait(), timeout=1)
+        await stream.aclose()
+        assert llm.closed.is_set(), "closing SSE must join the LLM source before returning"
+        await asyncio.wait_for(llm.closed.wait(), timeout=1)
+
+    asyncio.run(scenario())
+
+
 def _run_turn(pipeline, **request_overrides):
     request_kwargs = {
         "query": "有什么特色",
