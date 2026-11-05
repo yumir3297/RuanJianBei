@@ -72,6 +72,41 @@ async def test_completion_coordinator_stops_when_audio_epoch_is_stale():
 
 
 @pytest.mark.asyncio
+async def test_completion_coordinator_closes_audio_stream_and_cancels_tasks_on_client_close():
+    state = {"audio_closed": False, "cancelled": False}
+
+    class Turn:
+        audio_visibility_changed = False
+
+        async def final_audio_events(self, **kwargs):
+            try:
+                yield StreamEvent(type="audio")
+                await asyncio.sleep(60)
+            finally:
+                state["audio_closed"] = True
+
+        async def cancel_audio(self):
+            state["cancelled"] = True
+
+    async def forbidden():
+        pytest.fail("client close must happen before cache and persistence")
+
+    events = StreamCompletionCoordinator().events(
+        stream_turn=Turn(), answer="回答", faq_text_sent=False, incomplete=False,
+        faq_documents_present=False, text_only=False, streaming_requested=False,
+        epoch_is_current=lambda: asyncio.sleep(0, result=True), cache_answer=forbidden,
+        persist_answer=forbidden,
+        followups_event=lambda: StreamEvent(type="followups"),
+        done_event=lambda _: StreamEvent(type="done"),
+    )
+
+    assert (await anext(events)).type == "audio"
+    await events.aclose()
+
+    assert state == {"audio_closed": True, "cancelled": True}
+
+
+@pytest.mark.asyncio
 async def test_audio_task_drainer_waits_for_tasks_then_emits_events_in_fifo_order():
     completed = []
 

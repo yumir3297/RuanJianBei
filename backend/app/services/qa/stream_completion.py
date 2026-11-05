@@ -62,7 +62,7 @@ class AudioTaskDrainer:
 
 
 class StreamCompletionCoordinator:
-    """Keep post-generation audio, epoch fences, persistence, and terminal SSE ordered."""
+    """Keep post-generation audio, cancellation, epoch fences, and terminal SSE ordered."""
 
     async def events(
         self,
@@ -81,30 +81,38 @@ class StreamCompletionCoordinator:
         done_event: Callable[[str | None], StreamEvent],
         after_audio: Callable[[], Awaitable[None]] | None = None,
     ) -> AsyncIterator[StreamEvent]:
-        if faq_text_sent:
-            yield StreamEvent(type="text", data={"text": answer, "is_complete": True})
+        try:
+            if faq_text_sent:
+                yield StreamEvent(type="text", data={"text": answer, "is_complete": True})
 
-        async for event in stream_turn.final_audio_events(
-            faq_documents_present=faq_documents_present,
-            text_only=text_only,
-            streaming_requested=streaming_requested,
-        ):
-            yield event
-        if stream_turn.audio_visibility_changed:
-            return
+            audio_events = stream_turn.final_audio_events(
+                faq_documents_present=faq_documents_present,
+                text_only=text_only,
+                streaming_requested=streaming_requested,
+            )
+            try:
+                async for event in audio_events:
+                    yield event
+            finally:
+                await audio_events.aclose()
+            if stream_turn.audio_visibility_changed:
+                return
 
-        if after_audio is not None:
-            await after_audio()
-        if not await epoch_is_current():
-            yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
-            return
-        if cache_answer is not None:
-            await cache_answer()
-        chat_log_id = await persist_answer()
-        if not await epoch_is_current():
-            yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
-            return
-        if not faq_text_sent:
-            yield StreamEvent(type="text", data={"text": answer, "is_complete": not incomplete})
-        yield followups_event()
-        yield done_event(chat_log_id)
+            if after_audio is not None:
+                await after_audio()
+            if not await epoch_is_current():
+                yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
+                return
+            if cache_answer is not None:
+                await cache_answer()
+            chat_log_id = await persist_answer()
+            if not await epoch_is_current():
+                yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
+                return
+            if not faq_text_sent:
+                yield StreamEvent(type="text", data={"text": answer, "is_complete": not incomplete})
+            yield followups_event()
+            yield done_event(chat_log_id)
+        except BaseException:
+            await stream_turn.cancel_audio()
+            raise

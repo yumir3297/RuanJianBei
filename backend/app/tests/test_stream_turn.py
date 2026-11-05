@@ -112,6 +112,43 @@ async def test_stream_turn_withholds_stale_http_audio_after_epoch_change():
 
 
 @pytest.mark.asyncio
+async def test_closing_final_audio_delivery_cancels_later_scheduled_audio():
+    second_audio_started = asyncio.Event()
+    second_audio_cancelled = asyncio.Event()
+
+    async def source():
+        yield LLMStreamEvent(type="finish", finish_reason="stop")
+
+    async def audio_worker(sentence, queue, *, previous, semaphore, notify):
+        del semaphore
+        if previous is not None:
+            await previous
+        if sentence == "first":
+            await queue.publish([StreamEvent("audio", {"text": sentence})], notify=notify)
+            return
+        second_audio_started.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            second_audio_cancelled.set()
+
+    turn = create_turn(source(), audio_worker, text_only=True)
+    _ = [event async for event in turn.events()]
+    turn.schedule_audio("first")
+    turn.schedule_audio("second")
+    events = turn.final_audio_events(
+        faq_documents_present=False, text_only=True, streaming_requested=False,
+    )
+
+    assert (await anext(events)).type == "audio"
+    await asyncio.wait_for(second_audio_started.wait(), timeout=1)
+    await events.aclose()
+
+    await asyncio.wait_for(second_audio_cancelled.wait(), timeout=1)
+    assert turn.audio_group.pending == ()
+
+
+@pytest.mark.asyncio
 async def test_closing_stream_turn_cancels_speech_and_closes_llm_source():
     audio_started = asyncio.Event()
     audio_closed = asyncio.Event()

@@ -6,6 +6,12 @@
 
 验证：协调器测试覆盖 audio→epoch→cache→persist→epoch→text/followups/done 次序与过期音频时禁止后续副作用；Pipeline/聊天 SSE/证据契约定向集合 71 passed、1 条 Starlette 弃用警告。后端完整测试当前为 594 passed、19 skipped、3 failed：一个环境缺少 numpy 导致本地 ASR 预期路径测试失败，两个 BM25 测试因缺少 `rank_bm25` 失败；未安装依赖或将其报告为代码回归。测试集合先暴露 `test_answer_evidence_claims.py` 仍导入 `bd70eff` 已迁出的 `_faq_evidence_document`，已改为通过 `resolve_faq_path` 测试当前公开边界。以上是替身/本地测试，不是模型、TTS 设备或生产并发验收。
 
+## 2026-11-05：关闭生成完成阶段时取消剩余音频
+
+最小复现发现，客户端在 `StreamCompletionCoordinator.events()` 已转发一个最终音频 SSE 事件后关闭外层异步生成器，Python 的 `async for` 不会替外层消费者关闭内层 `final_audio_events()`；内层迭代器未关闭，音频任务取消回调也未运行。协调器现在显式 `aclose()` 内层音频事件迭代器，并在生成完成阶段任何异常/取消/客户端关闭时调用 `StreamTurn.cancel_audio()`。正常耗尽仍按 FIFO drain 完整音频后才继续缓存和持久化。
+
+验证：新增的外层 close 行为测试在修复前失败，修复后确认内层 generator 已关闭且音频取消回调已调用；流完成/StreamTurn/音频交付/Pipeline/SSE 定向集合 71 passed、1 条 Starlette 弃用警告。完整后端测试为 596 passed、19 skipped、3 failed（临时环境缺 `numpy`、`rank_bm25`）；Python 3.12 compileall、diff check 通过。未验证真实 TTS Provider、客户端网络断开或设备播放。
+
 ## 2026-11-05：由 StreamTurn 管理生成后的 HTTP 音频尾段与交付
 
 生成结束后的音频尾段选择、任务 drain、SSE FIFO 发布和 epoch 失效处理与 mux 消费共享同一请求的音频任务/队列。新增 `StreamTurn.final_audio_events()` 统一这些动作，避免 Pipeline 手动拼装 drainer/delivery；Pipeline 仍决定 FAQ 完整文本何时发出，并负责缓存、持久化、follow-up 与 done，不迁移 FAQ/RAG/cache 或终态策略。
