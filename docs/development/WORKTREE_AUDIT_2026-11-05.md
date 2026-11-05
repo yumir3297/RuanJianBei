@@ -396,3 +396,10 @@
 | `??` | `docs/superpowers/specs/2026-10-29-w02-durable-execution-design.md` | 未合并；改动保留在源 worktree/快照中；本任务不清理、改写旧文档或制作相关材料 | snapshot=yes; integration=yes |
 | `??` | `frontend/src/api/itinerary.js` | W02/V01 副本已有 proposal list/retry API；集成版再增加 request `AbortSignal` 传递，并在客户端强制 `confirmDuplicateRisk === true` 后才发送 retry。后端 retry schema/repository 和未知外部结果人工确认测试与之对应；归类为集成增强，不是未合并功能 | snapshot=yes; integration=yes |
 | `??` | `frontend/src/utils/requestGeneration.js` | 已合并（当前内容与集成树相同） | snapshot=yes; integration=yes |
+
+
+## 本轮复核（快速答案流关闭所有权，2026-11-05）
+
+- 起始集成 checkout 与原仓库同名集成 ref 均为 `ee7d904`；原 checkout `672a104`/95 状态路径，V01/W02/W02-V01 为 49/35/39。仅集成 `frontend/node_modules` 未跟踪，sources 无状态；快照与 prunable 登记状态未变化。
+- `FastPathAnswerFactory` 已以行为测试确认调用方提前关闭 factory 流会关闭其持有的 coordinator 流。Pipeline 移除四处重复外层 `aclosing`，factory 是快速回答事件流唯一关闭 owner。定向 92 passed，扩展集合 204 passed，compileall/diff check 通过。
+- 仅改集成副本 Pipeline、factory 测试和状态/架构文档；原活动 checkout 与其他 worktree 未改。

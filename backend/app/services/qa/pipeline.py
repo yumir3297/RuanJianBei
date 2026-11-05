@@ -325,9 +325,8 @@ class QAPipeline:
                 response_policy=self._active_response_policy,
                 expected_epoch=request_epoch,
             )
-            async with aclosing(answer_events) as events:
-                async for event in events:
-                    yield event
+            async for event in answer_events:
+                yield event
             return
         cache_key = build_selection_cache_key(
             normalized_query,
@@ -370,9 +369,8 @@ class QAPipeline:
                 response_policy=self._active_response_policy,
                 expected_epoch=request_epoch,
             )
-            async with aclosing(answer_events) as events:
-                async for event in events:
-                    yield event
+            async for event in answer_events:
+                yield event
             return
 
         if knowledge_path.cache_allowed is None:
@@ -396,9 +394,8 @@ class QAPipeline:
                 response_policy=self._active_response_policy,
                 expected_epoch=request_epoch,
             )
-            async with aclosing(answer_events) as events:
-                async for event in events:
-                    yield event
+            async for event in answer_events:
+                yield event
             return
 
         evidence_run = StreamEvidenceRun(
@@ -444,9 +441,8 @@ class QAPipeline:
                 response_policy=self._active_response_policy,
                 expected_epoch=request_epoch,
             )
-            async with aclosing(answer_events) as events:
-                async for event in events:
-                    yield event
+            async for event in answer_events:
+                yield event
             return
 
         # FAQ 走 LLM 改写时保留可观测的命中来源，便于与纯 FAQ 快路径区分。

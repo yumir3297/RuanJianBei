@@ -4,7 +4,7 @@
 
 问题：确定性路线、直接 FAQ、共享 cache 和无 RAG 证据等分支共用 `FastPathAnswerCoordinator` 的 SSE/语音/epoch 生命周期，但 `QAPipeline._emit_final_answer()` 仍在主流程内闭包绑定答案风格、来源处理、chat log 参数、followups 和 done 元数据。该配置与协调器的执行顺序职责混杂。
 
-选择：新增 `FastPathAnswerFactory`，按本轮 request、resolved interaction、response policy、来源和 hit level 创建 callback 并委托给现有 `FastPathAnswerCoordinator`。coordinator 继续拥有 `sources → text → speech → epoch gate → persist → epoch gate → followups → done` 次序；factory 不做 FAQ/cache/RAG 决策、epoch 判断或 SSE/TTS 执行。
+选择：新增 `FastPathAnswerFactory`，按本轮 request、resolved interaction、response policy、来源和 hit level 创建 callback 并委托给现有 `FastPathAnswerCoordinator`。coordinator 继续拥有 `sources → text → speech → epoch gate → persist → epoch gate → followups → done` 次序；factory 不做 FAQ/cache/RAG 决策、epoch 判断或 SSE/TTS 执行；它关闭内部 coordinator 事件迭代器，调用方取消或关闭快速回答流时，清理责任由 factory 收口。
 
 验证：新增行为测试检查答案前缀/证据绑定、持久化字段、快速答案 provider/degraded 元数据和 epoch/text_only 入参；原 fast-path coordinator 事件顺序/epoch 回归及 Pipeline、FAQ/cache、stream/completion、TTS/SSE 扩展集合共 203 passed。Python 3.12 compileall 和 diff check 通过。测试为本地替身，不代表真实模型/provider/设备验收。
 

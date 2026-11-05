@@ -9,12 +9,19 @@ from app.services.qa.stream_events import StreamEvent
 class RecordingCoordinator:
     def __init__(self):
         self.kwargs = None
+        self.closed = False
 
     def events(self, **kwargs):
         self.kwargs = kwargs
 
         async def source():
-            yield StreamEvent(type="text", data={"text": kwargs["prepare_answer"](kwargs["answer"], kwargs["sources"])})
+            try:
+                yield StreamEvent(
+                    type="text",
+                    data={"text": kwargs["prepare_answer"](kwargs["answer"], kwargs["sources"])},
+                )
+            finally:
+                self.closed = True
 
         return source()
 
@@ -75,5 +82,35 @@ def test_factory_binds_personalized_answer_persistence_and_terminal_metadata():
             "request": request,
             "active_subject": "灵山大佛",
         })]
+
+    asyncio.run(scenario())
+
+
+def test_closing_factory_events_closes_coordinator_events():
+    async def scenario():
+        coordinator = RecordingCoordinator()
+        factory = FastPathAnswerFactory(
+            coordinator=coordinator,
+            citation_binder=lambda answer, sources: answer,
+            persist_interaction=lambda **kwargs: None,
+            done_event_builder=lambda **kwargs: StreamEvent(type="done", data=kwargs),
+            followup_event_builder=lambda resolved: StreamEvent(type="followups"),
+        )
+        events = factory.events(
+            request=SimpleNamespace(session_id="s", query="q", text_only=True),
+            normalized_query="q",
+            answer="answer",
+            sources=[],
+            hit_level="faq_direct",
+            start=0.0,
+            resolved=SimpleNamespace(active_subject=None),
+            response_policy=response_policy_for(MultimodalEmotionFusion().fuse(None, None)),
+            expected_epoch=None,
+        )
+
+        event = await anext(events)
+        assert event.type == "text"
+        await events.aclose()
+        assert coordinator.closed is True
 
     asyncio.run(scenario())
