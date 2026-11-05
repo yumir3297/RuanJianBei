@@ -64,6 +64,7 @@ from app.services.qa.final_answer_speech_emitter import FinalAnswerSpeechEmitter
 from app.services.qa.fast_path_answer_coordinator import FastPathAnswerCoordinator
 from app.services.qa.queued_stream_events import QueuedStreamEvents
 from app.services.qa.stream_completion import StreamCompletionCoordinator
+from app.services.qa.stream_completion_effects import StreamCompletionEffects
 from app.services.qa.stream_generation_run import StreamGenerationRun
 from app.services.qa.stream_turn_factory import StreamTurnFactory
 from app.services.qa.vision_evidence import resolve_vision_evidence
@@ -542,54 +543,28 @@ class QAPipeline:
         answer_stream.full_answer = finalized.answer
 
         faq_text_sent = faq_documents is not None
-        latency_state = {"value": 0}
-
-        async def cache_answer() -> None:
-            await self.qa_cache.set(cache_key, answer_stream.full_answer, sources, epoch=request_epoch)
-
-        async def persist_answer() -> str | None:
-            latency_state["value"] = int((perf_counter() - start) * 1000)
-            return await self._persist_interaction(
-                session_id=request.session_id,
-                raw_query=request.query,
-                normalized_query=normalized_query,
-                answer=answer_stream.full_answer,
-                sources=sources,
-                hit_level=terminal_policy.hit_level,
-                latency_ms=latency_state["value"],
-                request=request,
-                active_subject=resolved.active_subject,
-            )
-
-        async def after_audio() -> None:
-            if degraded_llm and self.blind_spot_tracker is not None:
-                try:
-                    await self.blind_spot_tracker.record(
-                        raw_query=request.query,
-                        normalized_query=normalized_query,
-                        category="llm_fallback",
-                    )
-                    logger.info("Blind spot recorded (LLM degraded)")
-                except Exception:
-                    logger.exception("Knowledge blind spot recording failed")
-
-        def done_event(chat_log_id: str | None) -> StreamEvent:
-            logger.info(
-                "LLM completed: finish_reason=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s cached_tokens=%s",
-                llm_finish_reason,
-                llm_usage.prompt_tokens,
-                llm_usage.completion_tokens,
-                llm_usage.total_tokens,
-                llm_usage.cached_tokens,
-            )
-            return self._done_event(
-                chat_log_id=chat_log_id,
-                hit_level=terminal_policy.hit_level,
-                total_ms=latency_state["value"],
-                degraded=degraded_llm,
-                provider=terminal_policy.provider,
-                completion=terminal_policy.completion,
-            )
+        completion_effects = StreamCompletionEffects(
+            cache_writer=lambda answer, bound_sources, epoch: self.qa_cache.set(
+                cache_key, answer, bound_sources, epoch=epoch
+            ),
+            persist_interaction=self._persist_interaction,
+            blind_spot_tracker=self.blind_spot_tracker,
+            request=request,
+            normalized_query=normalized_query,
+            answer=answer_stream.full_answer,
+            sources=sources,
+            hit_level=terminal_policy.hit_level,
+            expected_epoch=request_epoch,
+            start=start,
+            llm_usage=llm_usage,
+            llm_finish_reason=llm_finish_reason,
+            degraded=degraded_llm,
+            provider=terminal_policy.provider,
+            completion=terminal_policy.completion,
+            active_subject=resolved.active_subject,
+            followup_event=lambda: self._followup_event(resolved),
+            done_event_builder=self._done_event,
+        )
 
         completion_events = self.stream_completion.events(
             stream_turn=stream_turn,
@@ -600,11 +575,11 @@ class QAPipeline:
             text_only=request.text_only,
             streaming_requested=streaming_requested,
             epoch_is_current=lambda: self._epoch_is_current(request_epoch),
-            cache_answer=cache_answer if terminal_policy.should_cache else None,
-            persist_answer=persist_answer,
-            followups_event=lambda: self._followup_event(resolved),
-            done_event=done_event,
-            after_audio=after_audio,
+            cache_answer=completion_effects.cache_answer if terminal_policy.should_cache else None,
+            persist_answer=completion_effects.persist_answer,
+            followups_event=completion_effects.followups_event,
+            done_event=completion_effects.done_event,
+            after_audio=completion_effects.after_audio,
         )
         async with aclosing(completion_events) as events:
             async for completion_event in events:
