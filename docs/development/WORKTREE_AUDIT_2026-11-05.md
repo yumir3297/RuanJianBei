@@ -1,5 +1,12 @@
 # Worktree 改动逐路径核对（2026-11-05）
 
+## 本轮复核（回答持久化边界阶段，2026-11-05）
+
+- 起始集成 checkout/ref 与原仓库同名集成 ref 均为 `3be6356`；原 checkout 为 `codex/repository-map@672a104`/95 路径，V01/W02/W02-V01 为 49/35/39。五个快照 refs 保留；phase3 仍登记 prunable 且未清理。
+- 本轮只在集成副本修改 QA Pipeline、增加 `ChatInteractionPersister` 和行为测试并更新架构/进度文档；原 checkout、V01/W02 worktree、快照和 `sources/` 未改，集成 `frontend/node_modules` 仍唯一未跟踪。
+- chat log→visitor profile→visitor memory 的原持久化顺序与失败策略由行为测试固定；指定 AI/流式集合 163 passed，Python 3.12 compileall/diff check 通过。既有 worktree 路径分类未改变；完整迁移到原 checkout 的安全审查仍未完成。
+- 本轮未合并、覆盖或删除任何其他 worktree。
+
 ## 本轮复核（确定性早答优先级阶段，2026-11-05）
 
 - 起始集成 checkout/ref 与原仓库同名集成 ref 均为 `11c28f1`；原 checkout 仍为 `codex/repository-map@672a104`/95 路径；V01/W02/W02-V01 仍 49/35/39。五个保护快照保留，phase3 仍登记 prunable 未清理。

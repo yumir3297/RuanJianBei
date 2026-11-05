@@ -45,3 +45,6 @@
 
 
 `DeterministicAnswerResolver` 保持早答决策优先级：不可核实开放/演出时间先于不可核实票价，二者均先于静态路线；静态路线只允许在无 vision 且 intent 为 `static_route` 时调用，builder 未命中则回到后续 FAQ/cache/RAG 流程。该 resolver 只返回决策和可选 status 文本，不发送 SSE、不读写缓存/知识、不持久化；Pipeline 对早答仍执行原 epoch fence、引用准备、语音、持久化和终态顺序。
+
+
+`ChatInteractionPersister` 先创建 chat log，再尽力更新 visitor profile 与 visitor memory；后两项失败只能记录异常，不能使已完成回答的持久化调用失败。speech profile metadata 只附在非 text-only 回答；emotional fields 只在 `ChatLogRepository` 路径写入，保留 request-scoped emotion values。缓存写入仍由 completion terminal policy 控制，此 persister 不访问答案缓存或 RAG。

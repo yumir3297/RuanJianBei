@@ -1,5 +1,15 @@
 # 技术决策
 
+## 2026-11-05：将回答持久化与游客聚合更新移出 Pipeline
+
+问题：`_persist_interaction()` 同时组装聊天日志、按 provider 条件记录情绪字段和语音缓存元数据，并在主记录成功后 best-effort 更新 visitor profile 与 visitor memory；它是 completion 的关键副作用边界。
+
+选择：新增 `ChatInteractionPersister` 管理持久化参数与 repository 调用。Pipeline 保留兼容 wrapper，显式传入当前 request-scoped emotion state；答案缓存/epoch/终态顺序仍由现有 completion coordinator 控制。chat log 先创建；visitor profile/memory 错误保持记录后继续，不回滚已完成回答。
+
+验证：行为测试覆盖 speech fingerprint/profile 字段、ChatLogRepository 情绪列、chat log→profile→memory 顺序，以及辅助存储异常不影响 chat log id 返回。新模块缺失时测试按预期失败；定向集 62 passed，指定 AI/流式回归 163 passed；Python 3.12 compileall 与 diff check 通过。测试使用替身，不代表真实数据库或部署库验收。
+
+回滚：如持久化字段或顺序偏离现契约，可将 wrapper 逻辑恢复到 Pipeline，保留两项行为测试；不得将 visitor 辅助写入失败改为中断 done。
+
 ## 2026-11-05：隔离确定性早答路由优先级
 
 问题：Pipeline 依次应用“无实时开放时间不可核实”“票价不可核实”和“静态路线”决策。内联判断容易使静态路线覆盖受限制的当前营业信息，或让带 vision 的问题误入路线快路径。

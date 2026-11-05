@@ -45,11 +45,7 @@ from app.services.qa.guided_selector import (
 )
 from app.services.qa.intent_router import IntentRouter
 from app.services.qa.route_constraints import explicit_route_hours as _explicit_route_hours
-from app.services.qa.request_profile import (
-    extract_interests as _extract_interests,
-    infer_audience_type as _infer_audience_type,
-    resolve_narration_audience as _resolve_narration_audience,
-)
+from app.services.qa.request_profile import resolve_narration_audience as _resolve_narration_audience
 from app.services.qa.request_query_context import resolve_request_query_context
 from app.services.qa.route_fast_path import StaticRouteAnswerBuilder
 from app.services.qa.speech_event_adapter import (
@@ -71,6 +67,7 @@ from app.services.qa.queued_speech_publisher import QueuedSpeechPublisher
 from app.services.qa.vision_evidence import resolve_vision_evidence
 from app.services.qa.answer_styler import no_evidence_reply
 from app.services.qa.stream_evidence_run import StreamEvidenceRun
+from app.services.qa.chat_interaction_persister import ChatInteractionPersister
 from app.services.rag.base import BaseRAGService
 from app.services.rag.query_rewriter import QueryRewriter
 from app.services.tts.base import BaseTTSService
@@ -146,6 +143,12 @@ class QAPipeline:
         )
         self.visibility_service = visibility_service
         self.speech_profile = speech_profile
+        self.chat_interaction_persister = ChatInteractionPersister(
+            chat_log_repository=self.chat_log_repository,
+            visitor_repository=self.visitor_repository,
+            visitor_memory_repository=self.visitor_memory_repository,
+            speech_profile=self.speech_profile,
+        )
         self.vision_catalog = vision_catalog
         self.vision_site_id = vision_site_id
         self.text_emotion_analyzer = TextEmotionAnalyzer()
@@ -598,7 +601,8 @@ class QAPipeline:
         active_subject: str | None = None,
     ) -> int:
         """Persist every completed branch before exposing its completion event."""
-        create_kwargs = dict(
+        state = self._current_request_state()
+        return await self.chat_interaction_persister.persist(
             session_id=session_id,
             raw_query=raw_query,
             normalized_query=normalized_query,
@@ -606,56 +610,13 @@ class QAPipeline:
             sources=sources,
             hit_level=hit_level,
             latency_ms=latency_ms,
+            request=request,
+            active_subject=active_subject,
+            text_emotion=state.active_text_emotion,
+            audio_emotion=state.active_audio_emotion,
+            fused_emotion=state.active_emotion,
+            response_policy=state.active_response_policy,
         )
-        if self.speech_profile is not None and not request.text_only:
-            from app.services.tts.speech_profile import answer_fingerprint, build_speech_cache_key
-
-            metadata = dict(self.speech_profile)
-            metadata["answer_version"] = answer_fingerprint(answer)
-            metadata["cache_key"] = build_speech_cache_key(answer, self.speech_profile)
-            create_kwargs["speech_metadata"] = metadata
-        if isinstance(self.chat_log_repository, ChatLogRepository):
-            create_kwargs.update(
-                input_mode=request.input_mode,
-                text_emotion=(
-                    self._active_text_emotion.label.value
-                    if self._active_text_emotion is not None
-                    else "neutral"
-                ),
-                audio_emotion=(
-                    self._active_audio_emotion.label.value
-                    if self._active_audio_emotion is not None and self._active_audio_emotion.available
-                    else None
-                ),
-                fused_emotion=self._active_emotion.label.value,
-                emotion_confidence=self._active_emotion.confidence,
-                emotion_intensity=self._active_emotion.intensity,
-                emotion_conflict=self._active_emotion.conflict,
-                emotion_modalities=list(self._active_emotion.modalities),
-                response_strategy=self._active_response_policy.label.value,
-            )
-        log = await self.chat_log_repository.create(**create_kwargs)
-        if self.visitor_repository is not None:
-            try:
-                await self.visitor_repository.upsert(
-                    session_id=session_id,
-                    interests=_extract_interests(request),
-                    audience_type=_infer_audience_type(request),
-                )
-            except Exception:
-                logger.exception("Visitor profile update failed.")
-        if self.visitor_memory_repository is not None and request.visitor_id:
-            try:
-                await self.visitor_memory_repository.record_visit(
-                    visitor_id=request.visitor_id,
-                    session_id=session_id,
-                    attraction_title=active_subject,
-                    interests=_extract_interests(request),
-                    narration_audience=_resolve_narration_audience(request),
-                )
-            except Exception:
-                logger.exception("Visitor memory write failed.")
-        return log.id
 
     @staticmethod
     def _done_event(
