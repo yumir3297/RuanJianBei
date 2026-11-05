@@ -64,7 +64,7 @@ from app.services.qa.final_answer_speech_emitter import FinalAnswerSpeechEmitter
 from app.services.qa.fast_path_answer_coordinator import FastPathAnswerCoordinator
 from app.services.qa.queued_stream_events import QueuedStreamEvents
 from app.services.qa.stream_completion import StreamCompletionCoordinator
-from app.services.qa.stream_generation_finalizer import finalize_stream_generation
+from app.services.qa.stream_generation_run import StreamGenerationRun
 from app.services.qa.stream_turn_factory import StreamTurnFactory
 from app.services.qa.vision_evidence import resolve_vision_evidence
 from app.services.qa.answer_styler import polish_answer, no_evidence_reply
@@ -492,47 +492,51 @@ class QAPipeline:
 
         # FAQ 走 LLM 改写时保留可观测的命中来源，便于与纯 FAQ 快路径区分。
         llm_hit_level = faq_path.hit_level if faq_documents is not None and faq_path is not None else "rag"
-        llm_fallback_hit_level = f"{llm_hit_level}_llm_fallback"
-
-        stream_turn, streaming_requested = self.stream_turn_factory.create(
-            query=request.query,
-            documents=documents,
-            persona=request.persona,
-            audience=audience,
-            memory=self._memory_prompt,
-            confirmed_visual_title=confirmed_visual_title,
-            vision_context_present=vision is not None,
-            faq_documents_present=faq_documents is not None,
-            text_only=request.text_only,
-            epoch_is_current=lambda: self._epoch_is_current(request_epoch),
-            emotion_aware_query=self._emotion_aware_query,
+        generation_run = StreamGenerationRun(
+            turn_factory=self.stream_turn_factory,
+            turn_kwargs={
+                "query": request.query,
+                "documents": documents,
+                "persona": request.persona,
+                "audience": audience,
+                "memory": self._memory_prompt,
+                "confirmed_visual_title": confirmed_visual_title,
+                "vision_context_present": vision is not None,
+                "faq_documents_present": faq_documents is not None,
+                "text_only": request.text_only,
+                "epoch_is_current": lambda: self._epoch_is_current(request_epoch),
+                "emotion_aware_query": self._emotion_aware_query,
+            },
+            finalization_kwargs={
+                "faq_documents_present": faq_documents is not None,
+                "cache_allowed": cache_allowed,
+                "llm_hit_level": llm_hit_level,
+                "fallback_hit_level": f"{llm_hit_level}_llm_fallback",
+                "llm_provider": self.llm_provider_name,
+                "faq_answer": faq_result.answer if faq_result is not None else "",
+                "persona": request.persona,
+                "faq_sources": faq_sources,
+            },
         )
-        answer_stream = stream_turn.answer_buffer
-
-        async with aclosing(stream_turn.events()) as events:
+        async with aclosing(generation_run.events()) as events:
             async for event in events:
                 yield event
 
-        generation_error = await stream_turn.check_generation_result()
-        if generation_error is not None:
-            yield generation_error
+        outcome = generation_run.outcome
+        if outcome is None:
+            raise RuntimeError("stream generation ended without an outcome")
+        stream_turn = outcome.stream_turn
+        streaming_requested = outcome.streaming_requested
+        if outcome.error_event is not None:
+            yield outcome.error_event
             return
 
+        finalized = outcome.finalized
+        if finalized is None:
+            raise RuntimeError("stream generation completed without finalization")
+        answer_stream = stream_turn.answer_buffer
         llm_usage = stream_turn.llm_usage
         llm_finish_reason = stream_turn.llm_finish_reason
-
-        finalized = finalize_stream_generation(
-            generated_answer=answer_stream.full_answer,
-            finish_reason=llm_finish_reason,
-            faq_documents_present=faq_documents is not None,
-            cache_allowed=cache_allowed,
-            llm_hit_level=llm_hit_level,
-            fallback_hit_level=llm_fallback_hit_level,
-            llm_provider=self.llm_provider_name,
-            faq_answer=faq_result.answer if faq_result is not None else "",
-            persona=request.persona,
-            faq_sources=faq_sources,
-        )
         terminal_policy = finalized.policy
         degraded_llm = terminal_policy.degraded
         answer_stream.full_answer = finalized.answer
