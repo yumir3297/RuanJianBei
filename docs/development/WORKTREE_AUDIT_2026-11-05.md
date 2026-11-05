@@ -2,6 +2,8 @@
 
 基线：原工作树 `code/RuanJianBei` 分支 `codex/repository-map`，HEAD `672a104`；集成树 `integration-work/v01` 分支引用由本地 fetch 同步。扫描到 95 个 porcelain 状态路径。未读取或修改 `sources/`，未执行合并、清理或 prune。
 
+2026-11-05 最新复核：原 checkout 仍为 `672a104` / 95 个未提交路径；V01、W02、W02/V01 集成分别为 `098553f`/49、`a8c2837`/35、`098553f`/39。保全快照 refs `codex/preserved-uncommitted-2026-11-04@4acaa53`、`codex/main-preserved-snapshot@e115eab`、`codex/v01-preserved-snapshot@3805943`、`codex/w02-preserved-snapshot@48ef626`、`codex/w02-integration-preserved-snapshot@5433557` 均存在。集成 HEAD 与原仓库同名集成 ref 目前均为 `6015817`；集成副本仅有未跟踪的 `frontend/node_modules` 本机链接。`/private/tmp/ai-guide-phase3` 仍 prunable 且未清理；`sources/` 无 Git 状态。本轮扩展回归 257 passed、1 条 Starlette 弃用警告，compileall 和 diff check 通过。逐路径分类见下表；所有活动 worktree 与快照均保留。
+
 2026-11-05 本轮复核：原 checkout 仍为 `672a104` / 95 状态路径；V01、W02、W02/V01 集成 worktree 分别为 49、35、39 个状态路径，HEAD 仍为 `098553f`、`a8c2837`、`098553f`。原仓库的五个保全快照 refs（主 checkout 两个、V01、W02、W02/V01 集成）均可解析；本轮开始时原仓库 `codex/competition-integration` ref 与集成 checkout 均为 `3687e7f`，随后提交 `ef51a88` 并从集成副本 fetch 同步该 ref。`sources/` 状态为空；`frontend/node_modules` 保持为集成副本的本机链接；`/private/tmp/ai-guide-phase3` 仍显示 prunable，未执行 prune。路径级既有语义判定见下表和进度日志，本轮没有将快照内容覆盖到集成树，也没有合并到原 checkout。当前仍未决的是完整迁移冲突审查、真实 Alembic migration 往返、真实 provider/设备验收；整库 pytest 收集存在 6 个导入错误，见进度记录。
 
 2026-11-05 复核：原工作树仍在 `672a104` 且 porcelain 数仍为 95；原仓库本地 `codex/competition-integration` 引用与集成树 `codex/competition-integration@0ec66ef` 相同（架构索引更新后提交为 `f4d9f47`，其后续推进见开发进度）。活动 V01/W02/W02-V01 worktree HEAD 和路径数量仍分别为 `098553f`/49、`a8c2837`/35、`098553f`/39；已不存在的 `/private/tmp/ai-guide-phase3` 仍是 prunable 登记，未 prune。原 checkout 的 95 条未提交内容与此核对前相同；集成树的 `frontend/node_modules` 本机依赖链接仍未跟踪。
