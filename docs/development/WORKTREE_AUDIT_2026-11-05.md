@@ -1,5 +1,11 @@
 # Worktree 改动逐路径核对（2026-11-05）
 
+## 本轮复核（request query context 阶段，2026-11-05）
+
+- 起始集成 checkout 与原仓库同名引用均为 `4111147`。原 checkout `672a104`/95 路径；V01/W02/W02-V01 仍 49/35/39，快照 refs 保持，phase3 仍 prunable 未清理。
+- 仅改集成副本 Pipeline、查询上下文解析器、行为测试及进度/架构记录；未改原 checkout、V01/W02 worktree、快照或 `sources/`。node_modules 保持未跟踪。
+- 既有逐路径分类不变；无集成到原 checkout 的合并。
+
 ## 本轮复核（path coverage 与 StreamAnswerRun cancellation，2026-11-05）
 
 - 集成 checkout 与原仓库同名集成引用当前均指向 `8085379`；原 checkout 仍 `672a104`/95 路径，V01/W02/W02-V01 分别 49/35/39；集成只有 `frontend/node_modules` 未跟踪。五个保护快照 refs 均在，phase3 仍登记 prunable，未 prune。

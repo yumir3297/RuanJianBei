@@ -14,7 +14,7 @@ from app.repositories.knowledge import KnowledgeRepository
 from app.repositories.route import RouteRepository
 from app.repositories.visitor import VisitorRepository
 from app.repositories.visitor_memory import VisitorMemoryRepository
-from app.schemas.chat import ChatRequest, ConversationContext
+from app.schemas.chat import ChatRequest
 from app.services.avatar.base import BaseAvatarService
 from app.services.llm.base import BaseLLMService
 from app.services.llm.types import LLMStreamEvent, LLMUsage
@@ -52,6 +52,7 @@ from app.services.qa.request_profile import (
     infer_audience_type as _infer_audience_type,
     resolve_narration_audience as _resolve_narration_audience,
 )
+from app.services.qa.request_query_context import resolve_request_query_context
 from app.services.qa.route_fast_path import StaticRouteAnswerBuilder
 from app.services.qa.speech_event_adapter import (
     build_audio_event as build_speech_audio_event,
@@ -300,19 +301,16 @@ class QAPipeline:
             },
         )
 
-        rewrite_context = None if vision is not None else request.context
-        if resolved.active_subject:
-            rewrite_context = ConversationContext(
-                last_subject=resolved.active_subject,
-                history_summary=request.context.history_summary if request.context else None,
-            )
-        retrieval_query = request.query
-        if vision is not None:
-            hint = vision.retrieval_query.strip()[:1000]
-            if hint and hint not in retrieval_query:
-                retrieval_query = f"{retrieval_query}\n{hint}"
-        normalized_query = self.query_rewriter.rewrite(retrieval_query, rewrite_context)
-        intent_decision = self.intent_router.detect(request.query, resolved.selection)
+        query_context = resolve_request_query_context(
+            request,
+            resolved,
+            vision=vision,
+            query_rewriter=self.query_rewriter,
+            intent_router=self.intent_router,
+        )
+        retrieval_query = query_context.retrieval_query
+        normalized_query = query_context.normalized_query
+        intent_decision = query_context.intent_decision
         yield StreamEvent(
             type="intent",
             data={

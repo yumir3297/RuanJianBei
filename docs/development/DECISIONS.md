@@ -1,5 +1,15 @@
 # 技术决策
 
+## 2026-11-05：隔离 retrieval query 与原始 intent query 的上下文解析
+
+问题：Pipeline 同时准备视觉检索提示、active-subject/history rewrite context、归一化检索 query，并将意图路由留在 raw user query 上；内联逻辑容易把视觉候选文本误送给意图检测，或在确认范围变化时继承旧景点上下文。
+
+选择：新增 `request_query_context.py`，返回 retrieval_query、normalized_query 和 IntentDecision。vision retrieval hint 只追加到检索 query，最多 1000 字符；有 vision 时默认不传旧会话 context；若选择解析得到 active subject，则以其替换历史 subject 且保留 history summary；intent 始终基于原始 query 和已解析 selection。FAQ、缓存资格、RAG scope 和答案路由继续留在 Pipeline。
+
+验证：行为测试覆盖 vision hint/raw intent 隔离、active subject 覆盖与 history summary 保留、普通文本请求原 context 复用。Intent/vision/retrieval/FAQ/cache/epoch/stream/TTS/SSE 指定集 160 passed；Python 3.12 compileall 与 diff check 通过。使用替身，不代表真实视觉模型或向量库验收。
+
+回滚：若 vision 文本影响 intent、历史 subject 泄漏、或 history summary 丢失，将 query/context 组合恢复至 Pipeline 内联，保留三项行为测试；不要把 context resolver 扩展为 scope/FAQ/cache 决策。
+
 ## 2026-11-05：显式验证 generation/completion 两阶段的任务取消
 
 问题：已有 GeneratorExit/`aclose()` 测试分别覆盖关闭 generation 和 completion iterator，但 SSE 请求也可能在等待其中一个阶段时被任务取消；必须证明 `CancelledError` 不会吞掉，并且底层异步生成器的 `finally` 清理已执行。
