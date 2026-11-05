@@ -3,8 +3,72 @@ import asyncio
 import pytest
 
 from app.services.qa.queued_stream_events import QueuedStreamEvents
-from app.services.qa.stream_completion import AudioTaskDrainer
+from app.services.qa.stream_completion import AudioTaskDrainer, StreamCompletionCoordinator
 from app.services.qa.stream_events import StreamEvent
+
+
+@pytest.mark.asyncio
+async def test_completion_coordinator_drains_audio_before_cache_and_terminal_events():
+    order = []
+
+    class Turn:
+        audio_visibility_changed = False
+
+        async def final_audio_events(self, **kwargs):
+            order.append("audio-start")
+            yield StreamEvent(type="audio", data={"text": "回答"})
+            order.append("audio-finished")
+
+    async def epoch_is_current():
+        order.append("epoch")
+        return True
+
+    async def cache_answer():
+        order.append("cache")
+
+    async def persist_answer():
+        order.append("persist")
+        return "log-1"
+
+    coordinator = StreamCompletionCoordinator()
+    events = [event async for event in coordinator.events(
+        stream_turn=Turn(), answer="回答", faq_text_sent=False, incomplete=False,
+        faq_documents_present=False, text_only=False, streaming_requested=False,
+        epoch_is_current=epoch_is_current, cache_answer=cache_answer,
+        persist_answer=persist_answer,
+        followups_event=lambda: StreamEvent(type="followups"),
+        done_event=lambda chat_log_id: StreamEvent(type="done", data={"id": chat_log_id}),
+    )]
+
+    assert [event.type for event in events] == ["audio", "text", "followups", "done"]
+    assert order == ["audio-start", "audio-finished", "epoch", "cache", "persist", "epoch"]
+
+
+@pytest.mark.asyncio
+async def test_completion_coordinator_stops_when_audio_epoch_is_stale():
+    calls = []
+
+    class Turn:
+        audio_visibility_changed = True
+
+        async def final_audio_events(self, **kwargs):
+            yield StreamEvent(type="error", data={"message": "stale"})
+
+    async def forbidden():
+        calls.append("side-effect")
+
+    coordinator = StreamCompletionCoordinator()
+    events = [event async for event in coordinator.events(
+        stream_turn=Turn(), answer="回答", faq_text_sent=False, incomplete=False,
+        faq_documents_present=False, text_only=False, streaming_requested=False,
+        epoch_is_current=lambda: asyncio.sleep(0, result=True),
+        cache_answer=forbidden, persist_answer=forbidden,
+        followups_event=lambda: StreamEvent(type="followups"),
+        done_event=lambda chat_log_id: StreamEvent(type="done"),
+    )]
+
+    assert [event.type for event in events] == ["error"]
+    assert calls == []
 
 
 @pytest.mark.asyncio

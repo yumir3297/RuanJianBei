@@ -59,3 +59,52 @@ class AudioTaskDrainer:
                 return
             for event in self.audio_events.drain():
                 yield event
+
+
+class StreamCompletionCoordinator:
+    """Keep post-generation audio, epoch fences, persistence, and terminal SSE ordered."""
+
+    async def events(
+        self,
+        *,
+        stream_turn,
+        answer: str,
+        faq_text_sent: bool,
+        incomplete: bool,
+        faq_documents_present: bool,
+        text_only: bool,
+        streaming_requested: bool,
+        epoch_is_current: Callable[[], Awaitable[bool]],
+        cache_answer: Callable[[], Awaitable[None]] | None,
+        persist_answer: Callable[[], Awaitable[str | None]],
+        followups_event: Callable[[], StreamEvent],
+        done_event: Callable[[str | None], StreamEvent],
+        after_audio: Callable[[], Awaitable[None]] | None = None,
+    ) -> AsyncIterator[StreamEvent]:
+        if faq_text_sent:
+            yield StreamEvent(type="text", data={"text": answer, "is_complete": True})
+
+        async for event in stream_turn.final_audio_events(
+            faq_documents_present=faq_documents_present,
+            text_only=text_only,
+            streaming_requested=streaming_requested,
+        ):
+            yield event
+        if stream_turn.audio_visibility_changed:
+            return
+
+        if after_audio is not None:
+            await after_audio()
+        if not await epoch_is_current():
+            yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
+            return
+        if cache_answer is not None:
+            await cache_answer()
+        chat_log_id = await persist_answer()
+        if not await epoch_is_current():
+            yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
+            return
+        if not faq_text_sent:
+            yield StreamEvent(type="text", data={"text": answer, "is_complete": not incomplete})
+        yield followups_event()
+        yield done_event(chat_log_id)

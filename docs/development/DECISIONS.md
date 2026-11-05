@@ -1,5 +1,11 @@
 # 技术决策
 
+## 2026-11-05：将生成完成后的 SSE 与提交顺序移入协调器
+
+生成回答后的主流程仍把音频尾段交付、过期 epoch 检查、fallback 盲点记录、缓存、聊天记录持久化及最终 `text/followups/done` 顺序写在 `QAPipeline.stream_chat`。新增 `StreamCompletionCoordinator` 负责协调这些已有步骤：FAQ 完整文本仍先于语音发出；HTTP 音频按 `StreamTurn` 顺序 drain；音频交付失效时停止；随后检查 epoch，再按原策略缓存与持久化，并在持久化后再次检查 epoch，才发送最终文本和终态事件。FAQ/RAG/cache 资格决策、答案降级策略、来源证据、请求构造仍留在 Pipeline。
+
+验证：协调器测试覆盖 audio→epoch→cache→persist→epoch→text/followups/done 次序与过期音频时禁止后续副作用；Pipeline/聊天 SSE/证据契约定向集合 71 passed、1 条 Starlette 弃用警告。后端完整测试当前为 594 passed、19 skipped、3 failed：一个环境缺少 numpy 导致本地 ASR 预期路径测试失败，两个 BM25 测试因缺少 `rank_bm25` 失败；未安装依赖或将其报告为代码回归。测试集合先暴露 `test_answer_evidence_claims.py` 仍导入 `bd70eff` 已迁出的 `_faq_evidence_document`，已改为通过 `resolve_faq_path` 测试当前公开边界。以上是替身/本地测试，不是模型、TTS 设备或生产并发验收。
+
 ## 2026-11-05：由 StreamTurn 管理生成后的 HTTP 音频尾段与交付
 
 生成结束后的音频尾段选择、任务 drain、SSE FIFO 发布和 epoch 失效处理与 mux 消费共享同一请求的音频任务/队列。新增 `StreamTurn.final_audio_events()` 统一这些动作，避免 Pipeline 手动拼装 drainer/delivery；Pipeline 仍决定 FAQ 完整文本何时发出，并负责缓存、持久化、follow-up 与 done，不迁移 FAQ/RAG/cache 或终态策略。

@@ -61,6 +61,7 @@ from app.services.qa.speech_event_adapter import (
 from app.services.qa.stream_events import StreamEvent
 from app.services.qa.final_answer_speech_emitter import FinalAnswerSpeechEmitter
 from app.services.qa.queued_stream_events import QueuedStreamEvents
+from app.services.qa.stream_completion import StreamCompletionCoordinator
 from app.services.qa.stream_finalization import resolve_final_answer
 from app.services.qa.stream_terminal_policy import resolve_terminal_policy
 from app.services.qa.stream_turn import StreamTurn
@@ -158,6 +159,7 @@ class QAPipeline:
             emotion_resolver=self._answer_emotion,
             epoch_is_current=self._epoch_is_current,
         )
+        self.stream_completion = StreamCompletionCoordinator()
 
     def _current_request_state(self) -> _PipelineRequestState:
         return self._request_state.get() or self._default_request_state
@@ -548,67 +550,71 @@ class QAPipeline:
         )
 
         faq_text_sent = faq_documents is not None
-        if faq_text_sent:
-            yield StreamEvent(type="text", data={"text": answer_stream.full_answer, "is_complete": True})
+        latency_state = {"value": 0}
 
-        async for audio_event in stream_turn.final_audio_events(
+        async def cache_answer() -> None:
+            await self.qa_cache.set(cache_key, answer_stream.full_answer, sources, epoch=request_epoch)
+
+        async def persist_answer() -> str | None:
+            latency_state["value"] = int((perf_counter() - start) * 1000)
+            return await self._persist_interaction(
+                session_id=request.session_id,
+                raw_query=request.query,
+                normalized_query=normalized_query,
+                answer=answer_stream.full_answer,
+                sources=sources,
+                hit_level=terminal_policy.hit_level,
+                latency_ms=latency_state["value"],
+                request=request,
+                active_subject=resolved.active_subject,
+            )
+
+        async def after_audio() -> None:
+            if degraded_llm and self.blind_spot_tracker is not None:
+                try:
+                    await self.blind_spot_tracker.record(
+                        raw_query=request.query,
+                        normalized_query=normalized_query,
+                        category="llm_fallback",
+                    )
+                    logger.info("Blind spot recorded (LLM degraded)")
+                except Exception:
+                    logger.exception("Knowledge blind spot recording failed")
+
+        def done_event(chat_log_id: str | None) -> StreamEvent:
+            logger.info(
+                "LLM completed: finish_reason=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s cached_tokens=%s",
+                llm_finish_reason,
+                llm_usage.prompt_tokens,
+                llm_usage.completion_tokens,
+                llm_usage.total_tokens,
+                llm_usage.cached_tokens,
+            )
+            return self._done_event(
+                chat_log_id=chat_log_id,
+                hit_level=terminal_policy.hit_level,
+                total_ms=latency_state["value"],
+                degraded=degraded_llm,
+                provider=terminal_policy.provider,
+                completion=terminal_policy.completion,
+            )
+
+        async for completion_event in self.stream_completion.events(
+            stream_turn=stream_turn,
+            answer=answer_stream.full_answer,
+            faq_text_sent=faq_text_sent,
+            incomplete=terminal_policy.incomplete,
             faq_documents_present=faq_documents is not None,
             text_only=request.text_only,
             streaming_requested=streaming_requested,
+            epoch_is_current=lambda: self._epoch_is_current(request_epoch),
+            cache_answer=cache_answer if terminal_policy.should_cache else None,
+            persist_answer=persist_answer,
+            followups_event=lambda: self._followup_event(resolved),
+            done_event=done_event,
+            after_audio=after_audio,
         ):
-            yield audio_event
-        if stream_turn.audio_visibility_changed:
-            return
-
-        if degraded_llm and self.blind_spot_tracker is not None:
-            try:
-                await self.blind_spot_tracker.record(
-                    raw_query=request.query,
-                    normalized_query=normalized_query,
-                    category="llm_fallback",
-                )
-                logger.info("Blind spot recorded (LLM degraded)")
-            except Exception:
-                logger.exception("Knowledge blind spot recording failed")
-        if not await self._epoch_is_current(request_epoch):
-            yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
-            return
-        if terminal_policy.should_cache:
-            await self.qa_cache.set(cache_key, answer_stream.full_answer, sources, epoch=request_epoch)
-        latency_ms = int((perf_counter() - start) * 1000)
-        chat_log_id = await self._persist_interaction(
-            session_id=request.session_id,
-            raw_query=request.query,
-            normalized_query=normalized_query,
-            answer=answer_stream.full_answer,
-            sources=sources,
-            hit_level=terminal_policy.hit_level,
-            latency_ms=latency_ms,
-            request=request,
-            active_subject=resolved.active_subject,
-        )
-        if not await self._epoch_is_current(request_epoch):
-            yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
-            return
-        logger.info(
-            "LLM completed: finish_reason=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s cached_tokens=%s",
-            llm_finish_reason,
-            llm_usage.prompt_tokens,
-            llm_usage.completion_tokens,
-            llm_usage.total_tokens,
-            llm_usage.cached_tokens,
-        )
-        if not faq_text_sent:
-            yield StreamEvent(type="text", data={"text": answer_stream.full_answer, "is_complete": not terminal_policy.incomplete})
-        yield self._followup_event(resolved)
-        yield self._done_event(
-            chat_log_id=chat_log_id,
-            hit_level=terminal_policy.hit_level,
-            total_ms=latency_ms,
-            degraded=degraded_llm,
-            provider=terminal_policy.provider,
-            completion=terminal_policy.completion,
-        )
+            yield completion_event
 
     async def _build_static_route_answer(self, request: ChatRequest) -> tuple[str, list[dict]] | None:
         """保留旧调用入口，将静态路线回答委托给独立业务节点。"""
