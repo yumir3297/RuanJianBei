@@ -637,3 +637,5 @@ Worktree 本轮复核：原 checkout `codex/repository-map@672a104` 仍为 95 �
 本阶段起始集成 checkout/ref `ee7d904`；原 checkout `672a104`/95 路径，V01/W02/W02-V01 为 49/35/39，五个快照保留，phase3 prunable 未清理，sources clean，node_modules 未跟踪。本阶段未改任何源 worktree。
 
 2026-11-06 Worktree 源码核对：主 checkout 的旧语音 API 与新增音频探测代码/测试，与集成版相同；ffprobe、音频秒数和容量设置及生产密钥保护也已进入集成配置。差异是集成配置还包含 SITE_ID 与知识导入边界。相关音频时长、生产配置和 voice API 回归 19 passed、1 条 Starlette/AnyIO 弃用警告；首次测试因临时 venv 缺 Alembic 收集后失败，安装项目声明依赖并复跑后通过。具体逐文件比较和分类见 [Worktree 审计](WORKTREE_AUDIT_2026-11-05.md)。该测试不代表真实 ffprobe 或云 ASR 验收；原 checkout 仍 95 个状态路径，未修改或合并。
+
+本轮再次核对原 checkout 状态时发现计数已为 101 项（`--untracked-files=normal`），展开未跟踪目录为 121 项；HEAD 和分支仍为 `672a104` / `codex/repository-map`。当前清单全部保留；由于没有此前 95 项的逐路径快照，不能断言六项计数差是何时或由谁引入，需后续以当前完整 porcelain 清单作为新审计基线。未改原 checkout。

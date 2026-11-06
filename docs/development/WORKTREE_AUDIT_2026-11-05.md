@@ -5,6 +5,7 @@
 - 原 checkout 的 `backend/app/api/voice.py`、未跟踪 `backend/app/services/audio_duration.py`、`backend/app/tests/test_audio_duration.py`、`backend/app/tests/test_production_security_config.py`、`backend/app/tests/test_voice_api.py` 均与集成副本逐字节相同。`backend/.env.example` 的 ffprobe 配置与生产密码注释已在集成副本；差异是集成版另有 `SITE_ID=default`。`backend/app/core/config.py` 的音频 ffprobe、最大秒数、容量限制、视觉像素限制及 production security guard 已在集成版；该文件差异仅为集成版另有站点 ID 与知识导入配置/路径。
 - 对应现有回归 `test_audio_duration.py`、`test_production_security_config.py`、`test_voice_api.py` 共 19 passed、1 条 Starlette/AnyIO 弃用警告。第一次收集因重建 venv 缺 Alembic 失败 1 项，补齐声明依赖后复跑全组通过。测试使用 mock/probe stub 和 TestClient，不代表真实 ffprobe 部署或云 ASR provider 验收。
 - 结论：上述源实现/测试为“已合并”（逐文件相同）或“后续集成实现包含相同变更且扩展配置”；未复制源文件。原 checkout 95 状态路径、其他 worktree、快照和 `sources/` 未改。
+- 本轮末再次读取原 checkout 的 porcelain：`--untracked-files=normal` 为 101 项，展开为 121 项；HEAD/分支仍 `672a104`/`codex/repository-map`。当前可确认原先保护的工作仍在，但无法由 Git 元数据重建先前 95 项的逐路径清单，故不声称计数完全不变，也未改动这些状态项。
 
 ## 本轮状态复核（快速答案 effects factory 阶段，2026-11-05）
 
