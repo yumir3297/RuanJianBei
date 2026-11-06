@@ -1,5 +1,16 @@
 # Worktree 改动逐路径核对（2026-11-05）
 
+## 尚未完成差异分组清单（2026-11-06）
+
+| 功能组 | 当前分类与证据 | 处理状态 / 下一步 |
+|---|---|---|
+| 主 checkout 的聊天/AI 后端 | `backend/app/api/chat.py`、`schemas/chat.py`、`services/qa/pipeline.py` 属于后续集成实现替代：集成版包含当前可见性、视觉目录绑定、FAQ/cache 路由、证据与请求 epoch 保护。主 checkout 的旧 inline citation 断言与当前 CONTRACTS 的证据 ID 契约冲突；音频时长、容量、语音 API 与配置变化已逐文件核对并由 `test_audio_duration.py`、`test_production_security_config.py`、`test_voice_api.py` 19 项回归覆盖。细项见主 checkout 表。 | 后端差异已合并或被后续实现替代；不复制旧 Pipeline，也不恢复未经逐句核验的自动 `[证据1]`。旧 citation 测试保持为契约差异记录。 |
+| V01/W02 行程 proposal 与 durable execution 后端 | `tour_sessions.py`、`tour_session.py`、`tool_execution` repository/worker 和 itinerary `intent/progress/provenance` 有逐路径语义比较；集成实现已扩展 proposal reservation、恢复/重放、progress fence 和来源失效。W02 `f1b4c9d76e20_add_tool_execution.py` 的父 revision 与集成 migration 不同，已由 merge migration 替代，不能单独移植。对应行为与 recovery 测试见 V01/W02 表及下方证据说明。 | 源差异保留在 worktree 与快照；集成版已覆盖其行为或由后续实现替代。真实 PostgreSQL 并发 claim/progress race 和部署旧库 migration 往返尚未验证；下一步需在对应 PostgreSQL/部署 DB 环境做专项验收，不在当前 SQLite 替身上推断完成。 |
+| V01/W02 游客端/播放器/store 改动 | `ChatView.vue`、`MapView.vue`、`RouteView.vue`、`useAudioPlayer.js`、`stores/chat.js`、`guide-page.css`/`guide-tools.css` 等仍标为未合并；审计表确认快照和源 worktree 保留，集成版内容不同。 | 有意不合入：属于本任务排除的前端改版。保留快照，后续若另开前端集成任务再逐项处理。 |
+| V01/W02 文档、研究和计划 | `docs/ARCHITECTURE.md`、`COMPATIBILITY.md`、`REPO_MAP.md`、AI backlog、durable-execution plans/spec/research 仍未合并；源 worktree/快照存在，细项见路径表。 | 有意不迁移或清理：属于旧文档/研究材料范围外。保持原状。 |
+| 主 checkout 新增前端/设计产物 | 审计表中的 12 个路径（包括前端入口/admin 视图、`admin-workbench.css` 和 `output/` 两张本地截图）仅在当前主 checkout 或其部分快照存在；与集成版不同或没有集成版本。 | 有意不合入：前端/设计产物不在本轮范围。当前主 checkout 全部保留；无快照的条目以当前 checkout 为唯一可见副本。 |
+| 主 checkout 历史 95 条路径计数 | 旧记录只有数量，没有 95 条逐路径快照；当前 porcelain 为 107 普通/128 展开。无法证明 +12 项分别何时产生或逐项映射到旧清单。 | 暂无法归因，原因是旧路径清单缺失。下一步以当前完整 porcelain 清单为新基线；不把数量变化标成已合并，不合入主 checkout，直到有可比的旧快照或逐路径材料。 |
+
 ## 本轮复核（Pipeline 全链路取消，2026-11-06）
 
 - 起点集成 checkout/ref 均为 `fff7c85`。原活动 checkout `codex/repository-map@672a104` 有 107 普通/128 展开状态路径；V01、W02、W02/V01 为 49/49、35/43、39/44。五个快照仍可解析，phase3 仍登记 prunable 且未 prune；检查过的 `sources/` 均 clean。

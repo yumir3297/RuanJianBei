@@ -667,3 +667,26 @@ Worktree 本轮复核：原 checkout `codex/repository-map@672a104` 仍为 95 �
 2026-11-06：补充全链路取消行为回归，在 Pipeline 已进入 completion、最终 HTTP TTS 仍阻塞时关闭客户端流，断言 TTS 子任务取消，且 cache repository 与 chat-log repository 均无写入。定向 cancellation/completion/answer-run 集合 13 passed；全后端 671 passed、19 skipped、8 warnings。compileall、repository map（8 documents/84 routes）、scripts unittest 11 项、diff check 通过。此阶段未改生产逻辑；测试证明当前 `Pipeline → StreamAnswerOrchestrator → StreamAnswerRun → StreamCompletionCoordinator` 关闭链已有端到端覆盖。架构仍保留显式 Pipeline，真实模型/provider/TTS 设备/部署库未验收。
 
 本轮起点集成 checkout/ref `fff7c85`；主 checkout `codex/repository-map@672a104` 为 107 普通/128 展开状态，V01/W02/W02-V01 为 49/49、35/43、39/44。五个快照 refs 均可解析；phase3 仍 prunable 且未清理；检查过的 `sources/` clean；审计表覆盖展开状态路径 128/128、49/49、43/43、44/44，漏列 0。仅修改集成副本的行为测试与进度/Worktree 审计文档，原活动 checkout、其它源 worktree、快照保持原样；node_modules 仍为未跟踪本机软链接。
+
+## 流式生成、取消与 TTS/SSE 本轮边界清单（2026-11-06）
+
+调用链：`QAPipeline.stream_chat()` 建立并在 `finally` 恢复请求级 ContextVar → `_stream_chat()` 做请求解析、FAQ/cache/RAG 路由 → `StreamEvidenceRun` 选择 FAQ/RAG 证据并在来源事件前后检查知识 epoch → `StreamAnswerOrchestrator` 绑定已选证据与请求策略 → `StreamAnswerGenerationFactory`/`StreamGenerationRun` 创建并 drain 单次生成 → `StreamTurnFactory`/`StreamTurn` 管理 LLM/TTS producer、mux consumer、audio task group 和 producer 退出 → `StreamAnswerRun` 在生成成功后才进入 completion → `StreamAnswerCompletionFactory`/`StreamCompletionEffects`/`StreamCompletionCoordinator` 负责尾段 TTS drain、epoch fence、cache/persist 和终态 SSE；`QueuedSpeechPublisher` 按 FIFO 发布 HTTP TTS/avatar，`speech_event_adapter` 模块映射 streaming TTS 事件。
+
+| 边界 | 状态 | 当前所有者与验证 |
+|---|---|---|
+| 请求状态作用域及 SSE 外层关闭 | 已完成 | `QAPipeline.stream_chat()` 用 request-local ContextVar，并在 `finally` reset；关闭 active generation 的 Pipeline 行为测试确认上游 LLM source 关闭。 |
+| FAQ/cache/RAG 路由、证据与 epoch fence | 已完成 | 路由留在 Pipeline/resolver；`StreamEvidenceRun` 在发布 sources 前后独立复核 epoch；生成/完成节点只接收已选来源，不能放宽 cache eligibility。现有 FAQ/cache/RAG/epoch 回归纳入后端全套。 |
+| 生成错误和取消传播 | 已完成 | `StreamGenerationRun`/`StreamAnswerRun` 使用 `aclosing` 关闭嵌套事件迭代器；生成错误不启动 completion。行为测试覆盖 async close 与 task cancellation。 |
+| LLM/TTS producer、mux 和音频 FIFO | 已完成 | `StreamTurn` 通过 `stream_response_scope` 清理 producer/audio group，显式关闭 mux consumer；`AudioTaskDrainer`/`AudioEventDelivery` 负责最终 HTTP TTS drain 和 epoch 变化时取消/扣留事件。定向 StreamTurn/mux/TTS 测试覆盖顺序和关闭。 |
+| completion 取消、副作用门控 | 已完成 | `StreamCompletionCoordinator` 先完成音频尾段和 epoch fence，再 cache/persist/done；异常或关闭时取消音频。全链路测试在 completion 阻塞 TTS 时关闭客户端，验证 TTS 取消且无 cache/chat-log 写入。 |
+| 需要进一步实现的生命周期拆分 | 本轮源码审查未发现明确缺口 | 以上边界已有独立所有者及行为/全链路回归；Pipeline 618 行保留业务决策和阶段组合，继续机械拆分会重复现有所有权。本轮不改生产代码，只更新分组差异清单与已完成状态。 |
+
+未完成 worktree 差异按功能分组及证据见 [Worktree 审计](WORKTREE_AUDIT_2026-11-05.md) 的“尚未完成差异分组清单”：AI/音频后端差异已合并或由后续实现替代；V01/W02 proposal/durable execution 旧源码有后续实现覆盖，源文件和快照仍保留；前端/播放器/store、旧 docs/research/plans 与主 checkout 12 个本地前端/设计产物有意不合入。95 条旧清单缺失导致 107/128 当前数量无法逐项归因，下一步只在获得旧快照时做数差回溯。当前 V01/W02 未解决的真实环境验证为 PostgreSQL 并发及部署旧库 migration；AI 流式仍需真实模型/provider、TTS 设备和部署数据库验收。
+
+## 本轮交付收尾（2026-11-06）
+
+按用户要求集中结束本轮：复核现有审计后把未完成 Worktree 差异按主 checkout AI/音频后端、V01/W02 durable execution 后端、前端/store、旧 docs/research/plans、主 checkout 本地设计产物及 95→107 历史计数缺口分组，给出证据、处理状态和下一步，详见审计文档“尚未完成差异分组清单”。历史 95 项无旧逐路径清单；原因明确、不可从数量推断合并。前端/材料类项因用户限定范围而有意保留，不纳入本轮。
+
+一次性复核流式链：`QAPipeline.stream_chat`/`_stream_chat` → `StreamEvidenceRun` → `StreamAnswerOrchestrator` → `StreamAnswerGenerationFactory`/`StreamGenerationRun` → `StreamTurnFactory`/`StreamTurn` 与 mux/TTS producer → `StreamAnswerRun` → completion factory/effects/coordinator → audio drain/cache/persist/终态事件。请求状态 reset、FAQ/cache/RAG 路由与证据 epoch、generation error 短路、嵌套迭代器关闭、producer/audio 清理、FIFO TTS/epoch 扣留、completion 取消副作用门控均标记已完成；现有源模块和行为测试已覆盖，没有发现可带来清晰价值的额外生产职责拆分，因此本轮不机械移动代码。真实 provider/TTS 设备、部署数据库仍待环境验收。
+
+定向流式/TTS 集合 `test_pipeline.py + test_stream*.py + test_speech_event_adapter.py + test_tts_streaming.py`：127 passed。按本轮要求在交付前只跑一次完整后端：671 passed、19 skipped、8 warnings（Starlette/AnyIO `BlockingPortal` 1 条；Python 3.12 SQLite datetime adapter 7 条）。compileall、repository map（8 documents/84 routes）、scripts unittest 11 项和 diff check 通过。集成分支本轮从 `069ea25` 开始；本轮进度和审计文档作为原子提交，并通过本地 fetch 快进同步同名引用。原 checkout 仍 `672a104`/107 普通、128 展开路径，未触碰。以上均为本地替身/SQLite 验证，不是真实模型、设备或生产数据库验收。
