@@ -247,3 +247,13 @@ FAQ 改写失败时必须在最终 text 和音频补播前恢复权威 FAQ 答�
 验证：新增节点测试确认 query、normalized_query 和 scope 原样传入，来源证据 ID 与 entry/revision/chunk ID 对应。完整指定 AI 回归集合 139 passed、1 条 Starlette 弃用警告；真实知识源和在线引用忠实度尚未验证。
 
 回滚：如果来源事件或聊天日志丢失、重排或错绑片段，恢复 Pipeline 原有映射逻辑并保留节点契约测试。
+
+## 2026-11-06：隔离 RAG 空证据答复边界
+
+问题：`QAPipeline` 同时处理空文档分支、best-effort blind-spot 记录和标准无证据快速答案，和主 RAG/流式生成流程的生命周期职责混在一起。
+
+选择：新增 `qa/no_evidence_answer_handler.py`。该 handler 只记录 `rag_no_docs`（失败仍 fail-soft）并将标准拒答连同空来源、`rag_insufficient` 命中级别交给既有 `FastPathAnswerFactory`；FAQ、缓存、RAG 检索、知识 epoch fence 和快速答案 SSE 顺序不迁移。继续保留显式 Pipeline，不引入运行时 Agent 框架。
+
+验证：行为测试覆盖盲点记录异常时仍生成无证据答案，并检查空 sources、hit level、expected epoch 及关闭 handler 时关闭内层 factory 流。初版 205 项 AI/流式集合通过；此后增加显式关闭边界，因临时 venv 消失且 PyPI DNS 失败，当前最终版本未能重跑 pytest。等价隔离异步行为脚本、compileall 和 diff check 通过。测试使用本地替身，不代表真实模型或设备验收。
+
+回滚：移除 handler 并还原 Pipeline 内联分支即可；保留测试用例作为无证据降级语义约束。

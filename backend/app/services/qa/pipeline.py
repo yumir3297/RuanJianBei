@@ -58,7 +58,7 @@ from app.services.qa.stream_answer_run import StreamAnswerRun
 from app.services.qa.stream_turn_factory import StreamTurnFactory
 from app.services.qa.queued_speech_publisher import QueuedSpeechPublisher
 from app.services.qa.fast_path_answer_factory import FastPathAnswerFactory
-from app.services.qa.answer_styler import no_evidence_reply
+from app.services.qa.no_evidence_answer_handler import NoEvidenceAnswerHandler
 from app.services.qa.stream_evidence_run import StreamEvidenceRun
 from app.services.qa.chat_interaction_persister import ChatInteractionPersister
 from app.services.rag.base import BaseRAGService
@@ -185,6 +185,10 @@ class QAPipeline:
             persist_interaction=self._persist_interaction,
             done_event_builder=self._done_event,
             followup_event_builder=self._followup_event,
+        )
+        self.no_evidence_answer_handler = NoEvidenceAnswerHandler(
+            fast_path_answer_factory=self.fast_path_answer_factory,
+            blind_spot_tracker=self.blind_spot_tracker,
         )
         self.stream_completion = StreamCompletionCoordinator()
         self.queued_speech_publisher = QueuedSpeechPublisher(
@@ -419,23 +423,9 @@ class QAPipeline:
         sources = evidence_outcome.sources
 
         if not documents:
-            if self.blind_spot_tracker is not None:
-                try:
-                    await self.blind_spot_tracker.record(
-                    raw_query=request.query,
-                    normalized_query=normalized_query,
-                    category="rag_no_docs",
-                )
-                    logger.info("Blind spot recorded (RAG no docs)")
-                except Exception:
-                    logger.exception("Knowledge blind spot recording failed")
-            answer = no_evidence_reply(request.persona)
-            answer_events = self.fast_path_answer_factory.events(
+            answer_events = self.no_evidence_answer_handler.events(
                 request=request,
                 normalized_query=normalized_query,
-                answer=answer,
-                sources=[],
-                hit_level="rag_insufficient",
                 start=start,
                 resolved=resolved,
                 response_policy=self._active_response_policy,
