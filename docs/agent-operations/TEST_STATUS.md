@@ -40,3 +40,9 @@ Updated: 2026-11-07. Results below were executed in the isolated worktree; these
 - PostgreSQL deployed-schema and true multi-process claim/progress race: **NOT RUN**. SQLite tests do not prove PostgreSQL behavior or upgrade safety for an existing production database.
 - Verified scenic map, current crowd feed, emergency contact/dispatch: **NOT AVAILABLE / NOT VERIFIED**. Do not enable placeholder data as official.
 - Full offline install/Service Worker on actual target devices: **NOT RUN**. The historical offline branch remains separate.
+
+## GitHub delivery status
+
+- PR #3: https://github.com/yumir3297/RuanJianBei/pull/3, targeting `codex/competition-integration`; state **OPEN** at the last check.
+- GitHub reported an empty status-check rollup and `gh pr checks` reported no checks for the branch. This is not a local test failure; local verification above is the available evidence.
+- GitHub's `mergeable` field was `UNKNOWN` at that time. No merge was attempted; the PR is awaiting normal review/branch analysis.

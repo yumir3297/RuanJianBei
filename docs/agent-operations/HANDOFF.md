@@ -9,6 +9,7 @@ Updated: 2026-11-07. Repository: `yumir3297/RuanJianBei`.
 - Selected source baseline: `7ef0459c669ef896ca2da6c1a9fc008f708e74df` (`origin/codex/competition-integration`)
 - Validated implementation commit: `8063453290be92cf683469822332fa96fc7cda09`.
 - PR #3 is open: https://github.com/yumir3297/RuanJianBei/pull/3 (base `codex/competition-integration`, head `integration/ai-workbench-final`). The current PR head SHA is available with `git rev-parse HEAD`; this handoff's containing commit is available with `git log -1 --format='%H' -- docs/agent-operations/HANDOFF.md`.
+- GitHub reported no branch status checks and `mergeable: UNKNOWN` at the last check; no merge was attempted.
 - Never continue by modifying `master` or the original `~/RuanJianBei` checkout.
 
 ## Read first
