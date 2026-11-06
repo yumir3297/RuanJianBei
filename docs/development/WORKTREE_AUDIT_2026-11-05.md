@@ -422,4 +422,4 @@
 
 - 在代码审查中发现 `QAPipeline` 对确定性/FAQ/cache 的 factory 异步流使用裸 `async for`。Python stdlib 等价复现确认关闭外层生成器时，内层 source 的 `finally` 尚未执行；因此在三个直接转发点加 `aclosing`，无证据路径由 handler 负责相同 owner 清理。新增 Pipeline 级早关行为测试。
 - pytest 当前不可用（临时环境缺失、系统解释器没有 pytest，安装受 PyPI DNS 阻断）；等价复现先失败后通过，compileall/diff check 通过。Pipeline 回归测试已写但未运行，当前代码版本的完整 pytest 结果缺失。真实 TTS/provider/设备未验收。
-- 集成起始基线/ref `0a13eeb`；原 checkout `672a104`/103 普通状态项、124 展开项；V01/W02/W02-V01 `098553f`/49、`a8c2837`/35、`098553f`/39；五个快照保留，phase3 仍 prunable 未清理，sources clean，node_modules 未跟踪。没有改动源 worktree，也没有把集成内容合入原活动 checkout。
+- 集成起始基线/ref `0a13eeb`；原 checkout `672a104`/最新 106 普通状态项、127 展开项（本轮较早读数 103/124，无法逐路径归因变化；当前路径均保留）；V01/W02/W02-V01 `098553f`/49、`a8c2837`/35、`098553f`/39；五个快照保留，phase3 仍 prunable 未清理，sources clean，node_modules 未跟踪。没有改动源 worktree，也没有把集成内容合入原活动 checkout。
