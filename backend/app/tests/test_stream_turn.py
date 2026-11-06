@@ -210,3 +210,55 @@ async def test_closing_stream_turn_cancels_speech_and_closes_llm_source():
     assert source_closed.is_set()
     assert audio_closed.is_set()
     assert turn.audio_group.pending == ()
+
+
+@pytest.mark.asyncio
+async def test_closing_stream_turn_closes_consumer_iterator_before_return():
+    consumer_started = asyncio.Event()
+    consumer_cleanup_started = asyncio.Event()
+    allow_consumer_cleanup = asyncio.Event()
+    consumer_closed = asyncio.Event()
+    source_closed = asyncio.Event()
+
+    async def source():
+        try:
+            await asyncio.Event().wait()
+            yield LLMStreamEvent(type="content", text="unreachable")
+        finally:
+            source_closed.set()
+
+    async def audio_worker(sentence, queue, **kwargs):
+        del sentence, queue, kwargs
+
+    turn = create_turn(source(), audio_worker)
+
+    async def consumer_events():
+        try:
+            consumer_started.set()
+            yield StreamEvent("text_chunk", {"token": "partial"})
+            await asyncio.Event().wait()
+        finally:
+            consumer_cleanup_started.set()
+            await allow_consumer_cleanup.wait()
+            consumer_closed.set()
+
+    turn.consumer.events = consumer_events
+    events = turn.events()
+
+    assert (await anext(events)).type == "text_chunk"
+    await consumer_started.wait()
+    closing = asyncio.create_task(events.aclose())
+    source_close = asyncio.create_task(source_closed.wait())
+    try:
+        await asyncio.wait_for(consumer_cleanup_started.wait(), timeout=1)
+        done, _pending = await asyncio.wait(
+            {closing, source_close}, timeout=0.05, return_when=asyncio.FIRST_COMPLETED
+        )
+        assert not done, "producer shutdown must wait until nested consumer cleanup completes"
+    finally:
+        allow_consumer_cleanup.set()
+        await closing
+        source_close.cancel()
+
+    assert consumer_closed.is_set(), "closing the SSE stream must close its consumer before returning"
+    assert source_closed.is_set()

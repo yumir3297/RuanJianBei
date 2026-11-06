@@ -1,5 +1,15 @@
 # 技术决策
 
+## 2026-11-06：显式拥有 StreamTurn 的嵌套 consumer，并保留迁移前已存在的应用日志记录器
+
+问题：`StreamTurn.events()` 通过裸 `async for` 转发 `consumer.events()`，外部 SSE 关闭时不能同步等待 consumer 的异步 finalizer；此外 Alembic `fileConfig()` 默认会把已存在的应用 logger 标为 disabled，迁移之后 AI 盲点等 QA 日志会被静默抑制。
+
+选择：`StreamTurn.events()` 用 `aclosing` 明确拥有 consumer 事件流，先等待其关闭，再退出响应 scope 取消/join producer 与音频任务。Alembic logging 配置传入 `disable_existing_loggers=False`，保留调用方已创建的应用 logger。仍保留显式 Pipeline、现有 mux/TTS/epoch 和 SSE 顺序，不引入运行时 Agent 框架。
+
+验证：consumer 异步 finalizer 关闭行为测试在旧实现下失败，修复后 `test_stream_turn.py` 7 passed；Alembic migration logger 测试在旧配置下失败，修复后与 no-evidence handler 回归 3 passed。后端完整 pytest：667 passed、19 skipped、8 warnings；Python 3.12 compileall 与 diff check 通过。测试采用本地替身和隔离 SQLite，不是模型/provider/TTS 设备或部署数据库验收。
+
+回滚：不得只移除 `aclosing` 或恢复默认 Alembic logger disable；若需要调整关闭次序，保留“嵌套 consumer cleanup 完成后再关闭 producer”的行为测试，以及迁移后 QA logger 仍启用的测试。
+
 ## 2026-11-05：分离快速答案的请求级副作用绑定
 
 问题：确定性路线、直接 FAQ、共享 cache 和无 RAG 证据等分支共用 `FastPathAnswerCoordinator` 的 SSE/语音/epoch 生命周期，但 `QAPipeline._emit_final_answer()` 仍在主流程内闭包绑定答案风格、来源处理、chat log 参数、followups 和 done 元数据。该配置与协调器的执行顺序职责混杂。

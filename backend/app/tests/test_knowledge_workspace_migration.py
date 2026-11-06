@@ -65,6 +65,18 @@ def test_existing_knowledge_and_chunks_migrate_as_published_revision(tmp_path, m
     engine.dispose()
 
 
+def test_alembic_migration_keeps_qa_loggers_enabled(tmp_path, monkeypatch) -> None:
+    from app.services.qa.no_evidence_answer_handler import logger as qa_logger
+
+    database_url = f"sqlite:///{tmp_path / 'logger-migration.db'}"
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    qa_logger.disabled = False
+
+    _upgrade(database_url, "head")
+
+    assert qa_logger.disabled is False
+
+
 def test_draft_revision_survives_database_session_recreation(tmp_path) -> None:
     import asyncio
 

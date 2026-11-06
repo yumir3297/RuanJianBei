@@ -1,5 +1,12 @@
 # Worktree 改动逐路径核对（2026-11-05）
 
+## 本轮复核（SSE consumer 关闭与 AI 日志完整性，2026-11-06）
+
+- 开始基线：集成副本 `integration-work/v01` 为 `codex/competition-integration@2bd81f5`，原仓库同名分支 ref 同指 `2bd81f5`；该集成副本是独立 checkout，不在原仓库 `git worktree list` 登记内。
+- 原仓库当前登记：主 checkout `codex/repository-map@672a104` 有 107 个 porcelain 路径（展开目录 128）；V01 `codex/v01-editable-itinerary@098553f` 为 49/49；W02 `codex/w02-durable-execution@a8c2837` 为 35/43；W02/V01 `codex/w02-v01-integration@098553f` 为 39/44。另有 `/private/tmp/ai-guide-phase3@098553f` 登记为 prunable，本轮不清理。主 checkout 当年先前记录的 95 项没有可回溯的逐路径快照；当前 107 项全部保留，不能将差异计数当作合并结论。此前逐项分类表仍是判断 V01/W02/main 当前差异的依据，分类仍分已合并、仅快照、尚未合并、后续实现替代；分支祖先关系不作功能合并证明。
+- 快照 refs `4acaa532`、`e115eab`、`3805943`、`48ef626`、`5433557` 均存在。所有登记 worktree 和集成副本 `sources/` 均无 Git 状态；集成副本唯一状态为保留的 `frontend/node_modules` 未跟踪本机软链接。原 checkout、V01/W02 worktree、快照均未修改；未将集成分支合入原活动 checkout。
+- 本轮集成实现仅涉及 `StreamTurn.events()` 对内层 consumer 事件流的关闭所有权、Alembic logging 保留已存在应用 logger，以及对应行为测试和架构/进度记录。后端完整回归 667 passed、19 skipped、8 warnings；AI/流式/FAQ/cache/RAG/evidence/epoch/TTS/SSE 集合 207 passed。测试仅覆盖本地替身和隔离 SQLite，不代表真实 provider、设备或部署数据库验收。
+
 ## 本轮复核（主 checkout 音频时长与部署配置差异，2026-11-06）
 
 - 原 checkout 的 `backend/app/api/voice.py`、未跟踪 `backend/app/services/audio_duration.py`、`backend/app/tests/test_audio_duration.py`、`backend/app/tests/test_production_security_config.py`、`backend/app/tests/test_voice_api.py` 均与集成副本逐字节相同。`backend/.env.example` 的 ffprobe 配置与生产密码注释已在集成副本；差异是集成版另有 `SITE_ID=default`。`backend/app/core/config.py` 的音频 ffprobe、最大秒数、容量限制、视觉像素限制及 production security guard 已在集成版；该文件差异仅为集成版另有站点 ID 与知识导入配置/路径。

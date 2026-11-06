@@ -90,8 +90,10 @@ class StreamTurn:
 
     async def events(self) -> AsyncIterator[StreamEvent]:
         async with stream_response_scope(self.producers, self.cancel_audio):
-            async for event in self.consumer.events():
-                yield event
+            consumer_events = self.consumer.events()
+            async with aclosing(consumer_events) as events:
+                async for event in events:
+                    yield event
 
     async def final_audio_events(
         self,
