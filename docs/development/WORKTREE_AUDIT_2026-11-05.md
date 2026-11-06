@@ -1,5 +1,11 @@
 # Worktree 改动逐路径核对（2026-11-05）
 
+## 本轮复核（Pipeline 全链路取消，2026-11-06）
+
+- 起点集成 checkout/ref 均为 `fff7c85`。原活动 checkout `codex/repository-map@672a104` 有 107 普通/128 展开状态路径；V01、W02、W02/V01 为 49/49、35/43、39/44。五个快照仍可解析，phase3 仍登记 prunable 且未 prune；检查过的 `sources/` 均 clean。
+- 重新将当前 porcelain 展开路径映射到本审计表：主 checkout 128/128、V01 49/49、W02 43/43、W02/V01 44/44，漏列 0。该结果仅证明表项覆盖，分类仍须结合既有逐文件比较和行为证据。
+- 仅在集成副本增加 Pipeline→Orchestrator→AnswerRun→Completion 取消集成测试并更新本进度/审计文档；测试在阻塞 HTTP TTS 期间关闭客户端流，验证音频任务取消且不执行 cache/chat-log 写入。定向 13 passed，全后端 671 passed、19 skipped、8 warnings；未改生产路径、源 worktree、主 checkout 或快照。`frontend/node_modules` 仍为唯一未跟踪本机软链接；自动化不代表真实 provider/设备/部署库验收。
+
 ## 本轮复核（答案缓存绑定契约，2026-11-06）
 
 - 起点集成 checkout 与原仓库同名 ref 均为 `9a486e9`。主 checkout `codex/repository-map@672a104` 为 107 个普通/128 个展开 porcelain 路径；V01、W02、W02/V01 分别 49/49、35/43、39/44。五个保护快照仍可解析，`/private/tmp/ai-guide-phase3` 仍标记 prunable 且未 prune；已检查 worktree 的 `sources/` 均 clean。

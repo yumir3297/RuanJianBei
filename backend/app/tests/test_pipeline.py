@@ -1223,6 +1223,78 @@ def test_stopping_generation_cancels_pending_http_tts() -> None:
     asyncio.run(run())
 
 
+def test_closing_full_answer_stream_during_completion_cancels_tts_before_cache_and_persist():
+    async def run():
+        tts_started = asyncio.Event()
+        tts_cancelled = asyncio.Event()
+        completion_started = asyncio.Event()
+        cache_repository = DummyCacheRepo()
+
+        class WaitingTTS:
+            async def synthesize(self, _text):
+                tts_started.set()
+                try:
+                    await asyncio.Event().wait()
+                except asyncio.CancelledError:
+                    tts_cancelled.set()
+                    raise
+
+        class RecordingChatLogs:
+            def __init__(self):
+                self.created = []
+
+            async def create(self, **kwargs):
+                self.created.append(kwargs)
+                return SimpleNamespace(id=len(self.created), **kwargs)
+
+        class RecordingCompletion:
+            def __init__(self, delegate):
+                self.delegate = delegate
+
+            async def events(self, **kwargs):
+                completion_started.set()
+                async for event in self.delegate.events(**kwargs):
+                    yield event
+
+        class OneSentenceLLM:
+            async def stream_generate(self, *args, **kwargs):
+                yield "基于官方证据回答。"
+
+        chat_logs = RecordingChatLogs()
+        pipeline = _build_test_pipeline(
+            llm_service=OneSentenceLLM(),
+            tts_service=WaitingTTS(),
+            qa_cache=QACache(cache_repository, ttl_seconds=60),
+            chat_log_repository=chat_logs,
+        )
+        observed_completion = RecordingCompletion(pipeline.stream_completion)
+        pipeline.stream_completion = observed_completion
+        pipeline.stream_answer_orchestrator.completion = observed_completion
+
+        async def consume():
+            async for _ in pipeline.stream_chat(ChatRequest(
+                query="讲解景点",
+                session_id="cancel-completion-effects",
+                text_only=False,
+            )):
+                pass
+
+        consumer = asyncio.create_task(consume())
+        await asyncio.wait_for(tts_started.wait(), timeout=1)
+        await asyncio.wait_for(completion_started.wait(), timeout=1)
+        consumer.cancel()
+        try:
+            await consumer
+        except asyncio.CancelledError:
+            pass
+
+        assert tts_cancelled.is_set()
+        assert cache_repository.set_keys == []
+        assert chat_logs.created == []
+
+    asyncio.run(run())
+
+
 def test_first_http_tts_audio_is_emitted_while_llm_waits_for_next_sentence() -> None:
     async def run():
         release_llm = asyncio.Event()

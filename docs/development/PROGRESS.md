@@ -663,3 +663,7 @@ Worktree 本轮复核：原 checkout `codex/repository-map@672a104` 仍为 95 �
 本轮 Worktree 起点为集成 checkout/ref `9a486e9`；原活动 checkout `codex/repository-map@672a104` 状态为 107 普通/128 展开，V01/W02/W02-V01 为 49/49、35/43、39/44；五个快照 refs 均可解析，phase3 worktree 仍 prunable 且未清理，所有检查过的 `sources/` clean，集成 `frontend/node_modules` 保持未跟踪软链接。本轮只改集成副本测试与架构/进度/Worktree 文档，未改原活动 checkout、源 worktree 或快照，未合并回原 checkout；现有逐项分类见 [Worktree 审计](WORKTREE_AUDIT_2026-11-05.md)。
 
 补充逐路径覆盖复核：将原仓库 Git porcelain `-z --untracked-files=all` 路径与 Worktree 审计表中记录的路径/目录前缀匹配，主 checkout 128/128、V01 49/49、W02 43/43、W02/V01 44/44 均有表项，漏列 0。此脚本核对的是审计覆盖，不单独证明表中“已合并/替代/未合并”的语义判断；分类结论仍依赖表内文件内容与行为证据。复核只读，所有源 worktree 与快照保持原样。
+
+2026-11-06：补充全链路取消行为回归，在 Pipeline 已进入 completion、最终 HTTP TTS 仍阻塞时关闭客户端流，断言 TTS 子任务取消，且 cache repository 与 chat-log repository 均无写入。定向 cancellation/completion/answer-run 集合 13 passed；全后端 671 passed、19 skipped、8 warnings。compileall、repository map（8 documents/84 routes）、scripts unittest 11 项、diff check 通过。此阶段未改生产逻辑；测试证明当前 `Pipeline → StreamAnswerOrchestrator → StreamAnswerRun → StreamCompletionCoordinator` 关闭链已有端到端覆盖。架构仍保留显式 Pipeline，真实模型/provider/TTS 设备/部署库未验收。
+
+本轮起点集成 checkout/ref `fff7c85`；主 checkout `codex/repository-map@672a104` 为 107 普通/128 展开状态，V01/W02/W02-V01 为 49/49、35/43、39/44。五个快照 refs 均可解析；phase3 仍 prunable 且未清理；检查过的 `sources/` clean；审计表覆盖展开状态路径 128/128、49/49、43/43、44/44，漏列 0。仅修改集成副本的行为测试与进度/Worktree 审计文档，原活动 checkout、其它源 worktree、快照保持原样；node_modules 仍为未跟踪本机软链接。
