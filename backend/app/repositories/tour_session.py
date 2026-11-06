@@ -170,6 +170,11 @@ class TourSessionRepository:
                                        version=expected_version + 1, snapshot_json=_encode(payload))
         self.session.add(revision)
         self._add_event(session_id, event_type, expected_version + 1)
+        from app.repositories.tool_execution import ToolExecutionRepository
+
+        await ToolExecutionRepository(self.session).mark_target_revision_changed(
+            session_id, expected_version + 1,
+        )
         item = await self.session.scalar(select(TourSession).where(
             TourSession.id == session_id, TourSession.owner_id == owner_id,
         ))
@@ -302,6 +307,11 @@ class TourSessionRepository:
                 snapshot_json=current_revision.snapshot_json,
             ))
         self._add_event(session_id, "deleted", expected_version + 1)
+        from app.repositories.tool_execution import ToolExecutionRepository
+
+        await ToolExecutionRepository(self.session).mark_target_revision_changed(
+            session_id, expected_version + 1, deleted=True,
+        )
         await self.session.commit()
         item = await self.session.scalar(select(TourSession).where(
             TourSession.id == session_id, TourSession.owner_id == owner_id,
@@ -324,6 +334,9 @@ class TourSessionRepository:
             TourSession.deleted_until <= now,
         ))).all())
         for session_id in expired_ids:
+            from app.repositories.tool_execution import ToolExecutionRepository
+
+            await ToolExecutionRepository(self.session).purge_session(session_id)
             await self.session.execute(delete(TourArtifactReference).where(
                 TourArtifactReference.session_id == session_id,
             ))
@@ -378,6 +391,9 @@ class TourSessionRepository:
         ))
         if item is None:
             return False
+        from app.repositories.tool_execution import ToolExecutionRepository
+
+        await ToolExecutionRepository(self.session).purge_session(session_id)
         await self.session.execute(delete(TourArtifactReference).where(
             TourArtifactReference.session_id == session_id,
         ))

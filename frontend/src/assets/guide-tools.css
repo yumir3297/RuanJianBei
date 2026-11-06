@@ -124,9 +124,28 @@
 .tour-session-open { display: grid; flex: 1; gap: 3px; min-width: 0; padding: 0; border: 0; background: transparent; text-align: left; color: #344b3c; cursor: pointer; }
 .tour-session-list small { color: #818b82; font-size: 11px; }
 .tour-session-list--trash { border-top: 1px solid #e5e9e4; padding-top: 8px; }
+.itinerary-editor { display: grid; gap: 8px; margin: 12px 0; padding: 12px; border: 1px solid #dbe5dc; border-radius: 12px; background: #f8faf7; }
+.itinerary-editor h5 { margin: 0; color: #294d3e; font-size: 14px; }
+.itinerary-editor p, .itinerary-editor small { margin: 0; color: #718074; font-size: 12px; }
+.itinerary-editor label, .itinerary-add-row { display: flex; align-items: center; gap: 7px; font-size: 12px; }
+.itinerary-editor input, .itinerary-add-row select { min-width: 0; padding: 7px; border: 1px solid #d7e0d7; border-radius: 8px; background: white; }
+.itinerary-add-row select { flex: 1; }
+.itinerary-stop-row { display: flex; align-items: center; gap: 6px; padding: 7px; border: 1px solid #e3e9e2; border-radius: 9px; background: white; font-size: 12px; }
+.itinerary-stop-row span { flex: 1; }
+.itinerary-stop-row button, .itinerary-add-row button { border: 1px solid #d7e0d7; border-radius: 7px; background: #fff; color: #42634d; }
+.itinerary-revisions { padding-top: 8px; border-top: 1px solid #dbe5dc; color: #42634d; font-size: 12px; }
+.itinerary-revisions summary { cursor: pointer; font-weight: 650; }
+.itinerary-revisions ul { display: grid; gap: 6px; padding-left: 18px; }
+.itinerary-revisions li { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.itinerary-revisions small { display: block; color: #718074; line-height: 1.5; }
+.itinerary-editor label:has(select[multiple]) { align-items: flex-start; flex-direction: column; }
+.itinerary-editor select[multiple] { width: 100%; min-height: 84px; padding: 6px; border: 1px solid #d7e0d7; border-radius: 8px; background: white; }
 @media (max-width: 520px) {
   .tour-session-panel { padding: 12px; }
   .tour-session-list li { flex-wrap: wrap; }
   .tour-session-open { flex-basis: 100%; }
   .tour-session-list .tour-session-danger, .tour-session-list .tour-session-secondary { flex: 1; }
+  .itinerary-stop-row { flex-wrap: wrap; }
+  .itinerary-stop-row span { flex-basis: 100%; }
+  .itinerary-revisions li { align-items: flex-start; flex-direction: column; }
 }

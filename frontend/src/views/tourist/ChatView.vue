@@ -15,15 +15,15 @@
         <nav class="tool-dock" aria-label="导览工具"><button v-for="tool in tools" :id="'tool-trigger-' + tool.id" :key="tool.id" type="button" :class="{ active: activeTool === tool.id }" :aria-expanded="activeTool === tool.id" aria-controls="guide-tools" @click="setTool(tool.id)"><GuideIcon :name="tool.icon" /><span>{{ tool.title }}</span><GuideIcon name="chevron" class="dock-chevron" /></button></nav>
       <dialog ref="toolDialogRef" id="guide-tools" class="tool-sheet" aria-labelledby="tool-title" @cancel.prevent="closeTool" @click="handleDialogBackdrop($event, closeTool)">
         <header class="tool-sheet-header"><h3 ref="toolHeadingRef" id="tool-title" tabindex="-1"><GuideIcon :name="selectedTool?.icon" />{{ selectedTool?.title }}</h3><button type="button" class="icon-button" aria-label="收起导览工具" @click="closeTool"><GuideIcon name="close" /></button></header>
-        <div class="tool-sheet-body"><KeepAlive><component :is="selectedTool.component" v-if="selectedTool" :key="activeTool" :busy="inputBusy" v-bind="activeTool === 'route' ? { weather } : activeTool === 'map' ? { weather, scenicColor, colorLabel: weatherColorLabel } : {}" @ask="handleToolQuestion" /></KeepAlive></div>
+        <div class="tool-sheet-body"><KeepAlive><component :is="selectedTool.component" v-if="selectedTool" :key="activeTool" :busy="inputBusy" v-bind="activeTool === 'route' ? { weather } : activeTool === 'map' ? { weather, scenicColor, colorLabel: weatherColorLabel, speechRate } : {}" @ask="handleToolQuestion" /></KeepAlive></div>
       </dialog>
         <div v-if="!activeTool" class="rail-discovery"><h3>常用提问</h3><button v-for="question in touristSettings.quick_questions.slice(0, 3)" :key="question" type="button" :disabled="inputBusy" @click="handleQuickQuestion(question)">{{ question }}<GuideIcon name="chevron" /></button></div>
       </aside>
       <section class="guide-scene" aria-label="数字人导游">
         <div class="scene-heading"><h1>{{ avatarDisplayName }}</h1><span>{{ touristSettings.guide_subtitle }}</span></div>
         <div class="avatar-stage">
-          <ThreeAvatar v-if="!avatarError" :preset="avatarConfig.modelKey" :emotion="avatar.currentEmotion.value" :is-speaking="avatarState === 'speaking' || avatarState === 'happy'" :speech-progress="speechProgress" :speech-elapsed-ms="speechElapsedMs" :speech-duration-ms="speechDurationMs" :speech-sync-active="activeAudioSegments > 0" :viseme-timeline="visemeTimeline" :avatar-state="avatarState" :action="avatar.currentAction.value" :action-key="avatar.actionKey.value" @loaded="handleAvatarLoaded" @error="handleAvatarLoadError" />
-          <AvatarDisplay v-else :state="avatarState" :emotion="avatar.currentEmotion.value" />
+          <ThreeAvatar v-if="!avatarError" :preset="avatarConfig.modelKey" :emotion="avatar.currentEmotion.value" :is-speaking="digitalHumanSpeaking" :speech-progress="speechProgress" :speech-elapsed-ms="speechElapsedMs" :speech-duration-ms="speechDurationMs" :speech-sync-active="digitalHumanSpeechSync" :viseme-timeline="visemeTimeline" :avatar-state="digitalHumanAvatarState" :action="avatar.currentAction.value" :action-key="avatar.actionKey.value" @loaded="handleAvatarLoaded" @error="handleAvatarLoadError" />
+          <AvatarDisplay v-else :state="digitalHumanAvatarState" :emotion="avatar.currentEmotion.value" />
           <div v-if="activeSubtitle" class="avatar-subtitle" aria-hidden="true">
             <span v-for="(word, index) in activeSubtitle.words" :key="`${word.begin_time}-${index}`" class="subtitle-word" :class="{ spoken: activeSubtitle.activeIndex >= 0 && index < activeSubtitle.activeIndex, active: index === activeSubtitle.activeIndex }">{{ word.text }}</span>
           </div>
@@ -75,7 +75,8 @@
           </form>
           <div class="composer-actions">
             <button type="button" class="image-btn" :disabled="inputBusy" @click="toggleVisionPanel"><GuideIcon name="camera" /><span>拍照识景</span></button>
-            <button v-if="chatStore.streaming || audioPlayer.isPlaying.value" type="button" class="voice-primary stop-primary" @click="chatStore.stopOutput()"><span class="stop-square"></span><span>停止讲解</span></button>
+            <label class="speech-rate-control"><span>语速</span><select v-model.number="speechRate" aria-label="讲解语速"><option :value="80">慢</option><option :value="100">标准</option><option :value="120">快</option></select></label>
+            <button v-if="chatStore.streaming || audioPlayer.isPlaying.value" type="button" class="voice-primary stop-primary" @click="stopAudioOutput"><span class="stop-square"></span><span>停止讲解</span></button>
             <button v-else type="button" class="voice-primary" :class="{ recording: speechListening || isRecording }" :disabled="transcribing || !voiceSupported" @click="toggleRecording"><GuideIcon name="mic" /><span>{{ transcribing ? '正在识别…' : voiceMode || speechListening || isRecording ? '结束语音' : '语音提问' }}</span></button>
             <button type="button" class="keyboard-btn" :aria-expanded="textInputExpanded" aria-controls="tourist-query" @click="toggleTextInput"><GuideIcon name="keyboard" /><span>{{ textInputExpanded ? '收起输入' : '键盘输入' }}</span></button>
           </div>
@@ -117,6 +118,25 @@
             <span v-if="message.role === 'assistant' && chatStore.streaming && index === chatStore.messages.length - 1 && message.content.length > 0" class="typing-cursor">|</span>
           </article>
           <div v-if="chatStore.streaming && !chatStore.messages.at(-1)?.content" class="thinking-notice" role="status"><span class="thinking-dots">···</span> 导游正在查阅资料</div>
+          <div v-if="tourStore.proposalLoading" class="itinerary-proposal" role="status"><span>正在生成可验证的改线方案…</span><button type="button" @click="tourStore.cancelProposal()">停止等待</button></div>
+          <section v-if="pendingIntentQuery" class="itinerary-proposal" aria-label="确认需求类型">
+            <p>“{{ pendingIntentQuery }}”可能是在询问，也可能是想调整当前行程。你希望怎么处理？</p>
+            <button type="button" @click="continuePendingIntentAsQuestion">普通问答</button>
+            <button type="button" @click="continuePendingIntentAsEdit">生成行程提案</button>
+            <button type="button" @click="pendingIntentQuery = ''">暂不处理</button>
+          </section>
+          <section v-if="tourStore.proposal" class="itinerary-proposal" aria-label="行程修改提案">
+            <header><strong>行程修改提案</strong><button type="button" @click="tourStore.cancelProposal()">关闭</button></header>
+            <p>“{{ tourStore.proposal.request_text }}”</p>
+            <p v-if="tourStore.proposal.status === 'needs_clarification'">{{ tourStore.proposal.clarification }} 请补充后重新提交。</p>
+            <template v-else>
+              <ul><li v-for="(change, index) in tourStore.proposal.diff" :key="`${change.kind}-${index}`">{{ proposalDiffText(change) }}</li></ul>
+              <p>{{ tourStore.proposal.validation.status === 'unverified' ? '有时长或路段尚未核实，应用前请确认。' : '已通过硬约束检查。' }}</p>
+              <button type="button" @click="tourStore.confirmProposal()">确认并保存新版本</button>
+              <button type="button" @click="tourStore.cancelProposal()">放弃</button>
+            </template>
+          </section>
+          <p v-if="tourStore.error" class="itinerary-proposal-error" role="alert">{{ tourStore.error }}</p>
           <div v-if="chatStore.messages.length <= 1" class="starter-questions"><button v-for="question in touristSettings.quick_questions.slice(0, 3)" :key="question" type="button" :disabled="inputBusy" @click="handleQuickQuestion(question)">{{ question }} <span aria-hidden="true">↗</span></button></div>
           <div v-if="chatStore.followups.length" class="followup-panel">
             <button v-for="item in chatStore.followups" :key="item.query" type="button" :disabled="chatStore.streaming" @click="handleFollowup(item.query)">{{ item.label }}</button>
@@ -261,6 +281,7 @@ import { GUIDE_PERSONA, useAvatar } from "../../composables/useAvatar";
 import { useWeather } from "../../composables/useWeather";
 import { useChatStore } from "../../stores/chat";
 import { useInteractionStore } from "../../stores/interaction";
+import { useTourSessionsStore } from "../../stores/tourSessions";
 
 const router = useRouter();
 const route = useRoute();
@@ -273,6 +294,7 @@ const feedbackReasons = [
 ];
 const chatStore = useChatStore();
 const interactionStore = useInteractionStore();
+const tourStore = useTourSessionsStore();
 const { scenicBgUrl, hasScenicBackground, welcomeText, touristSettings } = useScenicBackground();
 function rgbaHex(hex, alpha) {
   const value = /^#([\da-f]{6})$/i.exec(hex || "")?.[1] || "18352b";
@@ -323,6 +345,10 @@ const avatar = useAvatar();
 const { weather, scenicColor, displayText: weatherCaption, colorLabel: weatherColorLabel, startPolling: startWeather, stopPolling: stopWeather } = useWeather();
 const audioPlayer = useAudioPlayer();
 const avatarState = avatar.currentState;
+const mapNarrationActive = computed(() => audioPlayer.activePlayback.value?.owner === "map-narration");
+const digitalHumanSpeaking = computed(() => mapNarrationActive.value || avatarState.value === "speaking" || avatarState.value === "happy");
+const digitalHumanSpeechSync = computed(() => mapNarrationActive.value || activeAudioSegments.value > 0);
+const digitalHumanAvatarState = computed(() => mapNarrationActive.value ? "speaking" : avatarState.value);
 const avatarError = ref(false);
 const avatarLoaded = ref(false);
 
@@ -349,8 +375,12 @@ async function loadAvatarConfig() {
 }
 
 const query = ref("");
+const pendingIntentQuery = ref("");
 const voiceMode = ref(false);
 const explanationLevel = ref("adult");
+const SPEECH_RATE_KEY = "a5-guide-speech-rate-v1";
+const speechRate = ref((() => { try { const value = Number(localStorage.getItem(SPEECH_RATE_KEY)); return [80, 100, 120].includes(value) ? value : 100; } catch { return 100; } })());
+watch(speechRate, (value) => { try { localStorage.setItem(SPEECH_RATE_KEY, String(value)); } catch {} });
 const transcribing = ref(false);
 const transcriptionConfidence = ref(-1);
 const showConfirmBar = ref(false);
@@ -714,7 +744,6 @@ onBeforeUnmount(() => {
     window.clearTimeout(greetingTimer);
   }
   try { chatStore.stopOutput(); } catch {}
-  try { audioPlayer.stop(); } catch {}
   try { abortSpeechRecognition(); } catch {}
   if (isRecording.value) {
     try { stopRecording(); } catch {}
@@ -751,6 +780,24 @@ function handleFollowup(followupQuery) {
   submitQuery(followupQuery);
 }
 
+function continuePendingIntentAsQuestion() {
+  const value = pendingIntentQuery.value;
+  pendingIntentQuery.value = "";
+  if (value) submitQuery(value, { forceQA: true });
+}
+
+function continuePendingIntentAsEdit() {
+  const value = pendingIntentQuery.value;
+  pendingIntentQuery.value = "";
+  if (value) requestItineraryProposal(value);
+}
+
+function stopAudioOutput() {
+  const active = audioPlayer.activePlayback.value;
+  if (active?.owner === "map-narration") audioPlayer.stop(active.id);
+  else chatStore.stopOutput();
+}
+
 function handleQuickQuestion(question) {
   submitQuery(question);
 }
@@ -758,6 +805,18 @@ function handleQuickQuestion(question) {
 function submitQuery(rawQuery, extraOptions = {}) {
   const value = rawQuery.trim();
   if (!value || chatStore.streaming) {
+    return;
+  }
+  if (!extraOptions.forceQA && isItineraryEditIntent(value)) {
+    activeTab.value = "chat";
+    requestItineraryProposal(value);
+    query.value = "";
+    return;
+  }
+  if (!extraOptions.forceQA && isAmbiguousItineraryIntent(value)) {
+    activeTab.value = "chat";
+    pendingIntentQuery.value = value;
+    query.value = "";
     return;
   }
   // 讲解方式不再拼进问题文本：前缀会污染 raw_query / 检索 / FAQ 匹配 / 缓存键。
@@ -769,7 +828,7 @@ function submitQuery(rawQuery, extraOptions = {}) {
       audience: explanationLevel.value,
       ttsConfig: {
         voiceType: avatarConfig.value.voiceType,
-        speechRate: 100,
+        speechRate: speechRate.value,
         volume: 80,
       },
       onContext: (selection) => interactionStore.applyResolvedSelection(selection),
@@ -796,6 +855,15 @@ function submitQuery(rawQuery, extraOptions = {}) {
           chatStore.clearSubtitleWords();
         }
       },
+      onPlaybackStopped: () => {
+        activeAudioSegments.value = 0;
+        speechProgress.value = 0;
+        speechElapsedMs.value = 0;
+        speechDurationMs.value = 0;
+        visemeTimeline.value = null;
+        chatStore.clearSubtitleWords();
+        if (!mapNarrationActive.value) avatar.setState("idle");
+      },
       onSpeechProgress: (progress, elapsedMs, timeline, actualDurationMs) => {
         speechProgress.value = progress;
         speechElapsedMs.value = elapsedMs;
@@ -809,6 +877,30 @@ function submitQuery(rawQuery, extraOptions = {}) {
   }
   query.value = "";
   activeTab.value = "chat";
+}
+
+function isItineraryEditIntent(value) {
+  const hasPlan = /行程|路线|景点|停留点|游览顺序/.test(value);
+  const hasEdit = /调整|修改|改一下|改成|改为|重新规划|重新安排|换成|替换|删除|移除|增加|添加|加入|移动|避开|少走/.test(value);
+  return (hasPlan && hasEdit) || /(?:加|增加|添加|去掉|删除|换掉).{0,8}(?:景点|停留点)/.test(value);
+}
+function isAmbiguousItineraryIntent(value) {
+  if (tourStore.current?.snapshot?.schema_version !== 2) return false;
+  const mentionsPlan = /行程|路线|游览|景点|游玩|安排/.test(value);
+  const preferenceOrAdjustment = /轻松|少走|不想走|别太累|避开人多|不排队|带老人|带孩子|下雨|剩余.*(?:分钟|小时)|时间不够|来不及|调整|改改/.test(value);
+  return mentionsPlan && preferenceOrAdjustment;
+}
+function requestItineraryProposal(value) {
+  tourStore.requestProposal(value);
+}
+function proposalDiffText(change) {
+  const label = stop => stop?.name || stop?.spot_code || "停留点";
+  if (change.kind === "added") return `增加：${label(change.after)}`;
+  if (change.kind === "removed") return `移除：${label(change.before)}`;
+  if (change.kind === "changed") return `修改：${label(change.before)} → ${label(change.after)}`;
+  if (change.kind === "moved") return "调整停留顺序";
+  if (change.kind === "constraints") return "更新游览约束";
+  return "更新行程信息";
 }
 
 async function toggleRecording() {
@@ -1251,6 +1343,7 @@ function handleToolQuestion(payload) {
   if (inputBusy.value) return;
   interactionStore.clearSelection();
   if (payload.routeId) interactionStore.selectRoute(payload.routeId);
+  else if (payload.attractionId) interactionStore.selectAttraction(payload.attractionId);
   else if (payload.attraction) {
     const attraction = interactionStore.bootstrap.attractions.find(item => item.title === payload.attraction);
     if (attraction) interactionStore.selectAttraction(attraction.id);
@@ -1269,3 +1362,15 @@ watch(visionPanelOpen, async (open) => {
 </script>
 
 <style scoped src="../../assets/guide-page.css"></style>
+<style scoped>
+.itinerary-proposal { margin: 10px 0; padding: 12px; border: 1px solid #d6e2d8; border-radius: 12px; background: #f7faf6; color: #3d5948; font-size: 13px; }
+.itinerary-proposal header { display: flex; justify-content: space-between; align-items: center; }
+.itinerary-proposal p { margin: 7px 0; line-height: 1.5; }
+.itinerary-proposal ul { display: grid; gap: 5px; padding-left: 20px; }
+.itinerary-proposal button { min-height: 32px; margin: 3px; padding: 5px 10px; border: 1px solid #315b48; border-radius: 8px; background: #315b48; color: white; }
+.itinerary-proposal header button, .itinerary-proposal button + button { background: white; color: #315b48; }
+.itinerary-proposal[role="status"] { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.speech-rate-control { display: inline-flex; align-items: center; gap: 5px; color: var(--guide-muted, #68766f); font-size: 12px; }
+.speech-rate-control select { min-height: 34px; border: 1px solid var(--guide-line, #d9e2dc); border-radius: 8px; padding: 4px 7px; background: white; color: inherit; }
+.itinerary-proposal-error { color: #a34535; font-size: 12px; }
+</style>

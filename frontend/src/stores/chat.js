@@ -17,6 +17,7 @@ const GENERIC_ERROR_TEXT = "抱歉，导览服务暂时没有响应。请稍后�
 
 let activeStreamController = null;
 let activeStreamToken = 0;
+let activePlaybackSession = null;
 let lastFailedRequest = null;
 const SESSION_STORAGE_KEY = "a5-chat-session-id";
 const VISITOR_STORAGE_KEY = "a5-visitor-id";
@@ -133,7 +134,8 @@ export const useChatStore = defineStore("chat", {
         activeStreamController.abort();
         activeStreamController = null;
       }
-      audioPlayer.stop();
+      if (activePlaybackSession) audioPlayer.stop(activePlaybackSession.id, "chat-stopped");
+      activePlaybackSession = null;
       this.subtitleWords = [];
       this.streaming = false;
       this.voiceFallback = false;
@@ -157,6 +159,18 @@ export const useChatStore = defineStore("chat", {
       activeStreamController = streamController;
       const isCurrentRequest = () =>
         requestToken === activeStreamToken && activeStreamController === streamController;
+      const playbackSession = audioPlayer.claimPlayback("chat", (reason) => {
+        options.onPlaybackStopped?.();
+        if (!isCurrentRequest()) return;
+        activePlaybackSession = null;
+        activeStreamToken += 1;
+        streamController.abort();
+        activeStreamController = null;
+        this.streaming = false;
+        this.userStopped = reason !== "replaced";
+        this.statusText = reason === "replaced" ? "讲解已由地图接管" : STOPPED_STATUS_TEXT;
+      });
+      activePlaybackSession = playbackSession;
       let pcmStarted = false;
       let receivedDone = false;
 
@@ -185,7 +199,7 @@ export const useChatStore = defineStore("chat", {
             audience: options.audience || null,
             visitor_id: getVisitorId(),
             tts_voice: options.ttsConfig?.voiceType || null,
-            tts_rate: options.ttsConfig?.speechRate || 100,
+            tts_rate: 100,
             tts_volume: options.ttsConfig?.volume ?? 80,
             selection,
             context: this.conversationContext,
@@ -256,6 +270,7 @@ export const useChatStore = defineStore("chat", {
                     actualDurationMs,
                   ),
                 {
+                  sessionId: playbackSession.id,
                   rate: (options.ttsConfig?.speechRate || 100) / 100,
                   volume: (options.ttsConfig?.volume ?? 80) / 100,
                   allowBrowserSpeech: false,
@@ -284,13 +299,15 @@ export const useChatStore = defineStore("chat", {
                       options.onAudioEnded?.();
                       audioPlayer.flush();
                     },
+                    playbackSession.id,
+                    (options.ttsConfig?.speechRate || 100) / 100,
                   );
                 }
-                audioPlayer.feedPCMChunk(base64, sample_rate || 24000, channels || 1, bits || 16);
+                audioPlayer.feedPCMChunk(base64, sample_rate || 24000, channels || 1, bits || 16, playbackSession.id);
               }
               // 字级别时间戳 → viseme 时间线
               if (viseme_timeline) {
-                audioPlayer.updatePCMVisemeTimeline(viseme_timeline);
+                audioPlayer.updatePCMVisemeTimeline(viseme_timeline, playbackSession.id);
               }
               // 逐字字幕时间轴：后端按句下发（整段累计毫秒），直接拼接
               if (word_timeline?.length) {
@@ -336,7 +353,7 @@ export const useChatStore = defineStore("chat", {
               receivedDone = true;
               // 结束 PCM 流（如果在用流式模式）
               if (pcmStarted || audioPlayer.isPCMStreaming.value) {
-                audioPlayer.endPCMStream();
+                audioPlayer.endPCMStream(playbackSession.id);
                 pcmStarted = false;
               }
               assistantMessage.chatLogId = Number(chatLogId) || null;
@@ -358,7 +375,7 @@ export const useChatStore = defineStore("chat", {
             throw new Error("回答连接提前结束，未收到有效内容。");
           }
           if (pcmStarted || audioPlayer.isPCMStreaming.value) {
-            audioPlayer.endPCMStream();
+            audioPlayer.endPCMStream(playbackSession.id);
             pcmStarted = false;
           }
           this.streaming = false;
@@ -375,7 +392,7 @@ export const useChatStore = defineStore("chat", {
           return;
         }
         if (pcmStarted || audioPlayer.isPCMStreaming.value) {
-          audioPlayer.endPCMStream();
+          audioPlayer.endPCMStream(playbackSession.id);
           pcmStarted = false;
         }
         assistantMessage.content = assistantMessage.content

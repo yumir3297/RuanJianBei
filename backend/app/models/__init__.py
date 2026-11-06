@@ -19,6 +19,13 @@ from app.models.tour_session import (
     TourSessionRevision,
     TourSessionEvent,
 )
+from app.models.tool_execution import (
+    ToolAttempt,
+    ToolCommandReceipt,
+    ToolEvent,
+    ToolJob,
+    ToolStep,
+)
 
 __all__ = [
     "AvatarConfig",
@@ -40,4 +47,9 @@ __all__ = [
     "TourSessionEvent",
     "TourArtifactReference",
     "TourSessionIdempotency",
+    "ToolJob",
+    "ToolStep",
+    "ToolAttempt",
+    "ToolEvent",
+    "ToolCommandReceipt",
 ]

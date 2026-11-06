@@ -75,7 +75,17 @@ flowchart LR
 
 当前自动化覆盖 repository、身份/CSRF、API 隔离和幂等键；真实浏览器刷新、关闭重开、服务重启与 cookie 禁用行为仍待手动验收。模型与接口索引见 [REPO_MAP.md](REPO_MAP.md)。
 
-## 6. 运行与部署
+## 6. 持久工具执行（W02 内核）
+
+W02 在 W01 游览记录旁建立 `tool_jobs / tool_steps / tool_attempts / tool_events / tool_command_receipts`。每个任务固定工具版本、输入摘要、游客主体、景区和游览修订号；状态写入检查租约、fence 和目标修订。PostgreSQL 领取使用 `FOR UPDATE SKIP LOCKED`，SQLite 使用条件更新并限制单 worker。API 进程不启动执行器。
+
+游客 API 只提供游览范围的任务列表、详情、事件、取消和显式重试；写请求复用 W01 Cookie/CSRF。任务创建仅由 `enqueue_registered_tool` 内部命令调用，要求已注册工具和严格 Pydantic 输入/输出模型。输入上限 1 MiB、step 结果上限 1 MiB、job 结果上限 4 MiB、单事件 payload 上限 8 KiB、事件页上限 100 条；命令回执保留 7 天。独立 worker 命令：在 `backend/` 目录执行 `python -m app.services.tool_execution.worker`。目前 registry 为空，因此 worker 会记录提示并退出，不领取任务。
+
+W01 保存新修订时，旧修订上的活动任务在同一事务中转为 `stale` 并递增 fence；软删除会取消任务，永久删除清除任务私有数据。未知外部调用结果进入 `waiting_user`，自动重试只限明确安全的失败；人工重试需要幂等键，外部结果不确定时还需显式确认重复风险。
+
+当前只有一个通用 `run` 步骤内核，没有真实业务 handler、创建 HTTP 命令或前端任务卡；不表示行程生成、讲解、导入或发布已支持恢复。安全重试必须由 handler 显式声明，自动尝试最多 3 次；人工重试最多 2 次，且可能已发生的外部调用必须显式确认重复风险。`progress_version` 目前只记录输入值，W01 尚无独立游览进度版本校验；任务/事件 30 天保留与事件裁剪也未实现。迁移、自动化测试、崩溃恢复及 PostgreSQL 多 worker 行为未验证。
+
+## 7. 运行与部署
 
 - `backend/main.py` 启动时执行 Alembic、bootstrap 与模型预热；先备好数据库、处理数据与模型缓存。
 - `GET /health` 是进程级响应；`GET /ready` 检查部分数据库/配置条件，两者都不等于完整外部 AI 验收。

@@ -10,11 +10,14 @@ export function useAudioPlayer() {
   const mouthEnergy = ref(0);
   const mouthAnalysisActive = ref(false);
   const isPCMStreaming = ref(false);
+  const activePlayback = ref(null);
 
   let audioContext = null;
   let currentSource = null;
   let currentUtterance = null;
   let stopGeneration = 0;
+  let playbackSessionSequence = 0;
+  let playbackSession = null;
   let analyserNode = null;
   let analysisSinkNode = null;
   let analyserData = null;
@@ -30,6 +33,15 @@ export function useAudioPlayer() {
       try { audioContext = new AudioContext(); } catch { isSupported.value = false; }
     }
     return audioContext;
+  }
+
+  async function unlock() {
+    const ctx = ensureContext();
+    if (!ctx) return false;
+    if (ctx.state === "suspended") {
+      try { await ctx.resume(); } catch { return false; }
+    }
+    return ctx.state === "running";
   }
 
   function ensureAnalyser() {
@@ -96,6 +108,7 @@ export function useAudioPlayer() {
   async function playAudioBuffer(audioBuffer, onProgress, playbackOptions = {}) {
     const ctx = ensureContext();
     if (!ctx || audioBuffer === null) return 0;
+    const generation = stopGeneration;
     return new Promise((resolve) => {
       const source = ctx.createBufferSource();
       currentSource = source;
@@ -118,16 +131,20 @@ export function useAudioPlayer() {
       let progressTimer = null;
       if (onProgress) {
         progressTimer = setInterval(() => {
+          if (generation !== stopGeneration) return;
           const elapsed = (ctx.currentTime - startTime) * 1000;
           onProgress(Math.min(elapsed / (duration * 1000), 1), elapsed, duration * 1000);
         }, 30);
       }
       source.onended = () => {
-        currentSource = null;
+        if (currentSource === source) currentSource = null;
         source.disconnect();
         gainNode.disconnect();
-        stopMouthLoop();
-        if (progressTimer) { clearInterval(progressTimer); onProgress?.(1, duration * 1000, duration * 1000); }
+        if (generation === stopGeneration) stopMouthLoop();
+        if (progressTimer) {
+          clearInterval(progressTimer);
+          if (generation === stopGeneration) onProgress?.(1, duration * 1000, duration * 1000);
+        }
         resolve(duration * 1000);
       };
       source.start(0);
@@ -175,6 +192,7 @@ export function useAudioPlayer() {
 
   async function playSpeechSynthesis(text, durationMs, onProgress, playbackOptions = {}) {
     if (!speechSynthSupported) return 0;
+    const generation = stopGeneration;
     return new Promise((resolve) => {
       if (currentUtterance) window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
@@ -187,24 +205,50 @@ export function useAudioPlayer() {
       const estimatedDuration = Math.max((durationMs || text.length * 180) / playbackRate, 800);
       const visemeTimeline = generateFrontendVisemeTimeline(text, estimatedDuration);
       let progressTimer = null;
-      const reportProgress = (p) => onProgress?.(
-        Math.min(Math.max(p, 0), 1),
-        Date.now() - startTime,
-        estimatedDuration,
-        visemeTimeline,
-      );
-      const finish = (d) => { if (progressTimer) { clearInterval(progressTimer); progressTimer = null; } stopMouthLoop(); reportProgress(1); currentUtterance = null; resolve(d); };
-      utterance.onstart = () => { reportProgress(0); progressTimer = setInterval(() => reportProgress((Date.now() - startTime) / estimatedDuration), 50); };
-      utterance.onboundary = (e) => { if (text.length > 0 && Number.isFinite(e.charIndex)) reportProgress(e.charIndex / text.length); };
+      const reportProgress = (p) => {
+        if (generation !== stopGeneration || settled) return;
+        onProgress?.(Math.min(Math.max(p, 0), 1), Date.now() - startTime, estimatedDuration, visemeTimeline);
+      };
+      let settled = false;
+      const finish = (d) => {
+        if (settled) return;
+        settled = true;
+        if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
+        if (generation === stopGeneration) { stopMouthLoop(); reportProgress(1); }
+        if (currentUtterance === utterance) currentUtterance = null;
+        resolve(d);
+      };
+      utterance.onstart = () => { if (generation !== stopGeneration || settled) return; reportProgress(0); progressTimer = setInterval(() => reportProgress((Date.now() - startTime) / estimatedDuration), 50); };
+      utterance.onboundary = (e) => { if (generation === stopGeneration && !settled && text.length > 0 && Number.isFinite(e.charIndex)) reportProgress(e.charIndex / text.length); };
       utterance.onend = () => finish(Date.now() - startTime);
       utterance.onerror = () => finish(0);
-      waitForChineseVoice().then((zhVoice) => { if (zhVoice) utterance.voice = zhVoice; currentUtterance = utterance; window.speechSynthesis.speak(utterance); });
+      waitForChineseVoice().then((zhVoice) => {
+        if (generation !== stopGeneration) { finish(0); return; }
+        if (zhVoice) utterance.voice = zhVoice;
+        currentUtterance = utterance;
+        window.speechSynthesis.speak(utterance);
+      });
     });
   }
 
+  function isCurrentPlaybackSession(sessionId) {
+    return sessionId == null || playbackSession?.id === sessionId;
+  }
+
+  function claimPlayback(owner, onStopped) {
+    if (playbackSession) stop(playbackSession.id, "replaced");
+    else if (isPlaying.value || isPCMStreaming.value) stop();
+    const session = { id: ++playbackSessionSequence, owner, onStopped };
+    playbackSession = session;
+    activePlayback.value = { id: session.id, owner };
+    return { id: session.id, owner };
+  }
+
   async function enqueue(base64, durationMs = 800, onEnded, text = "", onProgress, playbackOptions = {}) {
+    if (!isCurrentPlaybackSession(playbackOptions.sessionId)) return false;
     queue.value.push({ base64, durationMs, onEnded, text, onProgress, playbackOptions });
     if (!isPlaying.value) await flush();
+    return true;
   }
 
   async function flush() {
@@ -214,7 +258,9 @@ export function useAudioPlayer() {
     while (queue.value.length > 0) {
       if (generation !== stopGeneration) break;
       const current = queue.value.shift();
+      if (!isCurrentPlaybackSession(current.playbackOptions?.sessionId)) continue;
       const audioBuffer = await base64ToAudioBuffer(current.base64);
+      if (generation !== stopGeneration) break;
       if (audioBuffer) {
         current.playbackOptions?.onMode?.("audio");
         await playAudioBuffer(audioBuffer, current.onProgress, current.playbackOptions);
@@ -233,11 +279,17 @@ export function useAudioPlayer() {
       }
       if (generation === stopGeneration && current.onEnded) current.onEnded();
     }
-    isPlaying.value = false;
-    stopMouthLoop();
+    if (generation === stopGeneration) {
+      isPlaying.value = false;
+      stopMouthLoop();
+    }
   }
 
-  function stop() {
+  function stop(sessionId = null, reason = "stopped") {
+    if (sessionId != null && playbackSession?.id !== sessionId) return false;
+    const stoppedSession = playbackSession;
+    playbackSession = null;
+    activePlayback.value = null;
     stopGeneration += 1;
     stopMouthLoop();
     if (currentSource) { try { currentSource.stop(); } catch {} currentSource = null; }
@@ -246,6 +298,8 @@ export function useAudioPlayer() {
     // 同时停止 PCM 流
     resetPCMStream(true);
     isPlaying.value = false;
+    try { stoppedSession?.onStopped?.(reason); } catch {}
+    return true;
   }
 
   // ── PCM 流式播放 ──
@@ -256,6 +310,7 @@ export function useAudioPlayer() {
   let pcmProgressTimer = null;
   let pcmEndTimer = null;
   let pcmTimeline = [];
+  let pcmPlaybackRate = 1;
 
   function resetPCMStream(stopSources = false) {
     if (stopSources && pcmStream?.sources) {
@@ -266,6 +321,7 @@ export function useAudioPlayer() {
     pcmOnProgress = null;
     pcmOnAudioEnded = null;
     pcmTimeline = [];
+    pcmPlaybackRate = 1;
     isPCMStreaming.value = false;
     if (pcmProgressTimer) { clearInterval(pcmProgressTimer); pcmProgressTimer = null; }
     if (pcmEndTimer) { clearTimeout(pcmEndTimer); pcmEndTimer = null; }
@@ -301,17 +357,21 @@ export function useAudioPlayer() {
     } catch { return null; }
   }
 
-  function startPCMStream(onProgress, onAudioEnded) {
+  function startPCMStream(onProgress, onAudioEnded, sessionId = null, rate = 1) {
+    if (!isCurrentPlaybackSession(sessionId)) return false;
     resetPCMStream(true);
     pcmOnProgress = onProgress;
     pcmOnAudioEnded = onAudioEnded;
     pcmAccumulatedMs = 0;
+    pcmPlaybackRate = Math.min(Math.max(Number(rate) || 1, 0.8), 1.5);
     isPCMStreaming.value = true;
     isPlaying.value = true;
     startMouthLoop();
+    return true;
   }
 
-  function feedPCMChunk(base64String, sampleRate = 24000, channels = 1, bits = 16) {
+  function feedPCMChunk(base64String, sampleRate = 24000, channels = 1, bits = 16, sessionId = null) {
+    if (!isCurrentPlaybackSession(sessionId)) return;
     const ctx = ensureContext();
     if (!ctx || !base64String) return;
     if (ctx.state === "suspended") ctx.resume();
@@ -327,6 +387,7 @@ export function useAudioPlayer() {
       // 第一个块：从当前时间开始播放
       const source = ctx.createBufferSource();
       source.buffer = audioBuffer;
+      source.playbackRate.value = pcmPlaybackRate;
       const gainNode = ctx.createGain();
       gainNode.gain.value = 0.8;
       source.connect(gainNode);
@@ -337,7 +398,7 @@ export function useAudioPlayer() {
 
       pcmStream = {
         startTime: ctx.currentTime,
-        nextTime: ctx.currentTime + audioBuffer.duration,
+        nextTime: ctx.currentTime + audioBuffer.duration / pcmPlaybackRate,
         lastSource: source,
         sources: new Set([source]),
       };
@@ -345,7 +406,7 @@ export function useAudioPlayer() {
       // 进度上报
       if (pcmOnProgress) {
         pcmProgressTimer = setInterval(() => {
-          const elapsedMs = Math.max((ctx.currentTime - pcmStream.startTime) * 1000, 0);
+          const elapsedMs = Math.min(Math.max((ctx.currentTime - pcmStream.startTime) * 1000 * pcmPlaybackRate, 0), pcmAccumulatedMs);
           const durationMs = Math.max(pcmAccumulatedMs, pcmTimeline.at(-1)?.end || 0, 1);
           pcmOnProgress(
             Math.min(elapsedMs / durationMs, 1),
@@ -366,6 +427,7 @@ export function useAudioPlayer() {
       // 后续块：在前一块结束后播放
       const source = ctx.createBufferSource();
       source.buffer = audioBuffer;
+      source.playbackRate.value = pcmPlaybackRate;
       const gainNode = ctx.createGain();
       gainNode.gain.value = 0.8;
       source.connect(gainNode);
@@ -374,7 +436,7 @@ export function useAudioPlayer() {
       if (analyser) source.connect(analyser);
       source.start(pcmStream.nextTime);
 
-      pcmStream.nextTime += audioBuffer.duration;
+      pcmStream.nextTime += audioBuffer.duration / pcmPlaybackRate;
       pcmStream.lastSource = source;
       pcmStream.sources.add(source);
 
@@ -391,14 +453,15 @@ export function useAudioPlayer() {
     pcmAccumulatedMs += chunkDurationMs;
   }
 
-  function updatePCMVisemeTimeline(timeline = []) {
-    if (!Array.isArray(timeline) || timeline.length === 0) return;
+  function updatePCMVisemeTimeline(timeline = [], sessionId = null) {
+    if (!isCurrentPlaybackSession(sessionId) || !Array.isArray(timeline) || timeline.length === 0) return;
     const byRange = new Map(pcmTimeline.map((item) => [`${item.start}:${item.end}`, item]));
     timeline.forEach((item) => byRange.set(`${item.start}:${item.end}`, item));
     pcmTimeline = [...byRange.values()].sort((a, b) => a.start - b.start);
   }
 
-  function endPCMStream() {
+  function endPCMStream(sessionId = null) {
+    if (!isCurrentPlaybackSession(sessionId)) return;
     if (!isPCMStreaming.value) return;
     const ctx = ensureContext();
     const remainingMs = pcmStream && ctx
@@ -419,8 +482,8 @@ export function useAudioPlayer() {
   }
 
   sharedAudioPlayer = {
-    queue, isPlaying, isSupported, mouthEnergy, mouthAnalysisActive, isPCMStreaming,
-    enqueue, flush, stop,
+    queue, isPlaying, isSupported, mouthEnergy, mouthAnalysisActive, isPCMStreaming, activePlayback,
+    enqueue, flush, stop, claimPlayback, isCurrentPlaybackSession, unlock,
     // PCM 流式播放
     startPCMStream, feedPCMChunk, updatePCMVisemeTimeline, endPCMStream,
   };

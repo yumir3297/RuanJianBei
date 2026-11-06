@@ -1,18 +1,35 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
+from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.deps import get_app_settings, get_db_session
 from app.models.tour_session import TourIdentity
 from app.repositories.tour_session import IdempotencyConflict, RevisionConflict, TourSessionRepository
+from app.schemas.itinerary import (
+    ApplyItineraryProposalRequest, CreateItineraryProposalRequest,
+    SaveItineraryV2Request, StartTourRequest, UpgradeItineraryRequest, StrictModel,
+    TourSnapshotV2, upgrade_snapshot,
+)
 from app.schemas.tour_session import CreateTourSessionRequest, SaveTourSessionRequest, TourArtifactReferenceRequest
+from app.services.itinerary.catalog import K01PublishedAttractionSource, PublishedAttractionCatalog, ResolvedSpot, parse_spot_reference
+from app.services.itinerary.progress import ProgressCommand, ProgressConflict, TourProgress, validate_remaining_budget
+from app.services.itinerary.provenance import normalize_snapshot_provenance
+from app.services.itinerary.intent import IntentError, IntentUnavailable, ItineraryIntentService, snapshot_digest
 from app.services.tour_session_identity import ensure_tour_identity, require_tour_write_protection
 
 router = APIRouter()
+
+
+class ProgressCommandRequest(StrictModel):
+    expected_progress_version: int
+    command: ProgressCommand
 
 
 async def get_tour_identity(
@@ -159,9 +176,239 @@ async def save_tour_session(
         raise _conflict(error) from error
     except IdempotencyConflict as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
     if item is None:
         raise HTTPException(status_code=404, detail="游览不存在")
     return item
+
+
+@router.put("/{session_id}/v2")
+async def save_tour_session_v2(
+    session_id: str, payload: SaveItineraryV2Request, request: Request,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=128)],
+    identity: TourIdentity = Depends(get_tour_identity), db: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_app_settings),
+):
+    _protect_write(request, identity, settings)
+    catalog = await PublishedAttractionCatalog(K01PublishedAttractionSource(db, site_id=settings.site_id)).list_for_site(settings.site_id)
+    entries = {entry.spot_code: entry for entry in catalog.entries}
+    snapshot = payload.snapshot.model_copy(deep=True)
+    missing_codes = (set(snapshot.constraints.required_spots) | set(snapshot.constraints.excluded_spots)) - set(entries)
+    if missing_codes:
+        raise HTTPException(status_code=422, detail="必去或排除景点不在当前已发布目录中")
+    for stop in snapshot.stops:
+        if stop.kind != "visit" or stop.spot_code is None:
+            if stop.source_entry_id or stop.source_revision_id:
+                raise HTTPException(status_code=422, detail="未解析停留点不能携带已发布知识引用")
+            continue
+        entry = entries.get(stop.spot_code)
+        if entry is None:
+            raise HTTPException(status_code=422, detail=f"景点 {stop.spot_code} 不在当前已发布目录中")
+        stop.source_entry_id, stop.source_revision_id = entry.entry_id, entry.published_revision_id
+    current = await TourSessionRepository(db).get_session(identity.id, session_id)
+    previous = TourSnapshotV2.model_validate(current["snapshot"]) if current and current["snapshot"].get("schema_version") == 2 else None
+    snapshot = normalize_snapshot_provenance(snapshot, previous=previous, catalog_entries=entries)
+    try:
+        return await TourSessionRepository(db).save_revision(
+            identity.id, session_id, payload.expected_version, snapshot.model_dump(mode="json"), idempotency_key,
+            catalog_entries=entries,
+        )
+    except RevisionConflict as error:
+        raise _conflict(error) from error
+    except (IdempotencyConflict, ValueError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+
+
+@router.post("/{session_id}/upgrade-v2")
+async def upgrade_tour_session_v2(
+    session_id: str, payload: UpgradeItineraryRequest, request: Request,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=128)],
+    identity: TourIdentity = Depends(get_tour_identity), db: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_app_settings),
+):
+    _protect_write(request, identity, settings)
+    repo = TourSessionRepository(db)
+    current = await repo.get_session(identity.id, session_id)
+    if current is None:
+        raise HTTPException(status_code=404, detail="游览不存在")
+    if current["version"] != payload.expected_version:
+        raise HTTPException(status_code=409, detail={"message": "行程内容已更新", "current_version": current["version"]})
+    if current["snapshot"].get("schema_version") == 2:
+        raise HTTPException(status_code=409, detail="行程已是 V2 格式")
+    catalog = await PublishedAttractionCatalog(K01PublishedAttractionSource(db, site_id=settings.site_id)).list_for_site(settings.site_id)
+    upgraded = upgrade_snapshot(current["snapshot"])
+    for stop in upgraded.stops:
+        parsed = parse_spot_reference(stop.name, catalog)
+        if isinstance(parsed, ResolvedSpot):
+            item = parsed.attraction
+            stop.name, stop.spot_code = item.title, item.spot_code
+            stop.source_entry_id, stop.source_revision_id = item.entry_id, item.published_revision_id
+    for code_field, name_field in (("required_spots", "unresolved_required_names"),
+                                   ("excluded_spots", "unresolved_excluded_names")):
+        resolved, remaining = [], []
+        for label in getattr(upgraded.constraints, name_field):
+            parsed = parse_spot_reference(label, catalog)
+            if isinstance(parsed, ResolvedSpot): resolved.append(parsed.attraction.spot_code)
+            else: remaining.append(label)
+        setattr(upgraded.constraints, code_field, resolved)
+        setattr(upgraded.constraints, name_field, remaining)
+    try:
+        return await repo.save_revision(identity.id, session_id, payload.expected_version,
+            upgraded.model_dump(mode="json"), idempotency_key, "upgraded", allow_upgrade=True)
+    except RevisionConflict as error:
+        raise _conflict(error) from error
+    except (IdempotencyConflict, ValueError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+
+
+@router.get("/{session_id}/progress")
+async def get_tour_progress(session_id: str, identity: TourIdentity = Depends(get_tour_identity), db: AsyncSession = Depends(get_db_session)):
+    repo = TourSessionRepository(db)
+    item = await repo.get_progress(identity.id, session_id)
+    if item is None:
+        if await repo.get_session(identity.id, session_id) is None:
+            raise HTTPException(status_code=404, detail="游览不存在")
+        return {"status": "not_started", "progress_version": 0, "status_by_stop": {}}
+    return item
+
+
+@router.post("/{session_id}/start")
+async def start_tour_progress(
+    session_id: str, payload: StartTourRequest, request: Request,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=128)],
+    identity: TourIdentity = Depends(get_tour_identity), db: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_app_settings),
+):
+    _protect_write(request, identity, settings)
+    try:
+        result = await TourSessionRepository(db).start_progress(identity.id, session_id, payload.expected_version, idempotency_key)
+    except RevisionConflict as error:
+        raise _conflict(error) from error
+    except (ValueError, ProgressConflict) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    if result is None:
+        raise HTTPException(status_code=404, detail="游览不存在")
+    return result
+
+
+@router.post("/{session_id}/progress")
+async def command_tour_progress(
+    session_id: str, payload: ProgressCommandRequest, request: Request,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=128)],
+    identity: TourIdentity = Depends(get_tour_identity), db: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_app_settings),
+):
+    _protect_write(request, identity, settings)
+    try:
+        result = await TourSessionRepository(db).command_progress(identity.id, session_id,
+            payload.expected_progress_version, payload.command, idempotency_key)
+    except (ValueError, ProgressConflict) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    if result is None:
+        raise HTTPException(status_code=404, detail="游览不存在")
+    return result
+
+
+@router.get("/{session_id}/progress/events")
+async def list_tour_progress_events(session_id: str, identity: TourIdentity = Depends(get_tour_identity), db: AsyncSession = Depends(get_db_session)):
+    items = await TourSessionRepository(db).list_progress_events(identity.id, session_id)
+    if items is None: raise HTTPException(status_code=404, detail="游览不存在")
+    return {"items": items}
+
+
+@router.get("/{session_id}/budget")
+async def get_tour_budget(session_id: str, identity: TourIdentity = Depends(get_tour_identity), db: AsyncSession = Depends(get_db_session)):
+    repo = TourSessionRepository(db)
+    item = await repo.get_session(identity.id, session_id)
+    if item is None: raise HTTPException(status_code=404, detail="游览不存在")
+    try: snapshot = TourSnapshotV2.model_validate(item["snapshot"])
+    except ValidationError as error: raise HTTPException(status_code=409, detail="请先升级到 V2 行程") from error
+    raw = await repo.get_progress(identity.id, session_id)
+    progress = TourProgress.model_validate(raw) if raw else None
+    return validate_remaining_budget(snapshot, progress, datetime.now(UTC)).model_dump(mode="json")
+
+
+@router.post("/{session_id}/proposals", status_code=status.HTTP_201_CREATED)
+async def create_itinerary_proposal(
+    session_id: str, payload: CreateItineraryProposalRequest, request: Request,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=128)],
+    identity: TourIdentity = Depends(get_tour_identity), db: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_app_settings),
+):
+    _protect_write(request, identity, settings)
+    repo = TourSessionRepository(db)
+    current = await repo.get_session(identity.id, session_id)
+    if current is None: raise HTTPException(status_code=404, detail="游览不存在")
+    if current["snapshot"].get("schema_version") != 2:
+        raise HTTPException(status_code=409, detail="请先升级到 V2 行程后再创建修改提案")
+    if current["version"] != payload.expected_version:
+        raise HTTPException(status_code=409, detail={"message": "行程版本已变化", "current_version": current["version"]})
+    if payload.draft_snapshot.schema_version != 2 or snapshot_digest(payload.draft_snapshot) != payload.draft_digest:
+        raise HTTPException(status_code=422, detail="请提交摘要匹配的 V2 行程草稿")
+    progress_raw = await repo.get_progress(identity.id, session_id)
+    progress_version = int((progress_raw or {}).get("progress_version", 0))
+    if payload.progress_version != progress_version:
+        raise HTTPException(status_code=409, detail="游览进度已变化，请刷新后重试")
+    catalog = await PublishedAttractionCatalog(K01PublishedAttractionSource(db, site_id=settings.site_id)).list_for_site(settings.site_id)
+    entries = {entry.spot_code: entry for entry in catalog.entries}
+    previous = TourSnapshotV2.model_validate(current["snapshot"])
+    sanitized_draft = normalize_snapshot_provenance(
+        payload.draft_snapshot, previous=previous, catalog_entries=entries,
+    )
+    reservation, owns_execution = await repo.reserve_proposal(identity.id, session_id,
+        payload.expected_version, payload.progress_version, payload.draft_digest, catalog.digest,
+        payload.text, sanitized_draft.model_dump(mode="json"), idempotency_key)
+    if not owns_execution:
+        if reservation.get("status") == "failed":
+            raise HTTPException(status_code=503, detail=reservation.get("validation", {}).get("message", "行程提案未能完成"))
+        if reservation.get("status") == "executing":
+            return JSONResponse(status_code=202, content=reservation)
+        return reservation
+    await db.commit()  # release the read transaction before awaiting the model
+    try:
+        generated = await ItineraryIntentService().propose(payload.text, sanitized_draft, catalog, settings)
+    except IntentUnavailable as error:
+        await repo.fail_reserved_proposal(identity.id, session_id, reservation["id"], str(error), idempotency_key)
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    except IntentError as error:
+        await repo.fail_reserved_proposal(identity.id, session_id, reservation["id"], str(error), idempotency_key)
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return await repo.complete_reserved_proposal(identity.id, session_id, reservation["id"], generated, idempotency_key)
+
+
+@router.get("/{session_id}/proposals/{proposal_id}")
+async def get_itinerary_proposal(session_id: str, proposal_id: str,
+        identity: TourIdentity = Depends(get_tour_identity), db: AsyncSession = Depends(get_db_session)):
+    item = await TourSessionRepository(db).get_proposal(identity.id, session_id, proposal_id)
+    if item is None: raise HTTPException(status_code=404, detail="行程提案不存在")
+    return item
+
+
+@router.post("/{session_id}/proposals/{proposal_id}/apply")
+async def apply_itinerary_proposal(
+    session_id: str, proposal_id: str, payload: ApplyItineraryProposalRequest, request: Request,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=128)],
+    identity: TourIdentity = Depends(get_tour_identity), db: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_app_settings),
+):
+    _protect_write(request, identity, settings)
+    repo = TourSessionRepository(db)
+    proposal = await repo.get_proposal(identity.id, session_id, proposal_id)
+    if proposal is None: raise HTTPException(status_code=404, detail="行程提案不存在")
+    catalog = await PublishedAttractionCatalog(K01PublishedAttractionSource(db, site_id=settings.site_id)).list_for_site(settings.site_id)
+    if proposal["catalog_digest"] != catalog.digest:
+        raise HTTPException(status_code=409, detail="景点资料已更新，请重新生成提案")
+    try:
+        result = await repo.apply_proposal(identity.id, session_id, proposal_id, payload.expected_version,
+            payload.progress_version, payload.draft_digest, idempotency_key,
+            catalog_entries={entry.spot_code: entry for entry in catalog.entries})
+    except RevisionConflict as error:
+        raise _conflict(error) from error
+    except (IdempotencyConflict, ValueError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    if result is None: raise HTTPException(status_code=404, detail="行程提案不存在")
+    return result
 
 
 @router.post("/{session_id}/restore/{revision_id}")
