@@ -1,5 +1,11 @@
 # Worktree 改动逐路径核对（2026-11-05）
 
+## 本轮复核（主 checkout 音频时长与部署配置差异，2026-11-06）
+
+- 原 checkout 的 `backend/app/api/voice.py`、未跟踪 `backend/app/services/audio_duration.py`、`backend/app/tests/test_audio_duration.py`、`backend/app/tests/test_production_security_config.py`、`backend/app/tests/test_voice_api.py` 均与集成副本逐字节相同。`backend/.env.example` 的 ffprobe 配置与生产密码注释已在集成副本；差异是集成版另有 `SITE_ID=default`。`backend/app/core/config.py` 的音频 ffprobe、最大秒数、容量限制、视觉像素限制及 production security guard 已在集成版；该文件差异仅为集成版另有站点 ID 与知识导入配置/路径。
+- 对应现有回归 `test_audio_duration.py`、`test_production_security_config.py`、`test_voice_api.py` 共 19 passed、1 条 Starlette/AnyIO 弃用警告。第一次收集因重建 venv 缺 Alembic 失败 1 项，补齐声明依赖后复跑全组通过。测试使用 mock/probe stub 和 TestClient，不代表真实 ffprobe 部署或云 ASR provider 验收。
+- 结论：上述源实现/测试为“已合并”（逐文件相同）或“后续集成实现包含相同变更且扩展配置”；未复制源文件。原 checkout 95 状态路径、其他 worktree、快照和 `sources/` 未改。
+
 ## 本轮状态复核（快速答案 effects factory 阶段，2026-11-05）
 
 - 起始集成 checkout 和原仓库同名 ref 均为 `9e04962`。原活动 checkout `codex/repository-map@672a104` 仍有 95 个状态路径；V01/W02/W02-V01 为 `098553f`/49、`a8c2837`/35、`098553f`/39。五个保护快照可解析，phase3 仍登记 prunable，未执行 prune。
@@ -137,11 +143,11 @@
 |---|---|---|---|
 | ` M` | `AGENTS.md` | 已合并（当前内容与集成树逐字节相同） | 快照含该文件；集成树含该文件 |
 | ` M` | `README.md` | 文档内容不同；按限定范围不迁移此产品介绍 | 快照含该文件；集成树含该文件 |
-| ` M` | `backend/.env.example` | 同路径模板不同，未迁移；保留两侧配置供逐项校验 | 快照含该文件；集成树含该文件 |
+| ` M` | `backend/.env.example` | 主 checkout 新增的 ffprobe 配置与生产密码注释已在集成版；集成版另有 `SITE_ID`，模板差异保留，不覆盖 | 两侧直接比较；音频/安全配置行为由集成现有配置和 19 项对应回归佐证 |
 | ` M` | `backend/app/api/chat.py` | 已被后续集成实现替代（原工作树缺少当前可见性、视觉目录绑定与语义 FAQ 初始化） | 快照含该文件；集成树含该文件 |
 | ` M` | `backend/app/api/vision.py` | 已合并（当前内容与集成树逐字节相同） | 快照含该文件；集成树含该文件 |
 | ` M` | `backend/app/api/voice.py` | 已合并（当前内容与集成树逐字节相同） | 快照含该文件；集成树含该文件 |
-| ` M` | `backend/app/core/config.py` | 已被后续集成实现替代（原工作树删去站点/知识导入配置） | 快照含该文件；集成树含该文件 |
+| ` M` | `backend/app/core/config.py` | 主 checkout 新增的 ffprobe、音频时长/容量、视觉像素上限及生产密钥检查均在集成版；集成版额外保留 site_id 与知识导入配置/路径 | 两侧 unified diff；`test_audio_duration.py`、`test_production_security_config.py`、`test_voice_api.py` 19 passed |
 | ` M` | `backend/app/models/chat_log.py` | 已合并（当前内容与集成树逐字节相同） | 快照含该文件；集成树含该文件 |
 | ` M` | `backend/app/repositories/chat_log.py` | 已合并（当前内容与集成树逐字节相同） | 快照含该文件；集成树含该文件 |
 | ` M` | `backend/app/schemas/chat.py` | 已被后续集成实现替代（原工作树缺少视觉确认和证据修订字段） | 快照含该文件；集成树含该文件 |
