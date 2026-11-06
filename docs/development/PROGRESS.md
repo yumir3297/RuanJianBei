@@ -661,3 +661,5 @@ Worktree 本轮复核：原 checkout `codex/repository-map@672a104` 仍为 95 �
 2026-11-06：补强 `StreamAnswerOrchestrator` 行为契约：正常完成可缓存时，cache writer 必须使用当前请求 cache key、绑定来源和 expected knowledge epoch；completion 测试替身仅在回调实际启用时执行写入。定向流式/缓存集合 26 passed；全后端 670 passed、19 skipped、8 warnings（1 条 Starlette/AnyIO 弃用，7 条 Python 3.12 SQLite datetime adapter）；compileall、repository map（8 documents/84 routes）、scripts unittest 11 项及 diff check 通过。修正 TARGET 对 epoch/SSE 生命周期仍由 Pipeline 独占的旧描述，明确节点按边界共同负责。Pipeline 仍 618 行；接下来继续审查请求主流程中剩余生命周期组合，真实 provider/TTS 设备/生产数据库未验收。
 
 本轮 Worktree 起点为集成 checkout/ref `9a486e9`；原活动 checkout `codex/repository-map@672a104` 状态为 107 普通/128 展开，V01/W02/W02-V01 为 49/49、35/43、39/44；五个快照 refs 均可解析，phase3 worktree 仍 prunable 且未清理，所有检查过的 `sources/` clean，集成 `frontend/node_modules` 保持未跟踪软链接。本轮只改集成副本测试与架构/进度/Worktree 文档，未改原活动 checkout、源 worktree 或快照，未合并回原 checkout；现有逐项分类见 [Worktree 审计](WORKTREE_AUDIT_2026-11-05.md)。
+
+补充逐路径覆盖复核：将原仓库 Git porcelain `-z --untracked-files=all` 路径与 Worktree 审计表中记录的路径/目录前缀匹配，主 checkout 128/128、V01 49/49、W02 43/43、W02/V01 44/44 均有表项，漏列 0。此脚本核对的是审计覆盖，不单独证明表中“已合并/替代/未合并”的语义判断；分类结论仍依赖表内文件内容与行为证据。复核只读，所有源 worktree 与快照保持原样。
