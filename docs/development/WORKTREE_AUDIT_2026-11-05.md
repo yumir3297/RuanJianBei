@@ -414,6 +414,6 @@
 ## 本轮复核（RAG 空证据处理边界，2026-11-06）
 
 - 集成 checkout 起始 HEAD `9f17d0b`，原仓库 `refs/heads/codex/competition-integration` 同指 `9f17d0b`。实现变更仅在集成 checkout：Pipeline 空证据分支改由 `NoEvidenceAnswerHandler` 负责盲点记录与标准快速拒答；新增对应行为测试。原 checkout 与其他源 worktree 未修改。
-- 重新按原仓库 Git 元数据核对：主 checkout `codex/repository-map@672a104` 当前 101 个 porcelain 状态项（展开未跟踪目录 121）；V01 `098553f`/49 项，W02 `a8c2837`/35 项，W02-V01 `098553f`/39 项。前次记录的主 checkout 95 项没有逐路径快照，本轮无法把新增计数差归因或标为已合并，故全部按当前清单保留并以现有审计表作逐项依据。V01/W02 的内容分类仍按审计表：已合并的以集成源码逐文件比较为证，仅有快照的仍保留在 snapshot ref，尚未合并及被后续实现替代的条目按原分类记录；不能以祖先关系代替文件级比较。
+- 重新按原仓库 Git 元数据核对：主 checkout `codex/repository-map@672a104` 当前 103 个普通 porcelain 状态项（展开未跟踪目录 124；修正先前读数 101/121），所有当前路径均保留；旧清单缺失，变化不能逐路径回溯；V01 `098553f`/49 项，W02 `a8c2837`/35 项，W02-V01 `098553f`/39 项。前次记录的主 checkout 95 项没有逐路径快照，本轮无法把新增计数差归因或标为已合并，故全部按当前清单保留并以现有审计表作逐项依据。V01/W02 的内容分类仍按审计表：已合并的以集成源码逐文件比较为证，仅有快照的仍保留在 snapshot ref，尚未合并及被后续实现替代的条目按原分类记录；不能以祖先关系代替文件级比较。
 - 五个保护快照 refs 仍在；`/private/tmp/ai-guide-phase3` worktree 登记为 prunable，但未执行 prune；`sources/` clean；集成 `frontend/node_modules` 仍未跟踪。集成分支未合入原活动 checkout。
 - handler 初版曾与既有 AI/流式集合取得 205 passed。随后审阅取消边界，补上 handler 对其包装的 factory 事件流的显式关闭和关闭行为测试；重跑时临时 venv 已消失，系统 Python 3.12 无 pytest，且 PyPI DNS 失败，因此当前最终版本未能重跑 pytest。用 stub 模块执行等价异步行为脚本，确认 tracker 失败仍发答复且关闭 handler 会关闭内层流；Python 3.12 compileall、`git diff --check` 通过。结果不构成真实模型、provider、设备或部署数据库验收。剩余验证包括重建 pytest 依赖后复跑当前版本、真实云模型/TTS 与设备表现、部署数据库，以及无法回溯的原 checkout 旧 95 项逐路径清单。
