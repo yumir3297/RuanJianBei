@@ -1,5 +1,15 @@
 # 技术决策
 
+## 2026-11-06：把有证据回答的生成与完成组装移出 Pipeline
+
+问题：`QAPipeline._stream_chat()` 在 RAG/FAQ 证据选定后仍内联构造 `StreamAnswerGenerationFactory`、`StreamAnswerCompletionFactory` 和 `StreamAnswerRun`，并绑定 cache key、epoch、持久化、followups 与终态事件。这个阶段已不再做路由，但仍把请求级生成组合留在主业务流程中。
+
+选择：新增请求级 `StreamAnswerContext` 和 `StreamAnswerOrchestrator`，由 Pipeline 把已确定的请求、证据、FAQ/cache policy、来源、epoch 与 cache key 传入。Orchestrator 只组装现有 generation/completion/run 节点，不重新判定 FAQ/cache/RAG，不改变来源、epoch 或降级策略；`StreamAnswerRun` 继续拥有 generation→completion 的 SSE 生命周期。保留显式 Pipeline 和现有运行时组件，不引入 Agent 框架。
+
+验证：两项 orchestrator 行为测试覆盖 FAQ fallback 权威文本和降级不缓存，以及外层关闭 generation 后不启动 completion；新增测试先因模块缺失失败，接入后两项通过。新测试加 Pipeline、generation/completion factory 与 StreamAnswerRun 定向集 64 passed；全后端 669 passed、19 skipped、8 warnings。Python 3.12 compileall、repository map 检查与 `git diff --check` 通过。回归为本地替身/隔离 SQLite，不表示真实模型/provider/TTS 设备/生产库验收。
+
+回滚：若需要回退，只将组装恢复到 `_stream_chat()`，保留测试所断言的 FAQ fallback、降级 cache 禁用、request policy binding 与取消短路；不能让 orchestrator 重新承担 FAQ/cache/RAG 决策。
+
 ## 2026-11-06：显式拥有 StreamTurn 的嵌套 consumer，并保留迁移前已存在的应用日志记录器
 
 问题：`StreamTurn.events()` 通过裸 `async for` 转发 `consumer.events()`，外部 SSE 关闭时不能同步等待 consumer 的异步 finalizer；此外 Alembic `fileConfig()` 默认会把已存在的应用 logger 标为 disabled，迁移之后 AI 盲点等 QA 日志会被静默抑制。

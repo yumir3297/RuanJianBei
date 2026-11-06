@@ -14,6 +14,8 @@
 
 `StreamAnswerCompletionFactory` 只从 finalized generation outcome 构造本轮 completion effects 和 coordinator 参数。应使用 canonical answer；只有 terminal policy `should_cache` 为真时才传入 cache callback；保留 FAQ 完整文本、streaming TTS 状态、degraded blind spot、persist 参数和 done 元数据。该 factory 不自行执行副作用，最终顺序仍归 `StreamCompletionCoordinator`，epoch fence 不得绕过。
 
+`StreamAnswerOrchestrator` 只接收 Pipeline 已完成路由和证据选择后的 `StreamAnswerContext`，再按单请求顺序创建 generation factory、completion factory 和 `StreamAnswerRun`。它不得改变输入的 FAQ/cache eligibility、来源集合、RAG 证据或 expected epoch；缓存 key 只绑定到该 request 的 cache callback。外层关闭必须关闭 orchestrator 持有的 `StreamAnswerRun.events()`，并向 generation/completion 当前活动迭代器传播关闭。FAQ、cache、RAG 选择仍归 `QAPipeline`/`AnswerKnowledgePathResolver`，证据和来源绑定仍归 `StreamEvidenceRun`。
+
 `StreamAnswerGenerationFactory` 只负责将当前 `ChatRequest` 与已选证据、受众/记忆/视觉上下文、FAQ 来源及共享缓存资格映射到 `StreamGenerationRun`。FAQ 改写使用 FAQ 原始权威答案作为 fallback input；请求 epoch callback 必须传入实际 StreamTurn 与 generation checks；`cache_allowed` 是上游判定结果，factory 不得自行放宽。实际 LLM query、TTS producer 和取消仍由 `StreamTurnFactory`/`StreamTurn` 管理。
 
 `resolve_request_query_context()` 将标准化检索 query 与意图路由输入分开：视觉 `retrieval_query`（去首尾空格并截断至 1000 字符）只追加到 retrieval query，intent 始终检查游客原始 query；有 vision 时不继承旧 conversation context，除非 selection resolution 提供 `active_subject`，此时构造以当前 subject 为准且保留 history summary 的新上下文。对未带 vision 且无新 subject 的文本请求，应将原 context 交给 QueryRewriter。此解析器不决定 FAQ/cache/RAG 或 scope。

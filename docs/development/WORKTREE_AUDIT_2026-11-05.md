@@ -1,5 +1,11 @@
 # Worktree 改动逐路径核对（2026-11-05）
 
+## 本轮复核（生成回答组合边界，2026-11-06）
+
+- 起始集成 checkout 与原仓库 `codex/competition-integration` ref 均为 `1c4c415`。主 checkout `codex/repository-map@672a104` 为 107 个 porcelain 路径（展开 128）；V01 `098553f`/49，W02 `a8c2837`/35 普通与 43 展开，W02/V01 `098553f`/39 普通与 44 展开。快照 `4acaa53`、`e115eab`、`3805943`、`48ef626`、`5433557` 均可解析；phase3 路径仍 prunable，未 prune。已有逐项分类表未因本轮变更，仍按字节比较/行为证据标记已合并、仅快照、尚未合并或后续实现替代；不按祖先关系判定。
+- 本轮只改集成副本：新增 `StreamAnswerOrchestrator`/`StreamAnswerContext`，Pipeline 有证据生成阶段改用该单请求组合点；新增两项行为测试，更新当前/目标架构、契约、决策、进度文档。原活动 checkout、V01/W02/W02-V01 worktree、快照均未改；`sources/` clean；集成副本 `frontend/node_modules` 仍为唯一未跟踪项。
+- 新增阶段的全后端回归 669 passed、19 skipped、8 warnings；AI 相关自动化仍使用本地替身/隔离 SQLite，真实 provider、设备和部署 DB 未验收。
+
 ## 本轮复核（SSE consumer 关闭与 AI 日志完整性，2026-11-06）
 
 - 开始基线：集成副本 `integration-work/v01` 为 `codex/competition-integration@2bd81f5`，原仓库同名分支 ref 同指 `2bd81f5`；该集成副本是独立 checkout，不在原仓库 `git worktree list` 登记内。

@@ -52,9 +52,10 @@ from app.services.qa.stream_events import StreamEvent
 from app.services.qa.final_answer_speech_emitter import FinalAnswerSpeechEmitter
 from app.services.qa.fast_path_answer_coordinator import FastPathAnswerCoordinator
 from app.services.qa.stream_completion import StreamCompletionCoordinator
-from app.services.qa.stream_answer_completion_factory import StreamAnswerCompletionFactory
-from app.services.qa.stream_answer_generation_factory import StreamAnswerGenerationFactory
-from app.services.qa.stream_answer_run import StreamAnswerRun
+from app.services.qa.stream_answer_orchestrator import (
+    StreamAnswerContext,
+    StreamAnswerOrchestrator,
+)
 from app.services.qa.stream_turn_factory import StreamTurnFactory
 from app.services.qa.queued_speech_publisher import QueuedSpeechPublisher
 from app.services.qa.fast_path_answer_factory import FastPathAnswerFactory
@@ -203,6 +204,18 @@ class QAPipeline:
             audio_worker=self.queued_speech_publisher,
             adapt_tts_event=self._handle_streaming_tts_event,
             coerce_llm_event=self._coerce_llm_event,
+        )
+        self.stream_answer_orchestrator = StreamAnswerOrchestrator(
+            turn_factory=self.stream_turn_factory,
+            llm_provider_name=self.llm_provider_name,
+            emotion_aware_query=self._emotion_aware_query,
+            epoch_is_current=lambda expected_epoch: self._epoch_is_current(expected_epoch),
+            completion=self.stream_completion,
+            cache=self.qa_cache,
+            persist_interaction=self._persist_interaction,
+            blind_spot_tracker=self.blind_spot_tracker,
+            followup_event_builder=self._followup_event,
+            done_event_builder=self._done_event,
         )
 
     def _current_request_state(self) -> _PipelineRequestState:
@@ -445,12 +458,7 @@ class QAPipeline:
 
         # FAQ 走 LLM 改写时保留可观测的命中来源，便于与纯 FAQ 快路径区分。
         llm_hit_level = faq_path.hit_level if faq_documents is not None and faq_path is not None else "rag"
-        generation_run = StreamAnswerGenerationFactory(
-            turn_factory=self.stream_turn_factory,
-            llm_provider_name=self.llm_provider_name,
-            emotion_aware_query=self._emotion_aware_query,
-            epoch_is_current=lambda: self._epoch_is_current(request_epoch),
-        ).build(
+        answer_context = StreamAnswerContext(
             request=request,
             documents=documents,
             audience=audience,
@@ -463,31 +471,14 @@ class QAPipeline:
             fallback_hit_level=f"{llm_hit_level}_llm_fallback",
             faq_answer=faq_path.source_answer if faq_path is not None else "",
             faq_sources=faq_sources,
-        )
-        completion_factory = StreamAnswerCompletionFactory(
-            completion=self.stream_completion,
-            cache_writer=lambda answer, bound_sources, epoch: self.qa_cache.set(
-                cache_key, answer, bound_sources, epoch=epoch
-            ),
-            persist_interaction=self._persist_interaction,
-            blind_spot_tracker=self.blind_spot_tracker,
-            request=request,
             normalized_query=normalized_query,
             sources=sources,
             expected_epoch=request_epoch,
             start=start,
-            active_subject=resolved.active_subject,
-            followup_event=lambda: self._followup_event(resolved),
-            done_event_builder=self._done_event,
-            faq_documents_present=faq_documents is not None,
-            text_only=request.text_only,
-            epoch_is_current=lambda: self._epoch_is_current(request_epoch),
+            cache_key=cache_key,
+            resolved=resolved,
         )
-        answer_run = StreamAnswerRun(
-            generation_run=generation_run,
-            completion_factory=completion_factory.build,
-        )
-        async with aclosing(answer_run.events()) as answer_events:
+        async with aclosing(self.stream_answer_orchestrator.events(answer_context)) as answer_events:
             async for event in answer_events:
                 yield event
 
