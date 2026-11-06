@@ -429,16 +429,18 @@ class QAPipeline:
         sources = evidence_outcome.sources
 
         if not documents:
-            answer_events = self.no_evidence_answer_handler.events(
-                request=request,
-                normalized_query=normalized_query,
-                start=start,
-                resolved=resolved,
-                response_policy=self._active_response_policy,
-                expected_epoch=request_epoch,
-            )
-            async for event in answer_events:
-                yield event
+            async with aclosing(
+                self.no_evidence_answer_handler.events(
+                    request=request,
+                    normalized_query=normalized_query,
+                    start=start,
+                    resolved=resolved,
+                    response_policy=self._active_response_policy,
+                    expected_epoch=request_epoch,
+                )
+            ) as answer_events:
+                async for event in answer_events:
+                    yield event
             return
 
         # FAQ 走 LLM 改写时保留可观测的命中来源，便于与纯 FAQ 快路径区分。

@@ -277,3 +277,13 @@ FAQ 改写失败时必须在最终 text 和音频补播前恢复权威 FAQ 答�
 验证：先将 `test_closing_final_audio_delivery_cancels_later_scheduled_audio` 收紧为 `aclose()` 后立即断言取消，旧实现按预期失败；加显式关闭后该测试通过。AI/流式/FAQ/cache/RAG/epoch/TTS/SSE 选定集合 182 passed、1 条 Starlette/AnyIO 弃用警告；Python 3.12 compileall 和 diff check 通过。测试用本地替身，不代表真实 TTS/provider/设备验收。
 
 回滚：若在受支持运行时取消语义有回退，恢复原转发并保留同步清理测试，修正 owner 生命周期后再继续。
+
+## 2026-11-06：Pipeline 关闭无证据 handler 流
+
+问题：`NoEvidenceAnswerHandler` 已负责关闭内部 FastPath 事件流，但 `QAPipeline` 裸转发 handler 自身的异步生成器；SSE 客户端中断时，handler 的关闭链不会在 Pipeline `aclose()` 返回前确定执行。
+
+选择：在 RAG 空结果分支以 `aclosing` 显式拥有 handler 事件流，形成 Pipeline→handler→FastPath 两层同步关闭链。无证据答复和 blind-spot fail-soft 逻辑不变。
+
+验证：新增 Pipeline 级取消测试；测试替换 handler 内捕获的 factory，旧裸转发结构按预期失败。修复后定向取消测试 2 passed，选定 AI/流式/FAQ/cache/RAG/epoch/TTS/SSE 回归 183 passed、1 条 Starlette/AnyIO 弃用警告；compileall/diff check 通过。测试为本地替身，不构成真实服务或设备验收。
+
+回滚：若取消测试回退，恢复显式 owner 关闭并检查异步生成器关闭是否在 `aclose()` 返回前完成；保留两层边界测试。

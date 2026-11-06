@@ -834,6 +834,47 @@ def test_closing_chat_stream_closes_fast_path_event_source():
     asyncio.run(scenario())
 
 
+def test_closing_chat_stream_closes_no_evidence_handler_source():
+    from app.services.qa.stream_events import StreamEvent
+
+    class BlockingFastPathFactory:
+        def __init__(self):
+            self.closed = asyncio.Event()
+            self.calls = 0
+
+        def events(self, **_kwargs):
+            self.calls += 1
+            async def source():
+                try:
+                    yield StreamEvent(type="text", data={"text": "无证据答复"})
+                    await asyncio.Event().wait()
+                finally:
+                    self.closed.set()
+
+            return source()
+
+    async def scenario():
+        pipeline = _build_test_pipeline(rag_service=DummyRAGService())
+        factory = BlockingFastPathFactory()
+        pipeline.fast_path_answer_factory = factory
+        pipeline.no_evidence_answer_handler.fast_path_answer_factory = factory
+        stream = pipeline.stream_chat(ChatRequest(
+            query="一个没有检索证据的特殊问题",
+            session_id="cancel-no-evidence",
+            text_only=True,
+        ))
+
+        async for event in stream:
+            if event.type == "text":
+                break
+        await stream.aclose()
+
+        assert factory.calls == 1
+        assert factory.closed.is_set(), "closing SSE must close the no-evidence source before returning"
+
+    asyncio.run(scenario())
+
+
 def _run_turn(pipeline, **request_overrides):
     request_kwargs = {
         "query": "有什么特色",

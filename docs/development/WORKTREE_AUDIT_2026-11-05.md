@@ -436,3 +436,9 @@
 - pytest 当前不可用（临时环境缺失、系统解释器没有 pytest，安装受 PyPI DNS 阻断）；等价复现先失败后通过，compileall/diff check 通过。Pipeline 回归测试已写但未运行，当前代码版本的完整 pytest 结果缺失。真实 TTS/provider/设备未验收。
 - 集成起始基线/ref `0a13eeb`；原 checkout `672a104`/最新 107 普通状态项、128 展开项（本轮较早读数 106/127、103/124，无法逐路径归因变化；当前路径均保留）；V01/W02/W02-V01 `098553f`/49、`a8c2837`/35、`098553f`/39；五个快照保留，phase3 仍 prunable 未清理，sources clean，node_modules 未跟踪。重新运行 porcelain 覆盖脚本：主 checkout 107/107、V01 49/49、W02 43 个展开路径由 35 行目录/文件记录覆盖、W02/V01 44 个展开路径由 39 行记录覆盖，均无漏项。没有改动源 worktree，也没有把集成内容合入原活动 checkout。
 - 补充验证：向临时环境安装项目轻量依赖、pytest-asyncio 与 asyncpg 后，当前最终代码的选定 AI/流式集合 182 passed、1 条 Starlette/AnyIO 弃用警告；覆盖 Pipeline 新增取消测试。该集合不含真实 provider/device/deployed DB 验收。先前记录的 pytest collection 阻塞已解除。
+
+## 本轮复核（无证据 handler 取消链，2026-11-06）
+
+- 集成 checkout/ref 起点 `7f6aa3b`；原 checkout `codex/repository-map@672a104` 107 普通/128 展开状态路径，V01/W02/W02-V01 49/35/39 项，五个快照 refs 保留，phase3 worktree 仍 prunable 未清理，sources clean，集成 node_modules 未跟踪。
+- 增加 Pipeline 级测试确认取消无证据答案时关闭 handler 内部 FastPath 源；测试先在旧结构失败，添加 Pipeline 对 handler 流的 `aclosing` 后通过。定向两个取消测试 2 passed；扩展 AI/流式选定集合 183 passed、1 条 Starlette/AnyIO 弃用警告；compileall/diff check 通过。
+- 仅改集成副本 Pipeline、行为测试和契约/进度文档；未改原 checkout、V01/W02 worktree 或快照，未合并到原活动 checkout。
