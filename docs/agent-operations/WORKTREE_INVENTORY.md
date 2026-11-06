@@ -17,6 +17,7 @@ Audit date: 2026-11-07. Remote refs were fetched from `origin`; no remote branch
 |---|---|---|---|
 | `origin/master` | `540568e231bbda10bfdfdeceaea4041aa681b078` | GitHub default branch; base ancestor | `HISTORICAL` — not edited directly |
 | `origin/codex/competition-integration` | `7ef0459c669ef896ca2da6c1a9fc008f708e74df` | 432 commits ahead of master; its parent `3bba074` is code/integration state and the tip adds archived delivery reports; contains both map and K01 lineages | `MERGE` — chosen source baseline for the isolated branch, not a direct merge to master |
+| `origin/integration/ai-workbench-final` | `8063453290be92cf683469822332fa96fc7cda09` at initial PR creation | This round's tested implementation commit; PR #3 may advance with docs-only handoff updates | `CONTINUE` — pushed; PR #3 is open against `codex/competition-integration` |
 | `origin/codex/repository-map` | `672a104ff81c50047dff5327ca317b5e3c332eb1` | One map commit beyond master; ancestor of selected integration | `ALREADY_INCLUDED` |
 | local `codex/knowledge-workspace` | `914c030b2e2cb339d64d22dec7a53efce4843e8f` | Nine K01 commits beyond master; ancestor of selected integration | `ALREADY_INCLUDED` |
 | `origin/codex/workspace-snapshot-main-checkout` | `22973a8da7ebbb2390dbfdde21c8af89e2ab705b` | Snapshot commit on map ancestry; historical audit recorded many exact-blob matches plus superseded/unscoped design paths | `PARTIAL_PICK` — no wholesale merge; current remaining differences were reviewed and found redundant, superseded or outside confirmed scope |
@@ -28,8 +29,9 @@ Audit date: 2026-11-07. Remote refs were fetched from `origin`; no remote branch
 ## GitHub work
 
 - Open PR #1: `codex/repository-map` → `master`, https://github.com/yumir3297/RuanJianBei/pull/1. Its code is already in the selected integration baseline; this audit did not merge or close the PR.
+- Open PR #3: `integration/ai-workbench-final` → `codex/competition-integration`, https://github.com/yumir3297/RuanJianBei/pull/3. Created after the initial branch/issue inventory; contains implementation commit `8063453290be92cf683469822332fa96fc7cda09`.
 - Open Issue #2: C01/W01 browser acceptance, https://github.com/yumir3297/RuanJianBei/issues/2. It remains an external device-acceptance item.
-- `gh pr list --state all` found no other PRs at audit time; `gh issue list --state all` found no other issues at audit time.
+- Initial `gh pr list --state all` found no other PRs before #3 was created; `gh issue list --state all` found no other issues at audit time.
 
 ## Snapshot safety and migration note
 

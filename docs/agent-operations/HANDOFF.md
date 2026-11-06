@@ -7,7 +7,8 @@ Updated: 2026-11-07. Repository: `yumir3297/RuanJianBei`.
 - Worktree: `~/RuanJianBei-integration-ai-workbench`
 - Branch: `integration/ai-workbench-final`
 - Selected source baseline: `7ef0459c669ef896ca2da6c1a9fc008f708e74df` (`origin/codex/competition-integration`)
-- Current changes are being prepared on this branch. Before commit, verify the final diff and tests; after commit, identify the commit containing this file with `git log -1 --format='%H' -- docs/agent-operations/HANDOFF.md`.
+- Validated implementation commit: `8063453290be92cf683469822332fa96fc7cda09`.
+- PR #3 is open: https://github.com/yumir3297/RuanJianBei/pull/3 (base `codex/competition-integration`, head `integration/ai-workbench-final`). The current PR head SHA is available with `git rev-parse HEAD`; this handoff's containing commit is available with `git log -1 --format='%H' -- docs/agent-operations/HANDOFF.md`.
 - Never continue by modifying `master` or the original `~/RuanJianBei` checkout.
 
 ## Read first
@@ -23,13 +24,13 @@ Updated: 2026-11-07. Repository: `yumir3297/RuanJianBei`.
 - Wired persistent K01 publication recovery to the admin UI. The UI restores known jobs by GET; unknown create results require an explicit same-idempotency-key recovery; browser storage failure fails closed.
 - Independent review identified and the current diff addresses definitive 4xx stale-draft rejection, lost retry responses, status polling after unmount, and read-only recovery when only in-memory job ID persistence failed.
 - Added the missing pinned async pytest plugin and corrected stale knowledge architecture, feature map and backlog claims.
-- Final automated evidence on the current change set: backend 671 passed / 19 skipped; frontend 164 passed; production build succeeded with a large-chunk warning; map checker and 11 script tests passed; migration lineage has one head and selected SQLite migration tests passed 7. Focused publication recovery: 13 passed. Independent review has no remaining P0/P1. Commit, push and PR remain. See [TEST_STATUS.md](TEST_STATUS.md).
+- Final automated evidence on the validated implementation commit: backend 671 passed / 19 skipped; frontend 164 passed; production build succeeded with a large-chunk warning; map checker and 11 script tests passed; migration lineage has one head and selected SQLite migration tests passed 7. Focused publication recovery: 13 passed. Independent review has no remaining P0/P1. The implementation branch is pushed and PR #3 is open. See [TEST_STATUS.md](TEST_STATUS.md).
 
 ## Immediate next actions
 
-1. Inspect the final diff and verify `git diff --check`.
-2. Commit on `integration/ai-workbench-final`.
-3. Push the feature branch and open a PR targeting `codex/competition-integration`, not `master`.
+1. Check for new commits or reviewer feedback on PR #3 before taking further action.
+2. Re-run relevant tests if any source changes are made.
+3. Keep `master` untouched; any additional fixes stay on this PR branch.
 
 ## Blockers and boundaries
 

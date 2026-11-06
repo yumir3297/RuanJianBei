@@ -19,6 +19,6 @@ Updated: 2026-11-07. Feature status is based on source and tests in the selected
 | K02/W03/O01/O02/R01/C01 | **Partial or not implemented** | See backlog and [DECISIONS.md](DECISIONS.md). Candidate or unconfirmed scope is not silently expanded into a full product. | Deferred/needs confirmed design or external evidence |
 | CASS/offline | **Held for evidence/design gate** | Only the separate `feat/location-guide-opt` branch has a CASS proposal and offline companion. Do not merge its map/telephone placeholders as verified resources; detailed reasons in [DECISIONS.md](DECISIONS.md). | Source branch preserved |
 | REVIEW-01 | **Done** — independent final review | Two read-only review passes; all P1/P2 findings were fixed, reviewer found no remaining P0/P1. Final test/status documentation reconciled. | Reviewer + Supervisor |
-| DELIVERY-01 | **Pending** — push feature branch and open PR | PR target must be `codex/competition-integration`; do not alter `master` | Supervisor |
+| DELIVERY-01 | **Done** — push feature branch and open PR | Implementation commit `8063453290be92cf683469822332fa96fc7cda09` is pushed; PR #3 is open against `codex/competition-integration`. Do not alter `master`. | Supervisor |
 
 Definition of Done for code changes includes updating or verifying `docs/REPO_MAP.md` unchanged, feature tests, `git diff --check`, a commit SHA, and actual validation boundaries.
