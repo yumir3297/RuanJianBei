@@ -267,3 +267,13 @@ FAQ 改写失败时必须在最终 text 和音频补播前恢复权威 FAQ 答�
 验证：新增 Pipeline 级早关测试。stdlib async-generator 边界复现先按旧结构失败，加入 `aclosing` 后通过；临时环境补齐轻量依赖后，含 Pipeline、FAQ/cache/RAG/epoch、stream 生命周期、TTS/SSE 的选定回归 182 passed，1 条 Starlette/AnyIO `BlockingPortal` 弃用警告；compileall 和 diff check 通过。用例使用本地替身，不表示真实模型/provider/设备验收。
 
 回滚：如果关闭测试在受支持运行时失败，恢复原转发并先修复迭代器关闭契约；不要删除取消回归。
+
+## 2026-11-06：尾段音频流关闭时同步取消排队任务
+
+问题：`StreamTurn.final_audio_events()` 将 `AudioEventDelivery.events()` 裸转发。客户端关闭外层生成器时，内层 delivery owner 的 `finally`/错误清理可能晚于 `aclose()` 返回，导致已排队的下一句语音继续运行。
+
+选择：用 `aclosing` 包住 delivery 事件迭代器，使 `AudioEventDelivery` 在 `StreamTurn.final_audio_events()` 返回关闭前执行取消并等待音频任务结束。FIFO、epoch 检查、事件顺序和文本回退不变。
+
+验证：先将 `test_closing_final_audio_delivery_cancels_later_scheduled_audio` 收紧为 `aclose()` 后立即断言取消，旧实现按预期失败；加显式关闭后该测试通过。AI/流式/FAQ/cache/RAG/epoch/TTS/SSE 选定集合 182 passed、1 条 Starlette/AnyIO 弃用警告；Python 3.12 compileall 和 diff check 通过。测试用本地替身，不代表真实 TTS/provider/设备验收。
+
+回滚：若在受支持运行时取消语义有回退，恢复原转发并保留同步清理测试，修正 owner 生命周期后再继续。

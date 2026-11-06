@@ -144,6 +144,7 @@ async def test_closing_final_audio_delivery_cancels_later_scheduled_audio():
     await asyncio.wait_for(second_audio_started.wait(), timeout=1)
     await events.aclose()
 
+    assert second_audio_cancelled.is_set(), "aclose must finish cancelling queued speech before returning"
     await asyncio.wait_for(second_audio_cancelled.wait(), timeout=1)
     assert turn.audio_group.pending == ()
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncIterable, AsyncIterator, Awaitable, Callable, Iterable
+from contextlib import aclosing
 
 from app.services.llm.types import LLMStreamEvent, LLMUsage
 from app.services.qa.queued_stream_events import QueuedStreamEvents
@@ -117,8 +118,9 @@ class StreamTurn:
             cancel_audio=self.cancel_audio,
         )
         delivery = AudioEventDelivery(drainer, self.cancel_audio)
-        async for event in delivery.events():
-            yield event
+        async with aclosing(delivery.events()) as events:
+            async for event in events:
+                yield event
         self.audio_visibility_changed = delivery.visibility_changed
 
     @property
