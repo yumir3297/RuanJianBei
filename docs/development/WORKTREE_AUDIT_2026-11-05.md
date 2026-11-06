@@ -237,6 +237,18 @@
 | `??` | `frontend/src/utils/publicationRecovery.js` | 已合并（当前内容与集成树逐字节相同） | 快照含该文件；集成树含该文件 |
 | `??` | `frontend/src/utils/speechRatePreference.js` | 已合并（当前内容与集成树逐字节相同） | 快照含该文件；集成树含该文件 |
 | `??` | `frontend/tests/` | 目录递归比较：15 个文件逐字节相同、1 个不同，集成树另有 22 个；保留两侧版本，本轮不迁移前端测试 | 当前文件 16；与集成树相同 15、不同 1、集成缺少 0、集成额外 22；快照路径 16 |
+| ` M` | `frontend/src/App.vue` | 尚未合并：当前内容不同于主 checkout 保全快照 `e115eab` 与集成版；前端范围外改动，原样保留 | snapshot=yes (different); integration=yes (different) |
+| ` M` | `frontend/src/main.js` | 尚未合并：当前内容不同于主 checkout 保全快照 `e115eab` 与集成版；前端范围外改动，原样保留 | snapshot=yes (different); integration=yes (different) |
+| ` M` | `frontend/src/views/admin/AdminLogin.vue` | 尚未合并：当前内容不同于主 checkout 保全快照 `e115eab` 与集成版；前端范围外改动，原样保留 | snapshot=yes (different); integration=yes (different) |
+| ` M` | `frontend/src/views/admin/AnalyticsReport.vue` | 尚未合并：当前内容不同于主 checkout 保全快照 `e115eab` 与集成版；前端范围外改动，原样保留 | snapshot=yes (different); integration=yes (different) |
+| ` M` | `frontend/src/views/admin/AvatarConfig.vue` | 尚未合并：当前内容不同于主 checkout 保全快照 `e115eab` 与集成版；前端范围外改动，原样保留 | snapshot=yes (different); integration=yes (different) |
+| ` M` | `frontend/src/views/admin/BlindSpotManage.vue` | 尚未合并：当前内容不同于主 checkout 保全快照 `e115eab` 与集成版；前端范围外改动，原样保留 | snapshot=yes (different); integration=yes (different) |
+| ` M` | `frontend/src/views/admin/Dashboard.vue` | 尚未合并：当前内容不同于主 checkout 保全快照 `e115eab` 与集成版；前端范围外改动，原样保留 | snapshot=yes (different); integration=yes (different) |
+| ` M` | `frontend/src/views/admin/DisplayAssets.vue` | 尚未合并：当前内容不同于主 checkout 保全快照 `e115eab` 与集成版；前端范围外改动，原样保留 | snapshot=yes (different); integration=yes (different) |
+| ` M` | `frontend/src/views/admin/ExperienceReport.vue` | 尚未合并：当前内容不同于主 checkout 保全快照 `e115eab` 与集成版；前端范围外改动，原样保留 | snapshot=yes (different); integration=yes (different) |
+| ` M` | `frontend/src/views/admin/KnowledgeManage.vue` | 尚未合并：当前内容不同于主 checkout 保全快照 `e115eab` 与集成版；前端范围外改动，原样保留 | snapshot=yes (different); integration=yes (different) |
+| `??` | `frontend/src/assets/admin-workbench.css` | 仅存在于当前主 checkout 工作树；无快照、无集成版本。保留，当前不纳入 AI/Worktree 集成改动 | snapshot=no; integration=no |
+| `??` | `output/` | 目录中两张 admin-design 本地截图仅存在于当前主 checkout；无快照、无集成版本。原样保留，当前不处理设计产物 | current files=2; snapshot=no; integration=no |
 
 ## V01/W02 活动 worktree 差异
 
@@ -422,5 +434,5 @@
 
 - 在代码审查中发现 `QAPipeline` 对确定性/FAQ/cache 的 factory 异步流使用裸 `async for`。Python stdlib 等价复现确认关闭外层生成器时，内层 source 的 `finally` 尚未执行；因此在三个直接转发点加 `aclosing`，无证据路径由 handler 负责相同 owner 清理。新增 Pipeline 级早关行为测试。
 - pytest 当前不可用（临时环境缺失、系统解释器没有 pytest，安装受 PyPI DNS 阻断）；等价复现先失败后通过，compileall/diff check 通过。Pipeline 回归测试已写但未运行，当前代码版本的完整 pytest 结果缺失。真实 TTS/provider/设备未验收。
-- 集成起始基线/ref `0a13eeb`；原 checkout `672a104`/最新 106 普通状态项、127 展开项（本轮较早读数 103/124，无法逐路径归因变化；当前路径均保留）；V01/W02/W02-V01 `098553f`/49、`a8c2837`/35、`098553f`/39；五个快照保留，phase3 仍 prunable 未清理，sources clean，node_modules 未跟踪。没有改动源 worktree，也没有把集成内容合入原活动 checkout。
+- 集成起始基线/ref `0a13eeb`；原 checkout `672a104`/最新 107 普通状态项、128 展开项（本轮较早读数 106/127、103/124，无法逐路径归因变化；当前路径均保留）；V01/W02/W02-V01 `098553f`/49、`a8c2837`/35、`098553f`/39；五个快照保留，phase3 仍 prunable 未清理，sources clean，node_modules 未跟踪。重新运行 porcelain 覆盖脚本：主 checkout 107/107、V01 49/49、W02 43 个展开路径由 35 行目录/文件记录覆盖、W02/V01 44 个展开路径由 39 行记录覆盖，均无漏项。没有改动源 worktree，也没有把集成内容合入原活动 checkout。
 - 补充验证：向临时环境安装项目轻量依赖、pytest-asyncio 与 asyncpg 后，当前最终代码的选定 AI/流式集合 182 passed、1 条 Starlette/AnyIO 弃用警告；覆盖 Pipeline 新增取消测试。该集合不含真实 provider/device/deployed DB 验收。先前记录的 pytest collection 阻塞已解除。
