@@ -318,19 +318,21 @@ class QAPipeline:
         if deterministic_answer is not None:
             if deterministic_answer.status_text is not None:
                 yield StreamEvent(type="status", data={"text": deterministic_answer.status_text})
-            answer_events = self.fast_path_answer_factory.events(
-                request=request,
-                normalized_query=normalized_query,
-                answer=deterministic_answer.answer,
-                sources=deterministic_answer.sources,
-                hit_level=deterministic_answer.hit_level,
-                start=start,
-                resolved=resolved,
-                response_policy=self._active_response_policy,
-                expected_epoch=request_epoch,
-            )
-            async for event in answer_events:
-                yield event
+            async with aclosing(
+                self.fast_path_answer_factory.events(
+                    request=request,
+                    normalized_query=normalized_query,
+                    answer=deterministic_answer.answer,
+                    sources=deterministic_answer.sources,
+                    hit_level=deterministic_answer.hit_level,
+                    start=start,
+                    resolved=resolved,
+                    response_policy=self._active_response_policy,
+                    expected_epoch=request_epoch,
+                )
+            ) as answer_events:
+                async for event in answer_events:
+                    yield event
             return
         cache_key = build_selection_cache_key(
             normalized_query,
@@ -362,19 +364,21 @@ class QAPipeline:
             if not await self._epoch_is_current(request_epoch):
                 yield StreamEvent(type="error", data={"message": "知识内容已更新，请重新提问。"})
                 return
-            answer_events = self.fast_path_answer_factory.events(
-                request=request,
-                normalized_query=normalized_query,
-                answer=faq_path.answer,
-                sources=faq_path.sources,
-                hit_level=faq_path.hit_level,
-                start=start,
-                resolved=resolved,
-                response_policy=self._active_response_policy,
-                expected_epoch=request_epoch,
-            )
-            async for event in answer_events:
-                yield event
+            async with aclosing(
+                self.fast_path_answer_factory.events(
+                    request=request,
+                    normalized_query=normalized_query,
+                    answer=faq_path.answer,
+                    sources=faq_path.sources,
+                    hit_level=faq_path.hit_level,
+                    start=start,
+                    resolved=resolved,
+                    response_policy=self._active_response_policy,
+                    expected_epoch=request_epoch,
+                )
+            ) as answer_events:
+                async for event in answer_events:
+                    yield event
             return
 
         if knowledge_path.cache_allowed is None:
@@ -387,19 +391,21 @@ class QAPipeline:
         if cached is not None:
             if cached.answer is None:
                 raise RuntimeError("current cached answer is missing its resolved text")
-            answer_events = self.fast_path_answer_factory.events(
-                request=request,
-                normalized_query=normalized_query,
-                answer=cached.answer,
-                sources=cached.sources,
-                hit_level="cache",
-                start=start,
-                resolved=resolved,
-                response_policy=self._active_response_policy,
-                expected_epoch=request_epoch,
-            )
-            async for event in answer_events:
-                yield event
+            async with aclosing(
+                self.fast_path_answer_factory.events(
+                    request=request,
+                    normalized_query=normalized_query,
+                    answer=cached.answer,
+                    sources=cached.sources,
+                    hit_level="cache",
+                    start=start,
+                    resolved=resolved,
+                    response_policy=self._active_response_policy,
+                    expected_epoch=request_epoch,
+                )
+            ) as answer_events:
+                async for event in answer_events:
+                    yield event
             return
 
         evidence_run = StreamEvidenceRun(

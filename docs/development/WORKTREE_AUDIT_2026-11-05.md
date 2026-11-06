@@ -417,3 +417,9 @@
 - 重新按原仓库 Git 元数据核对：主 checkout `codex/repository-map@672a104` 当前 103 个普通 porcelain 状态项（展开未跟踪目录 124；修正先前读数 101/121），所有当前路径均保留；旧清单缺失，变化不能逐路径回溯；V01 `098553f`/49 项，W02 `a8c2837`/35 项，W02-V01 `098553f`/39 项。前次记录的主 checkout 95 项没有逐路径快照，本轮无法把新增计数差归因或标为已合并，故全部按当前清单保留并以现有审计表作逐项依据。V01/W02 的内容分类仍按审计表：已合并的以集成源码逐文件比较为证，仅有快照的仍保留在 snapshot ref，尚未合并及被后续实现替代的条目按原分类记录；不能以祖先关系代替文件级比较。
 - 五个保护快照 refs 仍在；`/private/tmp/ai-guide-phase3` worktree 登记为 prunable，但未执行 prune；`sources/` clean；集成 `frontend/node_modules` 仍未跟踪。集成分支未合入原活动 checkout。
 - handler 初版曾与既有 AI/流式集合取得 205 passed。随后审阅取消边界，补上 handler 对其包装的 factory 事件流的显式关闭和关闭行为测试；重跑时临时 venv 已消失，系统 Python 3.12 无 pytest，且 PyPI DNS 失败，因此当前最终版本未能重跑 pytest。用 stub 模块执行等价异步行为脚本，确认 tracker 失败仍发答复且关闭 handler 会关闭内层流；Python 3.12 compileall、`git diff --check` 通过。结果不构成真实模型、provider、设备或部署数据库验收。剩余验证包括重建 pytest 依赖后复跑当前版本、真实云模型/TTS 与设备表现、部署数据库，以及无法回溯的原 checkout 旧 95 项逐路径清单。
+
+## 本轮复核（快速答案 SSE 取消关闭，2026-11-06）
+
+- 在代码审查中发现 `QAPipeline` 对确定性/FAQ/cache 的 factory 异步流使用裸 `async for`。Python stdlib 等价复现确认关闭外层生成器时，内层 source 的 `finally` 尚未执行；因此在三个直接转发点加 `aclosing`，无证据路径由 handler 负责相同 owner 清理。新增 Pipeline 级早关行为测试。
+- pytest 当前不可用（临时环境缺失、系统解释器没有 pytest，安装受 PyPI DNS 阻断）；等价复现先失败后通过，compileall/diff check 通过。Pipeline 回归测试已写但未运行，当前代码版本的完整 pytest 结果缺失。真实 TTS/provider/设备未验收。
+- 集成起始基线/ref `0a13eeb`；原 checkout `672a104`/103 普通状态项、124 展开项；V01/W02/W02-V01 `098553f`/49、`a8c2837`/35、`098553f`/39；五个快照保留，phase3 仍 prunable 未清理，sources clean，node_modules 未跟踪。没有改动源 worktree，也没有把集成内容合入原活动 checkout。

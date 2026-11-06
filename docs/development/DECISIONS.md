@@ -257,3 +257,13 @@ FAQ 改写失败时必须在最终 text 和音频补播前恢复权威 FAQ 答�
 验证：行为测试覆盖盲点记录异常时仍生成无证据答案，并检查空 sources、hit level、expected epoch 及关闭 handler 时关闭内层 factory 流。初版 205 项 AI/流式集合通过；此后增加显式关闭边界，因临时 venv 消失且 PyPI DNS 失败，当前最终版本未能重跑 pytest。等价隔离异步行为脚本、compileall 和 diff check 通过。测试使用本地替身，不代表真实模型或设备验收。
 
 回滚：移除 handler 并还原 Pipeline 内联分支即可；保留测试用例作为无证据降级语义约束。
+
+## 2026-11-06：快速答案流的取消关闭由调用方等待
+
+问题：`FastPathAnswerFactory.events()` 会关闭自己持有的 coordinator 流，但 `QAPipeline` 直接用 `async for` 转发 factory 异步生成器；关闭外层 SSE 不保证在 `aclose()` 返回前关闭这个嵌套生成器及其 owner。
+
+选择：在确定性、FAQ 和 cache 三条 Pipeline 快速路径显式用 `aclosing` 包住 factory 流；无证据路径由 `NoEvidenceAnswerHandler` 自己承担同一边界。factory/coordinator 内部行为不变。
+
+验证：新增 Pipeline 级早关测试。pytest 无法在当前临时环境运行（pytest 未安装、PyPI DNS 失败）；等价的 stdlib async-generator 边界复现先按旧结构失败，加入 `aclosing` 后通过；compileall 和 diff check 通过。当前版本完整 pytest 回归仍待可用依赖环境。
+
+回滚：如果关闭测试在受支持运行时失败，恢复原转发并先修复迭代器关闭契约；不要删除取消回归。

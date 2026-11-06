@@ -797,6 +797,43 @@ def test_closing_chat_stream_closes_the_active_llm_source():
     asyncio.run(scenario())
 
 
+def test_closing_chat_stream_closes_fast_path_event_source():
+    from app.services.qa.stream_events import StreamEvent
+
+    class BlockingFastPathFactory:
+        def __init__(self):
+            self.closed = asyncio.Event()
+
+        def events(self, **_kwargs):
+            async def source():
+                try:
+                    yield StreamEvent(type="text", data={"text": "回答"})
+                    await asyncio.Event().wait()
+                finally:
+                    self.closed.set()
+
+            return source()
+
+    async def scenario():
+        pipeline = _build_test_pipeline(faq_matcher=_faq_matcher())
+        factory = BlockingFastPathFactory()
+        pipeline.fast_path_answer_factory = factory
+        stream = pipeline.stream_chat(ChatRequest(
+            query="景区在哪里",
+            session_id="cancel-fast-path",
+            text_only=True,
+        ))
+
+        async for event in stream:
+            if event.type == "text":
+                break
+        await stream.aclose()
+
+        assert factory.closed.is_set(), "closing SSE must close the fast-path source before returning"
+
+    asyncio.run(scenario())
+
+
 def _run_turn(pipeline, **request_overrides):
     request_kwargs = {
         "query": "有什么特色",
