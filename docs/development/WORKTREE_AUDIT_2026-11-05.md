@@ -5,7 +5,7 @@
 - 开始基线：集成副本 `integration-work/v01` 为 `codex/competition-integration@2bd81f5`，原仓库同名分支 ref 同指 `2bd81f5`；该集成副本是独立 checkout，不在原仓库 `git worktree list` 登记内。
 - 原仓库当前登记：主 checkout `codex/repository-map@672a104` 有 107 个 porcelain 路径（展开目录 128）；V01 `codex/v01-editable-itinerary@098553f` 为 49/49；W02 `codex/w02-durable-execution@a8c2837` 为 35/43；W02/V01 `codex/w02-v01-integration@098553f` 为 39/44。另有 `/private/tmp/ai-guide-phase3@098553f` 登记为 prunable，本轮不清理。主 checkout 当年先前记录的 95 项没有可回溯的逐路径快照；当前 107 项全部保留，不能将差异计数当作合并结论。此前逐项分类表仍是判断 V01/W02/main 当前差异的依据，分类仍分已合并、仅快照、尚未合并、后续实现替代；分支祖先关系不作功能合并证明。
 - 快照 refs `4acaa532`、`e115eab`、`3805943`、`48ef626`、`5433557` 均存在。所有登记 worktree 和集成副本 `sources/` 均无 Git 状态；集成副本唯一状态为保留的 `frontend/node_modules` 未跟踪本机软链接。原 checkout、V01/W02 worktree、快照均未修改；未将集成分支合入原活动 checkout。
-- 本轮集成实现仅涉及 `StreamTurn.events()` 对内层 consumer 事件流的关闭所有权、Alembic logging 保留已存在应用 logger，以及对应行为测试和架构/进度记录。后端完整回归 667 passed、19 skipped、8 warnings；AI/流式/FAQ/cache/RAG/evidence/epoch/TTS/SSE 集合 207 passed。测试仅覆盖本地替身和隔离 SQLite，不代表真实 provider、设备或部署数据库验收。
+- 本轮集成实现仅涉及 `StreamTurn.events()` 对内层 consumer 事件流的关闭所有权、Alembic logging 保留已存在应用 logger，以及对应行为测试和架构/进度记录。原子实现提交为 `8963e23`；通过集成副本到原仓库的本地 fetch，将同名集成 ref 从 `2bd81f5` 快进到 `8963e23`。原 checkout HEAD 仍为 `672a104`，107/128 个当前状态路径保留。后端完整回归 667 passed、19 skipped、8 warnings；AI/流式/FAQ/cache/RAG/evidence/epoch/TTS/SSE 集合 207 passed。测试仅覆盖本地替身和隔离 SQLite，不代表真实 provider、设备或部署数据库验收。
 
 ## 本轮复核（主 checkout 音频时长与部署配置差异，2026-11-06）
 
