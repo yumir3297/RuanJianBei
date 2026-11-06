@@ -84,15 +84,15 @@
 - [x] **Step 2: 定义快照 V2 schema 及升级规则**
   - 严格枚举 `visit|rest`、来源、预算依据和执行状态；最多 50 条，分钟预算 1–720。
   - 老 `TourSnapshot` 升级只创建新修订；历史 JSON 不变；无法解析的 spot 保留名称但标 unknown。
-- [ ] **Step 3: 写版本迁移与服务端序列化/反序列化**
+- [x] **Step 3: 写版本迁移与服务端序列化/反序列化**
   - 行程 stop 有 UUID；景点使用 spot_code，当前内容引用存 entry_id 和 published_revision_id；未解析地点不得伪造坐标。
   - 数据迁移不给来源/距离/开放状态补造证据；duration basis 为 unknown 时 duration 可空。
 - [x] **Step 4: 写纯 reducer**
   - 实现 add/remove/replace/move/set-duration/add-rest/update-constraints；不接受模型写 owner、版本、lock、progress 或 resolved/source flags。
   - 按 stop_id 操作；验证锁定、排除/必去、顺序引用、重复 stop、额外字段与上限；返回确定性 diff。
-- [ ] **Step 5: 加可用预算和迁移防回归验证**
+- [x] **Step 5: 加可用预算和迁移防回归验证**
   - 已发布目录只返回可见条目；未知与歧义状态单独呈现。
-  - W01、K01 两条 Alembic 链已合并到单 head `f324abc9d012`，隔离 SQLite base→head→base→head 已通过；V01 自身迁移仍待添加和验证。正式 PostgreSQL 迁移需使用现有本机/CI 环境确认。
+  - W01、K01 与 V01 迁移合并到 `5c81a1e74f2b`；隔离 SQLite upgrade→downgrade base→upgrade head 已通过。正式 PostgreSQL 迁移仍需在本机/CI 确认。
 
 ### Task 3: 持久执行进度与时间预算
 
@@ -105,17 +105,17 @@
 - Progress command: `set_current(stop_id)`, `complete(stop_id)`, `skip(stop_id)`, `finish()`；所有命令追加事件并递增 progress_version。
 - Produces: `validate_remaining_budget(snapshot, progress, now) -> BudgetValidation`。
 
-- [ ] **Step 1: 定义独立 TourProgress 与 append-only 进度事件**
+- [x] **Step 1: 定义独立 TourProgress 与 append-only 进度事件**
   - 开始时记服务端 started_at 和 finish_by；progress_version 单调递增。
-- [ ] **Step 2: 实现原子、owner-scoped 进度命令**
+- [x] **Step 2: 实现原子、owner-scoped 进度命令**
   - 一个 current；只允许当前/未来合法转移；完成/跳过不可由快照保存改写；用户纠正必须有单独 correction 事件。
-- [ ] **Step 3: 实现剩余预算计算**
+- [x] **Step 3: 实现剩余预算计算**
   - 草稿按全程已知停留、休息与有证据的路段；开始后排除 completed/skipped 历史，只算 current/future，与 finish_by-now 比较。
   - 缺开始时间、当前停留实际剩余或路段依据则 unknown/unverified，不用 0 填充。
-- [ ] **Step 4: 处理同步冲突和重试**
+- [x] **Step 4: 处理同步冲突和重试**
   - 开始、进度操作、保存修订与应用提案在数据库串行条件下比较 plan version 和 progress_version。
   - 进度与行程均使用 W01 owner filter、幂等键；stale progress/version 409，绝不回滚已游事实。
-- [ ] **Step 5: 处理历史恢复旁路**
+- [x] **Step 5: 处理历史恢复旁路**
   - W01 restore_revision 在已有 progress 时先合并保护条目并通过相同校验；不能直接覆盖执行状态。
 
 ### Task 4: 游客端手动规划工作区
@@ -128,17 +128,18 @@
 - Store actions: `load(sessionId)`、`applyManual(operation)`、`save()`、`start()`、`progress(command)`、`acceptServerRevision(revision)`。
 - RouteView consumes existing preset recommendations; selecting preset initializes the draft and source reference, never fabricates a chat answer as the itinerary.
 
-- [ ] **Step 1: 加载 W01 任务并初始化 V2 草稿**
+- [x] **Step 1: 加载 W01 任务并初始化 V2 草稿**
   - Cookie unavailable/error keeps page usable as temporary draft and clearly marks save unavailable.
-- [ ] **Step 2: 做约束输入与模板采用**
+- [x] **Step 2: 做约束输入与模板采用**
   - 同行人、分钟预算、兴趣、必去/排除、步行偏好；未知约束不猜。模板 “采用”变成 stop list，不报虚假时间可行。
-- [ ] **Step 3: 做手动 stop editor**
+- [x] **Step 3: 做手动 stop editor**
   - 手机友好增删、上下移动、时长调整、休息和锁定；stop_id 稳定，已有 completed/skipped 不可由普通编辑抹除。
-- [ ] **Step 4: 做保存状态、版本冲突与恢复 UI**
+- [x] **Step 4: 做保存状态、版本冲突与恢复 UI**
   - show dirty/saving/saved/conflict/error；只有服务端确认 revision 才显示 saved。
-- [ ] **Step 5: 做开始/完成/跳过/恢复流程与预算提示**
+  - 历史版本可以显式恢复为新修订；服务端校验 stop locks、执行进度和版本条件。
+- [x] **Step 5: 做开始/完成/跳过/恢复流程与预算提示**
   - 明确显示 unknown/unverified，不以空路段计 0；开始后只展示当前/未来的剩余预算。
-- [ ] **Step 6: 检查前端构建与仓库地图**
+- [x] **Step 6: 检查前端构建与仓库地图**
   - Run: `npm run build -- --configLoader runner` from `frontend/`。
   - Run: `python3 scripts/check_repo_map.py` from repository root。
 
@@ -153,19 +154,21 @@
 - `ProposalService.create(owner, session_id, base_version, draft_digest, progress_version, intent, idempotency_key) -> Proposal`。
 - `ProposalService.apply(owner, proposal_id, expected_version, draft_digest, progress_version, idempotency_key) -> TourRevision`。
 
-- [ ] **Step 1: 定义严格提案/操作契约与期限**
+- [x] **Step 1: 定义严格提案/操作契约与期限**
   - 20 operations max、50 stops max；proposal TTL 30 minutes；status pending/ready/needs_clarification/failed/applied/expired。
-- [ ] **Step 2: 先写持久 request reservation 与幂等语义**
+- [x] **Step 2: 先写持久 request reservation 与幂等语义**
   - 同键异 body 409；数据库事务不能跨 provider await；过期 executing reservation 能安全标失败，不得改变当前游览。
-- [ ] **Step 3: 实现有限模型解析**
+- [x] **Step 3: 实现有限模型解析**
   - 仅用当前本地草稿、必要约束、已发布目录与本次请求；固定 provider/timeout budget 25s backend、35s route; 解析错误最多一次有界纠正。
   - 对用户输入当作数据，不接受 prompt 中要求覆盖锁定、owner 或事实的文本。
-- [ ] **Step 4: 通过相同 reducer 生成候选及验证**
+- [x] **Step 4: 通过相同 reducer 生成候选及验证**
   - 最多 200 个候选组合，确定性依次比较 hard conflicts、无关改动数、变更 stop 数、有证据软偏好；不声称全局最优。
-- [ ] **Step 5: 实现 owner-scoped proposal read 与显式 apply**
+  - `candidates.py` 对唯一候选复用 AI actor reducer；超过 200 个转追问。评分依次处理硬冲突、无关操作/字段、变更停留数、验证状态和稳定 JSON tie-break。少走路只按停留点数量作近似偏好，并读取已保存约束或本次明确请求，不推断真实距离。
+  - 意图 JSON/schema 首次校验失败会在 25 秒总预算内重新生成一次；第二次失败安全返回错误，未将无效模型输出当作修复指令。
+- [x] **Step 5: 实现 owner-scoped proposal read 与显式 apply**
   - 确认前核验 proposal owner、base plan version、draft digest、catalog digest、progress version、TTL；任一变化返回可解释 409。
   - apply 使用服务端已算出的 candidate，一次事务写新修订、进度保护和事件；重复请求返回原修订。
-- [ ] **Step 6: 验证下架与版本变化**
+- [x] **Step 6: 验证下架与版本变化**
   - 未应用提案引用内容被下架或发布变化时拒绝旧 apply，要求刷新事实后重新生成。
 
 ### Task 6: 前端对话修改、差异确认和地图/数字人联动
@@ -178,18 +181,19 @@
 - `requestProposal(text, {tourId, draftDigest, baseVersion})`、`applyProposal(proposalId)`、`cancelProposal(proposalId)`。
 - Chat distinguishes explicit edit intent from ordinary visitor QA; ambiguous intent asks whether to answer or edit. No edits execute from streamed answer text.
 
-- [ ] **Step 1: Add proposal state and bounded request/stop handling**
-  - late responses cannot replace current local draft; stop cancels visible generation; retain local edits on request failure.
-- [ ] **Step 2: Present clarification and structured diff**
+- [x] **Step 1: Add proposal state and bounded request/stop handling**
+  - Executing proposals have a durable reservation; repeated same-key requests replay state, different request bodies conflict, and reservations older than two minutes fail safely.
+  - The stop-waiting control aborts this browser's request/polling, invalidates its generation token, and prevents late responses from replacing the draft; the backend reservation may still finish. Local edits remain intact on failure.
+- [x] **Step 2: Present clarification and structured diff**
   - List added/removed/moved/changed stops, constraint effects, evidence and unknown travel/opening facts; confirm button applies exact reviewed candidate.
-- [ ] **Step 3: Add “introduce current stop” using current confirmed spot_code**
+- [x] **Step 3: Add “introduce current stop” using current confirmed spot_code**
   - Resolve only through server published catalog to entry id; use existing QA selection, not private stop name string as authority.
-- [ ] **Step 4: Project confirmed itinerary on map by stable stop_id and spot_code**
+- [x] **Step 4: Project confirmed itinerary on map by stable stop_id and spot_code**
   - Render only coordinates provided by the approved catalog; unlocated stops remain in list. Do not use `SPOT_COORDS` aliases as routing evidence.
-- [ ] **Step 5: Connect digital human narration to current stop**
-  - Reuse V03 shared-player owner, stop and speech rate; until apply succeeds, narration follows old confirmed itinerary.
-- [ ] **Step 6: Check build and repository map**
-  - Run: `npm run build -- --configLoader runner` and `python3 scripts/check_repo_map.py`.
+- [x] **Step 5: Connect digital human narration to current stop**
+  - Map and chat now share playback ownership and stop semantics; map narration uses the visitor's saved speech rate and drives the shared digital-human speaking state. Current-stop questions continue using published `spot_code` resolution and existing QA selection; itinerary changes take effect only after explicit apply.
+- [x] **Step 6: Check build and repository map**
+  - `npm run build` and `python3 scripts/check_repo_map.py` pass; manual browser/device playback and cancellation behavior still need acceptance.
 
 ### Task 7: Documentation and reviewable delivery
 
@@ -199,13 +203,15 @@
 **Interfaces:**
 - Documentation reflects actual routes/files and states browser/provider/device boundaries separately.
 
-- [ ] **Step 1: Update V01 work package with implemented slice and actual evidence**
+- [x] **Step 1: Update V01 work package with implemented slice and actual evidence**
   - Keep unchecked any unbuilt capability; identify schema/API and incomplete later phases.
-- [ ] **Step 2: Update code map and architecture for only live code**
+- [x] **Step 2: Update code map and architecture for only live code**
   - Add tour snapshot, proposal, progress, catalog and UI entries; do not mark roadmap-only design as implemented.
-- [ ] **Step 3: Run production build and repository map checks**
+- [x] **Step 3: Run production build and repository map checks**
   - Record exact outputs and limitations. Do not claim device, browser, provider or live walking-route validation unless actually observed.
-- [ ] **Step 4: `git diff --check` and inspect the final branch diff**
+- [x] **Step 4: `git diff --check` and inspect the final branch diff**
   - Confirm no W01 owner files were edited in its active checkout and no unrelated uncommitted F01/V03 changes were lost.
-- [ ] **Step 5: Prepare one fresh branch review**
+- [x] **Step 5: Prepare one fresh branch review**
   - Review schema/ownership, migration chain, concurrency, prompt contract, and demo path before considering a PR.
+  - Fresh read-only review found four important gaps (dirty draft start, client provenance, insertion before current, and start/save race); all four were fixed and reviewed again with no new findings. Full migration/owner/concurrency/provider paths were also covered by the backend suite. W02 remains in its own worktree; both branches modify the tour-session repository/model/API and `models/__init__.py`, so integration must resolve those overlapping edits together.
+  - Verification in the V01 worktree: backend `306 passed, 1 skipped`; frontend request/idempotency node tests `4 passed`; production Vite build succeeded (existing >500 kB chunk warning); repository map `8 documents, 76 registered HTTP routes`; `git diff --check` clean. Real browser/device acceptance and live provider behavior remain pending.

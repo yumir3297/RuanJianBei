@@ -29,6 +29,16 @@ from app.models.tour_session import (
     TourSessionIdempotency,
     TourSessionRevision,
     TourSessionEvent,
+    TourProgressRecord,
+    TourProgressEvent,
+    ItineraryProposal,
+)
+from app.models.tool_execution import (
+    ToolAttempt,
+    ToolCommandReceipt,
+    ToolEvent,
+    ToolJob,
+    ToolStep,
 )
 
 __all__ = [
@@ -58,6 +68,14 @@ __all__ = [
     "TourSession",
     "TourSessionRevision",
     "TourSessionEvent",
+    "TourProgressRecord",
+    "TourProgressEvent",
+    "ItineraryProposal",
     "TourArtifactReference",
     "TourSessionIdempotency",
+    "ToolJob",
+    "ToolStep",
+    "ToolAttempt",
+    "ToolEvent",
+    "ToolCommandReceipt",
 ]

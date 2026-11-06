@@ -110,6 +110,14 @@ class PublishedCatalogResponse(StrictModel):
     items: list[PublishedCatalogEntryRead]
 
 
+class StartTourRequest(StrictModel):
+    expected_version: int = Field(ge=1)
+
+
+class UpgradeItineraryRequest(StrictModel):
+    expected_version: int = Field(ge=1)
+
+
 class TourSnapshotV2(StrictModel):
     schema_version: Literal[2] = 2
     constraints: ItineraryConstraints = Field(default_factory=ItineraryConstraints)
@@ -128,6 +136,33 @@ class TourSnapshotV2(StrictModel):
             if leg.from_stop_id not in known_ids or leg.to_stop_id not in known_ids:
                 raise ValueError("路段必须引用当前快照中的停留点")
         return self
+
+
+class SaveItineraryV2Request(StrictModel):
+    expected_version: int = Field(ge=1)
+    snapshot: TourSnapshotV2
+
+
+class CreateItineraryProposalRequest(StrictModel):
+    expected_version: int = Field(ge=1)
+    progress_version: int = Field(default=0, ge=0)
+    draft_digest: str = Field(min_length=64, max_length=64)
+    draft_snapshot: TourSnapshotV2
+    text: str = Field(min_length=2, max_length=1000)
+
+    @field_validator("text")
+    @classmethod
+    def trim_text(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("修改需求不能为空")
+        return value
+
+
+class ApplyItineraryProposalRequest(StrictModel):
+    expected_version: int = Field(ge=1)
+    progress_version: int = Field(ge=0)
+    draft_digest: str = Field(min_length=64, max_length=64)
 
 
 class AddVisit(StrictModel):

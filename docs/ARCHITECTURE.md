@@ -1,6 +1,6 @@
 # 架构与业务链路
 
-核验于 2026-10-28，源码基线 `540568e`。这是现有实现的导航，未把路线图中的待办纳入已实现架构。
+核验于 2026-10-30，W02 整合分支以 V01 `098553f` 为基线，并包含 V01 源码快照与 W02 改动。SQLite migration、目标回归集和本地桌面浏览器游览页 smoke 已通过；worker 故障恢复、PostgreSQL 多 worker、真实模型和手机浏览器仍未验收。
 功能入口见 [REPO_MAP.md](REPO_MAP.md)，运行条件见 [DEVELOPMENT.md](DEVELOPMENT.md)。
 
 ## 边界
@@ -50,7 +50,7 @@ flowchart LR
 
 [MapView](../frontend/src/views/tourist/MapView.vue) → [useGeolocation](../frontend/src/composables/useGeolocation.js) / [useNarration](../frontend/src/composables/useNarration.js) → [narration API](../frontend/src/api/narration.js) → `POST /api/guide/narration` → [guide.py](../backend/app/api/guide.py)。
 
-讲解接口复用 QA 生成文本，再合成整段音频，以景点/音色/模型缓存并合并并发；不可用时返回 `available=False`，TTS 缺失也可返回文本。触发/排队状态机在 useNarration；请求、静态简介回退和播放编排在 MapView 的 `playNarration`，浏览器朗读在 useAudioPlayer。
+讲解接口复用 QA 生成文本，再合成整段音频，以景点/音色/模型缓存并合并并发；不可用时返回 `available=False`，TTS 缺失也可返回文本。触发/排队状态机在 useNarration；请求、静态简介回退和播放编排在 MapView 的 `playNarration`，浏览器朗读在 useAudioPlayer。聊天与地图通过同一个播放器按来源领取播放会话；接管会停止旧来源、忽略迟到音频，并复用游客本机语速偏好。地图讲解也会同步数字人的说话状态；提案停止等待只取消当前浏览器请求/轮询，服务端持久化任务仍可能完成，但不会自动应用或覆盖本地草稿。
 
 定位层包含真实与模拟状态，坐标变换和触发阈值见 [narration 常量](../frontend/src/constants/narration.js)。当前 `onSuccess` 直接把 `pos.coords` 传给 `evaluate`，后者读取 `lat/lng`；原生浏览器坐标为 `latitude/longitude`，这是需要修复或通过真实定位回归澄清的静态风险，本次仅建图未改行为。模拟成功不能证明 GPS 链路正常。
 
@@ -73,9 +73,32 @@ flowchart LR
 - 删除进入 30 天回收站，可恢复；超期由回收站查询时清理。历史版本恢复会产生新 revision。事件接口只读并按所有者隔离。
 - 前端以 `RouteView` 的“我的游览”入口创建/查看/删除游览任务，可把当前路线作为行程快照保存。匿名身份不支持跨设备找回；cookie 被禁用时前端提示无法持久化。
 
-当前自动化覆盖 repository、身份/CSRF、API 隔离和幂等键；真实浏览器刷新、关闭重开、服务重启与 cookie 禁用行为仍待手动验收。模型与接口索引见 [REPO_MAP.md](REPO_MAP.md)。
+## 6. 可编辑行程与连续对话修改（V01，实现中）
 
-## 6. 运行与部署
+- V2 快照在 W01 不可变修订上记录约束、停留点、发布内容引用、锁定字段和未知时长；V1 旧快照需显式升级，legacy 保存不能降级覆盖 V2。
+- `/api/itinerary/catalog` 只读 K01 当前已发布景点；保存时服务端重新绑定发布条目/修订。模型只能返回 allowlist 操作，确定性 reducer 校验锁定和目录，提案需游客确认才成为新修订。
+- V2 持久化路径从当前发布目录与既有服务端快照重建来源/证据；新或改动的停留时长标为游客输入，未验证路段不接受客户端自报证据。开始游览要求本地草稿已保存，版本 CAS 同时核对任务状态以隔离开始/保存竞争。
+- `tour_progress` 与追加式进度事件独立于计划快照，带自己的版本和幂等键；编辑行程时保留 completed/skipped/current 事实并同步未来 pending 点。
+- RouteView 可手动编辑约束、景点、休息点、时长和锁定；ChatView 对明确改线语句调用提案接口；MapView 只按当前目录带坐标的已确认点投影。
+- 预算把未知停留/路段标为未核实。当前没有权威开放时间、路网或可达性数据；provider 未配置时 AI 提案返回不可用，手动编辑仍可用。
+- V01 提案通过 W02 typed command 建立持久 job；proposal reservation 与 job 创建同事务提交，worker 保存候选与 job 成功状态也同事务提交。未开始外部调用的租约过期任务可重新排队；供应商调用结果不明时进入 `waiting_user`，游客确认重复调用风险后才能重试。
+- 前端关闭只停止当前等待/轮询；重新打开游览会读取最新提案并恢复其基线草稿与状态。提案仍是候选，游客须显式确认；apply 继续校验行程、进度与发布目录版本。正式 migration、服务重启和手机浏览器行为仍未验收。
+
+此 W02 整合分支未包含 V01 对应的自动化测试文件；本轮从原 V01 工作树选取相关测试，以整合分支后端代码运行并通过。本地桌面浏览器已验证创建空白游览、刷新列表和页面 reload 后恢复；关闭重开、服务重启、弱网、手机浏览器与 cookie 禁用行为仍待验收。模型与接口索引见 [REPO_MAP.md](REPO_MAP.md)。
+
+## 7. 持久工具执行（W02）
+
+W02 使用 `tool_jobs / tool_steps / tool_attempts / tool_events / tool_command_receipts` 保存执行状态，绑定游客、景区、游览修订、进度修订和工具版本。唯一生产 handler 是 V01 `itinerary.proposal`；无通用任意工具创建接口，也未接入运营发布流程。
+
+游客 API 提供游览范围内的执行列表、详情、事件、取消和显式重试；V01 提案路由负责校验并创建 typed job。任务输入上限 1 MiB、step 结果上限 1 MiB、job 结果上限 4 MiB、事件 payload 上限 8 KiB、事件页上限 100 条；幂等回执保留 7 天。
+
+独立 worker 命令：在 `backend/` 目录执行 `python -m app.services.tool_execution.worker`。API 进程不会启动 worker。PostgreSQL 领取使用 `FOR UPDATE SKIP LOCKED`；SQLite 采用条件更新，当前只适合单 worker。
+
+任务写入要求 lease、fence、当前行程修订和进度修订仍有效。更新行程、进度或删除游览会使活动 job 失效；永久删除清理任务私有数据。自动重试仅适用于 handler 显式声明安全的操作；当前 itinerary handler 禁止自动重试，外部调用结果不明时必须让游客确认可能重复调用费用。行程应用仍由 V01 的显式确认命令负责。
+
+当前只有固定 `run` 步骤；运营 handler、通用执行卡、事件裁剪和 30 天 job 清理尚未实现。SQLite Alembic upgrade/downgrade、36 条目标 V01/W02 测试、前端构建和本地空白游览创建/刷新/reload 已通过；全量 backend suite、崩溃/取消故障注入、PostgreSQL 多 worker、真实模型供应商及 W02 任务卡浏览器恢复流程尚未验证。
+
+## 8. 运行与部署
 
 - `backend/main.py` 启动时执行 Alembic、bootstrap 与模型预热；先备好数据库、处理数据与模型缓存。
 - `GET /health` 是进程级响应；`GET /ready` 检查部分数据库/配置条件，两者都不等于完整外部 AI 验收。

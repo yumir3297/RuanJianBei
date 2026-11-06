@@ -204,10 +204,13 @@ def validate_remaining_budget(
     unknown_stop_ids: list[UUID] = []
     unknown_legs: list[tuple[UUID, UUID]] = []
     for stop in remaining:
-        if str(stop.stop_id) == current_id and current_stop_remaining_minutes is not None:
-            if current_stop_remaining_minutes < 0:
+        if str(stop.stop_id) == current_id:
+            if current_stop_remaining_minutes is None:
+                unknown_stop_ids.append(stop.stop_id)
+            elif current_stop_remaining_minutes < 0:
                 raise ValueError("当前停留剩余分钟不能为负数")
-            known += current_stop_remaining_minutes
+            else:
+                known += current_stop_remaining_minutes
         elif stop.duration_minutes is not None:
             known += stop.duration_minutes
         else:
