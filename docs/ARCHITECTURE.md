@@ -1,12 +1,12 @@
 # 架构与业务链路
 
-核验于 2026-10-29，V01 分支基线 `098553f`，并有未提交实施改动。此处只描述已落入代码的链路；V01 仍有未验收事项。
-> 2026-10-29 工作副本增量：ASR 与视觉接口支持可选 `Idempotency-Key`，按接口、键和请求 fingerprint 做 5 分钟进程内 single-flight 与 JSON 结果缓存；同键不同请求返回 409，超过 128 条/1 MiB 响应上限时拒绝新任务或淘汰过期/最近最少使用结果。不保存上传内容；旧客户端兼容。该能力不跨多 worker 或重启，聊天 SSE 和 K01 发布仍未接入持久幂等。实现入口见 [功能地图](REPO_MAP.md)。
+核验于 2026-11-07，集成分支代码基线 `7ef0459`，另含本轮 K01 前端恢复接入。下文区分自动化/源码证据与真实设备、供应商、部署数据库验收；任务状态及差异见 [HANDOFF](agent-operations/HANDOFF.md)。
+> ASR 与视觉接口支持可选 `Idempotency-Key`，按接口、键和请求 fingerprint 做 5 分钟进程内 single-flight 与 JSON 结果缓存；同键不同请求返回 409，超过 128 条/1 MiB 响应上限时拒绝新任务或淘汰过期/最近最少使用结果。不保存上传内容；该能力不跨多 worker 或重启。
 > 真实 ASR provider 收到非 WAV 音频时，在占用既有 ASR 容量后通过 [audio_duration](../backend/app/services/audio_duration.py) 用受限 ffprobe 检查系统私有临时文件，校验音轨和时长后才调用 provider；结束后删除临时文件，最长运行时间可配置。该路径需部署系统安装 FFmpeg；游客录音器固定输出 WAV，不依赖它。当前只检查容器探测出的时长，不承诺完整解码验证。
 > 生产环境 `APP_ENV=production` 时，管理员默认密码/签名密钥或过短值会阻止应用启动；`/ready` 同步报告配置缺项，不回显秘密。游客 API 仍公开；[CapacityLimiter](../backend/app/services/capacity.py) 只管单进程并发，不是时间窗口速率限制或多实例防刷。
-> 2026-10-28 工作副本增量：聊天 SSE 在原有事件上补充心跳、连接/无数据/无进展/总时限与 `done.completion`；中断保留部分文本并停止音频。普通 TTS 句子并发合成、按序发送；分众 FAQ 在确定最终结果后输出一致的文字和语音。上传采用有界读取、图片容器尺寸检查及 WAV 时长检查，聊天/ASR/视觉使用可配置的单进程并发上限。实际实现与测试入口见 [功能地图](REPO_MAP.md)；K01 跨分支整合、非 WAV 时长及设备验收见专项记录。
+> 聊天 SSE 有心跳、连接/无数据/无进展/总时限与 `done.completion`；中断保留部分文本并停止音频。流式生成、证据、音频和 completion 各有取消/epoch 所有权；详细调用链和回归见 [功能地图](REPO_MAP.md) 与 [测试状态](agent-operations/TEST_STATUS.md)。
 
-主工作区记录的能力正在与 V01 集成，以下描述须在最终集成后复核。
+当前集成分支包含 K01、W01、V01 与 W02 的主要代码；功能是否完成按相应验收边界而非分支合并判断。
 功能入口见 [REPO_MAP.md](REPO_MAP.md)，运行条件见 [DEVELOPMENT.md](DEVELOPMENT.md)。
 
 ## 边界
@@ -60,14 +60,14 @@ flowchart LR
 
 讲解接口复用 QA 生成文本，再合成整段音频，以景点/音色/模型缓存并合并并发；不可用时返回 `available=False`，TTS 缺失也可返回文本。触发/排队状态机在 useNarration；请求、静态简介回退和播放编排在 MapView 的 `playNarration`，浏览器朗读在 useAudioPlayer。聊天与地图通过同一个播放器按来源领取播放会话；接管会停止旧来源、忽略迟到音频，并复用游客本机语速偏好。地图讲解也会同步数字人的说话状态；提案停止等待只取消当前浏览器请求/轮询，服务端持久化任务仍可能完成，但不会自动应用或覆盖本地草稿。
 
-定位层包含真实与模拟状态，坐标变换和触发阈值见 [narration 常量](../frontend/src/constants/narration.js)。当前 `onSuccess` 直接把 `pos.coords` 传给 `evaluate`，后者读取 `lat/lng`；原生浏览器坐标为 `latitude/longitude`，这是需要修复或通过真实定位回归澄清的静态风险，本次仅建图未改行为。模拟成功不能证明 GPS 链路正常。
+定位层包含真实与模拟状态，坐标变换和触发阈值见 [narration 常量](../frontend/src/constants/narration.js)。`useGeolocation` 将浏览器 `latitude/longitude` 映射到应用内部 `lat/lng`；自动讲解目前仅允许已标识的模拟坐标，真实坐标下保留手动讲解。自动化坐标测试不替代真机 GPS 精度、权限与实地验收。
 
 ## 4. 管理、数据与资源
 
 - 登录与 token：[auth.py](../backend/app/api/auth.py)、[auth store](../frontend/src/stores/auth.js)。接口是否受保护以具体路由依赖为准，前端路由守卫只是导航控制。
-- 知识 CRUD：[knowledge API](../backend/app/api/knowledge.py)；导入：[data_import](../backend/app/services/data_import/)；索引：[index_builder](../backend/app/services/rag/index_builder.py)。同步官方数据和重建索引会写入数据，不能作为只读健康检查。
-- 数据新鲜度分为 KnowledgeEntry、KnowledgeChunk、Chroma、QA 答案缓存与 FAQ 运行时。当前 CRUD 不自动更新后四层；`ProcessedDataImporter.sync` 以处理数据为输入更新条目/分块并清理持久化答案缓存，管理接口随后重载 FAQ；`build_rag_index` 仅消费既有分块。不要把同步源数据当作后台编辑后的无损发布操作。直接排查入口见 [功能地图](REPO_MAP.md) 的“知识更新后仍返回旧答案”。
-- [QACache](../backend/app/services/qa/cache.py) 使用内存及 [持久化缓存](../backend/app/repositories/qa_cache.py)，TTL 在 config 中默认七天；[chat.py](../backend/app/api/chat.py) 的 namespace 没有知识修订号。是否需要失效缓存须核对实际回答分支，不能只重建向量索引。
+- 知识以稳定 entry ID、不可变 draft/published revision 和持久 job 管理。管理员编辑写草稿；文件进入 `/api/knowledge-imports` 持久批次，经冲突核对后保存为草稿；`/api/knowledge-publications` 固定提交的 revision 并以数据库发布指针决定游客可见性。扫描 PDF 未接 OCR 时进入 `needs_ocr`，不可生成空内容发布。
+- 发布准备构建对应 revision 的 chunks/vector，再切换发布可见状态；`VisibilityService` 对直接读取、向量候选和回退检索校验可见版本。发布/下架更新知识 epoch，QA cache 与流式回答通过 epoch 隔离旧结果。全量索引重建使用安全替换路径；应以 [知识地图](REPO_MAP.md) 的专项链路排查，不把旧 `ProcessedDataImporter.sync` 当作后台草稿发布。
+- [QACache](../backend/app/services/qa/cache.py) 使用内存及持久化缓存；知识 epoch 进入缓存 key，流式路径在证据、音频/完成与副作用前重新验证。具体缓存、FAQ 与 fallback 分支须结合 [QAPipeline](../backend/app/services/qa/pipeline.py) 和专项测试核对。
 - 盲区：QA tracker → [knowledge_blind_spot repository](../backend/app/repositories/knowledge_blind_spot.py) → 管理员 FAQ 解决闭环。
 - 背景/欢迎语：[display_assets service](../backend/app/services/display_assets.py) 存储配置和上传资源；公开读取与后台写操作分开，URL 经 [display.js](../frontend/src/api/display.js) 解析。
 - 记忆：[visitor_memory repository](../backend/app/repositories/visitor_memory.py) 和 [memory/profile.py](../backend/app/services/memory/profile.py)；浏览器本地标识并不代表跨设备账号同步。
@@ -90,7 +90,7 @@ flowchart LR
 - RouteView 可手动编辑约束、景点、休息点、时长和锁定；ChatView 对明确改线语句调用提案接口；MapView 只按当前目录带坐标的已确认点投影。
 - 预算把未知停留/路段标为未核实。当前没有权威开放时间、路网或可达性数据；provider 未配置时 AI 提案返回不可用，手动编辑仍可用。
 - V01 提案在等待模型前持久化 executing reservation；同键重复请求复用请求状态，冲突 body 拒绝，超过两分钟的悬挂请求在重试时标记失败。前端可停止当前请求/轮询并忽略迟到结果，但不取消已在服务端运行的 provider 任务。
-- V01 与 W02 共用游览任务基础文件，但各自工作在独立分支；合入时需协调 Alembic head、`tour_session.py`、repository 和 `/api/tour-sessions` 改动。完整手机浏览器验收仍待完成。
+- V01 与 W02 已在当前集成树通过合并 migration 与持久 execution job 关联：提案在模型执行前保留 reservation，worker 在独立进程运行；API 启动不会自动启动 worker。工具输入绑定行程 revision/progress 版本，旧目标会被 fence；结果不确定时需游客显式确认风险后重试。当前 Alembic 单一 head 为 `91a0c5e2f347`；合成 SQLite migration 与自动化覆盖不证明真实部署库兼容或 PostgreSQL 并发。
 
 当前自动化覆盖 repository、身份/CSRF、API 隔离和幂等键；真实浏览器刷新、关闭重开、服务重启与 cookie 禁用行为仍待手动验收。模型与接口索引见 [REPO_MAP.md](REPO_MAP.md)。
 
