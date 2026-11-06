@@ -44,11 +44,12 @@ Windows/Linux 的校验命令已提供，当前仅在 macOS 主机执行；其�
 | 摄像头 | [useCamera](../frontend/src/composables/useCamera.js)、ChatView 的 captureFromCamera | HTTPS/权限允许、拒绝、无摄像头、占用、前后摄像头；失败后仍可上传文件；关闭后释放 track |
 | 麦克风/录音 | [useRecorder](../frontend/src/composables/useRecorder.js)、[recorder-worklet](../frontend/public/recorder-worklet.js) | getUserMedia、AudioContext、Worklet 加载；ScriptProcessor 降级在主线程高负载下的质量；停止、取消、切后台后 track 释放 |
 | 语音识别 | [useSpeechRecognition](../frontend/src/composables/useSpeechRecognition.js)、[voice API](../frontend/src/api/voice.js) | 浏览器 SpeechRecognition 和录音上传 ASR 分开测；服务失败、超时、无网时可改文字 |
-| 播放和嘴型 | [useAudioPlayer](../frontend/src/composables/useAudioPlayer.js)、[chat store](../frontend/src/stores/chat.js) | 用户点击后解锁音频、打断、再次播放、蓝牙/扬声器、后台恢复；语音失败时文字继续可读 |
+| 播放和嘴型 | [useAudioPlayer](../frontend/src/composables/useAudioPlayer.js)、[chat store](../frontend/src/stores/chat.js)、[MapView](../frontend/src/views/tourist/MapView.vue) | 聊天和地图讲解共享来源会话与游客语速；验证用户手势解锁、来源接管/停止、迟到音频、蓝牙/扬声器、切后台恢复及嘴型；语音失败时文字继续可读 |
 | GPS/模拟 | [useGeolocation](../frontend/src/composables/useGeolocation.js)、[useNarration](../frontend/src/composables/useNarration.js) | HTTPS、权限、真实坐标、低精度/景区外、模拟状态可辨别；原生 coords 字段适配风险见架构，不能用模拟巡游代验真 GPS |
 | 3D 人物 | [ThreeAvatar](../frontend/src/components/ThreeAvatar.vue)、[AvatarDisplay](../frontend/src/components/AvatarDisplay.vue) | WebGL/模型加载失败、低端机温升、切形象和多次开关工具；失败保留 SVG 降级和输入功能 |
 | 图像上传 | [vision API](../frontend/src/api/vision.js)、[vision.py](../backend/app/api/vision.py) | JPEG/PNG/WebP、空文件、超过服务端上限、相册 HEIC；不支持格式应有可恢复提示 |
 | 游客标识/游览任务身份 | [chat store](../frontend/src/stores/chat.js)、[tourSessions store](../frontend/src/stores/tourSessions.js)、[auth store](../frontend/src/stores/auth.js) | 游览任务使用 365 天 HttpOnly 匿名 cookie，仅同一浏览器恢复；测刷新/重开/服务重启、cookie 禁用、跨浏览器隔离和清除站点 cookie；不支持跨设备找回 |
+| V01 行程编辑与确认 | [RouteView](../frontend/src/views/tourist/RouteView.vue)、[ChatView](../frontend/src/views/tourist/ChatView.vue)、[MapView](../frontend/src/views/tourist/MapView.vue) | 已在桌面内置浏览器 1280×720 验证：V2 升级、目录选点、未保存草稿禁止开始、保存/开始/完成及重载恢复；本地 OpenAI 兼容模拟服务完成提案差异（40→30 分钟）、草稿变化后旧提案过期保护/禁用确认、按当前草稿重生成、确认保存新版本及重载恢复。后端测试覆盖活动游览应用提案后继续完成当前点，以及目录版本变化时拒绝应用且不改变行程/进度；前端覆盖进度刷新及失败时隐藏“开始游览”并提示刷新。provider 未配置时也验证了明确错误回退。真实 provider、320px/手机真机、游览中跨页面完整流程、弱网及重复提交并发仍待验收 |
 | 流式网络 | [useSSEStream](../frontend/src/composables/useSSEStream.js) | 建连超时、分块边界、连接中断、连续重试、停止后晚到消息；不承诺离线问答 |
 
 安全上下文和媒体策略参考 [MDN getUserMedia](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia)、[Geolocation](https://developer.mozilla.org/en-US/docs/Web/API/Geolocation_API)、[Autoplay](https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Autoplay)。
@@ -64,6 +65,7 @@ Windows/Linux 的校验命令已提供，当前仅在 macOS 主机执行；其�
 4. 地图工具 → 真实定位或明确标识的模拟 → 景点讲解；网络失败后静态内容仍可理解。
 5. 管理员登录 → 知识/资源页面 → 受保护操作；失败后状态不伪装成功。
 6. 模型/天气/TTS 缺配置与超时；文本和错误提示符合实际响应，不冒充真实模型结果。
+7. V01 手动改线并保存 → 发起对话提案 → 核对差异 → 明确确认 → 重开恢复；行程约束/人工锁和已完成进度不能被静默覆盖。
 
 ## 5. 验收记录格式
 
