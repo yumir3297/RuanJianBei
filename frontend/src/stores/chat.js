@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
 import { deleteVisitorMemory, streamChat } from "../api/chat";
 import { submitVisitorFeedback } from "../api/insights";
 import { useAudioPlayer } from "../composables/useAudioPlayer";
+import { createChatMetrics, rememberChatMetrics } from "../utils/chatMetrics";
 
 const audioPlayer = useAudioPlayer();
 
@@ -12,11 +13,12 @@ const UPDATED_CONTEXT_STATUS_TEXT = "已更新游览方向";
 const ANSWER_DONE_STATUS_TEXT = "回答完成";
 const FALLBACK_STATUS_TEXT = "云端语音暂不可用，已保留文字回答";
 const FALLBACK_DONE_STATUS_TEXT = "文字回答完成，语音暂不可用";
-const OFFLINE_STATUS_TEXT = "暂时离线";
+const INCOMPLETE_STATUS_TEXT = "讲解未完成";
 const GENERIC_ERROR_TEXT = "抱歉，导览服务暂时没有响应。请稍后再试，或换一个问题问问我。";
 
 let activeStreamController = null;
 let activeStreamToken = 0;
+let activeFlushPending = null;
 let lastFailedRequest = null;
 const SESSION_STORAGE_KEY = "a5-chat-session-id";
 const VISITOR_STORAGE_KEY = "a5-visitor-id";
@@ -121,8 +123,12 @@ export const useChatStore = defineStore("chat", {
       this.resetConversationContext();
     },
     stopOutput() {
+      activeFlushPending?.();
+      activeFlushPending = null;
       if (this.streaming) {
         this.userStopped = true;
+        const currentMessage = this.messages.at(-1);
+        if (currentMessage?.role === "assistant") currentMessage.completion = "stopped";
       }
       activeStreamToken += 1;
       if (activeStreamController) {
@@ -149,20 +155,29 @@ export const useChatStore = defineStore("chat", {
       this.errorMessage = "";
       this.userStopped = false;
       const requestToken = activeStreamToken;
+      const metrics = createChatMetrics();
+      const playbackSession = audioPlayer.claimPlayback("chat", () => options.onPlaybackStopped?.());
       const streamController = new AbortController();
       activeStreamController = streamController;
       const isCurrentRequest = () =>
         requestToken === activeStreamToken && activeStreamController === streamController;
+      const isCurrentGeneration = () => requestToken === activeStreamToken;
       let pcmStarted = false;
       let receivedDone = false;
 
-      const assistantMessage = {
-        role: "assistant",
-        content: "",
-      };
-
       this.messages.push({ role: "user", content: options.displayQuery || query });
-      this.messages.push(assistantMessage);
+      this.messages.push({ role: "assistant", content: "", completion: "streaming" });
+      // Mutate the reactive entry, not the original object pushed into Pinia.
+      const assistantMessage = this.messages.at(-1);
+      let pendingText = "";
+      let textTimer = null;
+      const flushPendingText = () => {
+        if (textTimer !== null) globalThis.clearTimeout(textTimer);
+        textTimer = null;
+        if (pendingText && isCurrentGeneration()) assistantMessage.content += pendingText;
+        pendingText = "";
+      };
+      activeFlushPending = flushPendingText;
       this.sources = [];
       this.emotionAnalysis = null;
       this.followups = [];
@@ -181,7 +196,9 @@ export const useChatStore = defineStore("chat", {
             audience: options.audience || null,
             visitor_id: getVisitorId(),
             tts_voice: options.ttsConfig?.voiceType || null,
-            tts_rate: options.ttsConfig?.speechRate || 100,
+            // Speech rate is applied by the browser player. Keep the transport
+            // request neutral so providers cannot apply a second rate change.
+            tts_rate: 100,
             tts_volume: options.ttsConfig?.volume ?? 80,
             selection,
             context: this.conversationContext,
@@ -215,12 +232,16 @@ export const useChatStore = defineStore("chat", {
               if (!isCurrentRequest()) {
                 return;
               }
-              assistantMessage.content += token;
+              if (token) metrics.mark("text_received");
+              pendingText += token || "";
+              if (textTimer === null) textTimer = globalThis.setTimeout(flushPendingText, 16);
             },
             text: ({ text, is_complete }) => {
               if (!isCurrentRequest()) {
                 return;
               }
+              flushPendingText();
+              if (text) metrics.mark("text_received");
               assistantMessage.content = text;
               if (is_complete) {
                 this.statusText = ANSWER_DONE_STATUS_TEXT;
@@ -230,8 +251,10 @@ export const useChatStore = defineStore("chat", {
               if (!isCurrentRequest()) {
                 return;
               }
+              flushPendingText();
               const isFallback = provider === "bailian_unavailable" || provider === "stub";
               const hasAudio = typeof base64 === "string" && base64.trim().length > 0;
+              if (hasAudio) metrics.mark("audio_received");
               if (isFallback || !hasAudio) {
                 this.voiceFallback = true;
                 this.statusText = FALLBACK_STATUS_TEXT;
@@ -242,20 +265,20 @@ export const useChatStore = defineStore("chat", {
               await audioPlayer.enqueue(
                 base64,
                 duration_ms,
-                () => options.onAudioEnded?.(),
+                () => { if (isCurrentGeneration()) options.onAudioEnded?.(); },
                 text || "",
                 (progress, elapsedMs, actualDurationMs) =>
-                  options.onSpeechProgress?.(
-                    progress,
-                    elapsedMs,
-                    viseme_timeline || null,
-                    actualDurationMs,
+                  isCurrentGeneration() && options.onSpeechProgress?.(
+                    progress, elapsedMs, viseme_timeline || null, actualDurationMs,
                   ),
                 {
-                  rate: (options.ttsConfig?.speechRate || 100) / 100,
+                  sessionId: playbackSession.id,
+                  rate: options.ttsConfig?.playbackRate ?? 1,
                   volume: (options.ttsConfig?.volume ?? 80) / 100,
                   allowBrowserSpeech: false,
+                  onScheduled: () => { if (isCurrentGeneration()) metrics.mark("audio_scheduled"); },
                   onMode: (mode) => {
+                    if (!isCurrentGeneration()) return;
                     if (mode === "silent") {
                       this.voiceFallback = true;
                       this.statusText = FALLBACK_STATUS_TEXT;
@@ -270,23 +293,52 @@ export const useChatStore = defineStore("chat", {
               }
               // 流式 PCM 音频块
               if (base64) {
+                metrics.mark("audio_received");
                 if (!audioPlayer.isPCMStreaming.value) {
-                  pcmStarted = true;
-                  options.onAudioStart?.();
-                  audioPlayer.startPCMStream(
+                  const started = audioPlayer.startPCMStream(
                     (progress, elapsedMs, durationMs, timeline) =>
-                      options.onSpeechProgress?.(progress, elapsedMs, timeline, durationMs),
+                      isCurrentGeneration() && options.onSpeechProgress?.(progress, elapsedMs, timeline, durationMs),
                     () => {
+                      if (!isCurrentGeneration()) return;
                       options.onAudioEnded?.();
                       audioPlayer.flush();
                     },
+                    () => { if (isCurrentGeneration()) metrics.mark("audio_scheduled"); },
+                    {
+                      sessionId: playbackSession.id,
+                      rate: options.ttsConfig?.playbackRate ?? 1,
+                      adaptive: import.meta.env.VITE_GUIDE_ADAPTIVE_AUDIO === "1",
+                      onBufferEvent: ({ gapMs, extraBufferMs }) => {
+                        if (isCurrentGeneration()) metrics.recordAudioGap(gapMs, extraBufferMs);
+                      },
+                      onUnavailable: () => {
+                        if (!isCurrentGeneration()) return;
+                        audioPlayer.stop(playbackSession.id, "unavailable");
+                        this.voiceFallback = true;
+                        this.statusText = FALLBACK_STATUS_TEXT;
+                        options.onAudioUnavailable?.({ provider: "browser_unavailable" });
+                      },
+                    },
                   );
+                  if (!started) {
+                    this.voiceFallback = true;
+                    this.statusText = FALLBACK_STATUS_TEXT;
+                    options.onAudioUnavailable?.({ provider: "browser_unavailable" });
+                    return;
+                  }
+                  pcmStarted = true;
+                  options.onAudioStart?.();
                 }
-                audioPlayer.feedPCMChunk(base64, sample_rate || 24000, channels || 1, bits || 16);
+                if (!audioPlayer.feedPCMChunk(base64, sample_rate || 24000, channels || 1, bits || 16, playbackSession.id)) {
+                  audioPlayer.stop(playbackSession.id, "unavailable");
+                  this.voiceFallback = true;
+                  this.statusText = FALLBACK_STATUS_TEXT;
+                  options.onAudioUnavailable?.({ provider: "audio_decode_failed" });
+                }
               }
               // 字级别时间戳 → viseme 时间线
               if (viseme_timeline) {
-                audioPlayer.updatePCMVisemeTimeline(viseme_timeline);
+                audioPlayer.updatePCMVisemeTimeline(viseme_timeline, playbackSession.id);
               }
               // 逐字字幕时间轴：后端按句下发（整段累计毫秒），直接拼接
               if (word_timeline?.length) {
@@ -325,14 +377,19 @@ export const useChatStore = defineStore("chat", {
             error: ({ message } = {}) => {
               throw new Error(message || "导览服务处理回答时发生错误。");
             },
-            done: ({ chat_log_id: chatLogId } = {}) => {
+            done: ({ chat_log_id: chatLogId, completion } = {}) => {
               if (!isCurrentRequest()) {
                 return;
               }
+              flushPendingText();
+              if (completion === "incomplete") {
+                throw new Error("回答未完成，连接或生成过程已中断。可重新尝试。");
+              }
               receivedDone = true;
+              assistantMessage.completion = "complete";
               // 结束 PCM 流（如果在用流式模式）
               if (pcmStarted || audioPlayer.isPCMStreaming.value) {
-                audioPlayer.endPCMStream();
+                audioPlayer.endPCMStream(playbackSession.id);
                 pcmStarted = false;
               }
               assistantMessage.chatLogId = Number(chatLogId) || null;
@@ -350,38 +407,29 @@ export const useChatStore = defineStore("chat", {
           },
         );
         if (isCurrentRequest() && !receivedDone) {
-          if (!assistantMessage.content.trim()) {
-            throw new Error("回答连接提前结束，未收到有效内容。");
-          }
-          if (pcmStarted || audioPlayer.isPCMStreaming.value) {
-            audioPlayer.endPCMStream();
-            pcmStarted = false;
-          }
-          this.streaming = false;
-          this.statusText = this.voiceFallback
-            ? FALLBACK_DONE_STATUS_TEXT
-            : ANSWER_DONE_STATUS_TEXT;
-          lastFailedRequest = null;
+          throw new Error("回答连接提前中断，内容未完成。可重新尝试。");
         }
       } catch (error) {
+        if (!isCurrentRequest()) return;
+        flushPendingText();
         if (isAbortError(error)) {
           if (this.userStopped) {
             this.statusText = STOPPED_STATUS_TEXT;
           }
           return;
         }
-        if (pcmStarted || audioPlayer.isPCMStreaming.value) {
-          audioPlayer.endPCMStream();
-          pcmStarted = false;
-        }
-        assistantMessage.content = assistantMessage.content
-          ? `${assistantMessage.content}\n\n（回答传输中断，可点击重试。）`
-          : GENERIC_ERROR_TEXT;
+        audioPlayer.stop(playbackSession.id);
+        pcmStarted = false;
+        assistantMessage.completion = "incomplete";
+        if (!assistantMessage.content) assistantMessage.content = GENERIC_ERROR_TEXT;
         this.streaming = false;
-        this.statusText = OFFLINE_STATUS_TEXT;
+        this.statusText = INCOMPLETE_STATUS_TEXT;
         this.errorMessage = error?.message || "导览服务暂时不可用，请稍后重试。";
         lastFailedRequest = { query, selection, options };
       } finally {
+        if (textTimer !== null) globalThis.clearTimeout(textTimer);
+        if (activeFlushPending === flushPendingText) activeFlushPending = null;
+        rememberChatMetrics(metrics.finish(assistantMessage.completion));
         if (activeStreamController === streamController) {
           activeStreamController = null;
         }
@@ -410,11 +458,14 @@ export const useChatStore = defineStore("chat", {
         message.feedbackSubmitting = false;
       }
     },
-    async retryLastMessage() {
+    async retryLastMessage(overrides = {}) {
       if (!lastFailedRequest || this.streaming) return;
       const request = lastFailedRequest;
-      if (this.messages.length >= 2) this.messages.splice(-2, 2);
-      await this.sendMessage(request.query, request.selection, request.options);
+      const options = { ...request.options, ...overrides };
+      if (request.options?.ttsConfig || overrides.ttsConfig) {
+        options.ttsConfig = { ...request.options?.ttsConfig, ...overrides.ttsConfig };
+      }
+      await this.sendMessage(request.query, request.selection, options);
     },
   },
 });

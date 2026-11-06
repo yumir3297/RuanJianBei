@@ -57,6 +57,15 @@ def test_build_tts_service_volcengine_resolves_preset() -> None:
     assert service._voice == "zh_female_cancan_uranus_bigtts"
 
 
+def test_build_tts_service_volcengine_can_replay_saved_voice_id() -> None:
+    service = factory.build_tts_service(
+        _settings(),
+        preset="gentle-female",
+        voice_override="saved-volcengine-voice",
+    )
+    assert service._voice == "saved-volcengine-voice"
+
+
 def test_build_tts_service_volcengine_unknown_preset_uses_default() -> None:
     service = factory.build_tts_service(_settings(), preset="unknown")
     assert isinstance(service, VolcengineTTSService)
@@ -68,6 +77,16 @@ def test_build_tts_service_bailian_resolves_preset() -> None:
     service = factory.build_tts_service(settings, preset="gentle-female")
     assert isinstance(service, BailianTTSService)
     assert service.voice == "longwan_v3"
+
+
+def test_build_tts_service_bailian_can_replay_saved_voice_id() -> None:
+    settings = _settings(tts_provider="bailian", tts_api_key="bk")
+    service = factory.build_tts_service(
+        settings,
+        preset="gentle-female",
+        voice_override="saved-bailian-voice",
+    )
+    assert service.voice == "saved-bailian-voice"
 
 
 def test_build_tts_service_unconfigured_raises() -> None:
@@ -84,6 +103,11 @@ def test_build_streaming_tts_service_volcengine() -> None:
     # create_session 只做本地构造，不发起网络连接
     session = service.create_session()
     assert session is not None
+
+
+def test_streaming_tts_uses_pcm_even_when_nonstreaming_format_is_mp3() -> None:
+    service = factory.build_streaming_tts_service(_settings(volcengine_tts_format="mp3"))
+    assert service.create_session()._format == "pcm"
 
 
 def test_build_streaming_tts_service_unconfigured_returns_none() -> None:

@@ -223,6 +223,22 @@ def _pcm_duration_ms(
     return num_bytes * 1000 // byte_rate
 
 
+def _pcm_to_wav(pcm: bytes, sample_rate: int, bits_per_sample: int = 16, channels: int = 1) -> bytes:
+    """Wrap raw little-endian PCM for browser AudioContext.decodeAudioData()."""
+    bytes_per_sample = bits_per_sample // 8
+    block_align = channels * bytes_per_sample
+    byte_rate = sample_rate * block_align
+    header = (
+        b"RIFF"
+        + struct.pack("<I", 36 + len(pcm))
+        + b"WAVEfmt "
+        + struct.pack("<IHHIIHH", 16, 1, channels, sample_rate, byte_rate, block_align, bits_per_sample)
+        + b"data"
+        + struct.pack("<I", len(pcm))
+    )
+    return header + pcm
+
+
 # ─────────────────────────────── 非流式合成 ───────────────────────────────
 
 
@@ -282,8 +298,9 @@ class VolcengineTTSService(BaseTTSService):
             logger.exception("火山 TTS 合成失败，降级为空音频")
             return TTSAudio(base64_audio="", duration_ms=0, provider="volcengine_unavailable")
 
+        playable_audio = _pcm_to_wav(pcm, self._sample_rate) if self._format == "pcm" else pcm
         return TTSAudio(
-            base64_audio=base64.b64encode(pcm).decode(),
+            base64_audio=base64.b64encode(playable_audio).decode(),
             duration_ms=_pcm_duration_ms(len(pcm), self._sample_rate),
             provider="volcengine",
         )
@@ -574,7 +591,7 @@ class VolcengineStreamingTTSSession:
 
         if event == Event.TTS_RESPONSE:
             self._queue.put_nowait(
-                StreamingTTSEvent(type="audio_chunk", data=parsed["payload"])
+                StreamingTTSEvent(type="audio_chunk", data=parsed["payload"], sample_rate=self._sample_rate)
             )
             return
 

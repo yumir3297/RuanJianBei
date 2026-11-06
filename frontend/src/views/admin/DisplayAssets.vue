@@ -2,45 +2,23 @@
   <section class="display-assets-layout">
     <header class="assets-hero">
       <div>
-        <h2>页面资源替换</h2>
-        <p>统一管理游客端视觉资源，支持风景背景与轮播配图的上传替换。</p>
+        <h2>页面与素材</h2>
+        <p>维护游客端品牌文案、主题设置和背景图片。</p>
       </div>
       <div class="hero-actions">
+        <el-tag v-if="hasUnsavedChanges" type="warning" effect="plain">有未保存更改</el-tag>
         <span v-if="lastUpdatedAt" class="hero-updated">更新于 {{ lastUpdatedAt }}</span>
         <el-button :loading="pageLoading" @click="loadPageData" size="small" class="hero-refresh-btn">刷新配置</el-button>
       </div>
     </header>
 
-    <div class="stat-row" v-loading="pageLoading && !initialized">
-      <article class="stat-item">
-        <div class="stat-icon stat-icon-blue">
-          <el-icon :size="16"><PictureFilled /></el-icon>
-        </div>
-        <div class="stat-body">
-          <div class="stat-title">游客端风景背景</div>
-          <div class="stat-desc">
-            {{ backgroundAsset.asset_url ? "已接入自定义景区背景图" : "当前使用内置默认背景" }}
-          </div>
-        </div>
-        <span :class="['stat-badge', { 'stat-badge-set': backgroundAsset.asset_url }]">
-          {{ backgroundAsset.asset_url ? "已设置" : "未设置" }}
-        </span>
-      </article>
-      <article class="stat-item">
-        <div class="stat-icon stat-icon-gold">
-          <el-icon :size="16"><Collection /></el-icon>
-        </div>
-        <div class="stat-body">
-          <div class="stat-title">Landing 页景区背景</div>
-          <div class="stat-desc">
-            {{ landingImages.length ? `已上传 ${landingImages.length} 张景区实景照片` : "当前使用默认景区图集" }}
-          </div>
-        </div>
-        <span :class="['stat-badge', { 'stat-badge-set': landingImages.length }]">
-          {{ landingImages.length ? `${landingImages.length} 张` : "未设置" }}
-        </span>
-      </article>
-    </div>
+    <el-alert v-if="pageLoadError" type="warning" :title="pageLoadError" :closable="false" show-icon>
+      <template #default><el-button link type="primary" @click="loadPageData">重新加载</el-button></template>
+    </el-alert>
+    <el-skeleton v-if="pageLoading && !initialized" :rows="8" animated />
+    <el-empty v-else-if="!initialized" description="配置尚未载入，当前不会提交默认值覆盖现有设置" />
+
+    <div v-else class="asset-sections">
 
     <article class="panel-card">
       <div class="section-heading">
@@ -68,7 +46,7 @@
           <h3>游客端品牌与主题</h3>
           <p>集中配置游客页品牌、数字人称呼、字体、强调色和风景照片的边缘渐隐效果。</p>
         </div>
-        <el-tag size="small" type="success" effect="plain">游客页即时生效</el-tag>
+        <el-tag size="small" effect="plain">保存后应用</el-tag>
       </div>
       <div class="card-body">
         <div class="settings-grid">
@@ -187,8 +165,8 @@
     <article class="panel-card">
       <div class="section-heading">
         <div>
-          <h3>Landing 页景区背景图</h3>
-          <p>上传景区实景照片，自动替换 Landing 页右侧大图区轮播背景。</p>
+          <h3>游客端首页轮播图（当前浏览器）</h3>
+          <p>这些图片保存在此浏览器的本地存储中，不会同步到其他管理员设备。</p>
         </div>
         <el-tag size="small" :type="landingImages.length ? 'success' : 'info'" effect="plain">
           {{ landingImages.length ? `${landingImages.length} 张` : "0 张" }}
@@ -201,8 +179,8 @@
           @click="openLandingPicker"
         >
           <el-icon :size="32"><UploadFilled /></el-icon>
-          <strong>点击上传景区背景图</strong>
-          <span>支持 JPG / PNG / WEBP，建议横向实景照片，可批量选择</span>
+          <strong>添加首页轮播图</strong>
+          <span>支持 JPG / PNG / WEBP，可批量选择；内容保存在当前浏览器</span>
         </div>
 
         <input
@@ -241,7 +219,7 @@
             :disabled="!landingImages.length"
             @click="handleApplyLanding"
           >
-            应用轮播背景
+            保存本地轮播图
           </el-button>
           <el-button
             size="small"
@@ -253,13 +231,15 @@
         </div>
       </div>
     </article>
+    </div>
   </section>
 </template>
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { Collection, PictureFilled, UploadFilled } from "@element-plus/icons-vue";
+import { onBeforeRouteLeave } from "vue-router";
+import { UploadFilled } from "@element-plus/icons-vue";
 
 import {
   clearTouristBackground,
@@ -275,6 +255,7 @@ const LANDING_STORAGE_KEY = "a5-landing-images-v1";
 
 const initialized = ref(false);
 const pageLoading = ref(false);
+const pageLoadError = ref("");
 const lastUpdatedAt = ref("");
 const backgroundInputRef = ref(null);
 const landingInputRef = ref(null);
@@ -289,6 +270,7 @@ const backgroundAsset = ref({
 
 const DEFAULT_WELCOME = "欢迎来到这里，我会陪您探索景点、规划路线并了解景区服务。";
 const welcomeTextValue = ref(DEFAULT_WELCOME);
+const savedWelcomeText = ref(DEFAULT_WELCOME);
 const welcomeTextEditing = ref(false);
 const welcomeTextSaving = ref(false);
 
@@ -313,9 +295,15 @@ const DEFAULT_TOURIST_SETTINGS = {
   ],
 };
 const touristSettings = ref(structuredClone(DEFAULT_TOURIST_SETTINGS));
+const savedTouristSettings = ref(null);
 const settingsSaving = ref(false);
 
 const landingImages = ref([]);
+const hasUnsavedChanges = computed(() => Boolean(
+  selectedBackgroundFile.value
+  || (savedTouristSettings.value && JSON.stringify(touristSettings.value) !== JSON.stringify(savedTouristSettings.value))
+  || (welcomeTextEditing.value && welcomeTextValue.value !== savedWelcomeText.value),
+));
 
 const backgroundPreviewUrl = computed(() =>
   selectedBackgroundPreviewUrl.value || resolveAssetUrl(backgroundAsset.value.asset_url),
@@ -433,6 +421,7 @@ async function loadDisplayAssetState() {
     updated_at: assets?.tourist_background?.updated_at || "",
   };
   welcomeTextValue.value = assets?.welcome_text || DEFAULT_WELCOME;
+  savedWelcomeText.value = welcomeTextValue.value;
   touristSettings.value = {
     ...structuredClone(DEFAULT_TOURIST_SETTINGS),
     ...(assets?.tourist_settings || {}),
@@ -440,6 +429,7 @@ async function loadDisplayAssetState() {
     quick_questions: [...(assets?.tourist_settings?.quick_questions || DEFAULT_TOURIST_SETTINGS.quick_questions)],
     hotlines: structuredClone(assets?.tourist_settings?.hotlines || DEFAULT_TOURIST_SETTINGS.hotlines),
   };
+  savedTouristSettings.value = structuredClone(touristSettings.value);
 }
 
 function moveModule(index, direction) {
@@ -461,6 +451,7 @@ async function handleSaveTouristSettings() {
   settingsSaving.value = true;
   try {
     touristSettings.value = await updateTouristDisplaySettings(touristSettings.value);
+    savedTouristSettings.value = structuredClone(touristSettings.value);
     lastUpdatedAt.value = formatNow();
     invalidateScenicBackground();
     ElMessage.success("游客端品牌与主题设置已保存");
@@ -472,14 +463,26 @@ async function handleSaveTouristSettings() {
 }
 
 async function loadPageData() {
+  if (hasUnsavedChanges.value) {
+    try {
+      await ElMessageBox.confirm("重新读取会覆盖当前未保存的页面设置。", "重新加载配置？", {
+        type: "warning",
+        confirmButtonText: "重新加载",
+        cancelButtonText: "继续编辑",
+      });
+    } catch {
+      return;
+    }
+  }
   pageLoading.value = true;
+  pageLoadError.value = "";
   try {
     await loadDisplayAssetState();
     loadLandingImages();
     initialized.value = true;
     lastUpdatedAt.value = formatNow();
   } catch (error) {
-    ElMessage.error(`配置读取失败：${error?.response?.data?.detail || error.message || "请检查后端服务"}`);
+    pageLoadError.value = `配置读取失败：${error?.response?.data?.detail || error.message || "请检查后端服务"}`;
   } finally {
     pageLoading.value = false;
   }
@@ -537,13 +540,13 @@ async function handleSaveWelcomeText() {
   try {
     const response = await updateWelcomeText(welcomeTextValue.value);
     welcomeTextValue.value = response.welcome_text;
+    savedWelcomeText.value = response.welcome_text;
     welcomeTextEditing.value = false;
     lastUpdatedAt.value = formatNow();
     invalidateScenicBackground();
     ElMessage.success("欢迎语已更新");
   } catch (error) {
     ElMessage.error(`欢迎语保存失败：${error?.response?.data?.detail || error.message}`);
-    await loadDisplayAssetState();
   } finally {
     welcomeTextSaving.value = false;
   }
@@ -551,8 +554,22 @@ async function handleSaveWelcomeText() {
 
 function handleCancelWelcomeText() {
   welcomeTextEditing.value = false;
-  loadDisplayAssetState();
+  welcomeTextValue.value = savedWelcomeText.value;
 }
+
+onBeforeRouteLeave(async () => {
+  if (!hasUnsavedChanges.value) return true;
+  try {
+    await ElMessageBox.confirm("离开后将丢弃当前未保存的页面设置。", "离开配置页？", {
+      type: "warning",
+      confirmButtonText: "离开页面",
+      cancelButtonText: "继续编辑",
+    });
+    return true;
+  } catch {
+    return false;
+  }
+});
 
 onMounted(() => { loadPageData(); });
 onBeforeUnmount(() => { revokeBackgroundPreview(); });

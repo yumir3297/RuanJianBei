@@ -29,6 +29,7 @@ class StreamingTTSEvent:
     """流式 TTS 返回的事件"""
     type: str  # "audio_chunk" | "word_timestamps" | "sentence_begin" | "done" | "error"
     data: bytes | list[dict] | dict | str | None = None
+    sample_rate: int = 24000
 
 
 class StreamingTTSSession:
@@ -223,7 +224,7 @@ class StreamingTTSSession:
                 if isinstance(message, bytes):
                     # 二进制帧 = PCM 音频数据
                     self._queue.put_nowait(
-                        StreamingTTSEvent(type="audio_chunk", data=message)
+                        StreamingTTSEvent(type="audio_chunk", data=message, sample_rate=self._sample_rate)
                     )
                 elif isinstance(message, str):
                     try:
