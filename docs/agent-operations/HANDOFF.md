@@ -37,4 +37,5 @@ Updated: 2026-11-07. Repository: `yumir3297/RuanJianBei`.
 
 - CASS/offline remain held: the separate branch contains a proposal and a demo implementation with placeholder map/unverified contacts; no official safety resource has been verified.
 - Real mobile browsers, real providers, PostgreSQL production upgrade/concurrency and verified contacts are not available in this session.
+- G1 remains partial for one unrecoverable historical evidence gap: the old main-checkout audit's 95 dirty-path count has no path manifest, while later audit counts were 107/128. Current worktrees are clean and protected; no source worktree was modified.
 - Full product G2/G3 cannot be claimed complete: W03 and O01 are not implemented; several other backlog tasks are only partial or awaiting design/real data.

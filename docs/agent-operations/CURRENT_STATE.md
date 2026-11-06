@@ -14,6 +14,8 @@ The selected integration branch already contains the main K01/W01/V01/W02 implem
 
 The current changes are not yet accepted as production/device validation. Real mobile browsers, live AI/TTS providers, production databases, and verified emergency resources are not available in this workspace.
 
+The overall result remains **PARTIAL**: the old main-checkout audit's 95-path state has no path-by-path manifest to reconcile with later 107/128 counts. Current registered worktrees are clean/protected and all known snapshots remain available, but that missing historical evidence cannot be recreated safely.
+
 ## Entry points
 
 - Handoff: [HANDOFF.md](HANDOFF.md)
