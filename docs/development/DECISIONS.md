@@ -264,6 +264,6 @@ FAQ 改写失败时必须在最终 text 和音频补播前恢复权威 FAQ 答�
 
 选择：在确定性、FAQ 和 cache 三条 Pipeline 快速路径显式用 `aclosing` 包住 factory 流；无证据路径由 `NoEvidenceAnswerHandler` 自己承担同一边界。factory/coordinator 内部行为不变。
 
-验证：新增 Pipeline 级早关测试。pytest 无法在当前临时环境运行（pytest 未安装、PyPI DNS 失败）；等价的 stdlib async-generator 边界复现先按旧结构失败，加入 `aclosing` 后通过；compileall 和 diff check 通过。当前版本完整 pytest 回归仍待可用依赖环境。
+验证：新增 Pipeline 级早关测试。stdlib async-generator 边界复现先按旧结构失败，加入 `aclosing` 后通过；临时环境补齐轻量依赖后，含 Pipeline、FAQ/cache/RAG/epoch、stream 生命周期、TTS/SSE 的选定回归 182 passed，1 条 Starlette/AnyIO `BlockingPortal` 弃用警告；compileall 和 diff check 通过。用例使用本地替身，不表示真实模型/provider/设备验收。
 
 回滚：如果关闭测试在受支持运行时失败，恢复原转发并先修复迭代器关闭契约；不要删除取消回归。
