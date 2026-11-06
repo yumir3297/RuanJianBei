@@ -4,7 +4,7 @@
 
 ## 当前选择：显式业务节点，保留 Pipeline 编排
 
-目前保留 FastAPI 与显式 `QAPipeline`，按可验证的业务职责拆分节点。当前代码包括受众画像解析、确定性路线回答与早答优先级解析、路线预算解析、视觉确认/发布证据绑定、FAQ与缓存快速路径决策、开放时间/票价不可核实规则、RAG来源证据束和TTS事件适配。异步请求生命周期、epoch fence 和 SSE 顺序仍由 Pipeline 控制。复杂行程提案由独立的持久任务 worker 处理，普通问答不进入通用 Supervisor。
+目前保留 FastAPI 与显式 `QAPipeline`，按可验证的业务职责拆分节点。当前代码包括受众画像解析、确定性路线回答与早答优先级解析、路线预算解析、视觉确认/发布证据绑定、FAQ与缓存快速路径决策、开放时间/票价不可核实规则、RAG来源证据束和TTS事件适配。Pipeline 决定业务路由并组合请求级节点；epoch fence、生成取消、TTS 调度和 SSE 生命周期由证据、生成、turn 与 completion 组件按边界共同持有。复杂行程提案由独立的持久任务 worker 处理，普通问答不进入通用 Supervisor。
 
 ```mermaid
 flowchart TD

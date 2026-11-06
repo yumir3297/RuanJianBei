@@ -1,5 +1,11 @@
 # Worktree 改动逐路径核对（2026-11-05）
 
+## 本轮复核（答案缓存绑定契约，2026-11-06）
+
+- 起点集成 checkout 与原仓库同名 ref 均为 `9a486e9`。主 checkout `codex/repository-map@672a104` 为 107 个普通/128 个展开 porcelain 路径；V01、W02、W02/V01 分别 49/49、35/43、39/44。五个保护快照仍可解析，`/private/tmp/ai-guide-phase3` 仍标记 prunable 且未 prune；已检查 worktree 的 `sources/` 均 clean。
+- 逐项差异分类沿用下方表格及本文件既有目录复核，不能用分支祖先关系代替内容/行为对比。主 checkout 早期 95 路径缺少逐路径清单，当前 107 路径全部保留，计数变化无法追溯归因。本轮未更改任何源 worktree、主 checkout 或快照，也未把集成分支合回主 checkout。
+- 集成副本只增加编排器 cache key/source/epoch 绑定行为测试并更正 TARGET 生命周期描述；`frontend/node_modules` 仍是唯一未跟踪本机软链接。定向回归 26 passed；全后端 670 passed、19 skipped、8 warnings；compileall、repository map、脚本测试 11 passed、diff check 通过。自动化使用本地替身/SQLite，不代表真实供应商、设备或部署数据库已验收。
+
 ## 本轮复核（生成回答组合边界，2026-11-06）
 
 - 起始集成 checkout 与原仓库 `codex/competition-integration` ref 均为 `1c4c415`。主 checkout `codex/repository-map@672a104` 为 107 个 porcelain 路径（展开 128）；V01 `098553f`/49，W02 `a8c2837`/35 普通与 43 展开，W02/V01 `098553f`/39 普通与 44 展开。快照 `4acaa53`、`e115eab`、`3805943`、`48ef626`、`5433557` 均可解析；phase3 路径仍 prunable，未 prune。已有逐项分类表未因本轮变更，仍按字节比较/行为证据标记已合并、仅快照、尚未合并或后续实现替代；不按祖先关系判定。

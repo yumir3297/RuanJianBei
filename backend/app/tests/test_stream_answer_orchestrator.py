@@ -23,6 +23,8 @@ class RecordingCompletion:
         self.kwargs = kwargs
 
         async def source():
+            if kwargs["cache_answer"] is not None:
+                await kwargs["cache_answer"]()
             yield StreamEvent("text", {"text": kwargs["answer"]})
             yield StreamEvent("done")
 
@@ -173,3 +175,41 @@ async def test_closing_orchestrator_during_generation_closes_turn_and_skips_comp
 
     assert turn_factory.turn.closed is True
     assert completion.kwargs is None
+
+
+@pytest.mark.asyncio
+async def test_orchestrator_binds_cache_write_to_answer_sources_and_request_epoch() -> None:
+    class Turn:
+        def __init__(self) -> None:
+            self.answer_buffer = SimpleNamespace(full_answer="")
+            self.llm_finish_reason = "stop"
+            self.llm_usage = SimpleNamespace(
+                prompt_tokens=2, completion_tokens=3, total_tokens=5, cached_tokens=0
+            )
+
+        async def events(self):
+            self.answer_buffer.full_answer = "基于证据的回答"
+            yield StreamEvent("text_chunk", {"token": "基于证据的回答"})
+
+        async def check_generation_result(self):
+            return None
+
+    class TurnFactory:
+        def __init__(self) -> None:
+            self.turn = Turn()
+
+        def create(self, **_kwargs):
+            return self.turn, False
+
+    context = _context()
+    turn_factory = TurnFactory()
+    completion = RecordingCompletion()
+    cache = RecordingCache()
+    orchestrator = _orchestrator(turn_factory, completion, cache)
+
+    events = [event async for event in orchestrator.events(context)]
+
+    assert [event.type for event in events] == ["text_chunk", "text", "done"]
+    assert cache.writes == [
+        ((context.cache_key, "基于证据的回答", context.sources), {"epoch": context.expected_epoch})
+    ]
