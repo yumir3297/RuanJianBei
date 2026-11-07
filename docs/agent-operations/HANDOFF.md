@@ -25,7 +25,7 @@ Updated: 2026-11-07. Repository: `yumir3297/RuanJianBei`.
 - Wired persistent K01 publication recovery to the admin UI. The UI restores known jobs by GET; unknown create results require an explicit same-idempotency-key recovery; browser storage failure fails closed.
 - Independent review identified and the current diff addresses definitive 4xx stale-draft rejection, lost retry responses, status polling after unmount, and read-only recovery when only in-memory job ID persistence failed.
 - Added the missing pinned async pytest plugin and corrected stale knowledge architecture, feature map and backlog claims.
-- Final automated evidence on the validated implementation commit: backend 671 passed / 19 skipped; frontend 164 passed; production build succeeded with a large-chunk warning; map checker and 11 script tests passed; migration lineage has one head and selected SQLite migration tests passed 7. Focused publication recovery: 13 passed. Independent review has no remaining P0/P1. The implementation branch is pushed and PR #3 is open. See [TEST_STATUS.md](TEST_STATUS.md).
+- Latest automated evidence: backend 672 passed / 19 skipped; frontend 164 passed; production build succeeded with a large-chunk warning; map checker and 11 script tests passed; migration lineage has one head and selected SQLite migration tests passed 7. Focused publication recovery: 13 passed. The repository's 22-row `guide_sections.json` sample completed import→draft→publish→dispose/reopen SQLite engine→visibility verification using fake vectors; no real provider/Chroma was used. Independent review found no P0/P1 in the K01 recovery changes. The branch is pushed and PR #3 is open. See [TEST_STATUS.md](TEST_STATUS.md).
 
 ## Immediate next actions
 
