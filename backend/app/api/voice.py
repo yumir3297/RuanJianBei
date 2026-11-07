@@ -26,6 +26,10 @@ def get_asr_service(settings: Settings = Depends(get_settings)) -> BaseASRServic
         from app.services.asr.local_sensevoice import LocalSenseVoiceASRService
 
         return LocalSenseVoiceASRService(settings=settings)
+    if settings.asr_provider == "volcengine":
+        from app.services.asr.volcengine import VolcengineASRService
+
+        return VolcengineASRService(settings=settings)
     if settings.asr_provider == "bailian":
         from app.services.asr.bailian import BailianASRService
 

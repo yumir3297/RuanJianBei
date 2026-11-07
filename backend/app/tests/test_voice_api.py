@@ -10,6 +10,7 @@ from app.api.voice import get_asr_service
 from app.core.config import Settings, get_settings
 from app.services.asr.base import ASRResult
 from app.services.asr.bailian import BailianASRService
+from app.services.asr.volcengine import VolcengineASRService
 import app.api.voice as voice_api
 
 
@@ -23,6 +24,13 @@ def build_client(settings: Settings) -> TestClient:
 def test_bailian_is_the_configured_cloud_asr_adapter() -> None:
     service = get_asr_service(Settings(asr_provider="bailian", asr_model="fun-asr"))
     assert isinstance(service, BailianASRService)
+
+
+def test_volcengine_is_the_configured_cloud_asr_adapter() -> None:
+    service = get_asr_service(
+        Settings(asr_provider="volcengine", volcengine_asr_api_key="test-key")
+    )
+    assert isinstance(service, VolcengineASRService)
 
 
 def test_transcribe_audio_returns_stub_metadata() -> None:
@@ -162,6 +170,36 @@ def test_audio_accepts_real_wav_within_duration_limit() -> None:
     client = build_client(Settings(asr_provider="stub", asr_max_audio_seconds=1))
     response = client.post("/api/asr/transcribe", content=_wav(0.5), headers={"Content-Type": "audio/wav"})
     assert response.status_code == 200
+
+
+def test_volcengine_asr_receives_raw_wav_without_public_audio_url() -> None:
+    audio = _wav(0.5)
+
+    class CapturingASR:
+        received: bytes | str | None = None
+
+        async def transcribe(self, payload):
+            self.received = payload
+            return ASRResult(text="测试转写", provider="volcengine")
+
+        async def aclose(self):
+            return None
+
+    service = CapturingASR()
+    client = build_client(
+        Settings(asr_provider="volcengine", asr_public_audio_base_url="")
+    )
+    client.app.dependency_overrides[get_asr_service] = lambda: service
+
+    response = client.post(
+        "/api/asr/transcribe",
+        content=audio,
+        headers={"Content-Type": "audio/wav"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["text"] == "测试转写"
+    assert service.received == audio
 
 
 def test_wav_cannot_bypass_duration_by_claiming_webm() -> None:
