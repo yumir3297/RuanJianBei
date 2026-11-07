@@ -39,3 +39,4 @@ Updated: 2026-11-07. Repository: `yumir3297/RuanJianBei`.
 - Real mobile browsers, real providers, PostgreSQL production upgrade/concurrency and verified contacts are not available in this session.
 - G1 remains partial for one unrecoverable historical evidence gap: the old main-checkout audit's 95 dirty-path count has no path manifest, while later audit counts were 107/128. Current worktrees are clean and protected; no source worktree was modified.
 - Full product G2/G3 cannot be claimed complete: W03 and O01 are not implemented; several other backlog tasks are only partial or awaiting design/real data.
+- K02 OCR discovery: a local macOS-only Apple Vision/OCRmyPDF wrapper exists at `~/Documents/pdf-ocr-mac/ocr-pdf`, outside the repository. Its README describes searchable-PDF and sidecar-text modes; no real document was run, output was not validated, and it is not wired into import jobs. Do not treat it as production-ready or cross-platform.
