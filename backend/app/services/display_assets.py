@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -32,18 +34,29 @@ class DisplayAssetService:
         self.upload_root.mkdir(parents=True, exist_ok=True)
         self.manifest_file.parent.mkdir(parents=True, exist_ok=True)
 
-    def get_assets(self) -> dict[str, dict[str, Any]]:
-        manifest = self._load_manifest()
+    def get_assets(self, *, strict: bool = False) -> dict[str, dict[str, Any]]:
+        manifest = self._load_manifest(strict=strict)
         asset = manifest.get(TOURIST_BACKGROUND_KEY)
         try:
             tourist_settings = TouristDisplaySettings.model_validate(
                 manifest.get(TOURIST_SETTINGS_KEY) or {}
             ).model_dump(mode="json")
-        except ValidationError:
+        except ValidationError as error:
+            if strict:
+                raise self._unavailable_manifest() from error
             tourist_settings = TouristDisplaySettings().model_dump(mode="json")
+        if strict and asset is not None:
+            if not isinstance(asset, dict):
+                raise self._unavailable_manifest()
+            asset_url = asset.get("asset_url")
+            if asset_url is not None and not isinstance(asset_url, str):
+                raise self._unavailable_manifest()
+        welcome_text = manifest.get(WELCOME_TEXT_KEY, DEFAULT_WELCOME_TEXT)
+        if strict and not isinstance(welcome_text, str):
+            raise self._unavailable_manifest()
         return {
             TOURIST_BACKGROUND_KEY: self._normalize_asset(asset),
-            WELCOME_TEXT_KEY: manifest.get(WELCOME_TEXT_KEY, DEFAULT_WELCOME_TEXT),
+            WELCOME_TEXT_KEY: welcome_text,
             TOURIST_SETTINGS_KEY: tourist_settings,
         }
 
@@ -119,20 +132,55 @@ class DisplayAssetService:
         self._save_manifest(manifest)
         return self._normalize_asset({})
 
-    def _load_manifest(self) -> dict[str, Any]:
-        self.ensure_storage()
-        if not self.manifest_file.exists():
-            return {}
+    def _load_manifest(self, *, strict: bool = False) -> dict[str, Any]:
         try:
-            return json.loads(self.manifest_file.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            return {}
+            self.ensure_storage()
+            try:
+                self.manifest_file.stat()
+            except FileNotFoundError:
+                return {}
+            payload = json.loads(self.manifest_file.read_text(encoding="utf-8"))
+            if not isinstance(payload, dict):
+                raise ValueError("display manifest root must be an object")
+            return payload
+        except (OSError, json.JSONDecodeError, ValueError) as error:
+            if strict:
+                raise self._unavailable_manifest() from error
+            if isinstance(error, json.JSONDecodeError):
+                return {}
+            raise
+
+    @staticmethod
+    def _unavailable_manifest() -> HTTPException:
+        return HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "display_manifest_unavailable",
+                "message": "游客展示配置暂不可用，请稍后重试。",
+            },
+        )
 
     def _save_manifest(self, payload: dict[str, Any]) -> None:
-        self.manifest_file.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+        self.ensure_storage()
+        encoded = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
+        temporary_path: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="wb",
+                dir=self.manifest_file.parent,
+                prefix=f".{self.manifest_file.name}.",
+                suffix=".tmp",
+                delete=False,
+            ) as temporary_file:
+                temporary_path = Path(temporary_file.name)
+                temporary_file.write(encoded)
+                temporary_file.flush()
+                os.fsync(temporary_file.fileno())
+            os.replace(temporary_path, self.manifest_file)
+            temporary_path = None
+        finally:
+            if temporary_path is not None:
+                temporary_path.unlink(missing_ok=True)
 
     def _delete_relative_file(self, relative_path: str | None) -> None:
         if not relative_path:

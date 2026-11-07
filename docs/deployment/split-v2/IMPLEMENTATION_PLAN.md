@@ -78,13 +78,13 @@ Task 4–5与纯业务功能可以分批推进，但不默认多人同时修改m
 - VisitorConfigService(session:AsyncSession,settings:Settings).read()->PublicVisitorConfig。
 - GET /api/visitor-config，匿名可读、no-store；DisplayAssetService.get_assets(*,strict:bool=False)，新入口strict=True。
 
-- [ ] 写test_anonymous_reads_active_config_without_admin_token：匿名200包含后台激活预设/逻辑音色/公开展示；不含id/model_path/内部路径/密钥。
-- [ ] 写test_admin_operations_remain_protected：管理列表/激活/修改匿名401；不能通过放开admin router解决读取。
-- [ ] 写test_missing_and_legacy_avatar_mapping：无记录回退hanfu/gentle-female；无激活按最小id；支持旧音色映射，未知值安全回退。
-- [ ] 写test_manifest_atomic_replace与test_strict_read_does_not_return_false_defaults：隔离tmp_path内读者只见完整旧/新JSON；替换失败原文件不变且temp清理；已有损坏/无权限文件新接口503，首次不存在文件200默认。
-- [ ] backend/运行选定venv python -m pytest app/tests/test_visitor_config_api.py app/tests/test_display_assets_atomic.py -q，确认未实现失败。
-- [ ] 实现schema、service、router及同目录私有temp+os.replace；新入口不调用带权限的管理API handler；不顺带做跨机器或多写者事务。
-- [ ] 重跑新测试与test_default_hotline_verification.py；更新地图并执行python3 scripts/check_repo_map.py；提交兼容后端接口。
+- [x] 写test_anonymous_reads_active_config_without_admin_token：匿名200包含后台激活预设/逻辑音色/公开展示；不含id/model_path/内部路径/密钥。
+- [x] 写test_admin_operations_remain_protected：管理列表/激活/修改匿名401；不能通过放开admin router解决读取。
+- [x] 写test_missing_and_legacy_avatar_mapping：无记录回退hanfu/gentle-female；无激活按最小id；支持旧音色映射，未知值安全回退。
+- [x] 写test_manifest_atomic_replace与test_strict_read_does_not_return_false_defaults：隔离tmp_path内读者只见完整旧/新JSON；替换失败原文件不变且temp清理；已有损坏/无权限文件新接口503，首次不存在文件200默认。
+- [x] backend/运行选定venv python -m pytest app/tests/test_visitor_config_api.py app/tests/test_display_assets_atomic.py -q，确认未实现失败。
+- [x] 实现schema、service、router及同目录私有temp+os.replace；新入口不调用带权限的管理API handler；不顺带做跨机器或多写者事务。
+- [x] 重跑新测试与test_default_hotline_verification.py；更新地图并执行python3 scripts/check_repo_map.py；提交兼容后端接口。
 
 ### Task 2：认证客户端与配置刷新分离
 
