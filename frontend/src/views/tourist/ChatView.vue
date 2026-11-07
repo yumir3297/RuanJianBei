@@ -311,9 +311,9 @@ import { useRecorder } from "../../composables/useRecorder";
 import { useCamera } from "../../composables/useCamera";
 import { useSpeechRecognition } from "../../composables/useSpeechRecognition";
 import { useScenicBackground } from "../../composables/useScenicBackground";
-import { fetchAvatarConfig } from "../../api/admin";
+import { useVisitorConfig } from "../../composables/useVisitorConfig.js";
 import { fetchWelcomeAudio, replayChatAnswer } from "../../api/chat";
-import { normalizeAvatarPresetFromModelPath, DEFAULT_AVATAR_PRESET } from "../../utils/avatarConfig";
+import { DEFAULT_AVATAR_PRESET } from "../../utils/avatarConfig";
 import { GUIDE_PERSONA, useAvatar } from "../../composables/useAvatar";
 import { useWeather } from "../../composables/useWeather";
 import { isItineraryEditIntent } from "../../utils/itineraryIntent.js";
@@ -341,7 +341,6 @@ const tourStore = useTourSessionsStore();
 const speechRate = ref(readSpeechRate());
 const speechRateOptions = SPEECH_RATE_OPTIONS;
 watch(speechRate, (rate) => writeSpeechRate(rate));
-const { scenicBgUrl, hasScenicBackground, welcomeText, touristSettings } = useScenicBackground();
 function rgbaHex(hex, alpha) {
   const value = /^#([\da-f]{6})$/i.exec(hex || "")?.[1] || "18352b";
   const rgb = [0, 2, 4].map((offset) => Number.parseInt(value.slice(offset, offset + 2), 16));
@@ -439,16 +438,6 @@ const AVATAR_MODEL_MAP = {
 
 const avatarDisplayName = computed(() => touristSettings.value.guide_name || AVATAR_MODEL_MAP[avatarConfig.value.modelKey]?.name || "小灵");
 const avatarDisplaySubtitle = computed(() => touristSettings.value.guide_subtitle || AVATAR_MODEL_MAP[avatarConfig.value.modelKey]?.subtitle || "数字人导游");
-
-async function loadAvatarConfig() {
-  try {
-    const config = await fetchAvatarConfig();
-    avatarConfig.value.modelKey = normalizeAvatarPresetFromModelPath(config?.model_path, DEFAULT_AVATAR_PRESET);
-    avatarConfig.value.voiceType = config?.voice_type || "gentle-female";
-  } catch {
-    // use default
-  }
-}
 
 const query = ref("");
 const pendingIntentQuery = ref("");
@@ -792,7 +781,6 @@ onMounted(() => {
   toolMedia.addEventListener("change", syncPanels);
   syncToolDialog();
   interactionStore.initialize();
-  loadAvatarConfig();
 
   startWeather();
 
@@ -1468,6 +1456,21 @@ watch(() => [chatStore.voiceFallback, chatStore.streaming, chatStore.errorMessag
   if (!streaming && (fallback || error)) textExpanded.value = true;
 });
 const inputBusy = computed(() => chatStore.streaming || speechListening.value || isRecording.value || transcribing.value);
+const visitorConfig = useVisitorConfig({
+  isIdle: () => !inputBusy.value
+    && !audioPlayer.isPlaying.value
+    && activeAudioSegments.value === 0
+    && !mapNarrationActive.value,
+});
+const stopVisitorAvatarWatch = watch(visitorConfig.avatar, (config) => {
+  if (avatarConfig.value.modelKey === config.model_key && avatarConfig.value.voiceType === config.voice_type) return;
+  avatarConfig.value = { modelKey: config.model_key, voiceType: config.voice_type };
+}, { immediate: true });
+onBeforeUnmount(stopVisitorAvatarWatch);
+const { scenicBgUrl, hasScenicBackground, welcomeText, touristSettings } = useScenicBackground({
+  display: visitorConfig.display,
+  refresh: visitorConfig.refresh,
+});
 
 let toolQuestionGeneration = 0;
 function setTool(id) {

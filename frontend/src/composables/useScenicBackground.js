@@ -1,7 +1,7 @@
-import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from "vue";
-import { fetchPublicDisplayAssets, resolveDisplayAssetUrl } from "../api/display";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { resolveDisplayAssetUrl } from "../api/display.js";
+import { createBackgroundAssetLoader } from "../utils/backgroundAssetLoader.js";
 
-// A scenic photograph remains visible before configuration loads or if an upload fails.
 const DEFAULT_BG_CSS = 'url("/assets/bg-scenic.png")';
 const DEFAULT_WELCOME = "你好，我是你的数字人导游。可以向我了解景点、游览路线和景区服务。";
 const DEFAULT_TOURIST_SETTINGS = {
@@ -35,113 +35,51 @@ const DEFAULT_TOURIST_SETTINGS = {
   ],
 };
 
-const cachedAssetUrl = shallowRef(null);
-const cachedWelcomeText = shallowRef(null);
-const cachedTouristSettings = shallowRef(null);
-let fetchPromise = null;
-const ASSETS_VERSION_KEY = "a5-display-assets-version";
-
-function loadBackgroundImage(url) {
-  return new Promise((resolve) => {
-    const image = new Image();
-    const timeout = window.setTimeout(() => finish(false), 15000);
-    function finish(loaded) {
-      window.clearTimeout(timeout);
-      image.onload = null;
-      image.onerror = null;
-      resolve(loaded);
-    }
-    image.onload = () => finish(true);
-    image.onerror = () => finish(false);
-    image.src = url;
-  });
-}
-
-async function ensureAssets(force = false) {
-  if (!force && cachedAssetUrl.value !== null) {
-    return;
-  }
-  if (fetchPromise) {
-    await fetchPromise;
-    return;
-  }
-  fetchPromise = (async () => {
-    try {
-      const assets = await fetchPublicDisplayAssets();
-      const bgUrl = resolveDisplayAssetUrl(assets?.tourist_background?.asset_url);
-      if (!bgUrl) cachedAssetUrl.value = "";
-      else if (bgUrl !== cachedAssetUrl.value) {
-        cachedAssetUrl.value = await loadBackgroundImage(bgUrl) ? bgUrl : "";
-      }
-      cachedWelcomeText.value = assets?.welcome_text || DEFAULT_WELCOME;
-      cachedTouristSettings.value = {
-        ...DEFAULT_TOURIST_SETTINGS,
-        ...(assets?.tourist_settings || {}),
-        modules: assets?.tourist_settings?.modules || DEFAULT_TOURIST_SETTINGS.modules,
-        quick_questions: assets?.tourist_settings?.quick_questions || DEFAULT_TOURIST_SETTINGS.quick_questions,
-        hotlines: assets?.tourist_settings?.hotlines || DEFAULT_TOURIST_SETTINGS.hotlines,
-      };
-    } catch {
-      if (cachedAssetUrl.value === null) {
-        cachedAssetUrl.value = "";
-        cachedWelcomeText.value = DEFAULT_WELCOME;
-        cachedTouristSettings.value = DEFAULT_TOURIST_SETTINGS;
-      }
-    } finally {
-      fetchPromise = null;
-    }
-  })();
-  await fetchPromise;
+function normalizeTouristSettings(settings) {
+  return {
+    ...DEFAULT_TOURIST_SETTINGS,
+    ...(settings || {}),
+    modules: settings?.modules || DEFAULT_TOURIST_SETTINGS.modules,
+    quick_questions: settings?.quick_questions || DEFAULT_TOURIST_SETTINGS.quick_questions,
+    hotlines: settings?.hotlines || DEFAULT_TOURIST_SETTINGS.hotlines,
+  };
 }
 
 export function invalidateScenicBackground() {
-  cachedAssetUrl.value = null;
-  cachedWelcomeText.value = null;
-  cachedTouristSettings.value = null;
-  try { window.localStorage.setItem(ASSETS_VERSION_KEY, String(Date.now())); } catch {}
+  // Legacy same-page API retained. Cross-origin updates use visitor-config polling.
 }
 
-export function useScenicBackground() {
+export function useScenicBackground({ display, refresh: refreshConfig } = {}) {
+  const cachedAssetUrl = ref(null);
+  const cachedWelcomeText = ref(null);
+  const cachedTouristSettings = ref(null);
   const loading = ref(false);
+  const backgroundLoader = createBackgroundAssetLoader({
+    resolveUrl: resolveDisplayAssetUrl,
+    onChange({ url, loading: isLoading }) {
+      cachedAssetUrl.value = url;
+      loading.value = isLoading;
+    },
+  });
 
   const scenicBgUrl = computed(() => {
-    const url = cachedAssetUrl.value;
-    if (url === null) return DEFAULT_BG_CSS;
-    if (url === "") return DEFAULT_BG_CSS;
-    return `url(${JSON.stringify(url)})`;
+    if (!cachedAssetUrl.value) return DEFAULT_BG_CSS;
+    return `url(${JSON.stringify(cachedAssetUrl.value)})`;
   });
   const hasScenicBackground = computed(() => Boolean(cachedAssetUrl.value));
+  const welcomeText = computed(() => cachedWelcomeText.value || DEFAULT_WELCOME);
 
-  const welcomeText = computed(() => {
-    return cachedWelcomeText.value || DEFAULT_WELCOME;
-  });
-
-  async function refresh() {
-    loading.value = true;
-    try {
-      await ensureAssets(true);
-    } finally {
-      loading.value = false;
-    }
+  async function applyDisplay(assets) {
+    if (!assets) return;
+    cachedWelcomeText.value = assets.welcome_text || DEFAULT_WELCOME;
+    cachedTouristSettings.value = normalizeTouristSettings(assets.tourist_settings);
+    await backgroundLoader.load(assets.tourist_background?.asset_url);
   }
 
-  if (cachedAssetUrl.value === null) {
-    ensureAssets();
-  }
-
-  function handleAssetsChange(event) {
-    if (event.key === ASSETS_VERSION_KEY) refresh();
-  }
-  function handleVisibilityChange() {
-    if (!document.hidden) refresh();
-  }
-  onMounted(() => {
-    window.addEventListener("storage", handleAssetsChange);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-  });
+  const stopDisplayWatch = watch(display || (() => null), applyDisplay, { immediate: true });
   onBeforeUnmount(() => {
-    window.removeEventListener("storage", handleAssetsChange);
-    document.removeEventListener("visibilitychange", handleVisibilityChange);
+    stopDisplayWatch();
+    backgroundLoader.dispose();
   });
 
   return {
@@ -150,7 +88,7 @@ export function useScenicBackground() {
     welcomeText,
     touristSettings: computed(() => cachedTouristSettings.value || DEFAULT_TOURIST_SETTINGS),
     loading,
-    refresh,
-    ensureAssets,
+    refresh: () => refreshConfig?.(),
+    ensureAssets: () => refreshConfig?.(),
   };
 }

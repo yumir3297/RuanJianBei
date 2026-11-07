@@ -1,4 +1,4 @@
-import http from "./http";
+import http from "./adminHttp.js";
 
 export async function fetchKnowledgeList() {
   const { data } = await http.get("/knowledge/");

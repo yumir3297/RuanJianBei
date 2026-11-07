@@ -1,4 +1,4 @@
-import http from "./http";
+import http from "./adminHttp.js";
 
 export async function uploadKnowledgeFiles(files, { documentId = "" } = {}) {
   const form = new FormData();

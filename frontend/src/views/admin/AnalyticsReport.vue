@@ -250,7 +250,7 @@ import {
   fetchQATrend,
   fetchSpotAttention,
   fetchVisitorGroups,
-} from "../../api/insights";
+} from "../../api/adminInsights.js";
 
 const spotChartRef = ref(null);
 const visitorPieRef = ref(null);

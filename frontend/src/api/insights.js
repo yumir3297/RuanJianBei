@@ -1,29 +1,6 @@
-import http from "./http";
+import http from "./http.js";
 
-export function fetchSpotAttention() {
-  return http.get("/insights/spot-attention").then((r) => r.data);
-}
-
-export function fetchVisitorGroups() {
-  return http.get("/insights/visitor-groups").then((r) => r.data);
-}
-
-export function fetchQATrend() {
-  return http.get("/insights/qa-trend").then((r) => r.data);
-}
-
-export function fetchBlindSpotTop() {
-  return http.get("/insights/blind-spot-top").then((r) => r.data);
-}
-
-export function fetchEmotionSummary() {
-  return http.get("/insights/emotion-summary").then((r) => r.data);
-}
-
+// Visitor feedback is a public visitor action; analytics reads live in adminInsights.js.
 export function submitVisitorFeedback(payload) {
   return http.post("/insights/feedback", payload).then((r) => r.data);
-}
-
-export function fetchExperienceReport(range = "week") {
-  return http.get("/insights/experience-report", { params: { range } }).then((r) => r.data);
 }

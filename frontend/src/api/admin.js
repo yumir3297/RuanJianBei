@@ -1,4 +1,4 @@
-import http from "./http";
+import http from "./adminHttp.js";
 
 export async function fetchAdminOverview() {
   const { data } = await http.get("/admin/overview");
@@ -32,11 +32,6 @@ export async function refreshFaq() {
 
 export async function rebuildVectorIndex() {
   const { data } = await http.post("/admin/build-rag-index", null, { timeout: 120000 });
-  return data;
-}
-
-export async function fetchAvatarConfig() {
-  const { data } = await http.get("/admin/avatar-configs/active");
   return data;
 }
 

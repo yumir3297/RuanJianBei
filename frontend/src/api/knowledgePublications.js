@@ -1,4 +1,4 @@
-import http from "./http";
+import http from "./adminHttp.js";
 import { createIdempotencyKey } from "../utils/idempotencyKey.js";
 
 export async function createKnowledgePublication(items, key = createIdempotencyKey()) {

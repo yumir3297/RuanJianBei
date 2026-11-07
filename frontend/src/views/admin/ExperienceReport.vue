@@ -34,7 +34,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import * as echarts from "echarts";
-import { fetchExperienceReport } from "../../api/insights";
+import { fetchExperienceReport } from "../../api/adminInsights.js";
 
 const range = ref("week"); const loading = ref(false); const error = ref("");
 const trendRef = ref(null); const reasonRef = ref(null); let trendChart = null; let reasonChart = null;

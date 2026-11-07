@@ -31,9 +31,9 @@
           <el-icon :size="16"><Collection /></el-icon>
         </div>
         <div class="stat-body">
-          <div class="stat-title">Landing 页景区背景</div>
+          <div class="stat-title">本机背景草稿</div>
           <div class="stat-desc">
-            {{ landingImages.length ? `已上传 ${landingImages.length} 张景区实景照片` : "当前使用默认景区图集" }}
+            {{ landingImages.length ? `当前浏览器保存 ${landingImages.length} 张图片` : "未保存本机图片草稿" }}
           </div>
         </div>
         <span :class="['stat-badge', { 'stat-badge-set': landingImages.length }]">
@@ -187,8 +187,8 @@
     <article class="panel-card">
       <div class="section-heading">
         <div>
-          <h3>Landing 页景区背景图</h3>
-          <p>上传景区实景照片，自动替换 Landing 页右侧大图区轮播背景。</p>
+          <h3>本机背景图片草稿</h3>
+          <p>图片仅保存在当前浏览器，不会发布到游客端；游客端线上背景请使用上方“游客背景图”设置。</p>
         </div>
         <el-tag size="small" :type="landingImages.length ? 'success' : 'info'" effect="plain">
           {{ landingImages.length ? `${landingImages.length} 张` : "0 张" }}
@@ -201,8 +201,8 @@
           @click="openLandingPicker"
         >
           <el-icon :size="32"><UploadFilled /></el-icon>
-          <strong>点击上传景区背景图</strong>
-          <span>支持 JPG / PNG / WEBP，建议横向实景照片，可批量选择</span>
+          <strong>选择本机背景图片</strong>
+          <span>只用于当前浏览器预览，支持 JPG / PNG / WEBP，可批量选择</span>
         </div>
 
         <input
@@ -241,14 +241,14 @@
             :disabled="!landingImages.length"
             @click="handleApplyLanding"
           >
-            应用轮播背景
+            保存本机草稿
           </el-button>
           <el-button
             size="small"
             :disabled="!landingImages.length"
             @click="handleClearLanding"
           >
-            清空全部
+            清空本机草稿
           </el-button>
         </div>
       </div>
@@ -269,7 +269,6 @@ import {
   updateWelcomeText,
 } from "../../api/admin";
 import { resolveDisplayAssetUrl as resolveAssetUrl } from "../../api/display";
-import { invalidateScenicBackground } from "../../composables/useScenicBackground";
 
 const LANDING_STORAGE_KEY = "a5-landing-images-v1";
 
@@ -416,12 +415,12 @@ function removeLandingImage(idx) {
 function handleApplyLanding() {
   const saved = saveLandingImages();
   lastUpdatedAt.value = formatNow();
-  if (saved) ElMessage.success("Landing 页轮播背景已应用，刷新 Landing 页面即可查看");
+  if (saved) ElMessage.success("本机背景图片草稿已保存");
 }
 
 function handleClearLanding() {
-  ElMessageBox.confirm("确定清空所有 Landing 页背景图吗？", "提示", { type: "warning" })
-    .then(() => { landingImages.value = []; saveLandingImages(); lastUpdatedAt.value = formatNow(); ElMessage.success("已清空全部背景图"); })
+  ElMessageBox.confirm("确定清空当前浏览器保存的背景图片草稿吗？", "提示", { type: "warning" })
+    .then(() => { landingImages.value = []; saveLandingImages(); lastUpdatedAt.value = formatNow(); ElMessage.success("已清空本机草稿背景图"); })
     .catch(() => {});
 }
 
@@ -462,7 +461,6 @@ async function handleSaveTouristSettings() {
   try {
     touristSettings.value = await updateTouristDisplaySettings(touristSettings.value);
     lastUpdatedAt.value = formatNow();
-    invalidateScenicBackground();
     ElMessage.success("游客端品牌与主题设置已保存");
   } catch (error) {
     ElMessage.error(`游客端设置保存失败：${error?.response?.data?.detail || error.message}`);
@@ -499,7 +497,6 @@ async function handleUploadBackground() {
     selectedBackgroundFile.value = null;
     revokeBackgroundPreview();
     lastUpdatedAt.value = formatNow();
-    invalidateScenicBackground();
     ElMessage.success("游客端背景已更新");
   } catch (error) {
     ElMessage.error(`背景上传失败：${error?.response?.data?.detail || error.message}`);
@@ -522,7 +519,6 @@ async function handleClearBackground() {
     selectedBackgroundFile.value = null;
     revokeBackgroundPreview();
     lastUpdatedAt.value = formatNow();
-    invalidateScenicBackground();
     ElMessage.success("自定义背景已清除");
   } catch (error) {
     if (error !== "cancel") ElMessage.error(`清除失败：${error?.response?.data?.detail || error.message}`);
@@ -539,7 +535,6 @@ async function handleSaveWelcomeText() {
     welcomeTextValue.value = response.welcome_text;
     welcomeTextEditing.value = false;
     lastUpdatedAt.value = formatNow();
-    invalidateScenicBackground();
     ElMessage.success("欢迎语已更新");
   } catch (error) {
     ElMessage.error(`欢迎语保存失败：${error?.response?.data?.detail || error.message}`);

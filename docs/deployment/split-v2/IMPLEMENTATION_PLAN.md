@@ -102,13 +102,13 @@ Task 4–5与纯业务功能可以分批推进，但不默认多人同时修改m
 - createVisitorConfigRefresher({fetchConfig,clock,isVisible,isIdle,onApply})->{start,refresh,flushPending,setVisible,dispose}。
 - useVisitorConfig({isIdle:()=>boolean})->{avatar,display,loading,refresh}。
 
-- [ ] 写tourist_never_reads_admin_token、admin_401_clears_store_and_memory、disabled_storage_keeps_current_login：即使已登录后台，游客Axios/SSE无管理Bearer；401立即失效且管理导航回登录。
-- [ ] 写visible_poll_and_hidden_pause、single_flight_and_dispose、busy_to_idle_flush_without_next_fetch：fake clock覆盖60s、隐藏/恢复、旧响应、Vue watch+nextTick立即应用。
-- [ ] 写same_config_does_not_reload_model、image_timeout_and_404_keep_last_good、late_onload_cannot_replace_new_background：图片URL解析/15s降级保留；忙时模型与音色不变，当前播放器所有权不变。
-- [ ] 运行四份新测试，确认缺失模块/行为失败；仅使用fake和Vite middlewareMode，不启动真实后端/供应商。
-- [ ] 实现transport/token与管理API迁移；游客http保留API_BASE_URL供SSE，游客反馈与adminInsights拆开，ChatView删除对api/admin依赖。
-- [ ] 实现刷新器及Vue watch接线；保留管理员invalidate兼容入口，移除游客对storage事件的跨域依赖。后台图集标明本机草稿、不清旧数据；语速/音量为本机预览。
-- [ ] 运行新测试及publication-api-integration、publication-recovery、sse-stream、audio-playback-session、chat-replay、speech-cancel；通过后提交。本任务不改当前heartbeat producer或210s ASR语义。
+- [x] 写tourist_never_reads_admin_token、admin_401_clears_store_and_memory、disabled_storage_keeps_current_login：即使已登录后台，游客Axios/SSE无管理Bearer；401立即失效且管理导航回登录。
+- [x] 写visible_poll_and_hidden_pause、single_flight_and_dispose、busy_to_idle_flush_without_next_fetch：fake clock覆盖60s、隐藏/恢复、旧响应、Vue watch+nextTick立即应用。
+- [x] 写same_config_does_not_reload_model、image_timeout_and_404_keep_last_good、late_onload_cannot_replace_new_background：图片URL解析/15s降级保留；忙时模型与音色不变，当前播放器所有权不变。
+- [x] 运行四份新测试，确认缺失模块/行为失败；仅使用fake和Vite middlewareMode，不启动真实后端/供应商。
+- [x] 实现transport/token与管理API迁移；游客http保留API_BASE_URL供SSE，游客反馈与adminInsights拆开，ChatView删除对api/admin依赖。
+- [x] 实现刷新器及Vue watch接线；保留管理员invalidate兼容入口，移除游客对storage事件的跨域依赖。后台图集标明本机草稿、不清旧数据；语速/音量为本机预览。
+- [x] 运行新测试及publication-api-integration、publication-recovery、sse-stream、audio-playback-session、chat-replay、speech-cancel；通过后提交。本任务不改当前heartbeat producer或210s ASR语义。
 
 ### Task 3：两个独立应用与发布产物
 

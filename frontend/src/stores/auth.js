@@ -1,41 +1,33 @@
+import { computed, ref } from "vue";
 import { defineStore } from "pinia";
-import http from "../api/http";
+import adminHttp from "../api/adminHttp.js";
+import {
+  clearAdminToken,
+  getAdminToken,
+  setAdminToken,
+  subscribeAdminToken,
+} from "../utils/adminAuthStorage.js";
 
-const AUTH_KEY = "a5-admin-auth";
+export const useAuthStore = defineStore("auth", () => {
+  const token = ref(getAdminToken());
+  const isAuthenticated = computed(() => Boolean(token.value));
+  subscribeAdminToken((nextToken) => { token.value = nextToken; });
 
-function readAuthToken() {
-  try { return localStorage.getItem(AUTH_KEY) || null; } catch { return null; }
-}
+  async function login(password) {
+    try {
+      const { data } = await adminHttp.post("/auth/login", { password });
+      setAdminToken(data.token);
+      return true;
+    } catch (error) {
+      const detail = error?.response?.data?.detail;
+      if (detail) throw new Error(detail);
+      throw new Error("登录失败，请检查网络连接");
+    }
+  }
 
-function removeAuthToken() {
-  try { localStorage.removeItem(AUTH_KEY); } catch { /* storage may be disabled */ }
-}
+  function logout() {
+    clearAdminToken();
+  }
 
-export const useAuthStore = defineStore("auth", {
-  state: () => ({
-    token: readAuthToken(),
-  }),
-  getters: {
-    isAuthenticated: (state) => !!state.token,
-  },
-  actions: {
-    async login(password) {
-      try {
-        const { data } = await http.post("/auth/login", { password });
-        this.token = data.token;
-        try { localStorage.setItem(AUTH_KEY, data.token); } catch { /* keep auth in memory */ }
-        return true;
-      } catch (error) {
-        const detail = error?.response?.data?.detail;
-        if (detail) {
-          throw new Error(detail);
-        }
-        throw new Error("登录失败，请检查网络连接");
-      }
-    },
-    logout() {
-      this.token = null;
-      removeAuthToken();
-    },
-  },
+  return { token, isAuthenticated, login, logout };
 });

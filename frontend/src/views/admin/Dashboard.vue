@@ -79,7 +79,7 @@ import { BarChart, PieChart } from "echarts/charts";
 import { AriaComponent, GridComponent, LegendComponent, TooltipComponent } from "echarts/components";
 import { init, use } from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
-import { fetchQATrend } from "../../api/insights";
+import { fetchQATrend } from "../../api/adminInsights.js";
 import { rebuildVectorIndex, syncOfficialData } from "../../api/admin";
 import { useAdminStore } from "../../stores/admin";
 
