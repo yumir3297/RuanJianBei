@@ -6,8 +6,8 @@ export async function transcribeAudio(audioBlob, options = {}) {
       "Content-Type": audioBlob.type || "audio/webm",
       ...(options.idempotencyKey ? { "Idempotency-Key": options.idempotencyKey } : {}),
     },
-    // Local SenseVoice can take longer on its first model load.
-    timeout: 45000,
+    // Cloud ASR may resample audio and wait on a streaming provider response.
+    timeout: 210000,
     signal: options.signal,
   });
 

@@ -22,7 +22,7 @@ from app.core.config import Settings  # noqa: E402
 
 
 @dataclass(slots=True)
-class QwenCheckResult:
+class DeepSeekCheckResult:
     name: str
     ok: bool
     status_code: int | None
@@ -34,13 +34,13 @@ class QwenCheckResult:
 
 
 @dataclass(slots=True)
-class QwenDiagnosticsReport:
+class DeepSeekDiagnosticsReport:
     ok: bool
     provider: str
     base_url: str
     model: str
     api_key_masked: str
-    checks: list[QwenCheckResult]
+    checks: list[DeepSeekCheckResult]
     conclusion: str
 
 
@@ -74,8 +74,8 @@ def models_url(base_url: str) -> str:
 
 def validate_settings(settings: Settings) -> list[str]:
     missing: list[str] = []
-    if settings.vision_provider.strip().lower() != "qwen":
-        missing.append("VISION_PROVIDER=qwen")
+    if settings.vision_provider.strip().lower() != "deepseek":
+        missing.append("VISION_PROVIDER=deepseek")
     if not settings.vision_api_key.strip():
         missing.append("VISION_API_KEY")
     if not settings.vision_base_url.strip():
@@ -85,7 +85,7 @@ def validate_settings(settings: Settings) -> list[str]:
     return missing
 
 
-async def run_get_models(client: httpx.AsyncClient, settings: Settings) -> QwenCheckResult:
+async def run_get_models(client: httpx.AsyncClient, settings: Settings) -> DeepSeekCheckResult:
     started_at = perf_counter()
     status_code: int | None = None
     try:
@@ -112,7 +112,7 @@ async def run_get_models(client: httpx.AsyncClient, settings: Settings) -> QwenC
                 }
         except ValueError:
             parsed = None
-        return QwenCheckResult(
+        return DeepSeekCheckResult(
             name="get_models",
             ok=200 <= response.status_code < 300,
             status_code=status_code,
@@ -121,17 +121,17 @@ async def run_get_models(client: httpx.AsyncClient, settings: Settings) -> QwenC
             parsed=parsed,
         )
     except Exception as exc:
-        return QwenCheckResult(
+        return DeepSeekCheckResult(
             name="get_models",
             ok=False,
             status_code=status_code,
             elapsed_ms=(perf_counter() - started_at) * 1000,
             error_type=type(exc).__name__,
-            error_message=safe_error_message(exc, "Qwen models check"),
+            error_message=safe_error_message(exc, "DeepSeek models check"),
         )
 
 
-async def run_minimal_chat(client: httpx.AsyncClient, settings: Settings) -> QwenCheckResult:
+async def run_minimal_chat(client: httpx.AsyncClient, settings: Settings) -> DeepSeekCheckResult:
     started_at = perf_counter()
     status_code: int | None = None
     try:
@@ -164,7 +164,7 @@ async def run_minimal_chat(client: httpx.AsyncClient, settings: Settings) -> Qwe
                 }
         except ValueError:
             parsed = None
-        return QwenCheckResult(
+        return DeepSeekCheckResult(
             name="minimal_chat",
             ok=200 <= response.status_code < 300,
             status_code=status_code,
@@ -173,20 +173,20 @@ async def run_minimal_chat(client: httpx.AsyncClient, settings: Settings) -> Qwe
             parsed=parsed,
         )
     except Exception as exc:
-        return QwenCheckResult(
+        return DeepSeekCheckResult(
             name="minimal_chat",
             ok=False,
             status_code=status_code,
             elapsed_ms=(perf_counter() - started_at) * 1000,
             error_type=type(exc).__name__,
-            error_message=safe_error_message(exc, "Qwen minimal chat"),
+            error_message=safe_error_message(exc, "DeepSeek minimal chat"),
         )
 
 
-async def run_diagnostics(settings: Settings) -> QwenDiagnosticsReport:
+async def run_diagnostics(settings: Settings) -> DeepSeekDiagnosticsReport:
     missing = validate_settings(settings)
     if missing:
-        return QwenDiagnosticsReport(
+        return DeepSeekDiagnosticsReport(
             ok=False,
             provider=settings.vision_provider,
             base_url=settings.vision_base_url,
@@ -206,13 +206,13 @@ async def run_diagnostics(settings: Settings) -> QwenDiagnosticsReport:
     minimal_chat = next(check for check in checks if check.name == "minimal_chat")
     get_models = next(check for check in checks if check.name == "get_models")
     if minimal_chat.ok:
-        conclusion = "Qwen compatible chat endpoint, API key, and configured model are usable."
+        conclusion = "DeepSeek compatible chat endpoint, API key, and configured model are usable."
     elif get_models.ok:
         conclusion = "API key and base URL look reachable, but configured model or chat request failed."
     else:
-        conclusion = "Qwen API diagnostics failed before a minimal model call succeeded."
+        conclusion = "DeepSeek API diagnostics failed before a minimal model call succeeded."
 
-    return QwenDiagnosticsReport(
+    return DeepSeekDiagnosticsReport(
         ok=minimal_chat.ok,
         provider=settings.vision_provider,
         base_url=settings.vision_base_url,
@@ -233,7 +233,7 @@ def safe_error_message(exc: Exception, prefix: str) -> str:
     return str(exc)[:200]
 
 
-def write_report(report: QwenDiagnosticsReport, report_path: Path) -> None:
+def write_report(report: DeepSeekDiagnosticsReport, report_path: Path) -> None:
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(
         json.dumps(asdict(report), ensure_ascii=False, indent=2),
@@ -242,10 +242,10 @@ def write_report(report: QwenDiagnosticsReport, report_path: Path) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Diagnose Qwen compatible API settings.")
+    parser = argparse.ArgumentParser(description="Diagnose DeepSeek compatible API settings.")
     parser.add_argument(
         "--report",
-        default=str(PROJECT_ROOT / "eval" / "reports" / "qwen_api_diagnostics.json"),
+        default=str(PROJECT_ROOT / "eval" / "reports" / "deepseek_api_diagnostics.json"),
     )
     parser.add_argument("--allow-network", action="store_true")
     return parser.parse_args()
@@ -254,7 +254,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     if not args.allow_network:
-        print("Refusing to diagnose Qwen API without --allow-network. No report was written.")
+        print("Refusing to diagnose DeepSeek API without --allow-network. No report was written.")
         return 2
 
     report_path = Path(args.report).expanduser().resolve()

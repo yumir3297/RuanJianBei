@@ -11,7 +11,7 @@
 | LLM 8% | `backend/app/services/llm/openai_compatible.py` 有兼容接口；默认 stub | 需真实模型成功调用并记录首字和失败回退 | 真实凭据与环境、重复测量未确认；P0 |
 | Agent/工作流 8% | `services/qa/pipeline.py`、`services/itinerary/` 及已整合 W02 执行器；AI 新增或替换景点需匹配发布目录，估算时长标为待核实 | 游客提出约束→展示修改→确认；隔离 fake provider 测试已覆盖任务状态与恢复，`4cdad1b` 行程专项 36 passed | 真实供应商、完整浏览器链路及 PostgreSQL 多 worker 仍待验收；P0 |
 | RAG 6% | `services/rag/`、知识发布、`api/chat.py` 来源输出；可用的条目、修订、片段 ID 在来源中保留；FAQ runtime 按知识版本刷新 | `tests/test_pipeline.py`、`test_faq_runtime_epoch.py` 检查来源、缓存及隔离 SQLite 跨进程刷新；Chroma 专项使用真实本地 Chroma 与合成向量 | 真实嵌入模型、发布后复问、并发重建、历史索引修复、资料权威性及引用忠实度未证实；P0 |
-| 多模态 5% | `services/vision/qwen.py`、`api/voice.py`；默认可能 stub；游客可明确确认已发布景点；未确认线索有模型提示和前端警示 | 拍摄→线索→确认→来源→讲解与语音；`test_vision_scope_safety.py` 检查未确认线索的检索与提示 | 提示不能保证模型遵守；真实照片/模型、低置信交互、端到端体验待证；P0 |
+| 多模态 5% | `services/vision/deepseek.py`、`api/voice.py`；凭据缺失可降级 stub；游客可明确确认已发布景点；未确认线索有模型提示和前端警示 | 拍摄→线索→确认→来源→讲解与语音；`test_vision_scope_safety.py` 检查未确认线索的检索与提示 | 提示不能保证模型遵守；真实照片/模型、低置信交互、端到端体验待证；P0 |
 | AI 安全 4% | 发布版本校验、上传与容量限制、身份约束；带游客记忆生成绕过共享缓存 | `tests/test_pipeline.py` 检查个性化缓存隔离；知识更新时旧音频停止的模拟测试 | v4 历史缓存仍需按数据策略处理；提示注入、真实供应商和跨进程边界待验收；P0 |
 | MCP/工具调用 4% | 行程规则与服务函数；W02 受控任务执行器已整合，见 `services/tool_execution/` | 展示受控任务执行和可验证结果 | 不把固定工作流称为已验收的模型自主工具选择；P1 |
 | 选题创新 10% | 游客导览与数字人场景 | 实地问题与来源讲解 | 真实用户需求与同类方案对比待调查；P1 |

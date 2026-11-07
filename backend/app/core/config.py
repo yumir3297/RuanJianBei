@@ -63,7 +63,7 @@ class Settings(BaseSettings):
     default_avatar_voice: str = Field(default="female_warm")
     asr_provider: str = Field(default="stub")
     asr_api_key: str = Field(default="")
-    asr_model: str = Field(default="paraformer-v2")
+    asr_model: str = Field(default="fun-asr")
     asr_base_url: str = Field(default="https://dashscope.aliyuncs.com/api/v1/services/audio/asr/transcription")
     asr_task_url: str = Field(default="https://dashscope.aliyuncs.com/api/v1/tasks")
     asr_vocabulary_id: str = Field(default="")
@@ -75,17 +75,17 @@ class Settings(BaseSettings):
     knowledge_import_min_free_bytes: int = Field(default=100 * 1024 * 1024, ge=0)
     knowledge_import_max_pages: int = Field(default=500, ge=1, le=5000)
     knowledge_import_parse_timeout_seconds: int = Field(default=120, ge=1, le=900)
-    asr_timeout_seconds: float = Field(default=30.0, gt=0.0, le=180.0)
+    asr_timeout_seconds: float = Field(default=180.0, gt=0.0, le=180.0)
     asr_ffprobe_path: str = Field(default="ffprobe", min_length=1, max_length=500)
     asr_probe_timeout_seconds: float = Field(default=3.0, gt=0.0, le=15.0)
     asr_poll_interval_seconds: float = Field(default=0.8, gt=0.0, le=10.0)
     asr_max_audio_bytes: int = Field(default=10 * 1024 * 1024, ge=1024, le=50 * 1024 * 1024)
     asr_max_audio_seconds: float = Field(default=180.0, gt=0, le=1800)
+    asr_ffmpeg_path: str = Field(default="ffmpeg", min_length=1, max_length=500)
+    asr_transcode_timeout_seconds: float = Field(default=20.0, gt=0.0, le=120.0)
     chat_max_active: int = Field(default=8, ge=1, le=1000)
     asr_max_active: int = Field(default=4, ge=1, le=1000)
     vision_max_active: int = Field(default=4, ge=1, le=1000)
-    asr_hotwords: str = Field(default="")
-    """景区专属 ASR 热词（逗号分隔），按景区在 .env 中自行配置。"""
     asr_local_model_dir: str = Field(default="D:/A5ScenicGuideModels/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17")
     asr_local_num_threads: int = Field(default=2, ge=1, le=16)
     asr_local_language: str = Field(default="zh")
@@ -108,6 +108,16 @@ class Settings(BaseSettings):
     volcengine_tts_voice: str = Field(default="zh_female_cancan_uranus_bigtts")
     volcengine_tts_format: str = Field(default="pcm")
     volcengine_tts_sample_rate: int = Field(default=24000, ge=8000, le=48000)
+    # 火山豆包 ASR v3 WebSocket 流式输入；完整录音由后端分包发送。
+    volcengine_asr_api_key: str = Field(default="")
+    volcengine_asr_app_id: str = Field(default="")
+    volcengine_asr_access_key: str = Field(default="")
+    volcengine_asr_resource_id: str = Field(default="volc.seedasr.sauc.duration")
+    volcengine_asr_ws_url: str = Field(
+        default="wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_nostream"
+    )
+    volcengine_asr_language: str = Field(default="zh-CN")
+    volcengine_asr_packet_interval_seconds: float = Field(default=0.1, ge=0.0, le=1.0)
     qweather_api_key: str = Field(default="")
     """和风天气 API KEY，仅在服务端使用，前端不接触。留空时接口安全降级。"""
     qweather_api_host: str = Field(default="devapi.qweather.com")
@@ -207,6 +217,20 @@ class Settings(BaseSettings):
         """火山 TTS 凭据是否可用：X-Api-Key 单凭据，或 APP ID + Access Token 组合。"""
         return bool(self.volcengine_tts_api_key) or bool(
             self.volcengine_tts_app_id and self.volcengine_tts_access_key
+        )
+
+    @property
+    def volcengine_asr_ready(self) -> bool:
+        """火山 ASR 凭据/资源是否齐备；可显式配置 ASR auth，或复用已授权的 TTS auth。"""
+        has_api_key = bool(self.volcengine_asr_api_key or self.volcengine_tts_api_key)
+        has_legacy_auth = bool(
+            (self.volcengine_asr_app_id or self.volcengine_tts_app_id)
+            and (self.volcengine_asr_access_key or self.volcengine_tts_access_key)
+        )
+        return bool(
+            (has_api_key or has_legacy_auth)
+            and self.volcengine_asr_resource_id.strip()
+            and self.volcengine_asr_ws_url.strip()
         )
 
     @property

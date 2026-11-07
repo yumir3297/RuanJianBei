@@ -25,7 +25,7 @@ from app.api.chat import build_pipeline, close_cached_llm_service  # noqa: E402
 from app.core.config import Settings  # noqa: E402
 from app.db.session import SessionLocal  # noqa: E402
 from app.schemas.chat import ChatRequest  # noqa: E402
-from app.services.vision.qwen import QwenVisionService  # noqa: E402
+from app.services.vision.deepseek import DeepSeekVisionService  # noqa: E402
 
 
 DEFAULT_QUESTION = "请根据这张图片识别出的线索，基于官方资料介绍它最可能对应的景区景点。"
@@ -84,8 +84,8 @@ def load_settings(args: argparse.Namespace) -> Settings:
 
 def validate_settings(settings: Settings) -> list[str]:
     missing: list[str] = []
-    if settings.vision_provider.strip().lower() != "qwen":
-        missing.append("VISION_PROVIDER=qwen")
+    if settings.vision_provider.strip().lower() != "deepseek":
+        missing.append("VISION_PROVIDER=deepseek")
     if not settings.vision_api_key.strip():
         missing.append("VISION_API_KEY")
     if not settings.vision_base_url.strip():
@@ -110,7 +110,7 @@ async def analyze_image(
 ) -> VisionPart:
     content = image_path.read_bytes()
     mime_type = mimetypes.guess_type(str(image_path))[0] or "image/jpeg"
-    service = QwenVisionService(settings)
+    service = DeepSeekVisionService(settings)
     started_at = perf_counter()
     try:
         result = await service.analyze(
@@ -251,7 +251,7 @@ async def run_smoke(args: argparse.Namespace) -> VisionRAGSmokeReport:
             elapsed_ms=0.0,
             query="",
             error_type="VisionFailed",
-            error_message=vision.error_message or "Qwen vision did not return usable retrieval hints.",
+            error_message=vision.error_message or "DeepSeek vision did not return usable retrieval hints.",
         )
 
     return VisionRAGSmokeReport(
@@ -284,7 +284,7 @@ def build_error_report(exc: Exception, args: argparse.Namespace) -> VisionRAGSmo
         session_id=args.session_id,
         vision=VisionPart(
             ok=False,
-            provider="qwen",
+            provider="deepseek",
             model="",
             elapsed_ms=0.0,
             error_type=type(exc).__name__,
@@ -295,7 +295,7 @@ def build_error_report(exc: Exception, args: argparse.Namespace) -> VisionRAGSmo
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run one controlled Qwen vision to RAG smoke test.")
+    parser = argparse.ArgumentParser(description="Run one controlled DeepSeek vision to RAG smoke test.")
     parser.add_argument("--image", required=True)
     parser.add_argument("--question", default=DEFAULT_QUESTION)
     parser.add_argument("--session-id", default="stage-b3-vision-rag-smoke")

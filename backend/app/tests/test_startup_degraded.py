@@ -115,3 +115,44 @@ def test_readiness_checks_voice_credentials_for_selected_provider(monkeypatch):
             failures = (await client.get("/ready")).json()["failures"]
             assert "volcengine_api_key_missing" in failures
     asyncio.run(scenario())
+
+
+def test_readiness_checks_volcengine_asr_auth_and_resource(monkeypatch):
+    import main
+    from app.core.config import Settings
+
+    settings = Settings(
+        llm_provider="stub",
+        asr_provider="volcengine",
+        tts_provider="stub",
+        volcengine_asr_api_key="",
+        volcengine_tts_api_key="test-credential",
+        volcengine_asr_resource_id="volc.seedasr.sauc.duration",
+    )
+    monkeypatch.setattr(main, "get_settings", lambda: settings)
+
+    class Session:
+        async def __aenter__(self): return self
+        async def __aexit__(self, *args): pass
+        async def execute(self, _query):
+            class Result:
+                def scalar_one(self): return 1
+            return Result()
+
+    monkeypatch.setattr(main, "AsyncSessionLocal", Session)
+
+    async def scenario():
+        async with AsyncClient(transport=ASGITransport(app=main.create_app()), base_url="http://test") as client:
+            failures = (await client.get("/ready")).json()["failures"]
+            assert "volcengine_asr_api_key_missing" not in failures
+
+            settings.volcengine_tts_api_key = ""
+            failures = (await client.get("/ready")).json()["failures"]
+            assert "volcengine_asr_api_key_missing" in failures
+
+            settings.volcengine_asr_api_key = "test-asr-key"
+            settings.volcengine_asr_resource_id = ""
+            failures = (await client.get("/ready")).json()["failures"]
+            assert "volcengine_asr_api_key_missing" in failures
+
+    asyncio.run(scenario())

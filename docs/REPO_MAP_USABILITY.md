@@ -14,7 +14,7 @@
 
 | 开发任务 | 初测 | 发现与复测 |
 |---|---|---|
-| iPhone 识图报错 | 成功 | 定位拍照/文件入口、raw-body 上传、MIME/大小校验、Qwen 服务和测试；能识别 HEIC 不在白名单内，未误称真机已通过 |
+| iPhone 识图报错 | 成功 | 定位拍照/文件入口、raw-body 上传、MIME/大小校验、DeepSeek Vision 服务和测试；能识别 HEIC 不在白名单内，未误称真机已通过 |
 | 点击停止后音频继续 | 成功 | 定位 stopOutput、请求 token、AbortController、SSE 消费、音频 stop/resetPCMStream；能区分后端契约与前端播放验证 |
 | 真实 GPS 不触发讲解 | 成功 | 定位坐标读取、触发状态机、MapView.playNarration、讲解接口和降级；找到已记录的 latitude/longitude 与 lat/lng 风险 |
 | 管理员修改知识但答案仍旧 | 部分成功 | 初版缺少分块/缓存直接入口；已补上症状排查表。复测仅按新增链接找到全部边界，成功 |

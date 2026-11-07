@@ -24,7 +24,7 @@
 
 启动后可检查 `http://127.0.0.1:8000/ready`；503 表示存在所列未就绪项。`/health` 仅表示服务响应，不能证明真实模型或知识库可用。FAQ 故障恢复和多进程限制见[开发指南](./docs/DEVELOPMENT.md)。
 
-配置模板默认 `VISION_PROVIDER=stub` 且 `ENABLE_SAMPLE_DATA=true`，不能用于展示真实图片识别或把示例数据当作景区事实。准备演示时应配置并验证实际视觉供应商、资料来源及其他所需服务；`/ready` 成功也不证明这些外部服务可用或回答正确。
+配置模板选择 DeepSeek `deepseek-flash` 视觉适配器和火山引擎 WebSocket ASR/TTS，但 API 凭据留空；代码默认视觉/ASR 仍可安全降级到 stub。Volcengine ASR 直接通过 WebSocket 发送录音，不需要公网音频 URL；非 16 kHz 单声道 WAV 由后端 FFmpeg 转换。未配置密钥时不代表真实服务已接通。`ENABLE_SAMPLE_DATA=true` 加载的是灵山示例数据，不能直接当作经核验的景区事实。准备演示时须验证实际服务和资料来源；`/ready` 成功也不证明外部服务可用或回答正确。
 
 ### 前置要求
 

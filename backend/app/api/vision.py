@@ -10,7 +10,7 @@ from app.core.deps import get_app_settings
 from app.schemas.vision import VisionAnalyzeResponse
 from app.api.bounded_body import read_bounded_body
 from app.api.capacity import acquire_capacity
-from app.services.vision import BaseVisionService, QwenVisionService, StubVisionService, VisionResult
+from app.services.vision import BaseVisionService, DeepSeekVisionService, StubVisionService, VisionResult
 from app.services.vision.image_headers import InvalidImage, detect_image_mime, image_dimensions
 from app.services.idempotency import IdempotencyCapacityExceeded, IdempotencyConflict, idempotency_coordinator
 
@@ -38,8 +38,8 @@ def get_cached_vision_service(settings: Settings) -> BaseVisionService:
     if _cached_vision_service is not None and signature == _cached_vision_signature:
         return _cached_vision_service
 
-    if settings.vision_provider.strip().lower() == "qwen":
-        _cached_vision_service = QwenVisionService(settings)
+    if settings.vision_provider.strip().lower() == "deepseek":
+        _cached_vision_service = DeepSeekVisionService(settings)
     else:
         _cached_vision_service = StubVisionService()
     _cached_vision_signature = signature

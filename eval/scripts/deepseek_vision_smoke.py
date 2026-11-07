@@ -17,14 +17,14 @@ for import_root in (PROJECT_ROOT, BACKEND_ROOT):
         sys.path.insert(0, str(import_root))
 
 from app.core.config import Settings  # noqa: E402
-from app.services.vision.qwen import QwenVisionService  # noqa: E402
+from app.services.vision.deepseek import DeepSeekVisionService  # noqa: E402
 
 
 DEFAULT_QUESTION = "这张图片可能对应景区哪个位置？请提取可用于景区资料检索的线索。"
 
 
 @dataclass(slots=True)
-class QwenVisionSmokeReport:
+class DeepSeekVisionSmokeReport:
     ok: bool
     provider: str
     model: str
@@ -50,8 +50,8 @@ def load_backend_settings() -> Settings:
 
 def validate_settings(settings: Settings) -> None:
     missing: list[str] = []
-    if settings.vision_provider.strip().lower() != "qwen":
-        missing.append("VISION_PROVIDER=qwen")
+    if settings.vision_provider.strip().lower() != "deepseek":
+        missing.append("VISION_PROVIDER=deepseek")
     if not settings.vision_api_key.strip():
         missing.append("VISION_API_KEY")
     if not settings.vision_base_url.strip():
@@ -59,12 +59,12 @@ def validate_settings(settings: Settings) -> None:
     if not settings.vision_model.strip():
         missing.append("VISION_MODEL")
     if missing:
-        raise ValueError(f"Missing or invalid Qwen vision settings: {', '.join(missing)}")
+        raise ValueError(f"Missing or invalid DeepSeek vision settings: {', '.join(missing)}")
 
 
-async def run_smoke(image_path: Path, question: str, *, allow_network: bool) -> QwenVisionSmokeReport:
+async def run_smoke(image_path: Path, question: str, *, allow_network: bool) -> DeepSeekVisionSmokeReport:
     if not allow_network:
-        raise PermissionError("Refusing to call Qwen vision without --allow-network.")
+        raise PermissionError("Refusing to call DeepSeek vision without --allow-network.")
     if not image_path.exists() or not image_path.is_file():
         raise FileNotFoundError(f"Image file not found: {image_path}")
 
@@ -78,7 +78,7 @@ async def run_smoke(image_path: Path, question: str, *, allow_network: bool) -> 
 
     mime_type = mimetypes.guess_type(str(image_path))[0] or "image/jpeg"
     started_at = perf_counter()
-    service = QwenVisionService(settings)
+    service = DeepSeekVisionService(settings)
     try:
         result = await service.analyze(
             content,
@@ -100,7 +100,7 @@ async def run_smoke(image_path: Path, question: str, *, allow_network: bool) -> 
         or result.visual_tags
         or result.query_hints
     )
-    return QwenVisionSmokeReport(
+    return DeepSeekVisionSmokeReport(
         ok=bool(retrieval_query.strip()) and has_structured_signal and not provider_error_type,
         provider=result.provider,
         model=settings.vision_model,
@@ -120,7 +120,7 @@ async def run_smoke(image_path: Path, question: str, *, allow_network: bool) -> 
     )
 
 
-def write_report(report: QwenVisionSmokeReport, report_path: Path) -> None:
+def write_report(report: DeepSeekVisionSmokeReport, report_path: Path) -> None:
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(
         json.dumps(asdict(report), ensure_ascii=False, indent=2),
@@ -133,10 +133,10 @@ def build_error_report(
     *,
     image_path: Path,
     report_path: Path,
-) -> QwenVisionSmokeReport:
-    report = QwenVisionSmokeReport(
+) -> DeepSeekVisionSmokeReport:
+    report = DeepSeekVisionSmokeReport(
         ok=False,
-        provider="qwen",
+        provider="deepseek",
         model="",
         image_path=str(image_path),
         image_bytes=image_path.stat().st_size if image_path.exists() and image_path.is_file() else 0,
@@ -157,17 +157,17 @@ def build_error_report(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run one controlled real Qwen vision smoke test.")
+    parser = argparse.ArgumentParser(description="Run one controlled real DeepSeek vision smoke test.")
     parser.add_argument("--image", required=True, help="Local image path for the smoke test.")
     parser.add_argument("--question", default=DEFAULT_QUESTION)
     parser.add_argument(
         "--report",
-        default=str(PROJECT_ROOT / "eval" / "reports" / "qwen_vision_smoke.json"),
+        default=str(PROJECT_ROOT / "eval" / "reports" / "deepseek_vision_smoke.json"),
     )
     parser.add_argument(
         "--allow-network",
         action="store_true",
-        help="Required to perform the real Qwen API call.",
+        help="Required to perform the real DeepSeek API call.",
     )
     return parser.parse_args()
 
@@ -177,7 +177,7 @@ def main() -> int:
     image_path = Path(args.image).expanduser().resolve()
     report_path = Path(args.report).expanduser().resolve()
     if not args.allow_network:
-        print("Refusing to call Qwen vision without --allow-network. No report was written.")
+        print("Refusing to call DeepSeek vision without --allow-network. No report was written.")
         return 2
     if not image_path.exists() or not image_path.is_file():
         print(f"Image file not found: {image_path}. No report was written.")

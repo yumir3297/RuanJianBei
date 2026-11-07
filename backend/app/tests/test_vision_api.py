@@ -5,10 +5,11 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from app.api.vision import get_vision_service
+from app.api.vision import close_cached_vision_service, get_cached_vision_service, get_vision_service
 from app.core.config import Settings
 from app.core.deps import get_app_settings
 from app.services.vision import BaseVisionService, VisionResult
+from app.services.vision.deepseek import DeepSeekVisionService
 from app.services.capacity import CapacityLimiter
 from main import app
 
@@ -57,6 +58,23 @@ def _post_vision(content=None, content_type="image/jpeg", params=None):
         content=content,
         headers=headers,
     )
+
+
+def test_deepseek_vision_provider_factory_selects_deepseek_adapter() -> None:
+    async def close_cached_service() -> None:
+        await close_cached_vision_service()
+
+    asyncio.run(close_cached_service())
+    settings = Settings(
+        vision_provider="deepseek",
+        vision_api_key="test-key",
+        vision_base_url="https://api.deepseek.com",
+        vision_model="deepseek-flash",
+    )
+    try:
+        assert isinstance(get_cached_vision_service(settings), DeepSeekVisionService)
+    finally:
+        asyncio.run(close_cached_service())
 
 
 def test_vision_analyze_api_returns_retrieval_query() -> None:

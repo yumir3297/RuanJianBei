@@ -12,7 +12,7 @@
 | 后端依赖 | [requirements.txt](../backend/requirements.txt)；包含锁定的 `torch==2.12.0+cpu` 和 CPU 索引，macOS/ARM 等平台未验证能原样安装；如无匹配 wheel，应记录依赖兼容问题后另行调整，不擅自跳过依赖或替换版本 |
 | 数据库 | [config.py](../backend/app/core/config.py) 默认 PostgreSQL；[session.py](../backend/app/db/session.py) 对 SQLite 有兼容分支，仍需分别验证迁移/查询 |
 | 模型/数据 | 本地 embedding、reranker 缓存及处理数据不等于 Git 克隆内容；main lifespan 会预热模型 |
-| ASR | 本地 SenseVoice 默认路径为 Windows `D:/...`；其他机器通过 `ASR_LOCAL_MODEL_DIR` 指向已准备好的模型目录 |
+| ASR | 默认云端语音使用火山 WebSocket ASR；非 16 kHz WAV 转换需要 FFmpeg。旧 Bailian 文件识别需公网音频 URL。本地 SenseVoice 默认路径为 Windows `D:/...`；其他机器通过 `ASR_LOCAL_MODEL_DIR` 指向已准备好的模型目录 |
 | 配置 | [backend/.env.example](../backend/.env.example) 为模板；实际 provider、数据库、模型路径须按运行环境配置，真实 key 不提交 |
 
 2026-11-02 补充：向量模型缺失或 FAQ 语义索引预热失败时，后端允许降级启动，精确/模糊 FAQ 和数据库检索使用现有回退；这不表示真实模型、语音或资料已就绪。`GET /health` 只表示进程响应；`GET /ready` 在已检测到模型不可用、FAQ 重载失败、知识分块为空或供应商配置缺失等情况下返回 503 和原因。向量模型在启动时检查，补齐后需重启重新评估；这些检查不证明供应商真实可用或回答正确。

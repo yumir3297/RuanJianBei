@@ -42,7 +42,7 @@
     </el-alert>
 
     <ImportBatchPanel :entries="entries" @changed="loadEntries" />
-    <PublicationStatus :job="publicationJob" :retrying="retryingPublication" @retry="retryPublication" />
+    <PublicationStatus :job="publicationJob" :retrying="retryingPublication" @retry="retryPublication" @recover="recoverPublication" />
 
     <div class="stat-grid" v-loading="loading && !entries.length">
       <article
@@ -340,7 +340,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import {
   Collection,
   EditPen,
@@ -364,6 +364,8 @@ import {
 } from "../../api/knowledge";
 import { rebuildVectorIndex, syncOfficialData, refreshFaq } from "../../api/admin";
 import { createKnowledgePublication, fetchKnowledgePublication, retryKnowledgePublication } from "../../api/knowledgePublications";
+import { createIdempotencyKey } from "../../utils/idempotencyKey.js";
+import { createPublicationWorkflow } from "../../utils/publicationRecovery.js";
 
 const entries = ref([]);
 const loading = ref(false);
@@ -376,6 +378,27 @@ const selectedRows = ref([]);
 const publicationJob = ref(null);
 const publishing = ref(false);
 const retryingPublication = ref(false);
+
+let publicationStorage = null;
+try {
+  if (typeof window !== "undefined") publicationStorage = window.sessionStorage;
+} catch {
+  // Private browsing/storage restrictions must fail closed before a POST.
+}
+
+const publicationWorkflow = createPublicationWorkflow({
+  storage: publicationStorage,
+  createKey: createIdempotencyKey,
+  submit: createKnowledgePublication,
+  fetch: fetchKnowledgePublication,
+  retry: retryKnowledgePublication,
+  onJob: (job) => { publicationJob.value = job; },
+  onSuccess: async () => {
+    ElMessage.success("所选草稿已发布");
+    selectedRows.value = [];
+    await loadEntries();
+  },
+});
 
 const searchQuery = ref("");
 const selectedCategory = ref("");
@@ -729,36 +752,39 @@ async function publishRows(rows) {
   if (!items.length) return;
   publishing.value = true;
   try {
-    publicationJob.value = await createKnowledgePublication(items);
-    await pollPublication(publicationJob.value.id);
+    await publicationWorkflow.publish(items);
   } catch (error) {
-    ElMessage.error(`创建发布任务失败：${error?.response?.data?.detail || error.message}`);
+    if (publicationJob.value?.state === "unknown") {
+      ElMessage.warning("发布结果尚未确认。请使用“恢复查询原任务”，不要重新创建发布任务。");
+    } else {
+      ElMessage.error(`创建发布任务失败：${error?.response?.data?.detail || error.message}`);
+    }
   } finally {
     publishing.value = false;
   }
 }
 
-async function pollPublication(id) {
-  publicationJob.value = await fetchKnowledgePublication(id);
-  if (["queued", "preparing"].includes(publicationJob.value.state)) {
-    window.setTimeout(() => pollPublication(id).catch((error) => ElMessage.error(`读取发布状态失败：${error.message}`)), 1400);
-    return;
-  }
-  if (publicationJob.value.state === "succeeded") {
-    ElMessage.success("所选草稿已发布");
-    selectedRows.value = [];
-    await loadEntries();
+async function recoverPublication() {
+  retryingPublication.value = true;
+  try {
+    await publicationWorkflow.recover();
+  } catch (error) {
+    ElMessage.warning(`恢复查询失败：${error?.response?.data?.detail || error.message}`);
+  } finally {
+    retryingPublication.value = false;
   }
 }
 
 async function retryPublication() {
-  if (!publicationJob.value?.id) return;
   retryingPublication.value = true;
   try {
-    publicationJob.value = await retryKnowledgePublication(publicationJob.value.id);
-    await pollPublication(publicationJob.value.id);
+    await publicationWorkflow.retry();
   } catch (error) {
-    ElMessage.error(`重试失败：${error?.response?.data?.detail || error.message}`);
+    if (publicationJob.value?.state === "unknown") {
+      ElMessage.warning("重试结果尚未确认，请恢复查询原任务后再决定下一步。");
+    } else {
+      ElMessage.error(`重试失败：${error?.response?.data?.detail || error.message}`);
+    }
   } finally {
     retryingPublication.value = false;
   }
@@ -817,9 +843,16 @@ async function handleRebuildIndex() {
   }
 }
 
-onMounted(() => {
-  loadEntries();
+onMounted(async () => {
+  await loadEntries();
+  try {
+    await publicationWorkflow.restore();
+  } catch (error) {
+    ElMessage.warning(`发现未确认的发布任务：${error.message}`);
+  }
 });
+
+onUnmounted(() => publicationWorkflow.stop());
 </script>
 
 <style scoped>

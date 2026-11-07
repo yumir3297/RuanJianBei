@@ -58,7 +58,7 @@ Windows/Linux 的校验命令已提供，当前仅在 macOS 主机执行；其�
 安全上下文和媒体策略参考 [MDN getUserMedia](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia)、[Geolocation](https://developer.mozilla.org/en-US/docs/Web/API/Geolocation_API)、[Autoplay](https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Autoplay)。
 远程手机访问开发机 HTTP LAN IP 通常不具备 localhost 的安全上下文条件；不要以禁用浏览器安全保护作为正式验收方案。
 
-ASR 当前游客录音器输出 WAV，WAV 时长由内置读取校验。真实 ASR provider 若接收非 WAV 请求，部署机器需安装 FFmpeg/ffprobe（或通过 `ASR_FFPROBE_PATH` 指定执行路径）；探测超时默认为 3 秒，可用 `ASR_PROBE_TIMEOUT_SECONDS` 调整。探测器缺失、音轨无效或无法确认时请求不会转发给 provider。压缩音频会短暂写入系统私有临时目录以供容器 seek 探测，随后删除。Stub 模式不启用外部探测。
+ASR 当前游客录音器输出 WAV，WAV 时长由内置读取校验。默认火山 WebSocket ASR 需要 FFmpeg 将非 16 kHz 单声道 WAV 转换为其要求的格式（可通过 `ASR_FFMPEG_PATH` 指定），并直接发送音频字节，不需要公网音频域名。非 WAV 请求仍需 FFmpeg/ffprobe 预检（可通过 `ASR_FFPROBE_PATH` 指定）；探测超时默认为 3 秒，可用 `ASR_PROBE_TIMEOUT_SECONDS` 调整。探测器缺失、音轨无效或无法确认时请求不会转发给 provider。压缩音频会短暂写入系统私有临时目录以供容器 seek 探测，随后删除。显式使用旧 Bailian 文件识别时仍需公网 HTTPS 音频 URL。Stub 模式不启用外部探测。
 
 生产部署需设置 `APP_ENV=production`、自定义至少 12 字符的 `ADMIN_PASSWORD` 和至少 32 字符的随机 `ADMIN_TOKEN_SECRET`；不满足时后端启动失败，且 readiness 会报告缺项。模板中的 `admin123` 与固定 token secret 仅供本地开发，不能用于生产。访客接口仍公开服务游客；当前单进程并发限制不提供时间窗口防刷或多 worker 限流。
 
