@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextvars import ContextVar
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
@@ -103,6 +104,27 @@ def test_heartbeat_closes_pending_producer_on_client_stop() -> None:
         assert cancelled.is_set()
 
     asyncio.run(run())
+
+
+def test_heartbeat_keeps_source_generator_in_one_context_across_yields() -> None:
+    async def run():
+        request_state = ContextVar("heartbeat_request_state", default=None)
+
+        async def source():
+            token = request_state.set("active-request")
+            try:
+                yield b"first\n\n"
+                await asyncio.sleep(0.02)
+                assert request_state.get() == "active-request"
+                yield b"last\n\n"
+            finally:
+                request_state.reset(token)
+
+        return [chunk async for chunk in chat_api.with_sse_heartbeat(source(), interval=0.005)]
+
+    chunks = asyncio.run(run())
+    assert chunks[0] == b"first\n\n"
+    assert chunks[-1] == b"last\n\n"
 
 
 def test_chat_rejects_over_capacity_before_starting_stream(monkeypatch) -> None:

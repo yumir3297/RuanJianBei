@@ -2,9 +2,9 @@
 
 核验于 2026-11-07，集成分支代码基线 `7ef0459`，另含本轮 K01 前端恢复接入。下文区分自动化/源码证据与真实设备、供应商、部署数据库验收；任务状态及差异见 [HANDOFF](agent-operations/HANDOFF.md)。
 > ASR 与视觉接口支持可选 `Idempotency-Key`，按接口、键和请求 fingerprint 做 5 分钟进程内 single-flight 与 JSON 结果缓存；同键不同请求返回 409，超过 128 条/1 MiB 响应上限时拒绝新任务或淘汰过期/最近最少使用结果。不保存上传内容；该能力不跨多 worker 或重启。
-> 真实 ASR provider 收到非 WAV 音频时，在占用既有 ASR 容量后通过 [audio_duration](../backend/app/services/audio_duration.py) 用受限 ffprobe 检查系统私有临时文件，校验音轨和时长后才调用 provider；结束后删除临时文件，最长运行时间可配置。该路径需部署系统安装 FFmpeg；游客录音器固定输出 WAV，不依赖它。当前只检查容器探测出的时长，不承诺完整解码验证。
+> 默认火山 ASR 通过 WebSocket 收取分包音频；输入非 16 kHz 单声道 PCM WAV 时以受限 FFmpeg 转换。非 WAV 请求还会在占用 ASR 容量后通过 [audio_duration](../backend/app/services/audio_duration.py) 用受限 ffprobe 检查系统私有临时文件，校验音轨和时长后才调用 provider；探测文件结束后删除。该路径需部署系统安装 FFmpeg/ffprobe；游客录音器固定输出 WAV，但浏览器采样率不保证为 16 kHz。当前只检查容器探测出的时长，不承诺完整解码验证。
 > 生产环境 `APP_ENV=production` 时，管理员默认密码/签名密钥或过短值会阻止应用启动；`/ready` 同步报告配置缺项，不回显秘密。游客 API 仍公开；[CapacityLimiter](../backend/app/services/capacity.py) 只管单进程并发，不是时间窗口速率限制或多实例防刷。
-> 聊天 SSE 有心跳、连接/无数据/无进展/总时限与 `done.completion`；中断保留部分文本并停止音频。流式生成、证据、音频和 completion 各有取消/epoch 所有权；详细调用链和回归见 [功能地图](REPO_MAP.md) 与 [测试状态](agent-operations/TEST_STATUS.md)。
+> 聊天 SSE 有心跳、连接/无数据/无进展/总时限与 `done.completion`；心跳包装器在单一生产任务内消费源生成器，保持 ContextVar 的任务上下文稳定；中断保留部分文本并停止音频。流式生成、证据、音频和 completion 各有取消/epoch 所有权；详细调用链和回归见 [功能地图](REPO_MAP.md) 与 [测试状态](agent-operations/TEST_STATUS.md)。
 
 当前集成分支包含 K01、W01、V01 与 W02 的主要代码；功能是否完成按相应验收边界而非分支合并判断。
 功能入口见 [REPO_MAP.md](REPO_MAP.md)，运行条件见 [DEVELOPMENT.md](DEVELOPMENT.md)。

@@ -19,27 +19,42 @@ class StreamEvent:
 async def with_sse_heartbeat(source: AsyncIterator[bytes], interval: float = 15.0) -> AsyncIterator[bytes]:
     """Keep idle transport connections alive without cancelling the producer."""
     iterator = source.__aiter__()
-    pending = None
+    queue: asyncio.Queue[tuple[bytes | None, Exception | None, bool]] = asyncio.Queue(maxsize=1)
+
+    async def produce() -> None:
+        try:
+            async for chunk in iterator:
+                await queue.put((chunk, None, False))
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            await queue.put((None, exc, True))
+        else:
+            await queue.put((None, None, True))
+        finally:
+            close = getattr(iterator, "aclose", None)
+            if close is not None:
+                try:
+                    await close()
+                except Exception:
+                    pass
+
+    producer = asyncio.create_task(produce())
     try:
         while True:
-            if pending is None:
-                pending = asyncio.ensure_future(iterator.__anext__())
-            done, _ = await asyncio.wait({pending}, timeout=interval)
-            if not done:
+            try:
+                chunk, error, finished = await asyncio.wait_for(queue.get(), timeout=interval)
+            except asyncio.TimeoutError:
                 yield b": keepalive\n\n"
                 continue
-            try:
-                chunk = pending.result()
-            except StopAsyncIteration:
-                break
-            pending = None
-            yield chunk
-    finally:
-        if pending is not None:
-            if not pending.done():
-                pending.cancel()
-            await asyncio.gather(pending, return_exceptions=True)
-        close = getattr(iterator, "aclose", None)
-        if close is not None:
-            await close()
 
+            if error is not None:
+                raise error
+            if finished:
+                break
+            if chunk is not None:
+                yield chunk
+    finally:
+        if not producer.done():
+            producer.cancel()
+        await asyncio.gather(producer, return_exceptions=True)
