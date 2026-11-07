@@ -79,6 +79,7 @@
 | 职责 | 位置与变更注意 |
 |---|---|
 | API 基址、超时、前端身份边界 | [transport.js](../frontend/src/api/transport.js) 提供无身份共享传输；[http.js](../frontend/src/api/http.js) 是游客匿名客户端；[adminHttp.js](../frontend/src/api/adminHttp.js) 单独读取管理端 token；流式 fetch 仍是独立通路并不携带管理员 token |
+| 两端应用入口与构建 | [apps/tourist](../frontend/apps/tourist) 和 [apps/admin](../frontend/apps/admin) 各自拥有 HTML/root/router；`npm run dev:tourist|dev:admin` 使用5173/5174，`npm run build:tourist|build:admin` 产出独立 `dist/tourist`、`dist/admin`；[check-build-boundaries](../frontend/scripts/check-build-boundaries.mjs) 校验静态资源闭包，测试边界见 [app-boundaries.test.mjs](../frontend/tests/app-boundaries.test.mjs) |
 | 流式恢复与播放诊断 | [useSSEStream](../frontend/src/composables/useSSEStream.js)、[chat store](../frontend/src/stores/chat.js)、[chatMetrics](../frontend/src/utils/chatMetrics.js)、[音频缓冲实验](../frontend/src/utils/adaptiveAudioBuffer.js)；前端 `npm test` 覆盖中断、代际、PCM、指标和模拟轨迹，验证边界见[验收记录](superpowers/plans/2026-10-28-ai-stream-validation.md) |
 | 上传与单进程并发保护 | [bounded_body](../backend/app/api/bounded_body.py)、[capacity](../backend/app/services/capacity.py)、[图片容器检查](../backend/app/services/vision/image_headers.py)；并发限制不是多进程全局限流，WAV 时长与图片头部检查的边界见[验收记录](superpowers/plans/2026-10-28-ai-stream-validation.md) |
 | 管理员生产鉴权配置 | [auth.py](../backend/app/api/auth.py) 使用 HMAC Bearer token；[Settings.production_security_failures](../backend/app/core/config.py) 检查生产密码与 token secret，[main lifespan](../backend/main.py) 在迁移/预热前 fail-fast；访客接口仍公开，时间窗口限流待设计 |

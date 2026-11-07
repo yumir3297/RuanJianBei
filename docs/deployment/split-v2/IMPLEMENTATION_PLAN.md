@@ -122,14 +122,14 @@ Task 4–5与纯业务功能可以分批推进，但不默认多人同时修改m
 
 **Interfaces:** dev默认游客，dev:tourist/dev:admin/build:tourist/build:admin；build依次构建；端口5173/5174且strictPort；产物dist/tourist、dist/admin，各含一个index入口及完整manifest/chunk。
 
-- [ ] 写tourist_graph_excludes_admin_auth_and_charts、admin_graph_keeps_preview_without_chat：遍历相对静态/动态imports，游客不可达管理员状态/API、ElementPlus/ECharts；后台可达ThreeAvatar，不可达游客ChatView/Router。
-- [ ] 写asset_allowlist、self_contained_manifest：两端排除tester，游客保留worklet，后台不含录音worklet；模型/动作和中文VRM正常；每个产物引用全部在本产物内存在。
-- [ ] 运行新测试确认当前单入口不满足，然后实现独立root/router/shell，保留现有src业务路径，不整体移动目录。
-- [ ] 游客保留旧/tourist工具重定向并移除管理入口；后台/到/admin/dashboard，跨端查看使用仅允许部署固定https/开发本机http的普通链接。
-- [ ] Vite7配置明确envDir、fs.allow、独立outDir，public白名单复制到.public-build；不复制真实.env，不通过缩小环境目录误漏必要公开配置。
-- [ ] package新增两个构建/开发/预览和临时legacy命令；单端构建不得清理另一个outDir。
-- [ ] 执行npm run build:tourist、npm run build:admin和两个边界脚本；重复只构建一端后另一端manifest/hash不变。检查缺模型、动作、图像与worklet引用。
-- [ ] 开发双端页面验证路由、未登录管理跳转、后台预览和游客文字输入；不因权限未给手机而阻断结构交付。提交后作为下一批功能接线基线。
+- [x] 写tourist_graph_excludes_admin_auth_and_charts、admin_graph_keeps_preview_without_chat：遍历相对静态/动态imports，游客不可达管理员状态/API、ElementPlus/ECharts；后台可达ThreeAvatar，不可达游客ChatView/Router。
+- [x] 写asset_allowlist、self_contained_manifest：两端排除tester，游客保留worklet，后台不含录音worklet；模型/动作和中文VRM正常；每个产物引用全部在本产物内存在。
+- [x] 运行新测试确认当前单入口不满足，然后实现独立root/router/shell，保留现有src业务路径，不整体移动目录。
+- [x] 游客保留旧/tourist工具重定向并移除管理入口；后台/到/admin/dashboard，跨端查看使用仅允许部署固定https/开发本机http的普通链接。
+- [x] Vite7配置明确envDir、fs.allow、独立outDir，public白名单复制到每端独立staging；不复制真实.env，不通过缩小环境目录误漏必要公开配置。
+- [x] package新增两个构建/开发/预览和临时legacy命令；单端构建不得清理另一个outDir。
+- [x] 执行npm run build:tourist、npm run build:admin和边界脚本；重复只构建一端后另一端全量文件hash不变。检查模型、动作、图像与worklet存在性。
+- [ ] 浏览器手工冒烟：验证游客旧工具路由、未登录管理跳转、后台数字人预览、游客文字输入。当前自动化浏览器两次超时且环境无本地浏览器；已验证两端 dev 服务及深链接均返回200，页面交互留到浏览器可用时补验。
 
 ### Task 4：生产启动职责与可复现运行包
 

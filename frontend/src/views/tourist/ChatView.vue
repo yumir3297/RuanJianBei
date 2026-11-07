@@ -6,7 +6,7 @@
       <div class="header-actions">
         <span v-if="weatherCaption" class="header-weather" :title="weatherColorLabel || undefined"><i class="weather-color-dot" :style="{ background: scenicColor.hex }" aria-hidden="true"></i>{{ weatherCaption }}<template v-if="weatherColorLabel">&nbsp;·&nbsp;{{ weatherColorLabel }}</template></span>
         <details class="service-menu"><summary><GuideIcon name="headphones" /><span>景区服务</span></summary><div class="service-popover"><button v-for="service in touristSettings.hotlines.filter(item => item.enabled)" :key="service.id" type="button" :disabled="inputBusy" @click="handleHotline(service.id); $event.currentTarget.closest('details').open = false"><strong>{{ service.label }}</strong><small>{{ service.number }}</small></button><p v-if="!touristSettings.hotlines.some(item => item.enabled)">暂无已配置的服务电话，请咨询景区工作人员。</p></div></details>
-        <RouterLink class="admin-entry" to="/admin/dashboard">运营管理</RouterLink>
+        <a v-if="adminAppUrl" class="admin-entry" :href="adminAppUrl" target="_blank" rel="noopener noreferrer">运营管理</a>
       </div>
     </header>
     <main class="guide-layout" :class="{ 'tool-open': activeTool, 'route-tool-open': activeTool === 'route', 'map-open': activeTool === 'map', 'text-open': textExpanded }">
@@ -312,6 +312,7 @@ import { useCamera } from "../../composables/useCamera";
 import { useSpeechRecognition } from "../../composables/useSpeechRecognition";
 import { useScenicBackground } from "../../composables/useScenicBackground";
 import { useVisitorConfig } from "../../composables/useVisitorConfig.js";
+import { adminAppUrl } from "../../utils/appLinks.js";
 import { fetchWelcomeAudio, replayChatAnswer } from "../../api/chat";
 import { DEFAULT_AVATAR_PRESET } from "../../utils/avatarConfig";
 import { GUIDE_PERSONA, useAvatar } from "../../composables/useAvatar";

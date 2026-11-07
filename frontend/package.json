@@ -4,10 +4,21 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "npm run dev:tourist",
+    "dev:tourist": "node scripts/prepare-public.mjs tourist && vite --config vite.tourist.config.js",
+    "dev:admin": "node scripts/prepare-public.mjs admin && vite --config vite.admin.config.js",
+    "build": "npm run build:tourist && npm run build:admin",
+    "build:tourist": "node scripts/prepare-public.mjs tourist && vite build --config vite.tourist.config.js",
+    "build:admin": "node scripts/prepare-public.mjs admin && vite build --config vite.admin.config.js",
+    "build:legacy": "vite build --config vite.config.js",
     "test": "node --test",
-    "preview": "vite preview"
+    "preview": "npm run preview:legacy",
+    "preview:legacy": "vite preview --config vite.config.js",
+    "preview:tourist": "vite preview --config vite.tourist.config.js",
+    "preview:admin": "vite preview --config vite.admin.config.js",
+    "check:app-boundaries": "node scripts/check-app-boundaries.mjs",
+    "check:build-boundaries": "node scripts/check-build-boundaries.mjs",
+    "check:build-isolation": "node scripts/check-build-isolation.mjs"
   },
   "dependencies": {
     "@pixiv/three-vrm": "^3.5.4",
