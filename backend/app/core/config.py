@@ -63,7 +63,7 @@ class Settings(BaseSettings):
     default_avatar_voice: str = Field(default="female_warm")
     asr_provider: str = Field(default="stub")
     asr_api_key: str = Field(default="")
-    asr_model: str = Field(default="paraformer-v2")
+    asr_model: str = Field(default="fun-asr")
     asr_base_url: str = Field(default="https://dashscope.aliyuncs.com/api/v1/services/audio/asr/transcription")
     asr_task_url: str = Field(default="https://dashscope.aliyuncs.com/api/v1/tasks")
     asr_vocabulary_id: str = Field(default="")
@@ -84,8 +84,6 @@ class Settings(BaseSettings):
     chat_max_active: int = Field(default=8, ge=1, le=1000)
     asr_max_active: int = Field(default=4, ge=1, le=1000)
     vision_max_active: int = Field(default=4, ge=1, le=1000)
-    asr_hotwords: str = Field(default="")
-    """景区专属 ASR 热词（逗号分隔），按景区在 .env 中自行配置。"""
     asr_local_model_dir: str = Field(default="D:/A5ScenicGuideModels/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17")
     asr_local_num_threads: int = Field(default=2, ge=1, le=16)
     asr_local_language: str = Field(default="zh")

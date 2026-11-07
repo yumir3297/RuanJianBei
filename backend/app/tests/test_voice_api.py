@@ -9,6 +9,7 @@ from app.api.voice import router
 from app.api.voice import get_asr_service
 from app.core.config import Settings, get_settings
 from app.services.asr.base import ASRResult
+from app.services.asr.bailian import BailianASRService
 import app.api.voice as voice_api
 
 
@@ -17,6 +18,11 @@ def build_client(settings: Settings) -> TestClient:
     app.include_router(router, prefix="/api/asr")
     app.dependency_overrides[get_settings] = lambda: settings
     return TestClient(app)
+
+
+def test_bailian_is_the_configured_cloud_asr_adapter() -> None:
+    service = get_asr_service(Settings(asr_provider="bailian", asr_model="fun-asr"))
+    assert isinstance(service, BailianASRService)
 
 
 def test_transcribe_audio_returns_stub_metadata() -> None:
@@ -48,7 +54,7 @@ def test_transcription_idempotency_reuses_result_and_rejects_key_mismatch(monkey
             return None
 
     service = CountingASR()
-    client = build_client(Settings(asr_provider="qwen"))
+    client = build_client(Settings(asr_provider="bailian"))
     app = client.app
     app.dependency_overrides[get_asr_service] = lambda: service
 
@@ -76,7 +82,7 @@ def test_compressed_audio_duration_is_checked_before_provider(monkeypatch) -> No
             return None
 
     service = CountingASR()
-    client = build_client(Settings(asr_provider="qwen", asr_max_audio_seconds=2))
+    client = build_client(Settings(asr_provider="bailian", asr_max_audio_seconds=2))
     client.app.dependency_overrides[get_asr_service] = lambda: service
 
     async def short_probe(*args, **kwargs):

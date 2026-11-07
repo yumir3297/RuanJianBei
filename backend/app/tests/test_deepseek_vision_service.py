@@ -6,15 +6,15 @@ import json
 import httpx
 
 from app.core.config import Settings
-from app.services.vision.qwen import QwenVisionService
+from app.services.vision.deepseek import DeepSeekVisionService
 
 
-def qwen_settings(**overrides) -> Settings:
+def deepseek_settings(**overrides) -> Settings:
     values = {
-        "vision_provider": "qwen",
-        "vision_api_key": "test-qwen-key",
-        "vision_base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        "vision_model": "qwen3.7-plus",
+        "vision_provider": "deepseek",
+        "vision_api_key": "test-deepseek-key",
+        "vision_base_url": "https://api.deepseek.com",
+        "vision_model": "deepseek-flash",
         "vision_connect_timeout_seconds": 1,
         "vision_read_timeout_seconds": 1,
         "vision_total_timeout_seconds": 3,
@@ -23,13 +23,13 @@ def qwen_settings(**overrides) -> Settings:
     return Settings(**values)
 
 
-def test_qwen_vision_service_sends_image_and_parses_json_result() -> None:
+def test_deepseek_vision_service_sends_image_and_parses_json_result() -> None:
     async def run():
         async def handler(request: httpx.Request) -> httpx.Response:
-            assert request.url == "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
-            assert request.headers["authorization"] == "Bearer test-qwen-key"
+            assert request.url == "https://api.deepseek.com/chat/completions"
+            assert request.headers["authorization"] == "Bearer test-deepseek-key"
             payload = json.loads(request.content)
-            assert payload["model"] == "qwen3.7-plus"
+            assert payload["model"] == "deepseek-flash"
             assert payload["stream"] is False
             user_content = payload["messages"][1]["content"]
             assert user_content[0]["type"] == "text"
@@ -60,7 +60,7 @@ def test_qwen_vision_service_sends_image_and_parses_json_result() -> None:
             )
 
         async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
-            service = QwenVisionService(qwen_settings(), client=client)
+            service = DeepSeekVisionService(deepseek_settings(), client=client)
             return await service.analyze(
                 b"fake-png-bytes",
                 filename="buddha.png",
@@ -70,7 +70,7 @@ def test_qwen_vision_service_sends_image_and_parses_json_result() -> None:
 
     result = asyncio.run(run())
 
-    assert result.provider == "qwen"
+    assert result.provider == "deepseek"
     assert result.scene_summary == "画面中疑似灵山大佛广场。"
     assert result.detected_text == "灵山胜境"
     assert result.candidate_attractions == ("灵山大佛",)
@@ -80,7 +80,7 @@ def test_qwen_vision_service_sends_image_and_parses_json_result() -> None:
     assert "这是什么景点" in result.as_retrieval_query("这是什么景点")
 
 
-def test_qwen_vision_service_ignores_empty_detected_text_array() -> None:
+def test_deepseek_vision_service_ignores_empty_detected_text_array() -> None:
     async def run():
         async def handler(_: httpx.Request) -> httpx.Response:
             return httpx.Response(
@@ -107,7 +107,7 @@ def test_qwen_vision_service_ignores_empty_detected_text_array() -> None:
             )
 
         async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
-            service = QwenVisionService(qwen_settings(), client=client)
+            service = DeepSeekVisionService(deepseek_settings(), client=client)
             return await service.analyze(b"fake-image", filename="buddha.jpg")
 
     result = asyncio.run(run())
@@ -117,33 +117,33 @@ def test_qwen_vision_service_ignores_empty_detected_text_array() -> None:
     assert "灵山大佛" in result.as_retrieval_query("这张图是什么景点")
 
 
-def test_qwen_vision_service_falls_back_when_configuration_missing() -> None:
-    service = QwenVisionService(qwen_settings(vision_api_key=""))
+def test_deepseek_vision_service_falls_back_when_configuration_missing() -> None:
+    service = DeepSeekVisionService(deepseek_settings(vision_api_key=""))
 
     async def run():
         return await service.analyze(b"fake-image", filename="unknown.jpg")
 
     result = asyncio.run(run())
 
-    assert result.provider == "qwen"
+    assert result.provider == "deepseek"
     assert result.confidence == 0.0
     assert "配置不完整" in result.scene_summary
     assert "unknown.jpg" in result.as_retrieval_query()
 
 
-def test_qwen_vision_service_fallback_records_provider_error() -> None:
+def test_deepseek_vision_service_fallback_records_provider_error() -> None:
     async def run():
         async def handler(_: httpx.Request) -> httpx.Response:
             raise httpx.ReadTimeout("slow provider")
 
         async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
-            service = QwenVisionService(qwen_settings(), client=client)
+            service = DeepSeekVisionService(deepseek_settings(), client=client)
             return await service.analyze(b"fake-image", filename="slow.jpg")
 
     result = asyncio.run(run())
 
-    assert result.provider == "qwen"
+    assert result.provider == "deepseek"
     assert result.confidence == 0.0
     assert "暂时不可用" in result.scene_summary
     assert result.raw["error_type"] == "ReadTimeout"
-    assert result.raw["error_message"] == "Qwen vision request timed out."
+    assert result.raw["error_message"] == "DeepSeek vision request timed out."

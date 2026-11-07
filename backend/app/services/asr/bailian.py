@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class BailianASRService(BaseASRService):
-    """DashScope Paraformer recorded-speech ASR service.
+    """DashScope Fun-ASR recorded-speech ASR service.
 
     The recorded-speech API pulls audio from a public file URL. Raw browser blobs
     must be exposed by the API layer before this service can submit a task.
@@ -217,7 +217,7 @@ class BailianASRService(BaseASRService):
     def _safe_error_message(exc: Exception) -> str:
         if isinstance(exc, httpx.HTTPStatusError):
             return f"百炼 ASR 返回 HTTP {exc.response.status_code}。"
-        if isinstance(exc, (httpx.TimeoutException, TimeoutError, TimeoutError)):
+        if isinstance(exc, (httpx.TimeoutException, TimeoutError)):
             return "百炼 ASR 请求超时。"
         if isinstance(exc, httpx.RequestError):
             return "百炼 ASR 网络请求失败。"

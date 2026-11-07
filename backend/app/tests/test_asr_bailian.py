@@ -13,7 +13,7 @@ def asr_settings(**overrides) -> Settings:
     values = {
         "asr_provider": "bailian",
         "asr_api_key": "test-asr-key",
-        "asr_model": "paraformer-v2",
+        "asr_model": "fun-asr",
         "asr_base_url": "https://dashscope.aliyuncs.com/api/v1/services/audio/asr/transcription",
         "asr_task_url": "https://dashscope.aliyuncs.com/api/v1/tasks",
         "asr_vocabulary_id": "vocab-lingshan",
@@ -32,7 +32,7 @@ def test_bailian_asr_submits_task_and_reads_transcription_url() -> None:
                 assert request.headers["authorization"] == "Bearer test-asr-key"
                 assert request.headers["x-dashscope-async"] == "enable"
                 payload = json.loads(request.content)
-                assert payload["model"] == "paraformer-v2"
+                assert payload["model"] == "fun-asr"
                 assert payload["input"]["file_urls"] == ["https://public.example.com/audio.webm"]
                 assert payload["parameters"]["vocabulary_id"] == "vocab-lingshan"
                 return httpx.Response(200, json={"output": {"task_id": "task-1"}})

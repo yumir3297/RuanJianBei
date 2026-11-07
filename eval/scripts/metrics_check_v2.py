@@ -150,7 +150,7 @@ print("=" * 60)
 print("  赛题硬指标汇总")
 print("=" * 60)
 print(f"""
-  1. 多模态大模型      ✅ DeepSeek + Qwen Vision
+  1. 多模态大模型      ✅ DeepSeek text + vision
   2. 准确率 ≥90%      {'✅' if acc >= 90 else '⚠️'} FAQ: {acc:.0f}%
   3. 响应 <5s         {'✅' if all_ok else '❌'} (P50={p50 if latencies else 0:.2f}s)
   4. 数字人口型+表情   ✅ 组件+SSE事件 就绪

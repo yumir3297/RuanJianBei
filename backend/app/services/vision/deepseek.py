@@ -15,7 +15,7 @@ from app.services.vision.base import BaseVisionService, VisionResult
 logger = logging.getLogger(__name__)
 
 
-class QwenVisionService(BaseVisionService):
+class DeepSeekVisionService(BaseVisionService):
     def __init__(
         self,
         settings: Settings,
@@ -35,7 +35,7 @@ class QwenVisionService(BaseVisionService):
         prompt: str | None = None,
     ) -> VisionResult:
         if not self._is_configured():
-            return self._fallback_result("Qwen 图片识别配置不完整。", filename=filename, mime_type=mime_type)
+            return self._fallback_result("DeepSeek 图片识别配置不完整。", filename=filename, mime_type=mime_type)
 
         try:
             payload = self._build_payload(content, mime_type=mime_type, prompt=prompt)
@@ -52,7 +52,7 @@ class QwenVisionService(BaseVisionService):
             response.raise_for_status()
             return self._parse_response(response.json(), filename=filename, mime_type=mime_type)
         except Exception as exc:
-            logger.warning("Qwen vision provider failed with %s.", type(exc).__name__)
+            logger.warning("DeepSeek vision provider failed with %s.", type(exc).__name__)
             return self._fallback_result(
                 "图片识别服务暂时不可用，当前图片只能作为低置信度检索线索。",
                 filename=filename,
@@ -113,7 +113,7 @@ class QwenVisionService(BaseVisionService):
             visual_tags=self._as_text_tuple(parsed.get("visual_tags")),
             query_hints=self._as_text_tuple(parsed.get("query_hints")),
             confidence=self._as_confidence(parsed.get("confidence")),
-            provider="qwen",
+            provider="deepseek",
             raw={
                 "filename": filename,
                 "mime_type": mime_type,
@@ -167,7 +167,7 @@ class QwenVisionService(BaseVisionService):
             scene_summary=scene_summary,
             query_hints=tuple(value for value in (filename,) if value),
             confidence=0.0,
-            provider="qwen",
+            provider="deepseek",
             raw=raw,
         )
 
@@ -221,11 +221,11 @@ class QwenVisionService(BaseVisionService):
         if value is None:
             return ""
         if isinstance(value, list | tuple):
-            return "；".join(item for item in (QwenVisionService._as_text(item) for item in value) if item)
+            return "；".join(item for item in (DeepSeekVisionService._as_text(item) for item in value) if item)
         if isinstance(value, dict):
             for key in ("text", "content", "value"):
                 if key in value:
-                    return QwenVisionService._as_text(value[key])
+                    return DeepSeekVisionService._as_text(value[key])
             return ""
         text = str(value).strip()
         return "" if text in {"[]", "{}", "null", "None"} else text
@@ -248,9 +248,9 @@ class QwenVisionService(BaseVisionService):
     @staticmethod
     def _safe_error_message(exc: Exception) -> str:
         if isinstance(exc, httpx.HTTPStatusError):
-            return f"Qwen vision returned HTTP {exc.response.status_code}."
+            return f"DeepSeek vision returned HTTP {exc.response.status_code}."
         if isinstance(exc, (httpx.TimeoutException, TimeoutError)):
-            return "Qwen vision request timed out."
+            return "DeepSeek vision request timed out."
         if isinstance(exc, httpx.RequestError):
-            return "Qwen vision network request failed."
+            return "DeepSeek vision network request failed."
         return str(exc)[:200]
