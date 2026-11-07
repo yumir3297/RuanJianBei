@@ -220,6 +220,20 @@ class Settings(BaseSettings):
         )
 
     @property
+    def volcengine_asr_ready(self) -> bool:
+        """火山 ASR 凭据/资源是否齐备；可显式配置 ASR auth，或复用已授权的 TTS auth。"""
+        has_api_key = bool(self.volcengine_asr_api_key or self.volcengine_tts_api_key)
+        has_legacy_auth = bool(
+            (self.volcengine_asr_app_id or self.volcengine_tts_app_id)
+            and (self.volcengine_asr_access_key or self.volcengine_tts_access_key)
+        )
+        return bool(
+            (has_api_key or has_legacy_auth)
+            and self.volcengine_asr_resource_id.strip()
+            and self.volcengine_asr_ws_url.strip()
+        )
+
+    @property
     def tts_ready(self) -> bool:
         """按 tts_provider 判断对应凭据是否齐备，作为是否启用真实 TTS 的统一开关。"""
         if self.tts_provider == "volcengine":

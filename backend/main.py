@@ -169,8 +169,10 @@ def create_app() -> FastAPI:
 
         if settings.llm_provider != "stub" and not settings.llm_api_key:
             failures.append(f"{settings.llm_provider}_api_key_missing")
-        if settings.asr_provider not in ("stub", "local_sensevoice") and not settings.asr_api_key:
-            failures.append(f"{settings.asr_provider}_api_key_missing")
+        if settings.asr_provider == "bailian" and not settings.asr_api_key:
+            failures.append("bailian_api_key_missing")
+        if settings.asr_provider == "volcengine" and not settings.volcengine_asr_ready:
+            failures.append("volcengine_asr_api_key_missing")
         if settings.tts_provider != "stub" and not settings.tts_ready:
             failures.append(f"{settings.tts_provider}_api_key_missing")
         if settings.competition_mode and settings.llm_provider.strip().lower() == "stub":
