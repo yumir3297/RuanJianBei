@@ -10,14 +10,20 @@
       </div>
     </div>
     <div class="upload-controls">
-      <el-upload v-model:file-list="files" drag multiple :auto-upload="false" accept=".pdf,.json">
+      <p v-if="limitsError" class="limits-warning" role="alert">
+        未能读取服务器上传限额，上传已暂停。<el-button link type="primary" :loading="limitsLoading" @click="loadLimits">重试获取限额</el-button>
+      </p>
+      <p v-else-if="limits" class="limits-note">
+        当前服务器每批最多 {{ limits.knowledge_import.max_files }} 个文件；单文件不超过 {{ formatBytes(limits.knowledge_import.max_file_bytes) }}。
+      </p>
+      <el-upload v-model:file-list="files" drag multiple :auto-upload="false" :disabled="limitsLoading || !limits" :limit="limits?.knowledge_import.max_files || 1" :on-change="handleFileChange" :on-exceed="handleExceed" accept=".pdf,.json">
         <el-icon class="upload-icon"><UploadFilled /></el-icon>
         <div class="el-upload__text">拖放文件到此处，或 <em>点击选择</em></div>
-        <template #tip><div class="el-upload__tip">支持 PDF 和 JSON，可一次选择多个文件。</div></template>
+        <template #tip><div class="el-upload__tip">支持 PDF 和 JSON；可选文件数与大小按服务器实时限额执行。</div></template>
       </el-upload>
       <div class="upload-actions">
         <el-input v-model="documentId" clearable placeholder="重导时填写来源文档 ID（新文档留空）" />
-        <el-button type="primary" :loading="uploading" :disabled="!files.length" @click="submit">上传并解析</el-button>
+        <el-button type="primary" :loading="uploading" :disabled="!canSubmit" @click="submit">上传并解析</el-button>
       </div>
     </div>
     <div v-if="batch" class="batch-result">
@@ -51,10 +57,12 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { UploadFilled } from "@element-plus/icons-vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { fetchKnowledgeImport, fetchRecentKnowledgeImports, resolveKnowledgeConflict, retryKnowledgeImport, uploadKnowledgeFiles } from "../../api/knowledgeImports";
+import { fetchAdminRuntimeLimits } from "../../api/adminRuntime.js";
+import { canSubmitImports, validateImportFiles } from "../../utils/importLimits.js";
 
 const props = defineProps({ entries: { type: Array, default: () => [] } });
 const emit = defineEmits(["changed"]);
@@ -66,8 +74,67 @@ const selectedBatchId = ref("");
 const uploading = ref(false);
 const refreshing = ref(false);
 const retrying = ref(false);
+const limits = ref(null);
+const limitsError = ref("");
+const limitsLoading = ref(false);
+const canSubmit = computed(() => canSubmitImports({
+  files: files.value,
+  limits: limits.value,
+  limitsLoading: limitsLoading.value,
+  limitsError: limitsError.value,
+  uploading: uploading.value,
+}));
+
+function formatBytes(value) {
+  if (value >= 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(value % (1024 * 1024) ? 1 : 0)} MiB`;
+  return `${Math.ceil(value / 1024)} KiB`;
+}
+
+async function loadLimits() {
+  limitsLoading.value = true;
+  limitsError.value = "";
+  try {
+    const result = await fetchAdminRuntimeLimits();
+    if (!validateImportFiles([], result).ok || !Number.isInteger(result?.display_assets?.max_image_bytes)
+      || result.display_assets.max_image_bytes < 1) throw new Error("invalid runtime limits");
+    limits.value = result;
+  } catch {
+    limits.value = null;
+    limitsError.value = "limits_unavailable";
+  } finally {
+    limitsLoading.value = false;
+  }
+}
+
+function handleFileChange(_file, uploadFiles) {
+  if (!limits.value) {
+    files.value = [];
+    return;
+  }
+  const accepted = [];
+  for (const file of uploadFiles) {
+    if (file.raw?.size > limits.value.knowledge_import.max_file_bytes) {
+      ElMessage.warning(`${file.name} 超过服务器单文件限额，已移除`);
+    } else if (accepted.length < limits.value.knowledge_import.max_files) {
+      accepted.push(file);
+    }
+  }
+  files.value = accepted;
+}
+
+function handleExceed() {
+  ElMessage.warning(`当前服务器每批最多允许 ${limits.value?.knowledge_import.max_files || 0} 个文件`);
+}
 
 async function submit() {
+  const validation = validateImportFiles(files.value.map((item) => item.raw), limits.value);
+  if (!validation.ok) {
+    const message = validation.reason === "too_many_files" ? "所选文件数量超过服务器限额"
+      : validation.reason === "file_too_large" ? "至少一个文件超过服务器单文件大小限额"
+        : "服务器上传限额不可用，请重试获取限额";
+    ElMessage.warning(message);
+    return;
+  }
   uploading.value = true;
   try {
     batch.value = await uploadKnowledgeFiles(files.value.map((item) => item.raw), { documentId: documentId.value.trim() });
@@ -184,12 +251,14 @@ async function merge(conflict) {
   }
 }
 
-onMounted(loadRecent);
+onMounted(() => { loadLimits(); loadRecent(); });
 
 </script>
 
 <style scoped>
 .import-panel { padding: 18px; border: 1px solid #d4c8b8; background: #fffaf2; }
+.limits-note { grid-column: 1 / -1; margin: 0 0 10px; color: #5b6470; font-size: 12px; }
+.limits-warning { grid-column: 1 / -1; margin: 0 0 10px; color: #b54708; font-size: 13px; }
 .panel-heading,.batch-title,.job-title,.conflict-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .panel-actions { display:flex; align-items:center; gap:8px; }
 .batch-actions { display:flex; align-items:center; gap:8px; }

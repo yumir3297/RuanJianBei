@@ -52,6 +52,7 @@ from app.services.rag.index_builder import RAGIndexBuilder
 from app.services.rag.vector_store import ChromaVectorStore
 from app.services.display_assets import DisplayAssetService
 from app.schemas.display_assets import TouristDisplaySettings
+from app.schemas.runtime_limits import AdminRuntimeLimits, DisplayAssetLimits, KnowledgeImportLimits
 from app.services.tts.factory import build_tts_service, resolve_voice_for_provider
 from app.services.tts.welcome_cache import _derive_model_key, generate_and_cache
 
@@ -70,6 +71,17 @@ async def _reload_faq_after_commit(session: AsyncSession) -> float:
         }) from error
 
 VALID_VOICE_TYPES = {"gentle-female", "calm-female", "deep-male", "lively-female"}
+
+
+@router.get("/runtime-limits", response_model=AdminRuntimeLimits)
+async def admin_runtime_limits(settings: Settings = Depends(get_app_settings)) -> AdminRuntimeLimits:
+    return AdminRuntimeLimits(
+        knowledge_import=KnowledgeImportLimits(
+            max_files=settings.knowledge_import_max_files,
+            max_file_bytes=settings.knowledge_import_max_file_bytes,
+        ),
+        display_assets=DisplayAssetLimits(max_image_bytes=settings.ui_asset_max_image_bytes),
+    )
 
 LEGACY_AVATAR_VOICE_MAP = {
     "female_warm": "gentle-female",

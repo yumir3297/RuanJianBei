@@ -1,0 +1,693 @@
+{
+  "schema_version": 1,
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/admin/analytics",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/avatar-configs",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/avatar-configs/active",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/avatar-configs/welcome-audio/regenerate",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/avatar-configs/{config_id}",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/avatar-configs/{config_id}/activate",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/avatar-voice-preview",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/blind-spots",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/blind-spots/{blind_spot_id}/resolve-with-faq",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/build-rag-index",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/display-assets",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/display-assets/tourist-background",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/display-assets/tourist-background",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/display-assets/tourist-settings",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/display-assets/welcome-text",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/overview",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/refresh-faq",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/runtime-limits",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/sync-processed-data",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/asr/files/{file_name}",
+      "boundary": "anonymous",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/asr/transcribe",
+      "boundary": "anonymous",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "boundary": "anonymous",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/chat/replay",
+      "boundary": "anonymous",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/chat/stream",
+      "boundary": "anonymous",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/chat/visitor-memory/{visitor_id}",
+      "boundary": "anonymous",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/chat/welcome-audio",
+      "boundary": "anonymous",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/display-assets/",
+      "boundary": "anonymous",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/guide/narration",
+      "boundary": "anonymous",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/insights/blind-spot-top",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/insights/emotion-summary",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/insights/experience-report",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/insights/feedback",
+      "boundary": "anonymous",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/insights/qa-trend",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/insights/spot-attention",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/insights/visitor-groups",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/itinerary/catalog",
+      "boundary": "anonymous",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/knowledge-imports/",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/knowledge-imports/conflicts/{conflict_id}/resolve",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/knowledge-imports/recent",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/knowledge-imports/{batch_id}",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/knowledge-imports/{batch_id}/retry",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/knowledge-publications/",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/knowledge-publications/{job_id}",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/knowledge-publications/{job_id}/retry",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/knowledge/",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/knowledge/",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/knowledge/{knowledge_id}",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/knowledge/{knowledge_id}",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/knowledge/{knowledge_id}/draft",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/quick-select/bootstrap",
+      "boundary": "anonymous",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/recommend/",
+      "boundary": "anonymous",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/tour-sessions",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/tour-sessions",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/tour-sessions/bootstrap",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/tour-sessions/trash",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/tour-sessions/{session_id}",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/tour-sessions/{session_id}",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/tour-sessions/{session_id}",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/tour-sessions/{session_id}/artifacts",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/tour-sessions/{session_id}/artifacts",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/tour-sessions/{session_id}/budget",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/tour-sessions/{session_id}/events",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/tour-sessions/{session_id}/executions",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/tour-sessions/{session_id}/executions/{job_id}",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/tour-sessions/{session_id}/executions/{job_id}/cancel",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/tour-sessions/{session_id}/executions/{job_id}/events",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/tour-sessions/{session_id}/executions/{job_id}/retry",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/tour-sessions/{session_id}/progress",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/tour-sessions/{session_id}/progress",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/tour-sessions/{session_id}/progress/events",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/tour-sessions/{session_id}/proposals",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/tour-sessions/{session_id}/proposals",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/tour-sessions/{session_id}/proposals/{proposal_id}",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/tour-sessions/{session_id}/proposals/{proposal_id}/apply",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/tour-sessions/{session_id}/purge",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/tour-sessions/{session_id}/restore/{revision_id}",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/tour-sessions/{session_id}/revisions",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/tour-sessions/{session_id}/start",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/tour-sessions/{session_id}/undelete",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/tour-sessions/{session_id}/upgrade-v2",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/tour-sessions/{session_id}/v2",
+      "boundary": "visitor-cookie",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/vision/analyze",
+      "boundary": "anonymous",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/visitor-config",
+      "boundary": "anonymous",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/weather/current",
+      "boundary": "anonymous",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "boundary": "internal",
+      "sites": [
+        "gateway"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/ready",
+      "boundary": "internal",
+      "sites": [
+        "gateway"
+      ]
+    }
+  ]
+}

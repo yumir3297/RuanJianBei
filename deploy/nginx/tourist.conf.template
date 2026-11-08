@@ -1,0 +1,47 @@
+server {
+    listen 80;
+    server_name __TOURIST_HOST__;
+    root /srv/releases/tourist/current;
+    index index.html;
+    client_max_body_size 6m;
+    error_page 413 = @payload_too_large;
+
+    location = /api/chat/stream {
+        if ($tourist_api_allowed = 0) { return 404; }
+        include /etc/nginx/snippets/common-api.conf;
+    }
+    location ^~ /api/knowledge-imports/ {
+        if ($tourist_api_allowed = 0) { return 404; }
+        client_max_body_size __IMPORT_BODY_LIMIT__;
+        include /etc/nginx/snippets/common-api.conf;
+    }
+    location = /api/asr/transcribe {
+        if ($tourist_api_allowed = 0) { return 404; }
+        client_max_body_size 12m;
+        include /etc/nginx/snippets/common-api.conf;
+    }
+    location = /api/vision/analyze {
+        if ($tourist_api_allowed = 0) { return 404; }
+        client_max_body_size 6m;
+        include /etc/nginx/snippets/common-api.conf;
+    }
+    location /api/ {
+        if ($tourist_api_allowed = 0) { return 404; }
+        limit_except GET POST PUT PATCH DELETE OPTIONS { deny all; }
+        include /etc/nginx/snippets/common-api.conf;
+    }
+    location /ui-assets/ {
+        client_max_body_size 10m;
+        include /etc/nginx/snippets/common-api.conf;
+    }
+    location ^~ /assets/ { try_files $uri =404; }
+    location ^~ /models/ { try_files $uri =404; }
+    location ^~ /motions/ { try_files $uri =404; }
+    location = /recorder-worklet.js { try_files $uri =404; }
+    location = /favicon.svg { try_files $uri =404; }
+    location @payload_too_large {
+        default_type application/json;
+        return 413 '{"detail":"request body exceeds this endpoint limit"}';
+    }
+    location / { try_files $uri $uri/ /index.html; }
+}

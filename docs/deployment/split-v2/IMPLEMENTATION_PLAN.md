@@ -177,14 +177,14 @@ Task 4–5与纯业务功能可以分批推进，但不默认多人同时修改m
 - release.json包含源码SHA、应用名、构建工具、文件hash、所需后端能力；脚本只接收明确端名tourist|admin与release-id。
 - 后端能力从已部署并核验的current/backend-release.json读取，字段image_digest/source_sha/schema_head/capabilities；前端required_backend_capabilities须为当前能力子集。后端升级验证所有仍支持前端的需求，不能只检查当前单一页面。
 
-- [ ] 写runtime_limits_requires_admin_and_matches_settings：匿名401，有token返回实际安全限额；测试自定义值，确认不暴露其他settings。UI限额获取失败时阻止上传并给重试，不猜默认大批量值。
-- [ ] 写multi_file_selection_matches_server_max与gateway_budget_includes_multipart：生产每批1×50MiB、网关55MiB；默认20环境不得被误渲染为整批55MiB，必须按实际批量预算渲染或拒绝未声明预算。
-- [ ] 写api_surface_complete_and_method_sensitive：insights统计GET只管理，feedback POST游客，W02 execution游客owner；所有路由覆盖，无未知项自动放行。
-- [ ] 写missing_api_asset_is_not_html、sse_no_buffer、asr_timeout_budget：网关缺失资源404/413为JSON或明确文本；SSE逐帧不缓冲；proxy_read_timeout240s是读间隔，保持客户端ASR210s和供应商180s+转换边界。
+- [x] 写runtime_limits_requires_admin_and_matches_settings：匿名401，有token返回实际安全限额；测试自定义值，确认不暴露其他settings。UI限额获取失败时阻止上传并给重试，不猜默认大批量值。
+- [x] 写multi_file_selection_matches_server_max与gateway_budget_includes_multipart：生产每批1×50MiB、网关55MiB；默认20环境渲染为1009MiB，按实际批量预算设置。
+- [x] 写api_surface_complete_and_method_sensitive：insights统计GET只管理，feedback POST游客，W02 execution游客owner；86条路由全覆盖，新增未知路由导致清单检查失败。
+- [x] 写missing_api_asset_is_not_html、sse_no_buffer、asr_timeout_budget：静态资源404、413 JSON；SSE关闭代理缓冲；proxy_read_timeout240s，客户端 ASR 210s、供应商180s+转换语义不变。NGINX 二进制未安装，真实 `nginx -t` 留待可用环境。
 - [ ] 写publish_and_rollback_preserve_both_active_asset_sets：在临时目录完成A→B→A，两个方向旧/新manifest引用的hash文件均HTTP可达；只保留旧目录但当前路径不可达判失败；拒绝hash同名不同内容与跨端目录覆盖。
 - [ ] 写static_release_never_changes_database_or_other_app：脚本操作限制在指定端web目录，无docker全栈重启/迁移/数据卷写入；未知端名和越界release-id拒绝。
 - [ ] 写publish_and_rollback_reject_missing_backend_capability、backend_upgrade_preserves_supported_frontends：缺visitor-config-v1/admin-runtime-limits-v1或缺后端metadata即拒绝新包切换；前端回滚同样检查；后端删除仍受支持旧包需要的能力时拒绝。legacy必须有显式已确认映射，不从health推断。
-- [ ] 实现管理限额与UI、网关方法/路径策略和分别持久web目录。Host/HTTPS信任按目标拓扑配置，不放宽Origin/CSRF；/api不剥前缀。
+- [ ] 实现管理限额与UI、网关方法/路径策略；分别持久 web release/current/previous 目录尚待发布工具实现。Host/HTTPS信任按目标拓扑配置，不放宽Origin/CSRF；/api不剥前缀。
 - [ ] 实现静态发布前完整校验与资源保留：按仍受支持release manifest合并hash资源；回滚目标也补齐活跃hash资源。HTML不缓存、无hash资源重验证，后台私有导入文件不暴露到/ui-assets。
 - [ ] 实现check_release_compatibility并接入发布/回滚/后端升级；核对实际容器digest与schema/契约后才更新backend-release.json。字段声明不代替真实契约测试，但缺少声明不得继续切换。
 - [ ] 实现备份/恢复脚本为显式维护操作：停API/worker写入后协调SQL、manifest、uploads、Chroma；恢复只能指定隔离目标，默认不覆盖现存生产目录。迁移前必须有恢复证据。

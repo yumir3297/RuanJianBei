@@ -51,6 +51,15 @@ Compose 文件不会代替维护窗口、旧进程排空、数据库备份或恢
 
 启动前需在仓库根目录执行 `npm --prefix frontend run build`，生成 `frontend/dist/tourist` 与 `frontend/dist/admin`；NGINX 分别只读挂载这两个目录。当前 NGINX 文件仅供本地结构演练，正式域名、HTTPS、CSRF trusted origin、请求预算和 SSE 代理策略由 Task 5 按目标拓扑配置。
 
+生产模板按 `KNOWLEDGE_IMPORT_MAX_FILES` 和 `KNOWLEDGE_IMPORT_MAX_FILE_BYTES` 计算 multipart 总预算。当前 runtime 示例为 1×50 MiB，网关预算为 55 MiB；开发默认 20×50 MiB 会渲染为 1009 MiB。修改服务端限额后，须用相同参数重新生成 NGINX 站点配置，不得只改 API 环境值：
+
+```sh
+python scripts/render_api_policy.py --check
+python scripts/render_api_policy.py --render-nginx deploy/nginx/generated \
+  --tourist-host guide.example.org --admin-host admin.example.org \
+  --max-files 1 --max-file-bytes 52428800
+```
+
 ## 状态端点
 
 - `/health` 是进程活性检查；它不证明数据库 schema、知识内容或模型已可用。
