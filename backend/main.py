@@ -2,12 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from alembic import command as alembic_command
-from alembic.config import Config as AlembicConfig
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -22,6 +19,7 @@ from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging
 from app.db.bootstrap import bootstrap_avatar_configs, bootstrap_experience_demo_feedback, bootstrap_quick_topics, bootstrap_sample_data
+from app.db.deployment import legacy_frontend_dist, migrate_database, prepare_startup_database
 from app.db.session import AsyncSessionLocal
 from app.services.knowledge.jobs import run_import_worker, run_publication_worker
 from app.models import (  # noqa: F401
@@ -59,12 +57,15 @@ class SPAStaticFiles(StaticFiles):
 
 def _run_migrations() -> None:
     """使用 Alembic 执行数据库迁移，替代 create_all。"""
-    alembic_ini = Path(__file__).parent / "alembic.ini"
-    if not alembic_ini.exists():
-        return
-    os.chdir(Path(__file__).parent)
-    alembic_cfg = AlembicConfig(str(alembic_ini))
-    alembic_command.upgrade(alembic_cfg, "head")
+    migrate_database(get_settings())
+
+
+async def _bootstrap_on_startup(settings, *, include_demo: bool = False) -> None:
+    await bootstrap_quick_topics()
+    await bootstrap_avatar_configs()
+    if include_demo:
+        await bootstrap_sample_data()
+        await bootstrap_experience_demo_feedback()
 
 
 @asynccontextmanager
@@ -78,11 +79,11 @@ async def lifespan(app: FastAPI):
     settings.ui_asset_upload_root.mkdir(parents=True, exist_ok=True)
     settings.knowledge_upload_root.mkdir(parents=True, exist_ok=True)
     settings.ui_asset_manifest_file.parent.mkdir(parents=True, exist_ok=True)
-    _run_migrations()
-    await bootstrap_quick_topics()
-    await bootstrap_avatar_configs()
-    await bootstrap_sample_data()
-    await bootstrap_experience_demo_feedback()
+    await prepare_startup_database(
+        settings,
+        migrate=lambda _settings: _run_migrations(),
+        initialize=_bootstrap_on_startup,
+    )
 
     # 预加载模型，避免首次请求冷启动
     from app.api.chat import get_cached_embedder, get_cached_reranker
@@ -187,8 +188,8 @@ def create_app() -> FastAPI:
     # In the reviewer bundle the prebuilt Vue app lives next to the backend.
     # Mount it last so API routes, health checks, and uploaded UI assets retain
     # their normal paths; Vite development remains unaffected.
-    frontend_dist = settings.project_root / "frontend" / "dist"
-    if frontend_dist.is_dir():
+    frontend_dist = legacy_frontend_dist(settings)
+    if settings.serve_frontend and (frontend_dist / "index.html").is_file():
         app.mount("/", SPAStaticFiles(directory=frontend_dist, html=True), name="frontend")
 
     return app

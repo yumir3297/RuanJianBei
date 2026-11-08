@@ -37,7 +37,10 @@ config = context.config
 
 # 读取 .env 中的 DATABASE_URL，将 asyncpg 转为 psycopg（v3）
 _env_path = Path(__file__).resolve().parents[1] / ".env"
-_db_url = os.environ.get("DATABASE_URL", "")
+_configured_url = config.get_main_option("sqlalchemy.url", "")
+_db_url = _configured_url if _configured_url and not _configured_url.startswith("driver://") else ""
+if not _db_url:
+    _db_url = os.environ.get("DATABASE_URL", "")
 if not _db_url and _env_path.exists():
     for line in _env_path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
