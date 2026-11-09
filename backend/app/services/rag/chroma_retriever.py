@@ -73,6 +73,14 @@ class VectorBackedRAGService(BaseRAGService):
 
         documents: list[RetrievedDocument] = []
         for result in candidates:
+            validator = getattr(self.fallback, "is_current_vector_result", None)
+            if validator is not None:
+                try:
+                    if not await validator(result.id, result.document):
+                        continue
+                except Exception:
+                    logger.exception("Could not validate vector result against current knowledge chunks.")
+                    continue
             meta = result.metadata
             documents.append(
                 RetrievedDocument(
@@ -83,6 +91,33 @@ class VectorBackedRAGService(BaseRAGService):
                     score=result.score,
                 )
             )
+
+        # The database is authoritative while the vector index is being rebuilt or
+        # after a failed rebuild. Supplementing every vector result makes newly
+        # saved knowledge visible and prevents stale vector text from winning.
+        if self.fallback is not None and hasattr(self.fallback, "is_current_vector_result"):
+            try:
+                current_documents = await self.fallback.retrieve(
+                    query,
+                    normalized_query=normalized,
+                    top_k=max(top_k * 4, 10),
+                    scope=scope,
+                )
+                by_content = {
+                    (item.title, item.content, item.source): item
+                    for item in documents
+                }
+                for item in current_documents:
+                    key = (item.title, item.content, item.source)
+                    existing = by_content.get(key)
+                    if existing is None or item.score > existing.score:
+                        by_content[key] = item
+                documents = list(by_content.values())
+            except Exception:
+                logger.exception("Current-knowledge retrieval failed; using validated vector results only.")
+
+        if not documents:
+            return await self._fallback_or_empty(query, normalized, top_k, scope, "stale_candidates")
 
         decision = self.reranker_gate.decide(
             scope=scope,

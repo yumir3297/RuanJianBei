@@ -3,29 +3,13 @@
     <header class="panel-card knowledge-hero">
       <div class="hero-copy">
         <h2>知识资产管理</h2>
-        <p>
-          统一维护景区讲解资料、游客高频问题与运营补录内容，让导览回答可检索、可追溯，也更适合现场答辩展示。
-        </p>
-        <div class="hero-pills">
-          <span class="hero-pill">
-            <el-icon><Collection /></el-icon>
-            知识池共 {{ formatNumber(entries.length) }} 条
-          </span>
-          <span class="hero-pill muted">覆盖 {{ formatNumber(categoryCount) }} 个知识分类</span>
-          <span v-if="lastUpdatedAt" class="hero-pill muted">更新于 {{ lastUpdatedAt }}</span>
-        </div>
+        <p>维护景点讲解、游客常见问题和运营补充资料。</p>
       </div>
 
-      <div class="hero-side">
-        <div class="hero-status">
-          <span class="hero-status-label">当前状态</span>
-          <strong>{{ statusSummary }}</strong>
-          <p>{{ statusDescription }}</p>
-        </div>
-        <div class="hero-actions">
-          <el-button :icon="RefreshRight" :loading="loading" @click="loadEntries">刷新快照</el-button>
-          <el-button type="primary" :icon="Plus" @click="openDialog()">新增知识</el-button>
-        </div>
+      <div class="hero-actions">
+        <span v-if="lastUpdatedAt" class="updated-at">读取于 {{ lastUpdatedAt }}</span>
+        <el-button :icon="RefreshRight" :loading="loading" @click="loadEntries">刷新</el-button>
+        <el-button type="primary" :icon="Plus" @click="openDialog()">新增知识</el-button>
       </div>
     </header>
 
@@ -41,33 +25,19 @@
       </template>
     </el-alert>
 
-    <div class="stat-grid" v-loading="loading && !entries.length">
-      <article
-        v-for="card in summaryCards"
-        :key="card.key"
-        class="stat-card"
-        :style="{ '--accent': card.accent, '--accent-soft': card.soft }"
-      >
-        <div class="stat-card-top">
-          <span class="stat-icon">
-            <el-icon><component :is="card.icon" /></el-icon>
-          </span>
-        </div>
-        <div class="stat-body">
-          <span class="stat-label">{{ card.label }}</span>
-          <strong class="stat-value">{{ formatNumber(card.value) }}</strong>
-          <p class="stat-note">{{ card.note }}</p>
-        </div>
-      </article>
-    </div>
+    <el-alert
+      v-if="indexStatus && !indexStatus.current"
+      type="warning"
+      :closable="false"
+      show-icon
+      title="知识已保存，检索索引正在等待重建"
+      :description="`当前知识版本 ${indexStatus.knowledge_generation}；索引版本 ${indexStatus.indexed_generation}。问答暂时直接使用当前数据库知识。重建索引完成后会自动恢复向量检索。`"
+    />
 
     <div class="knowledge-main">
       <article class="panel-card knowledge-table-card">
         <div class="card-heading">
-          <div>
-            <h3>知识资产快照</h3>
-            <p>围绕景区知识池进行检视、筛选与编辑，支撑讲解内容、游客问答与后续盲区补录。</p>
-          </div>
+          <h3>知识条目</h3>
           <div class="heading-meta">
             <span>{{ formatNumber(filteredEntries.length) }} / {{ formatNumber(entries.length) }} 条</span>
             <el-tag
@@ -101,6 +71,7 @@
               :value="category"
             />
           </el-select>
+          <el-button v-if="activeFilterCount" @click="clearFilters">清除筛选</el-button>
         </div>
 
         <el-skeleton v-if="loading" :rows="6" animated />
@@ -172,88 +143,29 @@
       </article>
 
       <aside class="knowledge-side">
-        <article class="panel-card side-card">
-          <div class="side-heading">
-            <div>
-              <h3>运营动作区</h3>
-            </div>
-            <el-tag size="small" type="success" effect="plain">核心操作</el-tag>
-          </div>
-
-          <div class="action-list">
-            <div class="action-item">
-              <div class="action-copy">
-                <strong>同步官方资料</strong>
-                <p>将景区官方资料同步进知识池，适合答辩前统一口径与内容底稿。</p>
-              </div>
-              <el-button :icon="UploadFilled" :loading="syncing" @click="handleSync">立即同步</el-button>
-            </div>
-
-            <div class="action-item">
-              <div class="action-copy">
-                <strong>重建向量索引</strong>
-                <p>知识内容更新后重建检索索引，保证讲解问答命中率与资料可追溯性。</p>
-              </div>
-              <el-button :icon="Operation" :loading="rebuilding" @click="handleRebuildIndex">开始重建</el-button>
-            </div>
-
-            <div class="action-item compact">
-              <div class="action-copy">
-                <strong>人工补录知识</strong>
-                <p>补充现场讲解口径、文化细节与游客常见追问，体现运营闭环能力。</p>
-              </div>
-              <el-button type="primary" plain :icon="EditPen" @click="openDialog()">新增条目</el-button>
-            </div>
-          </div>
-        </article>
-
-        <article class="panel-card side-card">
-          <div class="side-heading">
-            <div>
-              <h3>当前工作面</h3>
-            </div>
-          </div>
-
-          <div class="status-list">
-            <div class="status-row">
-              <span>页面状态</span>
-              <strong :class="statusToneClass">{{ statusSummary }}</strong>
-            </div>
-            <div class="status-row">
-              <span>当前筛选</span>
-              <strong>{{ filterSummary }}</strong>
-            </div>
-            <div class="status-row">
-              <span>当前分页</span>
-              <strong>第 {{ currentPage }} / {{ totalPages }} 页</strong>
-            </div>
-            <div class="status-row">
-              <span>最近刷新</span>
-              <strong>{{ lastUpdatedAt || "尚未加载" }}</strong>
-            </div>
-          </div>
-        </article>
-
-        <article class="panel-card side-card guidance-card">
-          <div class="side-heading">
-            <div>
-              <h3>录入规范提示</h3>
-            </div>
-          </div>
+        <section class="knowledge-maintenance" aria-label="知识库维护">
+          <h3>知识库维护</h3>
+          <p>新增或编辑知识后，按需同步资料并重建检索索引。</p>
+          <el-button :icon="UploadFilled" :loading="syncing" @click="handleSync">同步官方资料</el-button>
+          <el-button :icon="Operation" :loading="rebuilding" @click="handleRebuildIndex">重建检索索引</el-button>
+        </section>
+        <details class="knowledge-guidance">
+          <summary>知识录入建议</summary>
           <ul>
-            <li>标题尽量贴近游客提问口径，便于讲解与检索统一。</li>
-            <li>来源字段优先填写官方资料、运营补录或专题整理渠道。</li>
-            <li>别名建议补充口语表达和景点俗称，提升问答命中率。</li>
+            <li>标题使用游客容易想到的景点名称或问题。</li>
+            <li>标明资料来源，方便后续核对。</li>
+            <li>补充常用别名和口语问法。</li>
           </ul>
-        </article>
+        </details>
       </aside>
     </div>
 
     <el-dialog
       v-model="dialogVisible"
       :title="isEdit ? '编辑知识条目' : '新增知识条目'"
-      width="640px"
+      width="min(640px, calc(100vw - 32px))"
       class="knowledge-dialog"
+      :before-close="requestCloseDialog"
     >
       <div class="dialog-intro">
         <p>维护可展示、可检索、可回答的景区知识内容，建议同步补齐来源与别名。</p>
@@ -309,7 +221,7 @@
       </el-form>
 
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button @click="requestCloseDialog()">取消</el-button>
         <el-button type="primary" :loading="submitting" @click="submitForm">提交</el-button>
       </template>
     </el-dialog>
@@ -318,17 +230,15 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
+import { onBeforeRouteLeave } from "vue-router";
 import {
-  Collection,
-  EditPen,
-  Files,
   Operation,
   Plus,
   RefreshRight,
-  Tickets,
   UploadFilled,
 } from "@element-plus/icons-vue";
 import { ElMessage, ElMessageBox } from "element-plus";
+import { httpErrorMessage } from "../../utils/httpErrorMessage";
 
 import {
   createKnowledge,
@@ -336,7 +246,7 @@ import {
   fetchKnowledgeList,
   updateKnowledge,
 } from "../../api/knowledge";
-import { rebuildVectorIndex, syncOfficialData } from "../../api/admin";
+import { fetchKnowledgeIndexStatus, rebuildVectorIndex, syncOfficialData } from "../../api/admin";
 
 const entries = ref([]);
 const loading = ref(false);
@@ -344,6 +254,7 @@ const error = ref("");
 const syncing = ref(false);
 const rebuilding = ref(false);
 const lastUpdatedAt = ref("");
+const indexStatus = ref(null);
 
 const searchQuery = ref("");
 const selectedCategory = ref("");
@@ -356,6 +267,7 @@ const submitting = ref(false);
 const formRef = ref(null);
 const aliasInput = ref("");
 const currentId = ref(null);
+const formBaseline = ref("");
 
 const form = ref({
   title: "",
@@ -364,6 +276,9 @@ const form = ref({
   source: "管理员手动录入",
   aliases: [],
 });
+const hasUnsavedChanges = computed(() =>
+  Boolean(formBaseline.value) && JSON.stringify(form.value) !== formBaseline.value,
+);
 
 const rules = {
   title: [{ required: true, message: "请输入标题", trigger: "blur" }],
@@ -378,8 +293,6 @@ const categoryOptions = computed(() =>
     a.localeCompare(b, "zh-CN"),
   ),
 );
-
-const categoryCount = computed(() => categoryOptions.value.length);
 
 const filteredEntries = computed(() => {
   const keyword = searchQuery.value.trim().toLowerCase();
@@ -421,117 +334,9 @@ const visibleEnd = computed(() =>
     : 0,
 );
 
-const aliasConfiguredCount = computed(() =>
-  entries.value.filter((entry) => Array.isArray(entry.aliases) && entry.aliases.length > 0).length,
-);
-
-const manualEntryCount = computed(() =>
-  entries.value.filter((entry) => isManualSource(entry.source)).length,
-);
-
 const activeFilterCount = computed(
   () => Number(Boolean(searchQuery.value.trim())) + Number(Boolean(selectedCategory.value)),
 );
-
-const filterSummary = computed(() => {
-  if (!activeFilterCount.value) {
-    return "未启用筛选";
-  }
-
-  const fragments = [];
-  if (selectedCategory.value) {
-    fragments.push(selectedCategory.value);
-  }
-  if (searchQuery.value.trim()) {
-    fragments.push(`关键词：${searchQuery.value.trim()}`);
-  }
-  return fragments.join(" / ");
-});
-
-const statusSummary = computed(() => {
-  if (loading.value) {
-    return "加载中";
-  }
-  if (syncing.value) {
-    return "资料同步中";
-  }
-  if (rebuilding.value) {
-    return "索引重建中";
-  }
-  if (entries.value.length) {
-    return "知识池可用";
-  }
-  return "等待录入";
-});
-
-const statusDescription = computed(() => {
-  if (loading.value) {
-    return "正在读取当前知识资产快照，请稍候。";
-  }
-  if (syncing.value) {
-    return "官方资料正在回流至知识池，完成后会自动刷新当前快照。";
-  }
-  if (rebuilding.value) {
-    return "检索索引正在更新，完成后可提升问答与引用定位效果。";
-  }
-  if (entries.value.length) {
-    return "当前页面可直接进行筛选、补录、同步与索引维护。";
-  }
-  return "当前尚无知识条目，建议先同步官方资料或手动新增。";
-});
-
-const statusToneClass = computed(() => {
-  if (loading.value || syncing.value || rebuilding.value) {
-    return "tone-busy";
-  }
-  if (entries.value.length) {
-    return "tone-ready";
-  }
-  return "tone-waiting";
-});
-
-const summaryCards = computed(() => [
-  {
-    key: "knowledge-total",
-    kicker: "",
-    value: entries.value.length,
-    label: "知识资产总量",
-    note: "支撑景区讲解、问答与资料追溯的底层内容。",
-    icon: Collection,
-    accent: "#0f766e",
-    soft: "#dcf7f1",
-  },
-  {
-    key: "category-coverage",
-    kicker: "",
-    value: categoryCount.value,
-    label: "分类覆盖",
-    note: "反映当前景区知识维度是否完整、清晰。",
-    icon: Files,
-    accent: "#b8894f",
-    soft: "#f8ecd8",
-  },
-  {
-    key: "aliases",
-    kicker: "",
-    value: aliasConfiguredCount.value,
-    label: "已配置别名",
-    note: "便于识别游客口语化问法与景点俗称。",
-    icon: Tickets,
-    accent: "#2563eb",
-    soft: "#e1ebff",
-  },
-  {
-    key: "manual-entry",
-    kicker: "",
-    value: manualEntryCount.value,
-    label: "人工补录条目",
-    note: "体现后台持续维护与运营补充能力。",
-    icon: EditPen,
-    accent: "#c2410c",
-    soft: "#ffeadc",
-  },
-]);
 
 watch([searchQuery, selectedCategory], () => {
   currentPage.value = 1;
@@ -556,16 +361,13 @@ function formatUpdatedAt() {
   }).format(new Date());
 }
 
-function isManualSource(source) {
-  return !source || /管理员|手动|录入/.test(String(source));
-}
-
 function sourceLabel(source) {
   return source || "管理员手动录入";
 }
 
-function sourceNote(source) {
-  return isManualSource(source) ? "运营补录" : "资料来源";
+function clearFilters() {
+  searchQuery.value = "";
+  selectedCategory.value = "";
 }
 
 function summarizeContent(content) {
@@ -585,10 +387,19 @@ async function loadEntries() {
     const data = await fetchKnowledgeList();
     entries.value = Array.isArray(data) ? data : [];
     lastUpdatedAt.value = formatUpdatedAt();
+    await loadIndexStatus();
   } catch (e) {
-    error.value = `加载失败: ${e?.response?.data?.detail || e.message}`;
+    error.value = `加载失败: ${httpErrorMessage(e)}`;
   } finally {
     loading.value = false;
+  }
+}
+
+async function loadIndexStatus() {
+  try {
+    indexStatus.value = await fetchKnowledgeIndexStatus();
+  } catch {
+    indexStatus.value = null;
   }
 }
 
@@ -615,9 +426,41 @@ function openDialog(row = null) {
     };
   }
 
+  formBaseline.value = JSON.stringify(form.value);
   aliasInput.value = "";
   dialogVisible.value = true;
 }
+
+async function requestCloseDialog(done) {
+  if (submitting.value) return;
+  if (hasUnsavedChanges.value) {
+    try {
+      await ElMessageBox.confirm("关闭后将丢弃当前未保存的修改。", "放弃更改？", {
+        type: "warning",
+        confirmButtonText: "放弃修改",
+        cancelButtonText: "继续编辑",
+      });
+    } catch {
+      return;
+    }
+  }
+  if (typeof done === "function") done();
+  else dialogVisible.value = false;
+}
+
+onBeforeRouteLeave(async () => {
+  if (!dialogVisible.value || !hasUnsavedChanges.value) return true;
+  try {
+    await ElMessageBox.confirm("离开后将丢弃当前未保存的知识条目。", "离开编辑？", {
+      type: "warning",
+      confirmButtonText: "离开页面",
+      cancelButtonText: "继续编辑",
+    });
+    return true;
+  } catch {
+    return false;
+  }
+});
 
 function addAlias() {
   const value = aliasInput.value.trim();
@@ -650,7 +493,7 @@ async function submitForm() {
       dialogVisible.value = false;
       await loadEntries();
     } catch (e) {
-      ElMessage.error(`提交失败: ${e?.response?.data?.detail || e.message}`);
+      ElMessage.error(`提交失败: ${httpErrorMessage(e)}`);
     } finally {
       submitting.value = false;
     }
@@ -665,7 +508,7 @@ async function handleDelete(row) {
     await loadEntries();
   } catch (e) {
     if (e !== "cancel") {
-      ElMessage.error(`删除失败: ${e?.response?.data?.detail || e.message}`);
+      ElMessage.error(`删除失败: ${httpErrorMessage(e)}`);
     }
   }
 }
@@ -677,7 +520,7 @@ async function handleSync() {
     ElMessage.success(`数据同步完成，耗时约 ${(res.report.duration_ms / 1000).toFixed(1)}s`);
     await loadEntries();
   } catch (e) {
-    ElMessage.error(`同步失败: ${e?.response?.data?.detail || e.message}`);
+    ElMessage.error(`同步失败: ${httpErrorMessage(e)}`);
   } finally {
     syncing.value = false;
   }
@@ -690,13 +533,14 @@ async function handleRebuildIndex() {
     });
     rebuilding.value = true;
     const res = await rebuildVectorIndex();
+    await loadIndexStatus();
     lastUpdatedAt.value = formatUpdatedAt();
     ElMessage.success(
       `索引重建完成，耗时约 ${(res.report.duration_ms / 1000).toFixed(1)}s，共 ${res.report.indexed_chunks} 条`,
     );
   } catch (e) {
     if (e !== "cancel") {
-      ElMessage.error(`重建失败: ${e?.response?.data?.detail || e.message}`);
+      ElMessage.error(`重建失败: ${httpErrorMessage(e)}`);
     }
   } finally {
     rebuilding.value = false;
@@ -767,46 +611,15 @@ onMounted(() => {
   color: rgba(255, 255, 255, 0.78);
 }
 
-.hero-side {
-  display: grid;
-  align-content: end;
-  gap: 14px;
-  min-width: 320px;
-}
-
-.hero-status {
-  padding: 16px 18px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 0;
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(8px);
-}
-
-.hero-status-label {
-  display: inline-block;
-  margin-bottom: 8px;
-  color: rgba(255, 255, 255, 0.68);
-  font-size: 12px;
-}
-
-.hero-status strong {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 22px;
-}
-
-.hero-status p {
-  margin: 0;
-  color: rgba(255, 247, 235, 0.56);
-  font-size: 13px;
-  line-height: 1.65;
-}
-
 .hero-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
 }
+
+.updated-at { color: #59645d; font-size: 12px; }
 
 .stat-grid {
   display: grid;
@@ -946,27 +759,27 @@ onMounted(() => {
 }
 
 .source-text {
-  color: #241d16;
+  color: #202723;
   font-size: 13px;
 }
 
 .title-cell strong {
   display: block;
-  color: #241d16;
+  color: #202723;
 }
 
 .title-cell p {
   display: block;
   margin: 5px 0 0;
-  color: #675a4e;
+  color: #59645d;
   font-size: 12px;
   line-height: 1.55;
 }
 
 .category-tag {
-  border-color: rgba(184, 137, 79, 0.18);
-  color: #8a5d22;
-  background: rgba(248, 236, 216, 0.72);
+  border-color: #dce2dd;
+  color: #46574c;
+  background: #f5f7f5;
 }
 
 .alias-list {
@@ -978,7 +791,7 @@ onMounted(() => {
 
 .alias-more,
 .muted-text {
-  color: #675a4e;
+  color: #59645d;
   font-size: 12px;
 }
 
@@ -996,7 +809,7 @@ onMounted(() => {
 }
 
 .pagination-note {
-  color: #675a4e;
+  color: #59645d;
   font-size: 12px;
 }
 
@@ -1100,9 +913,9 @@ onMounted(() => {
 }
 
 :deep(.knowledge-table .el-table__header th) {
-  background: #f0e9dc;
-  color: #241d16;
-  font-weight: 700;
+  background: #f6f8f6;
+  color: #59645d;
+  font-weight: 500;
 }
 
 :deep(.knowledge-table .el-table__row td) {
@@ -1110,58 +923,58 @@ onMounted(() => {
 }
 
 :deep(.knowledge-table .el-table__row:hover td) {
-  background: #fcfaf5 !important;
+  background: #f6f8f6 !important;
 }
 
 :deep(.knowledge-table .el-table--striped .el-table__body tr.el-table__row--striped td) {
-  background: #f5f0e8;
+  background: #fafbfa;
 }
 
 :deep(.knowledge-dialog .el-dialog__header) {
   padding-bottom: 8px;
-  border-bottom: 1px solid #d4c8b8;
+  border-bottom: 1px solid #dce2dd;
 }
 
 :deep(.knowledge-dialog .el-dialog__title) {
-  color: #241d16;
+  color: #202723;
   font-family: inherit;
   font-size: 20px;
 }
 
 :deep(.knowledge-hero .el-button) {
-  --el-button-bg-color: rgba(255, 247, 235, 0.08);
-  --el-button-border-color: rgba(255, 247, 235, 0.15);
-  --el-button-text-color: #fff7eb;
-  --el-button-hover-bg-color: rgba(255, 247, 235, 0.15);
-  --el-button-hover-border-color: rgba(255, 247, 235, 0.25);
-  --el-button-hover-text-color: #fff7eb;
+  --el-button-bg-color: #fff;
+  --el-button-border-color: #dce2dd;
+  --el-button-text-color: #202723;
+  --el-button-hover-bg-color: #f0f2f0;
+  --el-button-hover-border-color: #cbd4ce;
+  --el-button-hover-text-color: #202723;
 }
 
 :deep(.knowledge-table-card .el-pagination.is-background .el-pager li:not(.is-disabled).is-active) {
-  --el-pagination-bg-color: #241d16;
-  --el-pagination-text-color: #fff7eb;
+  --el-pagination-bg-color: #285a46;
+  --el-pagination-text-color: #fff;
 }
 
 :deep(.table-actions .el-button--primary) {
-  --el-button-bg-color: #241d16;
-  --el-button-border-color: #241d16;
-  --el-button-text-color: #fff7eb;
-  --el-button-hover-bg-color: #3a3028;
-  --el-button-hover-border-color: #3a3028;
-  --el-button-hover-text-color: #fff7eb;
+  --el-button-bg-color: #285a46;
+  --el-button-border-color: #285a46;
+  --el-button-text-color: #fff;
+  --el-button-hover-bg-color: #204a39;
+  --el-button-hover-border-color: #204a39;
+  --el-button-hover-text-color: #fff;
 }
 
 :deep(.table-actions .el-button--danger) {
-  --el-button-text-color: #c93c3c;
+  --el-button-text-color: #b33a31;
 }
 
 :deep(.knowledge-hero .el-button--primary) {
-  --el-button-bg-color: #8a5d22;
-  --el-button-border-color: #8a5d22;
-  --el-button-text-color: #fff7eb;
-  --el-button-hover-bg-color: #a06c28;
-  --el-button-hover-border-color: #a06c28;
-  --el-button-hover-text-color: #fff7eb;
+  --el-button-bg-color: #285a46;
+  --el-button-border-color: #285a46;
+  --el-button-text-color: #fff;
+  --el-button-hover-bg-color: #204a39;
+  --el-button-hover-border-color: #204a39;
+  --el-button-hover-text-color: #fff;
 }
 
 :deep(.side-card .el-tag--success) {

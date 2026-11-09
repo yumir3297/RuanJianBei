@@ -1,10 +1,18 @@
 from __future__ import annotations
 
+import io
+import os
+import wave
+from pathlib import Path
+import time
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.api.voice import router
+from app.api.voice import get_asr_service
 from app.core.config import Settings, get_settings
+from app.services.asr.base import ASRResult
+import app.api.voice as voice_api
 
 
 def build_client(settings: Settings) -> TestClient:
@@ -31,6 +39,118 @@ def test_transcribe_audio_returns_stub_metadata() -> None:
     assert payload["confidence_source"] == "stub"
     assert payload["needs_confirmation"] is True
     assert "ASR provider" in payload["error_message"]
+
+
+def test_public_asr_audio_is_removed_after_provider_finishes(tmp_path, monkeypatch) -> None:
+    observed_paths: list[Path] = []
+
+    class PublicAudioASR:
+        requires_public_audio_url = True
+
+        async def transcribe(self, audio_url):
+            path = tmp_path / audio_url.rsplit("/", 1)[-1]
+            observed_paths.append(path)
+            assert path.is_file()
+            return ASRResult(text="识别结果", confidence=0.9, provider="fake")
+
+        async def aclose(self):
+            pass
+
+    monkeypatch.setattr(voice_api, "probe_audio_duration", lambda *_args, **_kwargs: 0.2)
+    settings = Settings(
+        asr_provider="bailian",
+        asr_public_audio_base_url="https://audio.example",
+        asr_upload_dir=str(tmp_path),
+    )
+    client = build_client(settings)
+    client.app.dependency_overrides[get_asr_service] = PublicAudioASR
+    audio = io.BytesIO()
+    with wave.open(audio, "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(16_000)
+        wav.writeframes(b"\0\0" * 160)
+
+    response = client.post(
+        "/api/asr/transcribe",
+        content=audio.getvalue(),
+        headers={"Content-Type": "audio/wav"},
+    )
+
+    assert response.status_code == 200
+    assert len(observed_paths) == 1
+    assert not observed_paths[0].exists()
+
+
+def test_expired_public_asr_audio_is_removed_and_not_served(tmp_path) -> None:
+    settings = Settings(asr_upload_dir=str(tmp_path), asr_public_audio_retention_seconds=60)
+    expired = tmp_path / "expired.wav"
+    expired.write_bytes(b"audio")
+    old_time = time.time() - 120
+    os.utime(expired, (old_time, old_time))
+    client = build_client(settings)
+
+    response = client.get("/api/asr/files/expired.wav")
+
+    assert response.status_code == 404
+    assert not expired.exists()
+
+
+def test_transcription_idempotency_reuses_result_and_rejects_key_mismatch(monkeypatch) -> None:
+    class CountingASR:
+        calls = 0
+        async def transcribe(self, payload):
+            self.calls += 1
+            return ASRResult(text="识别结果", confidence=0.9, provider="fake")
+        async def aclose(self):
+            return None
+
+    service = CountingASR()
+    client = build_client(Settings(asr_provider="qwen"))
+    app = client.app
+    app.dependency_overrides[get_asr_service] = lambda: service
+
+    async def short_probe(*args, **kwargs):
+        return 1
+
+    monkeypatch.setattr(voice_api, "probe_audio_duration", short_probe)
+    headers = {"Content-Type": "audio/webm", "Idempotency-Key": "voice-test-key"}
+    first = client.post("/api/asr/transcribe", content=b"one", headers=headers)
+    retry = client.post("/api/asr/transcribe", content=b"one", headers=headers)
+    conflict = client.post("/api/asr/transcribe", content=b"two", headers=headers)
+    assert first.status_code == retry.status_code == 200
+    assert first.json() == retry.json()
+    assert conflict.status_code == 409
+    assert service.calls == 1
+
+
+def test_compressed_audio_duration_is_checked_before_provider(monkeypatch) -> None:
+    class CountingASR:
+        calls = 0
+        async def transcribe(self, payload):
+            self.calls += 1
+            return ASRResult(text="ok", provider="fake")
+        async def aclose(self):
+            return None
+
+    service = CountingASR()
+    client = build_client(Settings(asr_provider="qwen", asr_max_audio_seconds=2))
+    client.app.dependency_overrides[get_asr_service] = lambda: service
+
+    async def short_probe(*args, **kwargs):
+        return 1.5
+
+    monkeypatch.setattr(voice_api, "probe_audio_duration", short_probe)
+    allowed = client.post("/api/asr/transcribe", content=b"compressed", headers={"Content-Type": "audio/webm"})
+
+    async def long_probe(*args, **kwargs):
+        return 3.0
+
+    monkeypatch.setattr(voice_api, "probe_audio_duration", long_probe)
+    too_long = client.post("/api/asr/transcribe", content=b"compressed-long", headers={"Content-Type": "audio/webm"})
+    assert allowed.status_code == 200
+    assert too_long.status_code == 413
+    assert service.calls == 1
 
 
 def test_transcribe_audio_limits_size_from_settings() -> None:
@@ -66,3 +186,37 @@ def test_bailian_without_public_audio_base_returns_clear_degradation() -> None:
     assert payload["confidence_source"] == "unavailable"
     assert payload["needs_confirmation"] is True
     assert "公网访问" in payload["error_message"]
+
+
+def _wav(seconds: float) -> bytes:
+    data = io.BytesIO()
+    with wave.open(data, "wb") as audio:
+        audio.setnchannels(1)
+        audio.setsampwidth(2)
+        audio.setframerate(8000)
+        audio.writeframes(b"\0\0" * int(8000 * seconds))
+    return data.getvalue()
+
+
+def test_audio_rejects_invalid_wav_before_calling_provider() -> None:
+    client = build_client(Settings(asr_provider="stub"))
+    response = client.post("/api/asr/transcribe", content=b"not a wav", headers={"Content-Type": "audio/wav"})
+    assert response.status_code == 400
+
+
+def test_audio_enforces_wav_duration_limit() -> None:
+    client = build_client(Settings(asr_provider="stub", asr_max_audio_seconds=1))
+    response = client.post("/api/asr/transcribe", content=_wav(2), headers={"Content-Type": "audio/wav"})
+    assert response.status_code == 413
+
+
+def test_audio_accepts_real_wav_within_duration_limit() -> None:
+    client = build_client(Settings(asr_provider="stub", asr_max_audio_seconds=1))
+    response = client.post("/api/asr/transcribe", content=_wav(0.5), headers={"Content-Type": "audio/wav"})
+    assert response.status_code == 200
+
+
+def test_wav_cannot_bypass_duration_by_claiming_webm() -> None:
+    client = build_client(Settings(asr_provider="stub", asr_max_audio_seconds=1))
+    response = client.post("/api/asr/transcribe", content=_wav(2), headers={"Content-Type": "audio/webm"})
+    assert response.status_code in {413, 415}

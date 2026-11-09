@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api import admin, auth, chat, display_assets, guide, insights, knowledge, quick_select, recommend, vision, voice, weather
+from app.api import admin, auth, chat, display_assets, guide, insights, knowledge, map_routes, quick_select, recommend, vision, voice, weather
 
 
 api_router = APIRouter(prefix="/api")
@@ -16,3 +16,4 @@ api_router.include_router(voice.router, prefix="/asr", tags=["asr"])
 api_router.include_router(insights.router, prefix="/insights", tags=["insights"])
 api_router.include_router(weather.router, prefix="/weather", tags=["weather"])
 api_router.include_router(guide.router, prefix="/guide", tags=["guide"])
+api_router.include_router(map_routes.router, prefix="/guide/map", tags=["map"])

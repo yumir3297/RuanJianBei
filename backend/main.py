@@ -36,6 +36,7 @@ from app.models import (  # noqa: F401
     VisitorFeedback,
 )
 from app.schemas.common import HealthResponse
+from app.services.asr.public_audio import cleanup_expired_public_audio
 
 
 class SPAStaticFiles(StaticFiles):
@@ -67,8 +68,17 @@ def _run_migrations() -> None:
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     settings = get_settings()
+    security_failures = settings.production_security_failures
+    if security_failures:
+        raise RuntimeError(
+            "Unsafe production security configuration: " + ", ".join(security_failures)
+        )
     settings.ui_asset_upload_root.mkdir(parents=True, exist_ok=True)
     settings.ui_asset_manifest_file.parent.mkdir(parents=True, exist_ok=True)
+    cleanup_expired_public_audio(
+        settings.asr_upload_root,
+        settings.asr_public_audio_retention_seconds,
+    )
     _run_migrations()
     await bootstrap_quick_topics()
     await bootstrap_avatar_configs()
@@ -132,8 +142,9 @@ def create_app() -> FastAPI:
         for provider, key in ((settings.llm_provider, settings.llm_api_key), (settings.asr_provider, settings.asr_api_key), (settings.tts_provider, settings.tts_api_key)):
             if provider != "stub" and not key:
                 failures.append(f"{provider}_api_key_missing")
-        if settings.competition_mode and settings.admin_password == "admin123":
+        if settings.competition_mode and settings.admin_password == "admin123" and "default_admin_password" not in failures:
             failures.append("default_admin_password")
+        failures.extend(settings.production_security_failures)
 
         status_code = 200 if not failures else 503
         return JSONResponse(status_code=status_code, content={"status": "ready" if not failures else "not_ready", "failures": failures})

@@ -25,7 +25,7 @@ class _FakePipeline:
         yield StreamEvent(type="text", data={"text": self._text, "is_complete": True})
 
 
-def _build_client(monkeypatch, *, pipeline=None, fail_build: bool = False) -> TestClient:
+def _build_client(monkeypatch, *, pipeline=None, fail_build: bool = False, generation=None) -> TestClient:
     app = FastAPI()
     app.include_router(guide_api.router, prefix="/api/guide")
 
@@ -40,9 +40,17 @@ def _build_client(monkeypatch, *, pipeline=None, fail_build: bool = False) -> Te
             raise RuntimeError("build failed")
         return pipeline if pipeline is not None else _FakePipeline()
 
+    class FakeGenerationRepository:
+        def __init__(self, _session):
+            pass
+
+        async def get(self):
+            return type("State", (), {"generation": generation["value"] if generation else 1})()
+
     app.dependency_overrides[get_db_session] = override_session
     app.dependency_overrides[get_app_settings] = override_settings
     monkeypatch.setattr(guide_api, "build_pipeline", fake_build_pipeline)
+    monkeypatch.setattr(guide_api, "KnowledgeGenerationRepository", FakeGenerationRepository)
     monkeypatch.setattr(guide_api, "_NARRATION_CACHE", {})
     return TestClient(app)
 
@@ -106,6 +114,28 @@ def test_narration_second_call_is_cached(monkeypatch) -> None:
 
     assert calls["n"] == 1
     assert second.json()["cached"] is True
+
+
+def test_narration_cache_isolated_by_knowledge_generation(monkeypatch) -> None:
+    generation = {"value": 1}
+    calls = {"n": 0}
+    pipeline = _FakePipeline()
+    original = pipeline.stream_chat
+
+    async def counting(payload):
+        calls["n"] += 1
+        async for event in original(payload):
+            yield event
+
+    pipeline.stream_chat = counting
+    client = _build_client(monkeypatch, pipeline=pipeline, generation=generation)
+    first = client.post("/api/guide/narration", json={"attraction": "灵山大佛"})
+    generation["value"] = 2
+    second = client.post("/api/guide/narration", json={"attraction": "灵山大佛"})
+
+    assert first.json()["cached"] is False
+    assert second.json()["cached"] is False
+    assert calls["n"] == 2
 
 
 def test_narration_degrades_without_5xx_on_pipeline_failure(monkeypatch) -> None:

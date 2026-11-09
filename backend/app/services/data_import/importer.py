@@ -16,6 +16,7 @@ from app.models.route import RouteTemplate
 from app.repositories.behavior_summary import BehaviorSummaryRepository
 from app.repositories.faq import FAQRepository
 from app.repositories.knowledge_chunk import KnowledgeChunkRepository
+from app.repositories.knowledge_generation import KnowledgeGenerationRepository
 from app.repositories.knowledge import KnowledgeRepository
 from app.repositories.knowledge_blind_spot import KnowledgeBlindSpotRepository
 from app.repositories.qa_cache import QACacheRepository
@@ -72,8 +73,9 @@ class ProcessedDataImporter:
         route_count = await self._sync_route_templates(route_payload)
         behavior_count = await self._sync_behavior_summary(behavior_summary_payload)
 
+        await self.qa_cache_repository.invalidate(commit=False)
+        await KnowledgeGenerationRepository(self.session).bump()
         await self.session.commit()
-        await self.qa_cache_repository.invalidate()
 
         return DataImportReport(
             knowledge_imported=knowledge_count,

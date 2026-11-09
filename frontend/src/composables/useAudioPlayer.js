@@ -1,6 +1,12 @@
 import { ref } from "vue";
+import { createAdaptiveAudioBuffer } from "../utils/adaptiveAudioBuffer";
 
 let sharedAudioPlayer = null;
+
+function normalizePlaybackRate(value) {
+  const rate = Number(value) || 1;
+  return Math.min(Math.max(rate, 0.8), 1.5);
+}
 
 export function useAudioPlayer() {
   if (sharedAudioPlayer) return sharedAudioPlayer;
@@ -10,11 +16,15 @@ export function useAudioPlayer() {
   const mouthEnergy = ref(0);
   const mouthAnalysisActive = ref(false);
   const isPCMStreaming = ref(false);
+  const activePlayback = ref(null);
 
   let audioContext = null;
   let currentSource = null;
   let currentUtterance = null;
+  let currentUtteranceFinish = null;
   let stopGeneration = 0;
+  let playbackSessionSequence = 0;
+  let playbackSession = null;
   let analyserNode = null;
   let analysisSinkNode = null;
   let analyserData = null;
@@ -30,6 +40,15 @@ export function useAudioPlayer() {
       try { audioContext = new AudioContext(); } catch { isSupported.value = false; }
     }
     return audioContext;
+  }
+
+  async function unlock() {
+    const ctx = ensureContext();
+    if (!ctx) return false;
+    if (ctx.state === "suspended") {
+      try { await ctx.resume(); } catch { return false; }
+    }
+    return ctx.state === "running";
   }
 
   function ensureAnalyser() {
@@ -96,11 +115,12 @@ export function useAudioPlayer() {
   async function playAudioBuffer(audioBuffer, onProgress, playbackOptions = {}) {
     const ctx = ensureContext();
     if (!ctx || audioBuffer === null) return 0;
+    const generation = stopGeneration;
     return new Promise((resolve) => {
       const source = ctx.createBufferSource();
       currentSource = source;
       source.buffer = audioBuffer;
-      const playbackRate = Math.min(Math.max(playbackOptions.rate || 1, 0.8), 1.5);
+      const playbackRate = normalizePlaybackRate(playbackOptions.rate);
       const volume = Math.min(Math.max(playbackOptions.volume ?? 0.8, 0), 1);
       const gainNode = ctx.createGain();
       source.playbackRate.value = playbackRate;
@@ -114,23 +134,29 @@ export function useAudioPlayer() {
       startMouthLoop();
 
       const startTime = ctx.currentTime;
-      const duration = audioBuffer.duration / playbackRate;
+      const contentDuration = audioBuffer.duration;
+      const playbackDuration = contentDuration / playbackRate;
       let progressTimer = null;
       if (onProgress) {
         progressTimer = setInterval(() => {
-          const elapsed = (ctx.currentTime - startTime) * 1000;
-          onProgress(Math.min(elapsed / (duration * 1000), 1), elapsed, duration * 1000);
+          if (generation !== stopGeneration) return;
+          const elapsed = Math.min(Math.max((ctx.currentTime - startTime) * 1000 * playbackRate, 0), contentDuration * 1000);
+          onProgress(Math.min(elapsed / (contentDuration * 1000), 1), elapsed, contentDuration * 1000);
         }, 30);
       }
       source.onended = () => {
-        currentSource = null;
+        if (currentSource === source) currentSource = null;
         source.disconnect();
         gainNode.disconnect();
-        stopMouthLoop();
-        if (progressTimer) { clearInterval(progressTimer); onProgress?.(1, duration * 1000, duration * 1000); }
-        resolve(duration * 1000);
+        if (generation === stopGeneration) stopMouthLoop();
+        if (progressTimer) {
+          clearInterval(progressTimer);
+          if (generation === stopGeneration) onProgress?.(1, contentDuration * 1000, contentDuration * 1000);
+        }
+        resolve(playbackDuration * 1000);
       };
       source.start(0);
+      if (ctx.state === "running") playbackOptions.onScheduled?.();
     });
   }
 
@@ -175,36 +201,64 @@ export function useAudioPlayer() {
 
   async function playSpeechSynthesis(text, durationMs, onProgress, playbackOptions = {}) {
     if (!speechSynthSupported) return 0;
+    const generation = stopGeneration;
     return new Promise((resolve) => {
       if (currentUtterance) window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = "zh-CN";
-      utterance.rate = Math.min(Math.max(playbackOptions.rate || 1, 0.8), 1.5);
+      utterance.rate = normalizePlaybackRate(playbackOptions.rate);
       utterance.pitch = 1.1;
       utterance.volume = Math.min(Math.max(playbackOptions.volume ?? 0.8, 0), 1);
       const startTime = Date.now();
-      const playbackRate = Math.min(Math.max(playbackOptions.rate || 1, 0.8), 1.5);
-      const estimatedDuration = Math.max((durationMs || text.length * 180) / playbackRate, 800);
-      const visemeTimeline = generateFrontendVisemeTimeline(text, estimatedDuration);
+      const playbackRate = normalizePlaybackRate(playbackOptions.rate);
+      const contentDuration = Math.max(durationMs || text.length * 180, 800);
+      const estimatedPlaybackDuration = contentDuration / playbackRate;
+      const visemeTimeline = generateFrontendVisemeTimeline(text, contentDuration);
       let progressTimer = null;
-      const reportProgress = (p) => onProgress?.(
-        Math.min(Math.max(p, 0), 1),
-        Date.now() - startTime,
-        estimatedDuration,
-        visemeTimeline,
-      );
-      const finish = (d) => { if (progressTimer) { clearInterval(progressTimer); progressTimer = null; } stopMouthLoop(); reportProgress(1); currentUtterance = null; resolve(d); };
-      utterance.onstart = () => { reportProgress(0); progressTimer = setInterval(() => reportProgress((Date.now() - startTime) / estimatedDuration), 50); };
-      utterance.onboundary = (e) => { if (text.length > 0 && Number.isFinite(e.charIndex)) reportProgress(e.charIndex / text.length); };
+      let settled = false;
+      const reportProgress = (p) => {
+        if (generation !== stopGeneration || settled) return;
+        const boundedProgress = Math.min(Math.max(p, 0), 1);
+        const elapsedContentMs = boundedProgress >= 1
+          ? contentDuration
+          : Math.min((Date.now() - startTime) * playbackRate, contentDuration);
+        onProgress?.(boundedProgress, elapsedContentMs, contentDuration, visemeTimeline);
+      };
+      const finish = (d) => {
+        if (settled) return;
+        if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
+        if (generation === stopGeneration) { stopMouthLoop(); reportProgress(1); }
+        settled = true;
+        if (currentUtterance === utterance) currentUtterance = null;
+        if (currentUtteranceFinish === finish) currentUtteranceFinish = null;
+        resolve(d);
+      };
+      utterance.onstart = () => { if (generation !== stopGeneration || settled) return; reportProgress(0); progressTimer = setInterval(() => reportProgress((Date.now() - startTime) / estimatedPlaybackDuration), 50); };
+      utterance.onboundary = (e) => { if (generation === stopGeneration && !settled && text.length > 0 && Number.isFinite(e.charIndex)) reportProgress(e.charIndex / text.length); };
       utterance.onend = () => finish(Date.now() - startTime);
       utterance.onerror = () => finish(0);
-      waitForChineseVoice().then((zhVoice) => { if (zhVoice) utterance.voice = zhVoice; currentUtterance = utterance; window.speechSynthesis.speak(utterance); });
+      waitForChineseVoice().then((zhVoice) => { if (generation !== stopGeneration) { finish(0); return; } if (zhVoice) utterance.voice = zhVoice; currentUtterance = utterance; currentUtteranceFinish = finish; window.speechSynthesis.speak(utterance); });
     });
   }
 
+  function claimPlayback(owner, onStopped) {
+    if (playbackSession) stop(playbackSession.id, "replaced");
+    else if (isPlaying.value || isPCMStreaming.value) stop();
+    const session = { id: ++playbackSessionSequence, owner, onStopped };
+    playbackSession = session;
+    activePlayback.value = { id: session.id, owner: session.owner };
+    return { id: session.id, owner: session.owner };
+  }
+
+  function isCurrentPlaybackSession(sessionId) {
+    return sessionId == null || playbackSession?.id === sessionId;
+  }
+
   async function enqueue(base64, durationMs = 800, onEnded, text = "", onProgress, playbackOptions = {}) {
+    if (!isCurrentPlaybackSession(playbackOptions.sessionId)) return false;
     queue.value.push({ base64, durationMs, onEnded, text, onProgress, playbackOptions });
     if (!isPlaying.value) await flush();
+    return true;
   }
 
   async function flush() {
@@ -214,7 +268,9 @@ export function useAudioPlayer() {
     while (queue.value.length > 0) {
       if (generation !== stopGeneration) break;
       const current = queue.value.shift();
+      if (!isCurrentPlaybackSession(current.playbackOptions?.sessionId)) continue;
       const audioBuffer = await base64ToAudioBuffer(current.base64);
+      if (generation !== stopGeneration) break;
       if (audioBuffer) {
         current.playbackOptions?.onMode?.("audio");
         await playAudioBuffer(audioBuffer, current.onProgress, current.playbackOptions);
@@ -233,19 +289,33 @@ export function useAudioPlayer() {
       }
       if (generation === stopGeneration && current.onEnded) current.onEnded();
     }
-    isPlaying.value = false;
-    stopMouthLoop();
+    if (generation === stopGeneration) {
+      isPlaying.value = false;
+      stopMouthLoop();
+    }
   }
 
-  function stop() {
+  function stop(sessionId = null, reason = "stopped") {
+    if (sessionId != null && playbackSession?.id !== sessionId) return false;
+    const stoppedSession = playbackSession;
+    playbackSession = null;
+    activePlayback.value = null;
     stopGeneration += 1;
     stopMouthLoop();
     if (currentSource) { try { currentSource.stop(); } catch {} currentSource = null; }
-    if (currentUtterance) { window.speechSynthesis.cancel(); currentUtterance = null; }
+    if (currentUtterance) {
+      const finishUtterance = currentUtteranceFinish;
+      window.speechSynthesis.cancel();
+      finishUtterance?.(0);
+      currentUtterance = null;
+      currentUtteranceFinish = null;
+    }
     queue.value = [];
     // 同时停止 PCM 流
     resetPCMStream(true);
     isPlaying.value = false;
+    try { stoppedSession?.onStopped?.(reason); } catch {}
+    return true;
   }
 
   // ── PCM 流式播放 ──
@@ -253,11 +323,23 @@ export function useAudioPlayer() {
   let pcmAccumulatedMs = 0;
   let pcmOnProgress = null;
   let pcmOnAudioEnded = null;
+  let pcmOnScheduled = null;
   let pcmProgressTimer = null;
   let pcmEndTimer = null;
   let pcmTimeline = [];
+  let pcmPlaybackRate = 1;
+  let pcmRunId = 0;
+  let pcmBufferPolicy = null;
+  let pcmOnBufferEvent = null;
+  let pcmOnUnavailable = null;
+  let pcmResumeTimer = null;
 
   function resetPCMStream(stopSources = false) {
+    pcmRunId += 1;
+    pcmBufferPolicy = null;
+    pcmOnBufferEvent = null;
+    pcmOnUnavailable = null;
+    if (pcmResumeTimer) { clearTimeout(pcmResumeTimer); pcmResumeTimer = null; }
     if (stopSources && pcmStream?.sources) {
       pcmStream.sources.forEach((source) => { try { source.stop(); } catch {} });
     }
@@ -265,7 +347,9 @@ export function useAudioPlayer() {
     pcmAccumulatedMs = 0;
     pcmOnProgress = null;
     pcmOnAudioEnded = null;
+    pcmOnScheduled = null;
     pcmTimeline = [];
+    pcmPlaybackRate = 1;
     isPCMStreaming.value = false;
     if (pcmProgressTimer) { clearInterval(pcmProgressTimer); pcmProgressTimer = null; }
     if (pcmEndTimer) { clearTimeout(pcmEndTimer); pcmEndTimer = null; }
@@ -301,23 +385,48 @@ export function useAudioPlayer() {
     } catch { return null; }
   }
 
-  function startPCMStream(onProgress, onAudioEnded) {
+  function startPCMStream(onProgress, onAudioEnded, onScheduled, options = {}) {
+    if (!isCurrentPlaybackSession(options.sessionId)) return false;
     resetPCMStream(true);
+    if (!ensureContext()) return false;
+    pcmBufferPolicy = options.adaptive ? createAdaptiveAudioBuffer() : null;
+    pcmPlaybackRate = normalizePlaybackRate(options.rate);
+    pcmOnBufferEvent = options.onBufferEvent || null;
+    pcmOnUnavailable = options.onUnavailable || null;
     pcmOnProgress = onProgress;
     pcmOnAudioEnded = onAudioEnded;
+    pcmOnScheduled = onScheduled;
     pcmAccumulatedMs = 0;
     isPCMStreaming.value = true;
     isPlaying.value = true;
     startMouthLoop();
+    return true;
   }
 
-  function feedPCMChunk(base64String, sampleRate = 24000, channels = 1, bits = 16) {
+  function feedPCMChunk(base64String, sampleRate = 24000, channels = 1, bits = 16, sessionId = null) {
+    if (!isCurrentPlaybackSession(sessionId)) return false;
     const ctx = ensureContext();
-    if (!ctx || !base64String) return;
-    if (ctx.state === "suspended") ctx.resume();
+    if (!ctx || !base64String) return false;
+    const runId = pcmRunId;
+    if (ctx.state === "suspended" && !pcmResumeTimer) {
+      const failResume = () => {
+        if (runId !== pcmRunId) return;
+        const onUnavailable = pcmOnUnavailable;
+        resetPCMStream(true);
+        isPlaying.value = false;
+        stopMouthLoop();
+        onUnavailable?.();
+      };
+      pcmResumeTimer = setTimeout(failResume, 3000);
+      Promise.resolve().then(() => ctx.resume()).then(() => {
+        if (runId !== pcmRunId) return;
+        if (ctx.state !== "running") { failResume(); return; }
+        if (pcmResumeTimer) { clearTimeout(pcmResumeTimer); pcmResumeTimer = null; }
+      }).catch(failResume);
+    }
 
     const audioBuffer = base64PCMToAudioBuffer(base64String, sampleRate, channels, bits);
-    if (!audioBuffer) return;
+    if (!audioBuffer) return false;
 
     if (pcmEndTimer) { clearTimeout(pcmEndTimer); pcmEndTimer = null; }
 
@@ -327,6 +436,7 @@ export function useAudioPlayer() {
       // 第一个块：从当前时间开始播放
       const source = ctx.createBufferSource();
       source.buffer = audioBuffer;
+      source.playbackRate.value = pcmPlaybackRate;
       const gainNode = ctx.createGain();
       gainNode.gain.value = 0.8;
       source.connect(gainNode);
@@ -334,10 +444,11 @@ export function useAudioPlayer() {
       const analyser = ensureAnalyser();
       if (analyser) source.connect(analyser);
       source.start(0);
+      if (ctx.state === "running") pcmOnScheduled?.();
 
       pcmStream = {
         startTime: ctx.currentTime,
-        nextTime: ctx.currentTime + audioBuffer.duration,
+        nextTime: ctx.currentTime + audioBuffer.duration / pcmPlaybackRate,
         lastSource: source,
         sources: new Set([source]),
       };
@@ -345,7 +456,8 @@ export function useAudioPlayer() {
       // 进度上报
       if (pcmOnProgress) {
         pcmProgressTimer = setInterval(() => {
-          const elapsedMs = Math.max((ctx.currentTime - pcmStream.startTime) * 1000, 0);
+          if (runId !== pcmRunId || !pcmStream) return;
+          const elapsedMs = Math.min(Math.max((ctx.currentTime - pcmStream.startTime) * 1000 * pcmPlaybackRate, 0), pcmAccumulatedMs);
           const durationMs = Math.max(pcmAccumulatedMs, pcmTimeline.at(-1)?.end || 0, 1);
           pcmOnProgress(
             Math.min(elapsedMs / durationMs, 1),
@@ -359,6 +471,7 @@ export function useAudioPlayer() {
       source.onended = () => {
         source.disconnect();
         gainNode.disconnect();
+        if (runId !== pcmRunId) return;
         pcmStream?.sources?.delete(source);
         if (pcmStream?.lastSource === source) pcmStream.lastSource = null;
       };
@@ -366,21 +479,32 @@ export function useAudioPlayer() {
       // 后续块：在前一块结束后播放
       const source = ctx.createBufferSource();
       source.buffer = audioBuffer;
+      source.playbackRate.value = pcmPlaybackRate;
       const gainNode = ctx.createGain();
       gainNode.gain.value = 0.8;
       source.connect(gainNode);
       gainNode.connect(ctx.destination);
       const analyser = ensureAnalyser();
       if (analyser) source.connect(analyser);
-      source.start(pcmStream.nextTime);
-
-      pcmStream.nextTime += audioBuffer.duration;
+      const scheduledTime = pcmBufferPolicy
+        ? pcmBufferPolicy.schedule(ctx.currentTime, pcmStream.nextTime)
+        : Math.max(pcmStream.nextTime, ctx.currentTime);
+      const gapMs = Math.max(ctx.currentTime - pcmStream.nextTime, 0) * 1000;
+      if (gapMs > 1) {
+        pcmOnBufferEvent?.({ gapMs, extraBufferMs: Math.max(scheduledTime - Math.max(ctx.currentTime, pcmStream.nextTime), 0) * 1000 });
+      }
+      // A network stall must not cause later chunks to overlap or advance
+      // subtitles through time in which no audio was available.
+      pcmStream.startTime += Math.max(scheduledTime - pcmStream.nextTime, 0);
+      source.start(scheduledTime);
+      pcmStream.nextTime = scheduledTime + audioBuffer.duration / pcmPlaybackRate;
       pcmStream.lastSource = source;
       pcmStream.sources.add(source);
 
       source.onended = () => {
         source.disconnect();
         gainNode.disconnect();
+        if (runId !== pcmRunId) return;
         pcmStream?.sources?.delete(source);
         if (pcmStream?.lastSource === source) {
           pcmStream.lastSource = null;
@@ -389,38 +513,52 @@ export function useAudioPlayer() {
     }
 
     pcmAccumulatedMs += chunkDurationMs;
+    return true;
   }
 
-  function updatePCMVisemeTimeline(timeline = []) {
-    if (!Array.isArray(timeline) || timeline.length === 0) return;
+  function updatePCMVisemeTimeline(timeline = [], sessionId = null) {
+    if (!isCurrentPlaybackSession(sessionId) || !Array.isArray(timeline) || timeline.length === 0) return;
     const byRange = new Map(pcmTimeline.map((item) => [`${item.start}:${item.end}`, item]));
     timeline.forEach((item) => byRange.set(`${item.start}:${item.end}`, item));
     pcmTimeline = [...byRange.values()].sort((a, b) => a.start - b.start);
   }
 
-  function endPCMStream() {
+  function endPCMStream(sessionId = null) {
+    if (!isCurrentPlaybackSession(sessionId)) return;
     if (!isPCMStreaming.value) return;
+    const runId = pcmRunId;
     const ctx = ensureContext();
-    const remainingMs = pcmStream && ctx
-      ? Math.max((pcmStream.nextTime - ctx.currentTime) * 1000, 0)
-      : 0;
-    const drainDelayMs = Math.max(remainingMs + 80, 120);
-
     if (pcmEndTimer) clearTimeout(pcmEndTimer);
-    pcmEndTimer = setTimeout(() => {
+    const checkDrained = () => {
+      if (runId !== pcmRunId) return;
+      if (ctx?.state === "suspended") {
+        // Wall-clock time can pass while AudioContext time is stopped. Keep
+        // the scheduled sources available for explicit stop or resume.
+        pcmEndTimer = setTimeout(checkDrained, 250);
+        return;
+      }
+      const remainingMs = pcmStream && ctx
+        ? Math.max((pcmStream.nextTime - ctx.currentTime) * 1000, 0)
+        : 0;
+      if (remainingMs > 1 && ctx?.state !== "closed") {
+        pcmEndTimer = setTimeout(checkDrained, Math.max(remainingMs + 80, 120));
+        return;
+      }
       pcmEndTimer = null;
       stopMouthLoop();
       if (pcmProgressTimer) { clearInterval(pcmProgressTimer); pcmProgressTimer = null; }
       isPlaying.value = false;
       const onAudioEnded = pcmOnAudioEnded;
-      resetPCMStream();
+      resetPCMStream(ctx?.state === "closed");
       onAudioEnded?.();
-    }, drainDelayMs);
+    };
+    const remainingMs = pcmStream && ctx ? Math.max((pcmStream.nextTime - ctx.currentTime) * 1000, 0) : 0;
+    pcmEndTimer = setTimeout(checkDrained, Math.max(remainingMs + 80, 120));
   }
 
   sharedAudioPlayer = {
-    queue, isPlaying, isSupported, mouthEnergy, mouthAnalysisActive, isPCMStreaming,
-    enqueue, flush, stop,
+    queue, isPlaying, isSupported, mouthEnergy, mouthAnalysisActive, isPCMStreaming, activePlayback,
+    claimPlayback, enqueue, flush, stop, unlock,
     // PCM 流式播放
     startPCMStream, feedPCMChunk, updatePCMVisemeTimeline, endPCMStream,
   };

@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.chat import build_pipeline
 from app.core.config import Settings
 from app.core.deps import get_app_settings, get_db_session
+from app.repositories.knowledge_generation import KnowledgeGenerationRepository
 from app.schemas.chat import ChatRequest
 
 router = APIRouter()
@@ -44,8 +45,8 @@ class NarrationRequest(BaseModel):
     tts_voice: str | None = None
 
 
-def _cache_key(attraction: str, voice: str, model: str) -> str:
-    return f"{attraction}|{voice}|{model}"
+def _cache_key(attraction: str, voice: str, model: str, knowledge_generation: int) -> str:
+    return f"{attraction}|{voice}|{model}|knowledge_generation={knowledge_generation}"
 
 
 def _get_lock(key: str) -> asyncio.Lock:
@@ -138,7 +139,8 @@ async def create_narration(
 ) -> dict[str, Any]:
     attraction = payload.attraction.strip()
     voice = payload.tts_voice or settings.tts_voice
-    key = _cache_key(attraction, voice, settings.llm_model or "stub")
+    generation = (await KnowledgeGenerationRepository(session).get()).generation
+    key = _cache_key(attraction, voice, settings.llm_model or "stub", generation)
 
     cached = _NARRATION_CACHE.get(key)
     if cached is not None:

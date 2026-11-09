@@ -15,8 +15,19 @@ class KnowledgeChunkRepository:
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
+    async def get(self, chunk_id: str) -> KnowledgeChunk | None:
+        return await self.session.get(KnowledgeChunk, chunk_id)
+
     async def replace_all(self, chunks: list[KnowledgeChunk]) -> int:
         await self.session.execute(delete(KnowledgeChunk))
+        self.session.add_all(chunks)
+        await self.session.flush()
+        return len(chunks)
+
+    async def replace_for_entry(self, entry_id: int, chunks: list[KnowledgeChunk]) -> int:
+        await self.session.execute(
+            delete(KnowledgeChunk).where(KnowledgeChunk.source_entry_id == entry_id)
+        )
         self.session.add_all(chunks)
         await self.session.flush()
         return len(chunks)

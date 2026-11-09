@@ -1,25 +1,33 @@
 <template>
-  <section class="panel-card admin-panel">
-    <h2 class="section-title">知识盲区处理</h2>
-    <p class="section-subtitle">游客提问但当前资料库无法回答的问题，可补充为 FAQ 后自动解决</p>
+  <section class="blind-spot-layout">
+    <header class="blind-spot-header">
+      <div>
+        <h1>知识盲区</h1>
+        <p>查看资料库未能回答的问题，并补充对应 FAQ。</p>
+      </div>
+      <el-button :loading="loading" @click="loadSpots">刷新列表</el-button>
+    </header>
 
     <el-tabs v-model="activeTab" @tab-change="handleTabChange">
       <el-tab-pane label="待处理" name="open">
         <el-skeleton v-if="loading" :rows="5" animated />
-        <el-alert v-else-if="error" type="warning" :title="error" show-icon />
-        <el-empty v-else-if="!spots.length" description="暂无待处理盲区" />
+        <el-alert v-else-if="error" type="warning" :title="error" show-icon>
+          <template #default><el-button link type="primary" @click="loadSpots">重新加载</el-button></template>
+        </el-alert>
+        <el-empty v-else-if="!spots.length" description="暂无待处理问题" />
         <el-table v-else :data="pagedSpots" stripe>
           <el-table-column prop="normalized_query" label="规范问题" min-width="200" />
           <el-table-column label="游客原始问法" min-width="250">
             <template #default="{ row }">
-              <el-tag v-for="(q, idx) in row.raw_query_samples" :key="idx" size="small" style="margin: 2px">
-                {{ q }}
-              </el-tag>
+              <div class="raw-question-list">
+                <p v-for="(q, idx) in row.raw_query_samples?.slice(0, 2)" :key="idx">{{ q }}</p>
+                <span v-if="row.raw_query_samples?.length > 2">另有 {{ row.raw_query_samples.length - 2 }} 种问法</span>
+              </div>
             </template>
           </el-table-column>
           <el-table-column label="被问次数" width="100">
             <template #default="{ row }">
-              <el-tag type="warning">{{ row.hit_count }}</el-tag>
+              <strong class="hit-count">{{ row.hit_count }}</strong>
             </template>
           </el-table-column>
           <el-table-column prop="first_seen_at" label="首次出现" width="180" />
@@ -34,8 +42,10 @@
 
       <el-tab-pane label="已解决" name="resolved">
         <el-skeleton v-if="loading" :rows="5" animated />
-        <el-alert v-else-if="error" type="warning" :title="error" show-icon />
-        <el-empty v-else-if="!spots.length" description="暂无已解决盲区" />
+        <el-alert v-else-if="error" type="warning" :title="error" show-icon>
+          <template #default><el-button link type="primary" @click="loadSpots">重新加载</el-button></template>
+        </el-alert>
+        <el-empty v-else-if="!spots.length" description="暂无已解决问题" />
         <el-table v-else :data="pagedSpots" stripe>
           <el-table-column prop="normalized_query" label="规范问题" min-width="200" />
           <el-table-column prop="resolution_type" label="解决方式" width="100" />
@@ -55,7 +65,12 @@
       />
     </div>
 
-    <el-dialog v-model="dialogVisible" title="补充 FAQ" width="600px">
+    <el-dialog v-model="dialogVisible" title="补充 FAQ" width="min(600px, calc(100vw - 32px))" :before-close="requestCloseDialog">
+      <div v-if="currentSpot" class="blind-spot-context">
+        <span>待补充的问题</span>
+        <strong>{{ currentSpot.normalized_query }}</strong>
+        <p v-for="(query, index) in currentSpot.raw_query_samples" :key="index">游客问法：{{ query }}</p>
+      </div>
       <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
         <el-form-item label="FAQ ID" prop="faq_id">
           <el-input v-model="form.faq_id" placeholder="例如: faq_admin_卫生间位置_a3f2b1" />
@@ -93,7 +108,7 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button @click="requestCloseDialog(() => { dialogVisible = false; })">取消</el-button>
         <el-button type="primary" @click="submitResolve" :loading="submitting">提交</el-button>
       </template>
     </el-dialog>
@@ -102,7 +117,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { fetchBlindSpots, resolveBlindSpotWithFAQ } from "../../api/admin";
 
 const activeTab = ref("open");
@@ -124,6 +139,7 @@ const currentSpot = ref(null);
 const formRef = ref(null);
 const aliasInput = ref("");
 const sourceInput = ref("");
+const initialFormSnapshot = ref("");
 
 const form = ref({
   faq_id: "",
@@ -132,6 +148,7 @@ const form = ref({
   answer: "",
   sources: [],
 });
+const hasUnsavedChanges = computed(() => JSON.stringify(form.value) !== initialFormSnapshot.value);
 
 const rules = {
   faq_id: [{ required: true, message: "请输入 FAQ ID", trigger: "blur" }],
@@ -173,7 +190,25 @@ function openResolveDialog(spot) {
   };
   aliasInput.value = "";
   sourceInput.value = "";
+  initialFormSnapshot.value = JSON.stringify(form.value);
   dialogVisible.value = true;
+}
+
+async function requestCloseDialog(done) {
+  if (submitting.value) return;
+  if (hasUnsavedChanges.value) {
+    try {
+      await ElMessageBox.confirm("关闭后将丢弃当前填写的 FAQ。", "放弃更改？", {
+        confirmButtonText: "放弃更改",
+        cancelButtonText: "继续编辑",
+        type: "warning",
+      });
+    } catch {
+      return;
+    }
+  }
+  done?.();
+  if (!done) dialogVisible.value = false;
 }
 
 function addAlias() {
@@ -220,13 +255,83 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.admin-panel {
-  padding: 24px;
+.blind-spot-layout {
+  width: min(1440px, 100%);
+  margin: 0 auto;
+}
+
+.blind-spot-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--admin-line, #dce2dd);
+}
+
+.blind-spot-header h1 {
+  margin: 0;
+  color: var(--admin-ink, #202723);
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.blind-spot-header p {
+  margin: 6px 0 0;
+  color: var(--admin-muted, #59645d);
+  font-size: 13px;
+}
+
+.raw-question-list p {
+  margin: 0 0 4px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.raw-question-list span {
+  color: var(--admin-muted, #59645d);
+  font-size: 12px;
+}
+
+.hit-count {
+  color: #7a5012;
+  font-variant-numeric: tabular-nums;
+}
+
+.blind-spot-context {
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--admin-accent, #285a46);
+  background: #f5f7f5;
+}
+
+.blind-spot-context span,
+.blind-spot-context strong {
+  display: block;
+}
+
+.blind-spot-context span {
+  margin-bottom: 4px;
+  color: var(--admin-muted, #59645d);
+  font-size: 12px;
+}
+
+.blind-spot-context p {
+  margin: 8px 0 0;
+  color: var(--admin-muted, #59645d);
+  font-size: 13px;
+  overflow-wrap: anywhere;
 }
 
 .pagination-wrap {
   display: flex;
   justify-content: center;
   margin-top: 20px;
+}
+
+@media (max-width: 640px) {
+  .blind-spot-header { align-items: flex-start; }
+  .blind-spot-header :deep(.el-button) { min-height: 42px; }
 }
 </style>

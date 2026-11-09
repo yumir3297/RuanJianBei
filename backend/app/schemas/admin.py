@@ -50,6 +50,12 @@ class RAGIndexBuildResponse(BaseModel):
     report: RAGIndexReport
 
 
+class KnowledgeIndexStatus(BaseModel):
+    knowledge_generation: int
+    indexed_generation: int
+    current: bool
+
+
 class AvatarConfigResponse(BaseModel):
     id: int
     name: str

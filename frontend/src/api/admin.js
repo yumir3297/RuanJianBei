@@ -30,6 +30,11 @@ export async function rebuildVectorIndex() {
   return data;
 }
 
+export async function fetchKnowledgeIndexStatus() {
+  const { data } = await http.get("/admin/knowledge-index-status");
+  return data;
+}
+
 export async function fetchAvatarConfig() {
   const { data } = await http.get("/admin/avatar-configs/active");
   return data;

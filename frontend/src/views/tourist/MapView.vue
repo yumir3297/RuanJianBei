@@ -1,124 +1,176 @@
 <template>
-  <div class="guide-tool-content map-tool">
-    <p class="tool-description">实时地图 × 数字人导览：看天气与客流，选一条路线，让导游陪你出发。</p>
-
+  <div class="map-workspace" @keydown.esc="handleMapEscape">
     <div class="map-stage">
       <div ref="mapEl" class="map-canvas" aria-label="景区实时地图"></div>
-      <div class="map-layer-switch" role="group" aria-label="底图切换">
-        <button type="button" :class="{ active: layer === 'vec' }" @click="setLayer('vec')">矢量</button>
-        <button type="button" :class="{ active: layer === 'img' }" @click="setLayer('img')">影像</button>
-      </div>
-      <button type="button" class="map-color-toggle" :class="{ active: showColor }" :aria-pressed="showColor" @click="showColor = !showColor">
-        <i :style="{ background: colorHex }"></i>景区颜色
-      </button>
-      <button type="button" class="map-narrate-toggle" :class="{ active: narrateOn }" :aria-pressed="narrateOn" @click="toggleNarrate">
-        {{ narrateOn ? "自动讲解中" : "开启自动讲解" }}
-      </button>
-      <div class="map-geo-tip" v-if="narrateOn && geo.error">{{ geo.error }}</div>
-      <SpotNarrationCard
-        v-if="narration.activeSpot.value"
-        :spot="narration.activeSpot.value"
-        :text="narrationText"
-        :progress="narrationProgress"
-        :loading="narrationLoading"
-        :playing="audio.isPlaying.value"
-        :degraded="narrationDegraded"
-        @replay="playNarration(narration.activeSpot.value)"
-        @stop="stopNarration"
-        @close="closeNarration"
-      />
-      <div class="map-legend" aria-hidden="true">
-        <span v-for="zone in zoneList" :key="zone.key"><i :style="{ background: zone.color }"></i>{{ zone.label }}</span>
-      </div>
     </div>
+    <div class="map-search">
+      <GuideIcon name="map" />
+      <label class="sr-only" for="map-search">搜索景点</label>
+      <input id="map-search" v-model="search" type="search" placeholder="搜索景点，如灵山大佛" autocomplete="off" @input="panel = 'spots'" @focus="panel = 'spots'" />
+      <button v-if="search" type="button" aria-label="清除搜索" @click="search = ''">×</button>
+    </div>
+    <span v-if="!locationMessage && !narrateOn" class="map-data-note">{{ spots.length }}处地图参考 · {{ pendingSpots.length }}处待核验</span>
+    <div class="map-position-actions">
+      <button type="button" aria-label="回到我的位置" :disabled="locating" @click="locateMe">{{ locating ? '…' : '◎' }}</button>
+      <button type="button" aria-label="查看整个景区" @click="fitScenic">⌖</button>
+    </div>
+    <p v-if="locationMessage || narrateOn" class="map-status" role="status">{{ locationMessage || `${modeLabel} · 自动讲解已开启` }}</p>
 
-    <div class="map-narrate-bar" v-if="narrateOn">
-      <button type="button" @click="toggleWalk">{{ walking ? "停止巡游" : "模拟巡游" }}</button>
-      <span>模式：{{ modeLabel }}</span>
-    </div>
-
-    <div class="map-live">
-      <div class="map-live-item">
-        <span class="k">天气 · 实时</span>
-        <span class="v">{{ weather ? `${weather.icon} ${weather.temp}°C ${weather.description}` : '正在获取…' }}</span>
+    <section v-if="panel" id="map-task-panel" class="map-task-panel" :aria-label="panelTitle">
+      <header><h4>{{ panelTitle }}</h4><button type="button" aria-label="收起面板" @click="closePanel">×</button></header>
+      <div class="map-panel-content">
+        <template v-if="panel === 'spots'">
+          <div class="map-zone-filters" aria-label="分区筛选"><button v-for="zone in zoneFilters" :key="zone.key" type="button" :aria-pressed="zoneFilter === zone.key" @click="zoneFilter = zone.key">{{ zone.label }}</button></div>
+          <p class="map-help">已取得参考坐标的景点可在地图查看；待核验项目仅提供讲解。</p>
+          <div class="map-results"><button v-for="spot in filteredSpots" :key="spot.name" type="button" @click="focusSpot(spot.name)"><span class="map-result-icon" v-html="markerSymbol(spot.type, spot.name)"></span><span><strong>{{ spot.name }}</strong><small>{{ spot.coordinateStatus === 'reference' ? '地图参考点' : '点位待核验 · 仅讲解' }} · {{ spot.desc }}</small></span><span class="map-result-arrow" aria-hidden="true">›</span></button></div>
+          <p v-if="!filteredSpots.length" class="map-help">没有找到景点，请换个关键词或分区。</p>
+        </template>
+        <template v-else-if="panel === 'routes'">
+          <p class="map-help">按已核对景点规划高德步行道路；显示的是路线预览，不含实时导航播报。</p>
+          <label class="map-field">选择路线<select v-model="routeId"><option v-for="item in routes" :key="item.id" :value="item.id">{{ item.title }} · {{ item.duration_label }}</option></select></label>
+          <ol v-if="activeRoute" class="map-stops"><li v-for="(spot,index) in activeRoute.spots" :key="index">{{ cleanName(spot) }}</li></ol>
+          <p v-if="routeStatus" class="map-route-status" role="status">{{ routeStatus }}</p>
+          <p v-if="routeSummary" class="map-route-summary">{{ routeSummary }}</p>
+          <button type="button" class="map-primary" :disabled="routeLoading || !routeReady" @click="previewRoute">{{ routeLoading ? '正在规划步行道路…' : '规划真实步行路线' }}</button>
+          <button type="button" class="map-secondary" :disabled="busy" @click="askGuide">请导游讲解路线</button>
+        </template>
+        <template v-else-if="panel === 'layers'">
+          <p class="map-help">数字表示聚合的景点数量，点击即可放大展开；不表示客流。</p>
+          <div class="map-option-row"><span>地图底图</span><div class="map-segment"><button type="button" :aria-pressed="layer === 'vec'" @click="setLayer('vec')">地图</button><button type="button" :aria-pressed="layer === 'img'" @click="setLayer('img')">卫星</button></div></div>
+          <div class="map-option-row"><span>景区颜色覆盖<small>{{ colorText }}</small></span><button type="button" :aria-pressed="showColor" @click="showColor = !showColor">{{ showColor ? '关闭' : '开启' }}</button></div>
+          <div class="map-option-row"><span>到点自动讲解<small>需要定位权限；模拟模式会明确提示</small></span><button type="button" :aria-pressed="narrateOn" @click="toggleNarrate">{{ narrateOn ? '关闭' : '开启' }}</button></div>
+          <div v-if="narrateOn" class="map-option-row"><span>{{ modeLabel }}</span><button type="button" @click="toggleWalk">{{ walking ? '停止巡游' : '模拟巡游' }}</button></div>
+          <div class="map-zones"><span v-for="zone in zoneList" :key="zone.key"><i :style="{background:zone.color}"></i>{{ zone.label }}</span></div>
+        </template>
+        <template v-else>
+          <dl class="map-facts"><div><dt>天气</dt><dd>{{ weather ? `${weather.temp}°C ${weather.description}` : '天气暂不可用' }}</dd></div><div><dt>景区颜色</dt><dd>{{ colorText }}</dd></div><div><dt>演示客流</dt><dd>{{ crowd.total.toLocaleString() }} 人 · {{ crowd.comfort }}</dd></div></dl>
+          <p class="map-help">客流与舒适度为演示数据。地图显示{{ spots.length }}处有来源的参考位置；{{ pendingSpots.length }}处待核验景点仅列清单，6处其它景区项目不在此落点。参考点不等于入口或可通行路径。</p>
+        </template>
       </div>
-      <div class="map-live-item">
-        <span class="k">景区颜色 · 实时</span>
-        <span class="v"><i class="live-dot" :style="{ background: colorHex }"></i>{{ colorText }}</span>
-      </div>
-      <div class="map-live-item">
-        <span class="k">在园人数 · 演示</span>
-        <span class="v">{{ crowd.total.toLocaleString() }} 人</span>
-      </div>
-      <div class="map-live-item">
-        <span class="k">舒适度</span>
-        <span class="v" :class="{ warn: crowd.comfort === '较拥挤' }">{{ crowd.comfort }}</span>
-      </div>
-    </div>
-
-    <div class="map-bars">
-      <div v-for="zone in crowd.zones" :key="zone.key" class="map-bar">
-        <div class="map-bar-top"><span>{{ zone.label }}</span><b>{{ zone.occ.toLocaleString() }} 人 · {{ zone.pct }}%</b></div>
-        <div class="map-bar-track"><div class="map-bar-fill" :class="{ warn: zone.pct >= 80 }" :style="{ width: zone.pct + '%' }"></div></div>
-      </div>
-    </div>
-
-    <h4 class="map-subtitle">路线规划</h4>
-    <select v-model="routeId" class="map-select" aria-label="选择游览路线">
-      <option v-for="item in routes" :key="item.id" :value="item.id">{{ item.title }} · {{ item.duration_label }}</option>
-    </select>
-    <div v-if="activeRoute" class="map-route-steps">
-      <template v-for="(spot, index) in activeRoute.spots" :key="index">
-        <span class="step">{{ cleanName(spot) }}</span>
-        <span v-if="index < activeRoute.spots.length - 1" class="arrow">→</span>
-      </template>
-    </div>
-
-    <h4 class="map-subtitle">分区景点</h4>
-    <div class="tool-chips" aria-label="按分区筛选">
-      <button v-for="zone in zoneFilters" :key="zone.key" type="button" :class="{ active: zoneFilter === zone.key }" :aria-pressed="zoneFilter === zone.key" @click="zoneFilter = zone.key">{{ zone.label }}</button>
-    </div>
-    <div class="map-poi-list">
-      <button v-for="spot in filteredSpots" :key="spot.name" type="button" class="map-poi" :class="{ active: spot.name === selectedName }" @click="focusSpot(spot.name)">
-        <span class="emoji">{{ spot.emoji }}</span>
-        <span class="info"><strong>{{ spot.name }}</strong><small>{{ spot.desc }}</small></span>
-      </button>
-    </div>
-
-    <button type="button" class="tool-primary" :disabled="busy" @click="askGuide">{{ askLabel }} <GuideIcon name="mic" /></button>
-    <p class="map-note">天气与景区颜色来自和风天气实时数据（气象预警色带 / 空气质量等级色），密钥由后端代理不出前端；坐标与客流为演示值，正式版接入高德地图 MCP 与腾讯位置大数据。</p>
+    </section>
+    <SpotNarrationCard v-else-if="narration.activeSpot.value" :spot="narration.activeSpot.value" :text="narrationText" :progress="narrationProgress" :loading="narrationLoading" :playing="narrationIsPlaying" :degraded="narrationDegraded" @replay="playNarration(narration.activeSpot.value)" @stop="stopNarration" @close="closeNarration" />
+    <section v-else-if="selectedSpot" class="map-place-card" aria-label="选中景点"><div><strong>{{ selectedSpot.name }}</strong><small class="map-place-note">{{ selectedSpot.coordinateNote }}<a v-if="selectedSpot.sourceUrl" :href="selectedSpot.sourceUrl" target="_blank" rel="noopener noreferrer">查看来源</a></small><p>{{ selectedSpot.desc }}</p></div><button type="button" class="map-primary" :disabled="busy" @click="playNarration(selectedSpot)">听讲解</button><button type="button" aria-label="取消选中景点" @click="selectedName = ''">×</button></section>
+    <nav class="map-task-nav" aria-label="地图任务"><button v-for="item in panelItems" :key="item.id" :id="`map-${item.id}-trigger`" type="button" :aria-expanded="panel === item.id" aria-controls="map-task-panel" @click="panel = panel === item.id ? null : item.id"><GuideIcon :name="item.icon" /><span>{{ item.label }}</span></button></nav>
   </div>
 </template>
-
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from "vue";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import GuideIcon from "../../components/GuideIcon.vue";
 import SpotNarrationCard from "../../components/SpotNarrationCard.vue";
 import { scenicSpots, PRESET_ROUTES } from "../../constants/touristCatalog";
-import { LINGSHAN_CENTER, MAP_ZONES, SPOT_COORDS, ROUTE_ALIASES } from "../../constants/mapSpots";
+import { LINGSHAN_CENTER, MAP_ZONES, ROUTE_ALIASES, SPOT_COORDS } from "../../constants/mapSpots";
 import { useAudioPlayer } from "../../composables/useAudioPlayer";
 import { useGeolocation } from "../../composables/useGeolocation";
 import { useNarration } from "../../composables/useNarration";
-import { speechText } from "../../constants/narration";
+import { wgs84ToGcj02, speechText } from "../../constants/narration";
 import { fetchSpotNarration } from "../../api/narration";
+import { fetchWalkingRoute } from "../../api/mapRoutes";
+import { createLatestRequest } from "../../utils/latestRequest";
+import { MAP_COORDINATE_AUDIT, MAP_ROUTE_STOPS } from "../../constants/mapCoordinateAudit";
+import { groupMapPoints, layoutMapLabels, markerSymbol } from "../../utils/mapMarkers";
 
 const props = defineProps({
   busy: { type: Boolean, default: false },
   weather: { type: Object, default: null },
   scenicColor: { type: Object, default: null },
   colorLabel: { type: String, default: "" },
+  speechRate: { type: Number, default: 1 },
 });
 const emit = defineEmits(["ask"]);
+const panel = ref(null);
+const search = ref("");
+const locating = ref(false);
+const locationMessage = ref("");
+let locationRequest = 0;
+const panelItems = [
+  { id: "spots", label: "景点", icon: "landmark" },
+  { id: "routes", label: "路线", icon: "route" },
+  { id: "layers", label: "图层", icon: "settings" },
+  { id: "info", label: "园区", icon: "book" },
+];
+const panelTitle = computed(() => panelItems.find(item => item.id === panel.value)?.label || "园区信息");
+function handleMapEscape(event) {
+  if (!panel.value) return;
+  event.preventDefault();
+  event.stopPropagation();
+  closePanel();
+}
+function closePanel() {
+  const previous = panel.value;
+  panel.value = null;
+  document.activeElement?.blur();
+  nextTick(() => document.getElementById(`map-${previous}-trigger`)?.focus({ preventScroll: true }));
+}
+function fitScenic() {
+  map?.fitBounds(scenicBounds, { padding: [36, 90], maxZoom: 16 });
+}
+async function previewRoute() {
+  if (!map || !routeReady.value || routeLoading.value) return;
+  routeController?.abort();
+  routeController = new AbortController();
+  routeLoading.value = true;
+  routeStatus.value = "正在按景区道路规划，请稍候…";
+  if (routeSummary.value && locationMessage.value === routeSummary.value) locationMessage.value = "";
+  routeSummary.value = "";
+  locationMessage.value = "";
+  if (routeLine) { map?.removeLayer(routeLine); routeLine = null; }
+  const request = routeRequestId;
+  try {
+    const result = await fetchWalkingRoute(resolvedRouteStops.value.map(spot => spot.sourcePoiId), { signal: routeController.signal });
+    if (request !== routeRequestId || !mapToolActive) return;
+    if (!result.available) {
+      routeStatus.value = result.reason === "not_configured" ? "步行路线服务尚未配置。" : "暂时没有取得道路路线，请稍后重试。";
+      return;
+    }
+    routeLine = L.polyline(result.coordinates, { color: "#bd6d18", weight: 6, opacity: 0.96, lineCap: "round", lineJoin: "round" }).addTo(map);
+    map.fitBounds(routeLine.getBounds(), { padding: [56, 72], maxZoom: 17 });
+    const distance = result.distance_m >= 1000 ? `${(result.distance_m / 1000).toFixed(1)} 公里` : `${result.distance_m} 米`;
+    const duration = Math.max(1, Math.round(result.duration_s / 60));
+    routeSummary.value = `${distance} · 步行约 ${duration} 分钟 · 高德道路路径`;
+    locationMessage.value = routeSummary.value;
+    routeStatus.value = "";
+    selectedName.value = "";
+    panel.value = null;
+  } catch (error) {
+    if (error.name !== "AbortError" && request === routeRequestId) routeStatus.value = "路线请求失败，请检查网络后重试。";
+  } finally {
+    if (request === routeRequestId) routeLoading.value = false;
+  }
+}
+function locateMe() {
+  if (!navigator.geolocation) { locationMessage.value = "当前浏览器无法定位，仍可搜索景点。"; return; }
+  const request = ++locationRequest;
+  locating.value = true;
+  locationMessage.value = "正在获取你的位置…";
+  navigator.geolocation.getCurrentPosition(position => {
+    if (request !== locationRequest || !mapToolActive || !map) return;
+    locating.value = false;
+    const fixed = wgs84ToGcj02(position.coords.latitude, position.coords.longitude);
+    const latlng = [fixed.lat, fixed.lng];
+    if (!myLocationMarker) myLocationMarker = L.circleMarker(latlng, { radius: 8, color: "#fff", fillColor: "#176de6", fillOpacity: 1, weight: 3 }).addTo(map);
+    else myLocationMarker.setLatLng(latlng);
+    map.flyTo(latlng, 16);
+    locationMessage.value = position.coords.accuracy > 100 ? "定位精度较低，请核对周围环境。" : "已显示真实位置，可继续浏览景区。";
+  }, error => {
+    if (request !== locationRequest || !mapToolActive) return;
+    locating.value = false;
+    locationMessage.value = error.code === 1 ? "定位未获授权，仍可搜索景点和查看路线。" : "暂时无法定位，仍可手动浏览景区。";
+  }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 });
+}
 
 const colorHex = computed(() => props.scenicColor?.hex || "#2D5A4B");
 const colorText = computed(() => props.colorLabel || props.scenicColor?.label || "暂无数据");
 
-const spots = scenicSpots
-  .filter((spot) => SPOT_COORDS[spot.name])
-  .map((spot) => ({ ...spot, ...SPOT_COORDS[spot.name] }));
-const spotByName = Object.fromEntries(spots.map((spot) => [spot.name, spot]));
+const mapCatalog = [
+  ...scenicSpots.map(spot => ({ ...spot, heat: SPOT_COORDS[spot.name]?.heat || 0, ...MAP_COORDINATE_AUDIT[spot.name] })),
+  ...MAP_ROUTE_STOPS,
+].filter(spot => spot.coordinateStatus !== "other-scenic");
+const spots = mapCatalog.filter(spot => spot.coordinateStatus === "reference");
+const pendingSpots = mapCatalog.filter(spot => spot.coordinateStatus === "pending");
+const spotByName = Object.fromEntries(mapCatalog.map(spot => [spot.name, spot]));
+const placedByName = Object.fromEntries(spots.map(spot => [spot.name, spot]));
 
 const zoneList = Object.entries(MAP_ZONES).map(([key, zone]) => ({ key, ...zone }));
 const zoneFilters = [{ key: "all", label: "全部" }, ...zoneList];
@@ -126,10 +178,11 @@ const zoneFilters = [{ key: "all", label: "全部" }, ...zoneList];
 function resolveSpot(text) {
   const bare = String(text || "").replace(/[（(].*?[）)]/g, "").trim();
   if (!bare) return null;
-  if (spotByName[bare]) return spotByName[bare];
-  const contained = spots.find((spot) => bare.includes(spot.name));
+  const aliased = ROUTE_ALIASES[bare] || bare;
+  if (placedByName[aliased]) return placedByName[aliased];
+  const contained = spots.find((spot) => aliased.includes(spot.name));
   if (contained) return contained;
-  return ROUTE_ALIASES[bare] ? spotByName[ROUTE_ALIASES[bare]] || null : null;
+  return null;
 }
 
 /* ---------- 地图 ---------- */
@@ -143,6 +196,9 @@ let colorOverlay = null;
 let routeLine = null;
 let resizeObserver = null;
 let meMarker = null;
+let myLocationMarker = null;
+let markerLayer = null;
+let selectedLabel = null;
 const markers = {};
 
 // 景区颜色覆盖范围：由景点演示坐标外扩生成（非测绘边界，仅用于风险着色示意）
@@ -173,20 +229,12 @@ function initMap() {
   L.control.attribution({ prefix: false })
     .addAttribution("底图 © 高德地图（测试用途）")
     .addAttribution("天气数据 © 和风天气")
+    .addAttribution('点位参考 © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>')
     .addTo(map);
 
-  spots.forEach((spot) => {
-    const icon = L.divIcon({
-      className: "",
-      html: `<div class="map-pin zone-${spot.zone}"><span>${spot.emoji}</span></div>`,
-      iconSize: [26, 26],
-      iconAnchor: [13, 24],
-    });
-    const marker = L.marker([spot.lat, spot.lng], { icon, riseOnHover: true }).addTo(map);
-    marker.bindTooltip(spot.name, { className: "map-tip", direction: "top", offset: [0, -18] });
-    marker.on("click", () => { selectedName.value = spot.name; });
-    markers[spot.name] = marker;
-  });
+  markerLayer = L.layerGroup().addTo(map);
+  renderMarkers();
+  map.on("zoomend moveend resize", renderMarkers);
 
   resizeObserver = new ResizeObserver(() => map.invalidateSize());
   resizeObserver.observe(mapEl.value);
@@ -204,6 +252,45 @@ function initMap() {
   });
 }
 
+function renderMarkers() {
+  if (!map || !markerLayer) return;
+  markerLayer.clearLayers();
+  if (!placedByName[selectedName.value] && selectedLabel) map.removeLayer(selectedLabel);
+  Object.keys(markers).forEach(name => delete markers[name]);
+  const projected = spots.map(spot => ({ ...spot, ...map.latLngToContainerPoint([spot.lat, spot.lng]) }));
+  const groups = groupMapPoints(projected, map.getZoom() >= 18 ? 0 : 44, selectedName.value);
+  const size = map.getSize();
+  const labels = layoutMapLabels(groups, size.x, size.y, selectedName.value);
+  for (const group of groups) {
+    const spot = group[0];
+    const selected = spot.name === selectedName.value;
+    const cluster = group.length > 1 && !selected;
+    const html = cluster
+      ? `<span class="scenic-symbol scenic-cluster">${group.length}<small>处</small></span>`
+      : `<span class="scenic-symbol">${markerSymbol(spot.type, spot.name)}</span>${selected && group.length > 1 ? `<span class="scenic-count">+${group.length - 1}</span>` : ""}`;
+    const labelSide = labels.get(spot.name);
+    const markerHtml = labelSide ? `${html}<span class="scenic-name name-${labelSide}">${spot.name.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</span>` : html;
+    const marker = L.marker([spot.lat, spot.lng], {
+      icon: L.divIcon({ className: `scenic-marker${selected ? " is-selected" : ""}`, html: markerHtml, iconSize: [44,44], iconAnchor: [22,22] }),
+      title: cluster ? `${group.length} 处景点，点击展开` : spot.name,
+      alt: cluster ? `${group.length} 处景点` : spot.name,
+      zIndexOffset: selected ? 1000 : cluster ? 100 : 0,
+    }).addTo(markerLayer);
+    const label = document.createElement("span");
+    label.textContent = cluster ? `${group.length} 处景点 · 点击放大` : spot.name;
+    if (selected) {
+      if (!selectedLabel) selectedLabel = L.tooltip({ className: "scenic-label", permanent: true, direction: "top", offset: [0,-16] });
+      selectedLabel.setLatLng([spot.lat, spot.lng]).setContent(label);
+      if (!map.hasLayer(selectedLabel)) selectedLabel.addTo(map);
+    }
+    marker.on("click", () => {
+      if (cluster) map.fitBounds(group.map(item => [item.lat,item.lng]), { padding: [65,100], maxZoom: Math.min(map.getZoom()+2,18) });
+      else { selectedName.value = spot.name; panel.value = null; }
+    });
+    if (!cluster) markers[spot.name] = marker;
+  }
+}
+
 function setLayer(next) {
   layer.value = next;
   if (!map) return;
@@ -215,8 +302,11 @@ function focusSpot(name) {
   const spot = spotByName[name];
   if (!spot || !map) return;
   selectedName.value = name;
+  panel.value = null;
+  document.activeElement?.blur();
+  if (spot.coordinateStatus !== "reference") { locationMessage.value = `${name}点位待核验，仍可听讲解。`; return; }
+  locationMessage.value = "";
   map.flyTo([spot.lat, spot.lng], Math.max(map.getZoom(), 16), { duration: 0.6 });
-  markers[name]?.openTooltip();
 }
 
 /* ---------- 客流（热度模型演示） ---------- */
@@ -247,27 +337,38 @@ const crowd = computed(() => {
 const routes = PRESET_ROUTES;
 const routeId = ref(routes[0].id);
 const activeRoute = computed(() => routes.find((item) => item.id === routeId.value) || null);
+const resolvedRouteStops = computed(() => activeRoute.value?.spots.map(resolveSpot) || []);
+const routeReady = computed(() => resolvedRouteStops.value.length >= 2 && resolvedRouteStops.value.every(spot => spot?.sourcePoiId));
+const routeLoading = ref(false);
+const routeStatus = ref("");
+const routeSummary = ref("");
+let routeController = null;
+let routeRequestId = 0;
 
 function cleanName(text) {
   return String(text).replace(/[（(].*?[）)]/g, "");
 }
 
-watch([routeId, () => map], () => {
-  if (!map || !activeRoute.value) return;
-  const points = activeRoute.value.spots.map(resolveSpot).filter(Boolean).map((spot) => [spot.lat, spot.lng]);
-  if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
-  if (points.length > 1) {
-    routeLine = L.polyline(points, { color: "#c49b4c", weight: 4, opacity: 0.9, dashArray: "2 8", lineCap: "round" }).addTo(map);
-    map.fitBounds(routeLine.getBounds(), { padding: [40, 40], maxZoom: 16 });
-  }
-});
+function clearRoute() {
+  routeRequestId += 1;
+  routeController?.abort();
+  routeLoading.value = false;
+  routeStatus.value = "";
+  if (routeSummary.value && locationMessage.value === routeSummary.value) locationMessage.value = "";
+  routeSummary.value = "";
+  if (routeLine) { map?.removeLayer(routeLine); routeLine = null; }
+}
+watch(routeId, clearRoute);
 
 /* ---------- 分区景点 ---------- */
 const zoneFilter = ref("all");
 const selectedName = ref("");
+watch(selectedName, renderMarkers);
+const selectedSpot = computed(() => spotByName[selectedName.value] || null);
 const filteredSpots = computed(() =>
-  spots
+  mapCatalog
     .filter((spot) => zoneFilter.value === "all" || spot.zone === zoneFilter.value)
+    .filter((spot) => !search.value.trim() || spot.name.includes(search.value.trim()) || spot.desc.includes(search.value.trim()))
     .slice()
     .sort((a, b) => b.heat - a.heat),
 );
@@ -282,14 +383,20 @@ const narrationLoading = ref(false);
 const narrationDegraded = ref(false);
 const walking = ref(false);
 let narrateTimer = null;
+let mapToolActive = false;
+let activeNarrationSession = null;
 
 const narration = useNarration({
   getPosition: () => geo.position.value,
   getSpots: () => spots,
   isBusy: () => props.busy || audio.isPlaying.value,
   onTrigger: (spot) => playNarration(spot),
-  // 排队超时：中断卡住的播放以保证讲解不中断；用户正在对话时不打断会话
-  onInterrupt: () => { if (!props.busy) audio.stop(); },
+  // 排队超时只允许中断自己的地图讲解，不能停止聊天或其他媒体源。
+  onInterrupt: () => {
+    if (activeNarrationSession && audio.activePlayback.value?.id === activeNarrationSession.id) {
+      audio.stop(activeNarrationSession.id, "pending-timeout");
+    }
+  },
 });
 
 const modeLabel = computed(() => {
@@ -297,8 +404,40 @@ const modeLabel = computed(() => {
   return map[geo.mode.value] || geo.mode.value;
 });
 
+const narrationRequests = createLatestRequest();
+const narrationIsPlaying = computed(() => Boolean(
+  activeNarrationSession
+  && audio.activePlayback.value?.id === activeNarrationSession.id
+  && audio.isPlaying.value,
+));
+
+function claimNarrationSession() {
+  let session;
+  session = audio.claimPlayback("map-narration", () => {
+    if (activeNarrationSession?.id !== session.id) return;
+    activeNarrationSession = null;
+    narrationLoading.value = false;
+    narrationProgress.value = 0;
+    narration.status.value = "idle";
+  });
+  activeNarrationSession = session;
+  return session;
+}
+
+watch(() => props.busy, (busy) => {
+  if (busy) {
+    narrationRequests.cancel();
+    narrationLoading.value = false;
+    if (activeNarrationSession && audio.activePlayback.value?.id === activeNarrationSession.id) {
+      audio.stop(activeNarrationSession.id, "visitor-input");
+    }
+  }
+});
+
 async function playNarration(spot) {
-  if (!spot) return;
+  if (!spot || props.busy || !mapToolActive) return;
+  const request = narrationRequests.begin();
+  const playbackSession = claimNarrationSession();
   narrationLoading.value = true;
   narrationDegraded.value = false;
   narrationText.value = spot.desc || "";
@@ -306,22 +445,37 @@ async function playNarration(spot) {
 
   let data = null;
   try {
-    data = await fetchSpotNarration(spot.name);
+    data = await fetchSpotNarration(spot.name, undefined, { signal: request.signal });
   } catch {
     data = null;
   }
 
+  if (!request.isCurrent() || activeNarrationSession?.id !== playbackSession.id) return;
   narrationLoading.value = false;
   if (data && data.available) {
     // 卡片展示完整讲解词；浏览器朗读兜底只念开头，避免长时间占用播放通道
     narrationText.value = data.text || spot.desc || "";
     narrationDegraded.value = !data.base64_audio;
-    audio.enqueue(data.base64_audio, data.duration_ms || 60000, () => finishNarration(), speechText(data.text), (p) => { narrationProgress.value = p; }, { allowBrowserSpeech: true });
+    audio.enqueue(
+      data.base64_audio,
+      data.duration_ms || 60000,
+      () => { if (request.isCurrent() && activeNarrationSession?.id === playbackSession.id) finishNarration(); },
+      speechText(data.text),
+      (p) => { if (request.isCurrent() && activeNarrationSession?.id === playbackSession.id) narrationProgress.value = p; },
+      { allowBrowserSpeech: true, sessionId: playbackSession.id, rate: props.speechRate },
+    );
   } else {
     narrationDegraded.value = true;
     const fallback = spot.desc || `${spot.name}`;
     narrationText.value = fallback;
-    audio.enqueue("", Math.max(fallback.length * 180, 1200), () => finishNarration(), speechText(fallback), (p) => { narrationProgress.value = p; }, { allowBrowserSpeech: true });
+    audio.enqueue(
+      "",
+      Math.max(fallback.length * 180, 1200),
+      () => { if (request.isCurrent() && activeNarrationSession?.id === playbackSession.id) finishNarration(); },
+      speechText(fallback),
+      (p) => { if (request.isCurrent() && activeNarrationSession?.id === playbackSession.id) narrationProgress.value = p; },
+      { allowBrowserSpeech: true, sessionId: playbackSession.id, rate: props.speechRate },
+    );
   }
 }
 
@@ -332,7 +486,11 @@ function finishNarration() {
 }
 
 function stopNarration() {
-  audio.stop();
+  narrationRequests.cancel();
+  narrationLoading.value = false;
+  const session = activeNarrationSession;
+  activeNarrationSession = null;
+  if (session) audio.stop(session.id);
   narrationProgress.value = 0;
   narration.status.value = "idle";
 }
@@ -346,8 +504,9 @@ async function toggleNarrate() {
   narrateOn.value = !narrateOn.value;
   if (narrateOn.value) {
     // 用户手势内同步解锁 AudioContext，保证后续自动播放不被拦截
-    try { await audio.flush(); audio.stop(); } catch {}
-    geo.start();
+    await audio.unlock();
+    // KeepAlive deactivation or a second toggle may happen while unlock awaits.
+    if (mapToolActive && narrateOn.value) geo.start();
   } else {
     geo.stop();
     closeNarration();
@@ -358,16 +517,18 @@ async function toggleNarrate() {
 
 function toggleWalk() {
   if (walking.value) { geo.stopWalk(); walking.value = false; return; }
-  const path = activeRoute.value ? activeRoute.value.spots.map(resolveSpot).filter(Boolean) : spots;
+  const routeSpots = activeRoute.value?.spots.map(resolveSpot);
+  if (routeSpots?.some(spot => !spot)) { locationMessage.value = "该路线点位尚未完整核对，暂不模拟巡游。"; return; }
+  const path = routeSpots || spots;
   geo.startWalk(path);
   walking.value = true;
 }
 
 /* ---------- 交给数字人导游 ---------- */
-const askLabel = computed(() => (selectedName.value ? `让导游讲讲${selectedName.value}` : "让导游带我走这条路线"));
+const askLabel = computed(() => (selectedName.value ? `让导游讲讲${selectedName.value}` : "让导游讲解这条路线"));
 
 function askGuide() {
-  if (selectedName.value) {
+  if (selectedName.value && panel.value !== "routes") {
     emit("ask", { query: `请介绍${selectedName.value}，并结合当前客流与天气给出游览建议`, attraction: selectedName.value });
     return;
   }
@@ -376,81 +537,80 @@ function askGuide() {
   emit("ask", { query: `请介绍${route.title}，沿途经过${route.spots.map(cleanName).join("、")}，并给出游览建议` });
 }
 
-onMounted(() => {
-  nextTick(initMap);
+function startNarrationTimer() {
+  if (narrateTimer !== null) return;
   narrateTimer = setInterval(() => {
-    if (!narrateOn.value) return;
+    if (!mapToolActive || !narrateOn.value) return;
     narration.update();
     narration.drainPending();
   }, 900);
+}
+
+function stopNarrationTimer() {
+  if (narrateTimer === null) return;
+  clearInterval(narrateTimer);
+  narrateTimer = null;
+}
+
+function activateMapTool() {
+  if (mapToolActive) return;
+  mapToolActive = true;
+  startNarrationTimer();
+  nextTick(() => map?.invalidateSize());
+}
+
+function deactivateMapTool() {
+  if (!mapToolActive && narrateTimer === null) return;
+  mapToolActive = false;
+  routeRequestId += 1;
+  routeController?.abort();
+  routeLoading.value = false;
+  routeStatus.value = "";
+  locationRequest += 1;
+  locating.value = false;
+  stopNarrationTimer();
+  narrationRequests.cancel();
+  narrationLoading.value = false;
+  const session = activeNarrationSession;
+  activeNarrationSession = null;
+  if (session) audio.stop(session.id, "map-hidden");
+  narrateOn.value = false;
+  geo.stopWalk();
+  geo.stop();
+  walking.value = false;
+  narration.reset();
+}
+
+onMounted(() => {
+  nextTick(initMap);
+  activateMapTool();
 });
+onActivated(activateMapTool);
+onDeactivated(deactivateMapTool);
 
 onBeforeUnmount(() => {
-  if (narrateTimer) { clearInterval(narrateTimer); narrateTimer = null; }
-  geo.stop();
+  deactivateMapTool();
   if (resizeObserver) resizeObserver.disconnect();
   if (map) { map.remove(); map = null; }
 });
 </script>
 
-<style scoped>
-.map-tool { display: flex; flex-direction: column; }
-.map-stage { position: relative; height: 300px; border-radius: 10px; overflow: hidden; border: 1px solid var(--guide-line, #e3e8df); margin-bottom: 12px; background: #e7e4dc; }
-.map-canvas { position: absolute; inset: 0; }
-.map-layer-switch { position: absolute; top: 8px; right: 8px; z-index: 400; display: flex; overflow: hidden; border-radius: 6px; border: 1px solid rgba(45, 90, 75, 0.18); background: rgba(255, 255, 255, 0.94); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); }
-.map-layer-switch button { min-height: 32px; padding: 4px 12px; border: 0; background: transparent; font-size: 12px; color: #6b7a72; }
-.map-layer-switch button + button { border-left: 1px solid rgba(45, 90, 75, 0.14); }
-.map-layer-switch button.active { background: #2d5a4b; color: #f3f7f4; font-weight: 600; }
-.map-legend { position: absolute; left: 8px; bottom: 8px; z-index: 400; display: flex; flex-wrap: wrap; gap: 4px 10px; max-width: 70%; padding: 5px 9px; border-radius: 6px; border: 1px solid rgba(45, 90, 75, 0.14); background: rgba(255, 255, 255, 0.92); font-size: 11px; color: #6b7a72; }
-.map-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 4px; }
-.map-color-toggle { position: absolute; top: 8px; left: 8px; z-index: 400; display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 12px; border-radius: 6px; border: 1px solid rgba(45, 90, 75, 0.18); background: rgba(255, 255, 255, 0.94); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); font-size: 12px; color: #6b7a72; }
-.map-color-toggle i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.16); }
-.map-color-toggle.active { background: #2d5a4b; border-color: #2d5a4b; color: #f3f7f4; font-weight: 600; }
-
-.map-live { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
-.map-live-item { padding: 8px 9px; border-radius: 8px; border: 1px solid rgba(45, 90, 75, 0.1); background: #f7f9f3; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.map-live-item .k { font-size: 11px; color: #6b7a72; white-space: nowrap; }
-.map-live-item .v { font-size: 13px; font-weight: 600; color: #2c3a33; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.map-live-item .v.warn { color: #b4552d; }
-.map-live-item .live-dot { display: inline-block; width: 9px; height: 9px; margin-right: 5px; border-radius: 50%; vertical-align: middle; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.14); }
-
-.map-bars { display: flex; flex-direction: column; gap: 7px; margin-bottom: 14px; }
-.map-bar { font-size: 12px; }
-.map-bar-top { display: flex; justify-content: space-between; color: #6b7a72; margin-bottom: 3px; }
-.map-bar-top b { color: #2c3a33; }
-.map-bar-track { height: 6px; border-radius: 999px; background: #eaf0eb; overflow: hidden; }
-.map-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #4d7565, #2d5a4b); }
-.map-bar-fill.warn { background: linear-gradient(90deg, #d99a4e, #b4552d); }
-
-.map-subtitle { margin: 4px 0 8px; font-size: 13px; font-weight: 600; color: #2c3a33; }
-.map-select { width: 100%; padding: 9px 10px; border: 1px solid rgba(45, 90, 75, 0.18); border-radius: 8px; background: #fff; color: #2c3a33; font-size: 13px; margin-bottom: 8px; }
-.map-route-steps { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 12px; color: #2c3a33; margin-bottom: 14px; line-height: 1.9; }
-.map-route-steps .arrow { color: #94a39c; font-size: 11px; }
-
-.map-poi-list { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; margin-bottom: 14px; scrollbar-width: thin; }
-.map-poi { display: flex; gap: 9px; align-items: flex-start; text-align: left; padding: 8px 9px; border: 1px solid rgba(45, 90, 75, 0.08); border-radius: 8px; background: #f7f9f3; }
-.map-poi:hover { border-color: #2d5a4b; background: #eaf0eb; }
-.map-poi.active { border-color: #c49b4c; background: #f5ecd8; }
-.map-poi .emoji { font-size: 17px; line-height: 1.3; }
-.map-poi .info { min-width: 0; display: flex; flex-direction: column; }
-.map-poi .info strong { font-size: 13px; color: #2c3a33; }
-.map-poi .info small { font-size: 11px; color: #94a39c; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-
-.map-note { margin-top: 10px; font-size: 11px; line-height: 1.7; color: #94a39c; }
-
-.map-narrate-toggle { position: absolute; top: 48px; left: 8px; z-index: 400; min-height: 32px; padding: 4px 12px; border-radius: 6px; border: 1px solid rgba(45, 90, 75, 0.18); background: rgba(255, 255, 255, 0.94); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); font-size: 12px; color: #6b7a72; }
-.map-narrate-toggle.active { background: #c49b4c; border-color: #c49b4c; color: #fff; font-weight: 600; }
-.map-geo-tip { position: absolute; top: 84px; left: 8px; z-index: 400; max-width: 60%; padding: 4px 9px; border-radius: 6px; background: rgba(180, 85, 45, 0.92); color: #fff; font-size: 11px; }
-.map-narrate-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 12px; color: #6b7a72; }
-.map-narrate-bar button { min-height: 28px; padding: 3px 12px; border-radius: 7px; border: 1px solid #2d5a4b; background: #fff; color: #2d5a4b; font-size: 12px; }
-</style>
+<style scoped src="../../assets/map-workspace.css"></style>
 
 <style>
-/* Leaflet 自定义标记（非 scoped，标记由 Leaflet 注入 DOM） */
-.map-pin { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50% 50% 50% 2px; transform: rotate(-45deg); background: #2d5a4b; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3); font-size: 12px; }
-.map-pin span { transform: rotate(45deg); line-height: 1; }
-.map-pin.zone-houshan { background: #7a5230; }
-.map-pin.zone-huqu { background: #2f7d7d; }
-.map-pin.zone-guangchang { background: #8b6d2b; }
-.leaflet-tooltip.map-tip { font-size: 11.5px; padding: 3px 7px; border-radius: 6px; border: 1px solid rgba(45, 90, 75, 0.14); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06); }
+/* Leaflet creates these nodes outside Vue templates. */
+.scenic-marker { display: grid !important; place-items: center; background: transparent; border: 0; }
+.scenic-symbol { display: grid; place-items: center; width: 28px; height: 28px; border: 2px solid #fff; border-radius: 50%; background: #fff; color: #2a5947; box-shadow: 0 1px 6px #183c3a40; box-sizing: border-box; }
+.scenic-symbol svg { width: 18px; height: 18px; }
+.scenic-name { position: absolute; padding: 3px 8px; border-radius: 6px; color: #214c38; background: #fffffff0; white-space: nowrap; box-shadow: 0 1px 5px #173b2020; font: 600 12px/18px system-ui,sans-serif; }
+.scenic-name.name-right { left: 41px; top: 10px; }
+.scenic-name.name-left { right: 41px; top: 10px; }
+.scenic-name.name-bottom { top: 43px; left: 50%; transform: translateX(-50%); }
+.scenic-cluster small { font-size: 9px; }
+.scenic-symbol.scenic-cluster { display: flex; gap: 1px; justify-content: center; }
+.scenic-symbol.scenic-cluster { width: 32px; height: 32px; color: #fff; background: #346552; border: 3px solid #fff; font: 600 13px/1 system-ui,sans-serif; }
+.scenic-marker.is-selected .scenic-symbol { width: 34px; height: 34px; background: #24563f; color: #fff; box-shadow: 0 0 0 3px #ffffffcc,0 3px 10px #183c3a66; }
+.scenic-count { position: absolute; top: -2px; right: -2px; background: #fff; color: #24563f; border: 1px solid #c5d5c9; border-radius: 8px; padding: 1px 3px; font: 600 9px/1.4 system-ui,sans-serif; }
+.scenic-marker:focus-visible { outline: 3px solid #24563f; border-radius: 50%; }
+.leaflet-tooltip.scenic-label { padding: 5px 9px; background: #fffffff5; border: 0; color: #234838; border-radius: 7px; box-shadow: 0 2px 8px #16392e26; font: 600 12px/1.4 system-ui,sans-serif; }
 </style>

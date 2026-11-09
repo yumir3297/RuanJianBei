@@ -34,6 +34,16 @@ class FakeVectorStore:
         self.records = list(records)
         return len(self.records)
 
+    def prepare_all(self, records: list[VectorStoreRecord]) -> str:
+        self.records = list(records)
+        return "prepared"
+
+    def activate_prepared(self, _generation_name: str) -> None:
+        pass
+
+    def discard_prepared(self, _generation_name: str) -> None:
+        self.records = []
+
 
 def test_rag_index_builder_indexes_chunks_with_metadata() -> None:
     async def scenario():
