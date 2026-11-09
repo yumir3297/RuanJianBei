@@ -18,6 +18,7 @@ class RAGIndexBuildReport:
     collection_name: str
     embedding_model_name: str
     duration_ms: int
+    prepared_generation_name: str | None = None
 
 
 class RAGIndexBuilder:
@@ -34,7 +35,7 @@ class RAGIndexBuilder:
         self.vector_store = vector_store
         self.batch_size = max(batch_size, 1)
 
-    async def build(self) -> RAGIndexBuildReport:
+    async def build(self, *, activate: bool = True) -> RAGIndexBuildReport:
         started_at = perf_counter()
         chunks = await self.chunk_repository.list_all()
         records: list[VectorStoreRecord] = []
@@ -53,13 +54,20 @@ class RAGIndexBuilder:
                     )
                 )
 
-        indexed_count = self.vector_store.replace_all(records)
+        prepared_generation_name = self.vector_store.prepare_all(records)
+        if activate:
+            try:
+                self.vector_store.activate_prepared(prepared_generation_name)
+            except Exception:
+                self.vector_store.discard_prepared(prepared_generation_name)
+                raise
         return RAGIndexBuildReport(
             total_chunks=len(chunks),
-            indexed_chunks=indexed_count,
+            indexed_chunks=len(records),
             collection_name=self.vector_store.collection_name,
             embedding_model_name=self.embedder.model_name,
             duration_ms=round((perf_counter() - started_at) * 1000),
+            prepared_generation_name=prepared_generation_name,
         )
 
     def _document_for(self, chunk: KnowledgeChunk) -> str:

@@ -28,7 +28,12 @@ def resolve_voice_for_provider(settings: Settings, preset: str | None) -> str:
     return resolve_tts_voice(preset, _default_voice(settings), provider=settings.tts_provider)
 
 
-def build_tts_service(settings: Settings, preset: str | None = None) -> BaseTTSService:
+def build_tts_service(
+    settings: Settings,
+    preset: str | None = None,
+    *,
+    voice_override: str | None = None,
+) -> BaseTTSService:
     """构建非流式 TTS 服务；provider 未配置凭据时抛出 ValueError。"""
     if settings.tts_provider == "volcengine":
         from app.services.tts.volcengine import VolcengineTTSService
@@ -40,7 +45,7 @@ def build_tts_service(settings: Settings, preset: str | None = None) -> BaseTTSS
             access_key=settings.volcengine_tts_access_key or None,
             api_key=settings.volcengine_tts_api_key or None,
             resource_id=settings.volcengine_tts_resource_id,
-            voice=resolve_voice_for_provider(settings, preset),
+            voice=voice_override or resolve_voice_for_provider(settings, preset),
             format=settings.volcengine_tts_format,
             sample_rate=settings.volcengine_tts_sample_rate,
         )
@@ -53,7 +58,7 @@ def build_tts_service(settings: Settings, preset: str | None = None) -> BaseTTSS
             api_key=settings.tts_api_key,
             base_url=settings.tts_base_url,
             model=settings.tts_model,
-            voice=resolve_voice_for_provider(settings, preset),
+            voice=voice_override or resolve_voice_for_provider(settings, preset),
             timeout_seconds=settings.tts_timeout_seconds,
             use_compatible_api=False,
         )
@@ -76,7 +81,9 @@ def build_streaming_tts_service(
             api_key=settings.volcengine_tts_api_key or None,
             resource_id=settings.volcengine_tts_resource_id,
             voice=resolve_voice_for_provider(settings, preset),
-            format=settings.volcengine_tts_format,
+            # Streaming is decoded as PCM by the browser independently of the
+            # configured non-streaming container format.
+            format="pcm",
             sample_rate=settings.volcengine_tts_sample_rate,
             enable_subtitle=True,
         )

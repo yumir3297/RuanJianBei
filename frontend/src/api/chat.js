@@ -11,6 +11,12 @@ export async function fetchWelcomeAudio() {
   return data;
 }
 
+/** Re-synthesize a completed answer saved in the current anonymous session. */
+export async function replayChatAnswer(payload) {
+  const { data } = await http.post("/chat/replay", payload);
+  return data;
+}
+
 /** 清除该游客在服务端的跨会话记忆，返回删除条数。 */
 export async function deleteVisitorMemory(visitorId) {
   const { data } = await http.delete(

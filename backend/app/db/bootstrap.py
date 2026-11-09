@@ -11,7 +11,11 @@ from app.models.avatar_config import AvatarConfig
 from app.models.knowledge import KnowledgeEntry
 from app.models.quick_topic import QuickTopic
 from app.models.visitor_feedback import VisitorFeedback
+from app.repositories.knowledge_chunk import KnowledgeChunkRepository
+from app.repositories.knowledge_generation import KnowledgeGenerationRepository
+from app.repositories.qa_cache import QACacheRepository
 from app.schemas.knowledge import KnowledgeCreate
+from app.services.data_import.chunker import KnowledgeChunker
 
 
 DEFAULT_AVATAR_CONFIGS = (
@@ -177,6 +181,12 @@ async def bootstrap_sample_data() -> None:
                 metadata_json=item.metadata_json,
             )
             session.add(entry)
+        await session.flush()
+        entries = list((await session.execute(select(KnowledgeEntry))).scalars().all())
+        chunks = KnowledgeChunker().build_chunks(entries)
+        await KnowledgeChunkRepository(session).replace_all(chunks)
+        await QACacheRepository(session).invalidate(commit=False)
+        await KnowledgeGenerationRepository(session).bump()
         await session.commit()
 
 

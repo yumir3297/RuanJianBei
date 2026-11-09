@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     vision_read_timeout_seconds: float = Field(default=60.0, gt=0.0, le=120.0)
     vision_total_timeout_seconds: float = Field(default=90.0, gt=0.0, le=300.0)
     vision_max_image_bytes: int = Field(default=5 * 1024 * 1024, ge=1024, le=20 * 1024 * 1024)
+    vision_max_image_pixels: int = Field(default=25_000_000, ge=1, le=100_000_000)
     cache_ttl_seconds: int = Field(default=7 * 24 * 60 * 60)
     enable_sample_data: bool = Field(default=True)
     default_avatar_voice: str = Field(default="female_warm")
@@ -67,9 +68,16 @@ class Settings(BaseSettings):
     asr_vocabulary_id: str = Field(default="")
     asr_public_audio_base_url: str = Field(default="")
     asr_upload_dir: str = Field(default="../.uploads/asr")
+    asr_public_audio_retention_seconds: int = Field(default=3600, ge=60, le=604800)
     asr_timeout_seconds: float = Field(default=30.0, gt=0.0, le=180.0)
+    asr_ffprobe_path: str = Field(default="ffprobe", min_length=1, max_length=500)
+    asr_probe_timeout_seconds: float = Field(default=3.0, gt=0.0, le=15.0)
     asr_poll_interval_seconds: float = Field(default=0.8, gt=0.0, le=10.0)
     asr_max_audio_bytes: int = Field(default=10 * 1024 * 1024, ge=1024, le=50 * 1024 * 1024)
+    asr_max_audio_seconds: float = Field(default=180.0, gt=0, le=1800)
+    chat_max_active: int = Field(default=8, ge=1, le=1000)
+    asr_max_active: int = Field(default=4, ge=1, le=1000)
+    vision_max_active: int = Field(default=4, ge=1, le=1000)
     asr_hotwords: str = Field(default="")
     """景区专属 ASR 热词（逗号分隔），按景区在 .env 中自行配置。"""
     asr_local_model_dir: str = Field(default="D:/A5ScenicGuideModels/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17")
@@ -95,6 +103,8 @@ class Settings(BaseSettings):
     volcengine_tts_format: str = Field(default="pcm")
     volcengine_tts_sample_rate: int = Field(default=24000, ge=8000, le=48000)
     qweather_api_key: str = Field(default="")
+    amap_web_service_key: str = Field(default="")
+    """高德 Web 服务 Key，仅供服务端路线规划接口使用。"""
     """和风天气 API KEY，仅在服务端使用，前端不接触。留空时接口安全降级。"""
     qweather_api_host: str = Field(default="devapi.qweather.com")
     """和风天气 API Host（控制台分配的专属域名，如 abcxyz.qweatherapi.com）。"""
@@ -114,6 +124,21 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @property
+    def production_security_failures(self) -> tuple[str, ...]:
+        if self.app_env.strip().lower() not in {"production", "prod"}:
+            return ()
+        failures: list[str] = []
+        if self.admin_password == "admin123":
+            failures.append("default_admin_password")
+        if len(self.admin_password) < 12:
+            failures.append("weak_admin_password")
+        if self.admin_token_secret == "a5-scenic-admin-secret-key":
+            failures.append("default_admin_token_secret")
+        if len(self.admin_token_secret) < 32:
+            failures.append("weak_admin_token_secret")
+        return tuple(failures)
 
     @property
     def backend_root(self) -> Path:

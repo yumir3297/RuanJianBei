@@ -11,42 +11,32 @@
     <div v-if="isAdminRoute && !isFullBleedRoute" class="admin-layout">
       <aside class="admin-sidebar">
         <div class="sidebar-brand">
-          <div class="sidebar-eyebrow">AI DIGITAL GUIDE</div>
-          <div class="sidebar-title">智能数字人导游</div>
-          <div class="sidebar-subtitle">管 理 后 台</div>
+          <div class="sidebar-title">灵山胜境</div>
+          <div class="sidebar-subtitle">景区运营工作台</div>
         </div>
-        <div class="sidebar-section-label">导航</div>
         <nav class="sidebar-nav">
-          <RouterLink
-            v-for="item in adminLinks"
-            :key="item.path"
-            :to="item.path"
-            class="sidebar-nav-link"
-            :class="{ active: route.path === item.path }"
-          >
-            <span class="sidebar-nav-icon">
-              <el-icon><component :is="item.icon" /></el-icon>
-            </span>
-            <span>{{ item.label }}</span>
-          </RouterLink>
+          <div v-for="group in adminLinkGroups" :key="group.label" class="sidebar-nav-group">
+            <div class="sidebar-section-label">{{ group.label }}</div>
+            <RouterLink
+              v-for="item in group.items"
+              :key="item.path"
+              :to="item.path"
+              class="sidebar-nav-link"
+              :class="{ active: route.path === item.path }"
+              :aria-current="route.path === item.path ? 'page' : undefined"
+            >
+              <span class="sidebar-nav-icon">
+                <el-icon><component :is="item.icon" /></el-icon>
+              </span>
+              <span>{{ item.label }}</span>
+            </RouterLink>
+          </div>
         </nav>
         <div class="sidebar-footer">
           <RouterLink to="/" class="sidebar-back-link">
             <el-icon><ArrowLeft /></el-icon>
             <span>返回首页</span>
           </RouterLink>
-          <div class="sidebar-status">
-            <span class="sidebar-status-dot"></span>
-            <span>运行中</span>
-            <span class="sidebar-version">v3.2</span>
-          </div>
-          <div class="sidebar-user">
-            <span class="sidebar-avatar">管</span>
-            <div>
-              <div class="sidebar-user-name">系统管理员</div>
-              <div class="sidebar-user-email">admin@lingshan.com</div>
-            </div>
-          </div>
         </div>
       </aside>
       <main class="admin-main">
@@ -74,14 +64,20 @@ const isAdminRoute = computed(() => route.path.startsWith("/admin"));
 const isTouristRoute = computed(() => route.path.startsWith("/tourist") || route.path === "/");
 const isFullBleedRoute = computed(() => route.path === "/" || route.path === "/admin/login");
 
-const adminLinks = [
-  { path: "/admin/dashboard", label: "总览", icon: DataLine },
-  { path: "/admin/knowledge", label: "知识管理", icon: Document },
-  { path: "/admin/blind-spots", label: "知识盲区", icon: Warning },
-  { path: "/admin/analytics", label: "数据大屏", icon: Monitor },
-  { path: "/admin/experience-report", label: "感受度报告", icon: TrendCharts },
-  { path: "/admin/avatar", label: "数字人配置", icon: UserFilled },
-  { path: "/admin/assets", label: "资源替换", icon: PictureFilled },
+const adminLinkGroups = [
+  { label: "工作台", items: [{ path: "/admin/dashboard", label: "总览", icon: DataLine }] },
+  { label: "内容运营", items: [
+    { path: "/admin/knowledge", label: "知识管理", icon: Document },
+    { path: "/admin/blind-spots", label: "知识盲区", icon: Warning },
+  ] },
+  { label: "游客体验", items: [
+    { path: "/admin/avatar", label: "数字人配置", icon: UserFilled },
+    { path: "/admin/assets", label: "页面与素材", icon: PictureFilled },
+  ] },
+  { label: "运营分析", items: [
+    { path: "/admin/analytics", label: "问答分析", icon: Monitor },
+    { path: "/admin/experience-report", label: "游客反馈", icon: TrendCharts },
+  ] },
 ];
 
 function handleLogout() {

@@ -1,0 +1,3906 @@
+diff --git a/backend/app/api/bounded_body.py b/backend/app/api/bounded_body.py
+new file mode 100644
+index 0000000..22f200c
+--- /dev/null
++++ b/backend/app/api/bounded_body.py
+@@ -0,0 +1,14 @@
++from fastapi import HTTPException, Request, status
++
++
++async def read_bounded_body(request: Request, max_bytes: int) -> bytes:
++    """Read incrementally and reject before buffering more than the allowed body."""
++    body = bytearray()
++    async for chunk in request.stream():
++        if len(body) + len(chunk) > max_bytes:
++            raise HTTPException(
++                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
++                detail=f"上传内容过大（最大 {max_bytes} 字节）。",
++            )
++        body.extend(chunk)
++    return bytes(body)
+diff --git a/backend/app/api/capacity.py b/backend/app/api/capacity.py
+new file mode 100644
+index 0000000..11b2fce
+--- /dev/null
++++ b/backend/app/api/capacity.py
+@@ -0,0 +1,25 @@
++from fastapi import HTTPException, Request, status
++from threading import Lock
++
++from app.core.config import Settings
++from app.services.capacity import CapacityLease, CapacityLimiter
++
++_initialization_lock = Lock()
++
++
++def acquire_capacity(request: Request, settings: Settings, name: str) -> CapacityLease:
++    limiter = getattr(request.app.state, "guide_capacity", None)
++    if limiter is None:
++        with _initialization_lock:
++            limiter = getattr(request.app.state, "guide_capacity", None)
++            if limiter is None:
++                limiter = CapacityLimiter({
++                    "chat": settings.chat_max_active,
++                    "asr": settings.asr_max_active,
++                    "vision": settings.vision_max_active,
++                })
++                request.app.state.guide_capacity = limiter
++    lease = limiter.try_acquire(name)
++    if lease is None:
++        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="服务繁忙，请稍后再试。", headers={"Retry-After": "5"})
++    return lease
+diff --git a/backend/app/api/chat.py b/backend/app/api/chat.py
+index dff9dc1..c62a128 100644
+--- a/backend/app/api/chat.py
++++ b/backend/app/api/chat.py
+@@ -7,12 +7,14 @@ from hashlib import sha256
+ from functools import lru_cache
+ from pathlib import Path
+
+-from fastapi import APIRouter, Depends
++from fastapi import APIRouter, Depends, Request
+ from fastapi.responses import StreamingResponse
++from starlette.background import BackgroundTask
+ from sqlalchemy import select
+ from sqlalchemy.ext.asyncio import AsyncSession
+
+ from app.core.config import Settings
++from app.api.capacity import acquire_capacity
+ from app.core.deps import get_app_settings, get_db_session
+ from app.models.avatar_config import AvatarConfig
+ from app.repositories.chat_log import ChatLogRepository
+@@ -34,7 +36,7 @@ from app.services.qa.followup_suggestions import FollowUpSuggestionService
+ from app.services.qa.guided_selector import GuidedSelectionResolver
+ from app.services.qa.intent_router import IntentRouter
+ from app.services.qa.pipeline import QAPipeline
+-from app.services.qa.stream_events import StreamEvent
++from app.services.qa.stream_events import StreamEvent, with_sse_heartbeat
+ from app.services.qa.runtime import get_runtime_faq_matcher
+ from app.services.rag.bm25_reranker import BM25Reranker
+ from app.services.rag.cross_encoder_reranker import CrossEncoderReranker
+@@ -251,15 +253,17 @@ async def build_pipeline(
+ @router.post("/stream")
+ async def stream_chat(
+     payload: ChatRequest,
++    request: Request,
+     session: AsyncSession = Depends(get_db_session),
+     settings: Settings = Depends(get_app_settings),
+ ) -> StreamingResponse:
+-    print(f"[API] /stream received: query={payload.query!r}, session_id={payload.session_id}, input_mode={payload.input_mode}, text_only={payload.text_only}, selection={payload.selection}", flush=True)
++    lease = acquire_capacity(request, settings, "chat")
++    logger.info("Chat stream accepted: input_mode=%s text_only=%s", payload.input_mode, payload.text_only)
+     async def event_generator():
+         # Send a first event before local model initialization. This keeps the
+         # UI responsive during a cold start and proves that the SSE link works.
+-        yield StreamEvent(type="status", data={"text": "正在准备导览知识..."}).to_sse()
+         try:
++            yield StreamEvent(type="status", data={"text": "正在准备导览知识..."}).to_sse()
+             pipeline = await build_pipeline(
+                 session,
+                 settings,
+@@ -275,10 +279,13 @@ async def stream_chat(
+                 type="error",
+                 data={"message": "导览服务处理回答时发生错误，请稍后重试。"},
+             ).to_sse()
++        finally:
++            lease.release()
+
+     return StreamingResponse(
+-        event_generator(),
++        with_sse_heartbeat(event_generator()),
+         media_type="text/event-stream",
++        background=BackgroundTask(lease.release),
+         headers={
+             "Cache-Control": "no-cache, no-transform",
+             "Connection": "keep-alive",
+diff --git a/backend/app/api/vision.py b/backend/app/api/vision.py
+index 49bcdae..1a18264 100644
+--- a/backend/app/api/vision.py
++++ b/backend/app/api/vision.py
+@@ -1,13 +1,17 @@
+ from __future__ import annotations
+
+ from hashlib import sha256
++import struct
+
+ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
+
+ from app.core.config import Settings
+ from app.core.deps import get_app_settings
+ from app.schemas.vision import VisionAnalyzeResponse
++from app.api.bounded_body import read_bounded_body
++from app.api.capacity import acquire_capacity
+ from app.services.vision import BaseVisionService, QwenVisionService, StubVisionService, VisionResult
++from app.services.vision.image_headers import InvalidImage, detect_image_mime, image_dimensions
+
+
+ router = APIRouter()
+@@ -72,7 +76,7 @@ async def analyze_image(
+     settings: Settings = Depends(get_app_settings),
+     vision_service: BaseVisionService = Depends(get_vision_service),
+ ) -> VisionAnalyzeResponse:
+-    content = await request.body()
++    content = await read_bounded_body(request, settings.vision_max_image_bytes)
+     if not content:
+         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Image content is required.")
+
+@@ -91,12 +95,32 @@ async def analyze_image(
+     if len(content) > settings.vision_max_image_bytes:
+         raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Image is too large.")
+
+-    result = await vision_service.analyze(
+-        content,
+-        filename=filename,
+-        mime_type=mime,
+-        prompt=question,
+-    )
++    actual_mime = detect_image_mime(content)
++    if actual_mime != mime:
++        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="图片实际格式与所选格式不一致，请重新选择。")
++    try:
++        width, height = image_dimensions(content, mime)
++    except InvalidImage as exc:
++        if str(exc) == "animated WebP is not supported":
++            raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="暂不支持动态 WebP，请选择静态图片。")
++        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="图片文件损坏或不完整，请重新选择。")
++    except (ValueError, struct.error):
++        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="图片文件损坏或不完整，请重新选择。")
++    if width <= 0 or height <= 0:
++        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="图片尺寸无效，请重新选择。")
++    if width * height > settings.vision_max_image_pixels:
++        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="图片像素过大，请压缩后重试。")
++
++    lease = acquire_capacity(request, settings, "vision")
++    try:
++        result = await vision_service.analyze(
++            content,
++            filename=filename,
++            mime_type=mime,
++            prompt=question,
++        )
++    finally:
++        lease.release()
+     return _to_response(result, question)
+
+
+diff --git a/backend/app/api/voice.py b/backend/app/api/voice.py
+index c482483..3948927 100644
+--- a/backend/app/api/voice.py
++++ b/backend/app/api/voice.py
+@@ -2,11 +2,15 @@ from __future__ import annotations
+
+ from pathlib import Path
+ from uuid import uuid4
++import io
++import wave
+
+ from fastapi import APIRouter, Depends, HTTPException, Request, status
+ from fastapi.responses import FileResponse
+
+ from app.core.config import Settings, get_settings
++from app.api.bounded_body import read_bounded_body
++from app.api.capacity import acquire_capacity
+ from app.services.asr.base import BaseASRService
+ from app.services.asr.stub import StubASRService
+
+@@ -36,7 +40,7 @@ async def transcribe_audio(
+     settings: Settings = Depends(get_settings),
+     asr_service: BaseASRService = Depends(get_asr_service),
+ ):
+-    content = await request.body()
++    content = await read_bounded_body(request, settings.asr_max_audio_bytes)
+     if not content:
+         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Audio content is required.")
+     if len(content) > settings.asr_max_audio_bytes:
+@@ -45,16 +49,37 @@ async def transcribe_audio(
+             detail=f"Audio is too large (max {settings.asr_max_audio_bytes} bytes).",
+         )
+
+-    payload: bytes | str = content
+-    if getattr(asr_service, "requires_public_audio_url", False):
+-        payload = _prepare_public_audio_url(content, request, settings)
+-
++    mime = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
++    wav_mimes = {"audio/wav", "audio/x-wav", "audio/wave"}
++    is_wav = content.startswith(b"RIFF") and content[8:12] == b"WAVE"
++    if is_wav and mime not in wav_mimes | {"", "application/octet-stream"}:
++        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="录音实际格式与声明格式不一致，请重新录音。")
++    if is_wav or mime in wav_mimes:
++        try:
++            with wave.open(io.BytesIO(content), "rb") as wav:
++                frames = wav.getnframes()
++                rate = wav.getframerate()
++                expected_bytes = frames * wav.getnchannels() * wav.getsampwidth()
++                if not rate or not frames or len(wav.readframes(frames)) != expected_bytes:
++                    raise ValueError("incomplete audio")
++                if frames / rate > settings.asr_max_audio_seconds:
++                    raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="录音时间过长，请缩短录音后重试。")
++        except (wave.Error, EOFError, ValueError):
++            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="录音文件损坏或格式不正确，请重新录音。")
++
++    lease = acquire_capacity(request, settings, "asr")
+     try:
++        payload: bytes | str = content
++        if getattr(asr_service, "requires_public_audio_url", False):
++            payload = _prepare_public_audio_url(content, request, settings)
+         result = await asr_service.transcribe(payload)
+     finally:
+-        close = getattr(asr_service, "aclose", None)
+-        if close:
+-            await close()
++        try:
++            close = getattr(asr_service, "aclose", None)
++            if close:
++                await close()
++        finally:
++            lease.release()
+     return {
+         "text": result.text,
+         "confidence": result.confidence,
+diff --git a/backend/app/core/config.py b/backend/app/core/config.py
+index 94be49d..b7f817c 100644
+--- a/backend/app/core/config.py
++++ b/backend/app/core/config.py
+@@ -56,6 +56,7 @@ class Settings(BaseSettings):
+     vision_read_timeout_seconds: float = Field(default=60.0, gt=0.0, le=120.0)
+     vision_total_timeout_seconds: float = Field(default=90.0, gt=0.0, le=300.0)
+     vision_max_image_bytes: int = Field(default=5 * 1024 * 1024, ge=1024, le=20 * 1024 * 1024)
++    vision_max_image_pixels: int = Field(default=25_000_000, ge=1, le=100_000_000)
+     cache_ttl_seconds: int = Field(default=7 * 24 * 60 * 60)
+     enable_sample_data: bool = Field(default=True)
+     default_avatar_voice: str = Field(default="female_warm")
+@@ -76,6 +77,10 @@ class Settings(BaseSettings):
+     asr_timeout_seconds: float = Field(default=30.0, gt=0.0, le=180.0)
+     asr_poll_interval_seconds: float = Field(default=0.8, gt=0.0, le=10.0)
+     asr_max_audio_bytes: int = Field(default=10 * 1024 * 1024, ge=1024, le=50 * 1024 * 1024)
++    asr_max_audio_seconds: float = Field(default=180.0, gt=0, le=1800)
++    chat_max_active: int = Field(default=8, ge=1, le=1000)
++    asr_max_active: int = Field(default=4, ge=1, le=1000)
++    vision_max_active: int = Field(default=4, ge=1, le=1000)
+     asr_hotwords: str = Field(default="")
+     """景区专属 ASR 热词（逗号分隔），按景区在 .env 中自行配置。"""
+     asr_local_model_dir: str = Field(default="D:/A5ScenicGuideModels/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17")
+diff --git a/backend/app/services/capacity.py b/backend/app/services/capacity.py
+new file mode 100644
+index 0000000..672c32d
+--- /dev/null
++++ b/backend/app/services/capacity.py
+@@ -0,0 +1,29 @@
++"""Per-process concurrent-work limits; deployment-wide limits belong at the edge."""
++from threading import Lock
++
++
++class CapacityLease:
++    def __init__(self, limiter: "CapacityLimiter", name: str) -> None:
++        self._limiter = limiter
++        self._name = name
++        self._released = False
++
++    def release(self) -> None:
++        with self._limiter._lock:
++            if not self._released:
++                self._released = True
++                self._limiter._active[self._name] -= 1
++
++
++class CapacityLimiter:
++    def __init__(self, limits: dict[str, int]) -> None:
++        self._limits = dict(limits)
++        self._active = {name: 0 for name in limits}
++        self._lock = Lock()
++
++    def try_acquire(self, name: str) -> CapacityLease | None:
++        with self._lock:
++            if self._active[name] >= self._limits[name]:
++                return None
++            self._active[name] += 1
++            return CapacityLease(self, name)
+diff --git a/backend/app/services/qa/pipeline.py b/backend/app/services/qa/pipeline.py
+index 67851ab..592d7d5 100644
+--- a/backend/app/services/qa/pipeline.py
++++ b/backend/app/services/qa/pipeline.py
+@@ -407,7 +407,7 @@ class QAPipeline:
+                     normalized_query=normalized_query,
+                     category="rag_no_docs",
+                 )
+-                    logger.info("Blind spot recorded (RAG no docs): %s", normalized_query)
++                    logger.info("Blind spot recorded (RAG no docs)")
+                 except Exception:
+                     logger.exception("Knowledge blind spot recording failed")
+             answer = no_evidence_reply(request.persona)
+@@ -434,12 +434,29 @@ class QAPipeline:
+         llm_finish_reason: str | None = None
+         audio_queue: asyncio.Queue[StreamEvent] = asyncio.Queue()
+         audio_tasks: list[asyncio.Task[None]] = []
++        audio_concurrency = asyncio.Semaphore(3)
++
++        def schedule_audio(sentence: str) -> None:
++            previous = audio_tasks[-1] if audio_tasks else None
++            audio_tasks.append(asyncio.create_task(
++                self._queue_audio(sentence, audio_queue, previous=previous, semaphore=audio_concurrency, notify=notify_audio)
++            ))
++
++        async def notify_audio() -> None:
++            await mux_queue.put(("audio_ready", None))
++
++        async def cancel_audio() -> None:
++            for task in audio_tasks:
++                if not task.done():
++                    task.cancel()
++            await asyncio.gather(*audio_tasks, return_exceptions=True)
+
+         # ── 流式 TTS 路径 ──
+         tts_stream: StreamingTTSSession | VolcengineStreamingTTSSession | None = None
+         streaming_requested = (
+             self.streaming_tts_service is not None
+             and not request.text_only
++            and faq_documents is None
+         )
+         if streaming_requested and self.streaming_tts_service is not None:
+             tts_stream = self.streaming_tts_service.create_session()
+@@ -544,6 +561,13 @@ class QAPipeline:
+                         for sse in self._handle_streaming_tts_event(tts_event):
+                             yield sse
+                     event = None
++                elif kind == "audio_ready":
++                    while True:
++                        try:
++                            yield audio_queue.get_nowait()
++                        except QueueEmpty:
++                            break
++                    event = None
+                 else:
+                     event = None
+
+@@ -559,18 +583,18 @@ class QAPipeline:
+                         continue
+                     full_answer += token
+                     sentence_buffer += token
+-                    yield StreamEvent(type="text_chunk", data={"token": token})
++                    if faq_documents is None:
++                        yield StreamEvent(type="text_chunk", data={"token": token})
+
+                     if streaming_requested:
+                         if not tts_failed:
+                             tts_text_buffer += token
+-                    else:
++                    elif faq_documents is None:
+                         # HTTP TTS：句子级别缓冲
+-                        if self._should_trigger_tts(token, sentence_buffer):
+-                            sentence = sentence_buffer.strip()
+-                            sentence_buffer = ""
+-                            if sentence and not request.text_only:
+-                                audio_tasks.append(asyncio.create_task(self._queue_audio(sentence, audio_queue)))
++                        sentences, sentence_buffer = self._take_speakable_sentences(sentence_buffer)
++                        for sentence in sentences:
++                            if not request.text_only:
++                                schedule_audio(sentence)
+
+                         while True:
+                             try:
+@@ -608,6 +632,9 @@ class QAPipeline:
+
+                 if llm_done and streaming_requested and not tts_connected and tts_failed:
+                     tts_done = True
++        except BaseException:
++            await cancel_audio()
++            raise
+         finally:
+             for task in (llm_task, tts_task):
+                 if task is not None and not task.done():
+@@ -623,26 +650,13 @@ class QAPipeline:
+                     logger.exception("Failed to close streaming TTS session")
+
+         if llm_error is not None:
++            await cancel_audio()
+             raise llm_error
+         if visibility_changed:
++            await cancel_audio()
+             yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
+             return
+
+-        if streaming_requested and tts_failed and not request.text_only:
+-            remaining_text = full_answer[tts_confirmed_chars:].strip()
+-            if remaining_text:
+-                audio_tasks.append(asyncio.create_task(self._queue_audio(remaining_text, audio_queue)))
+-        elif not streaming_requested and sentence_buffer.strip() and not request.text_only:
+-            audio_tasks.append(asyncio.create_task(self._queue_audio(sentence_buffer.strip(), audio_queue)))
+-
+-        for task in audio_tasks:
+-            await task
+-            while True:
+-                try:
+-                    yield audio_queue.get_nowait()
+-                except QueueEmpty:
+-                    break
+-
+         degraded_llm = bool(
+             llm_finish_reason
+             and (
+@@ -650,6 +664,45 @@ class QAPipeline:
+                 or llm_finish_reason.startswith("interrupted_")
+             )
+         )
++        if degraded_llm and faq_documents is not None:
++            # Do not speak a partial rewrite that will be replaced by the FAQ.
++            full_answer = polish_answer(faq_result.answer, request.persona, faq_sources)
++
++        if not await self._epoch_is_current(request_epoch):
++            await cancel_audio()
++            yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
++            return
++
++        faq_text_sent = faq_documents is not None
++        if faq_text_sent:
++            yield StreamEvent(type="text", data={"text": full_answer, "is_complete": True})
++
++        if faq_documents is not None and not request.text_only:
++            if full_answer.strip():
++                schedule_audio(full_answer.strip())
++        elif streaming_requested and tts_failed and not request.text_only:
++            remaining_text = full_answer[tts_confirmed_chars:].strip()
++            if remaining_text:
++                schedule_audio(remaining_text)
++        elif not streaming_requested and sentence_buffer.strip() and not request.text_only:
++            schedule_audio(sentence_buffer.strip())
++
++        try:
++            for task in audio_tasks:
++                await task
++                if not await self._epoch_is_current(request_epoch):
++                    await cancel_audio()
++                    yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
++                    return
++                while True:
++                    try:
++                        yield audio_queue.get_nowait()
++                    except QueueEmpty:
++                        break
++        except BaseException:
++            await cancel_audio()
++            raise
++
+         if degraded_llm and self.blind_spot_tracker is not None:
+             try:
+                 await self.blind_spot_tracker.record(
+@@ -657,7 +710,7 @@ class QAPipeline:
+                     normalized_query=normalized_query,
+                     category="llm_fallback",
+                 )
+-                logger.info("Blind spot recorded (LLM degraded): %s", normalized_query)
++                logger.info("Blind spot recorded (LLM degraded)")
+             except Exception:
+                 logger.exception("Knowledge blind spot recording failed")
+         if degraded_llm and faq_documents is not None:
+@@ -667,6 +720,7 @@ class QAPipeline:
+             # 否则一次 LLM 抖动就会长期污染该受众的缓存。
+             full_answer = polish_answer(faq_result.answer, request.persona, faq_sources)
+         if not await self._epoch_is_current(request_epoch):
++            await cancel_audio()
+             yield StreamEvent(type="error", data={"message": "知识内容已更新，已停止继续输出。"})
+             return
+         if not degraded_llm and self._active_emotion.label == EmotionLabel.NEUTRAL:
+@@ -694,7 +748,11 @@ class QAPipeline:
+             llm_usage.total_tokens,
+             llm_usage.cached_tokens,
+         )
+-        yield StreamEvent(type="text", data={"text": full_answer, "is_complete": True})
++        incomplete = bool(
++            llm_finish_reason and llm_finish_reason.startswith("interrupted_") and faq_documents is None
++        )
++        if not faq_text_sent:
++            yield StreamEvent(type="text", data={"text": full_answer, "is_complete": not incomplete})
+         yield self._followup_event(resolved)
+         yield self._done_event(
+             chat_log_id=chat_log_id,
+@@ -702,6 +760,7 @@ class QAPipeline:
+             total_ms=latency_ms,
+             degraded=degraded_llm,
+             provider="deepseek" if not degraded_llm else "evidence_fallback",
++            completion="incomplete" if incomplete else "complete",
+         )
+
+     async def _build_static_route_answer(self, request: ChatRequest) -> tuple[str, list[dict]] | None:
+@@ -801,12 +860,16 @@ class QAPipeline:
+         return next((route for route in routes if route.id == target_id), None)
+
+     @staticmethod
+-    def _should_trigger_tts(token: str, buffer: str) -> bool:
+-        if token in "。！？!?":
+-            return True
+-        if token in "，、" and len(buffer) >= 8:
+-            return True
+-        return False
++    def _take_speakable_sentences(buffer: str) -> tuple[list[str], str]:
++        sentences: list[str] = []
++        start = 0
++        for index, char in enumerate(buffer):
++            if char in "。！？!?；;\n" or (char in "，、," and index - start + 1 >= 8):
++                sentence = buffer[start:index + 1].strip()
++                if sentence:
++                    sentences.append(sentence)
++                start = index + 1
++        return sentences, buffer[start:]
+
+     @staticmethod
+     def _should_flush_streaming_tts(buffer: str) -> bool:
+@@ -975,6 +1038,7 @@ class QAPipeline:
+         total_ms: int,
+         degraded: bool = False,
+         provider: str = "local",
++        completion: str = "complete",
+     ) -> StreamEvent:
+         return StreamEvent(
+             type="done",
+@@ -984,12 +1048,31 @@ class QAPipeline:
+                 "total_ms": total_ms,
+                 "degraded": degraded,
+                 "provider": provider,
++                "completion": completion,
+             },
+         )
+
+-    async def _queue_audio(self, sentence: str, queue: asyncio.Queue[StreamEvent]) -> None:
+-        audio = await self.tts_service.synthesize(sentence)
++    async def _queue_audio(
++        self, sentence: str, queue: asyncio.Queue[StreamEvent], *,
++        previous: asyncio.Task[None] | None = None, semaphore: asyncio.Semaphore | None = None,
++        notify=None,
++    ) -> None:
++        async def synthesize():
++            try:
++                return await self.tts_service.synthesize(sentence)
++            except Exception:
++                logger.exception("TTS sentence synthesis failed; preserving text")
++                from app.services.tts.base import TTSAudio
++                return TTSAudio(base64_audio="", duration_ms=0, provider="tts_unavailable")
++
++        if semaphore is None:
++            audio = await synthesize()
++        else:
++            async with semaphore:
++                audio = await synthesize()
+         avatar = await self.avatar_service.drive(sentence)
++        if previous is not None:
++            await previous
+         await queue.put(StreamEvent(type="avatar", data={
+             "viseme_text": avatar.viseme_text,
+             "emotion": self._active_response_policy.avatar_emotion,
+@@ -1002,6 +1085,8 @@ class QAPipeline:
+                 audio.provider,
+             )
+         )
++        if notify is not None:
++            await notify()
+
+     @classmethod
+     def _build_audio_event(
+@@ -1078,7 +1163,7 @@ class QAPipeline:
+             b64 = base64.b64encode(tts_event.data).decode("ascii")
+             results.append(StreamEvent(type="audio_chunk", data={
+                 "base64": b64,
+-                "sample_rate": 24000,
++                "sample_rate": tts_event.sample_rate,
+                 "channels": 1,
+                 "bits": 16,
+             }))
+diff --git a/backend/app/services/qa/stream_events.py b/backend/app/services/qa/stream_events.py
+index cc9e720..899c2d7 100644
+--- a/backend/app/services/qa/stream_events.py
++++ b/backend/app/services/qa/stream_events.py
+@@ -1,6 +1,8 @@
+ from __future__ import annotations
+
+ import json
++import asyncio
++from collections.abc import AsyncIterator
+ from dataclasses import dataclass, field
+
+
+@@ -13,3 +15,31 @@ class StreamEvent:
+         payload = json.dumps(self.data, ensure_ascii=False)
+         return f"event: {self.type}\ndata: {payload}\n\n".encode("utf-8")
+
++
++async def with_sse_heartbeat(source: AsyncIterator[bytes], interval: float = 15.0) -> AsyncIterator[bytes]:
++    """Keep idle transport connections alive without cancelling the producer."""
++    iterator = source.__aiter__()
++    pending = None
++    try:
++        while True:
++            if pending is None:
++                pending = asyncio.ensure_future(iterator.__anext__())
++            done, _ = await asyncio.wait({pending}, timeout=interval)
++            if not done:
++                yield b": keepalive\n\n"
++                continue
++            try:
++                chunk = pending.result()
++            except StopAsyncIteration:
++                break
++            pending = None
++            yield chunk
++    finally:
++        if pending is not None:
++            if not pending.done():
++                pending.cancel()
++            await asyncio.gather(pending, return_exceptions=True)
++        close = getattr(iterator, "aclose", None)
++        if close is not None:
++            await close()
++
+diff --git a/backend/app/services/tts/factory.py b/backend/app/services/tts/factory.py
+index d4b3855..0fe861a 100644
+--- a/backend/app/services/tts/factory.py
++++ b/backend/app/services/tts/factory.py
+@@ -76,7 +76,9 @@ def build_streaming_tts_service(
+             api_key=settings.volcengine_tts_api_key or None,
+             resource_id=settings.volcengine_tts_resource_id,
+             voice=resolve_voice_for_provider(settings, preset),
+-            format=settings.volcengine_tts_format,
++            # Streaming is decoded as PCM by the browser independently of the
++            # configured non-streaming container format.
++            format="pcm",
+             sample_rate=settings.volcengine_tts_sample_rate,
+             enable_subtitle=True,
+         )
+diff --git a/backend/app/services/tts/streaming.py b/backend/app/services/tts/streaming.py
+index e025bc3..9123074 100644
+--- a/backend/app/services/tts/streaming.py
++++ b/backend/app/services/tts/streaming.py
+@@ -29,6 +29,7 @@ class StreamingTTSEvent:
+     """流式 TTS 返回的事件"""
+     type: str  # "audio_chunk" | "word_timestamps" | "sentence_begin" | "done" | "error"
+     data: bytes | list[dict] | dict | str | None = None
++    sample_rate: int = 24000
+
+
+ class StreamingTTSSession:
+@@ -223,7 +224,7 @@ class StreamingTTSSession:
+                 if isinstance(message, bytes):
+                     # 二进制帧 = PCM 音频数据
+                     self._queue.put_nowait(
+-                        StreamingTTSEvent(type="audio_chunk", data=message)
++                        StreamingTTSEvent(type="audio_chunk", data=message, sample_rate=self._sample_rate)
+                     )
+                 elif isinstance(message, str):
+                     try:
+diff --git a/backend/app/services/tts/volcengine.py b/backend/app/services/tts/volcengine.py
+index 14c10cc..130c5d8 100644
+--- a/backend/app/services/tts/volcengine.py
++++ b/backend/app/services/tts/volcengine.py
+@@ -591,7 +591,7 @@ class VolcengineStreamingTTSSession:
+
+         if event == Event.TTS_RESPONSE:
+             self._queue.put_nowait(
+-                StreamingTTSEvent(type="audio_chunk", data=parsed["payload"])
++                StreamingTTSEvent(type="audio_chunk", data=parsed["payload"], sample_rate=self._sample_rate)
+             )
+             return
+
+diff --git a/backend/app/services/vision/image_headers.py b/backend/app/services/vision/image_headers.py
+new file mode 100644
+index 0000000..3eebca8
+--- /dev/null
++++ b/backend/app/services/vision/image_headers.py
+@@ -0,0 +1,141 @@
++"""Bounded image container and dimension checks before calling vision providers.
++
++This validates container structure and dimensions, not full pixel decoding.
++"""
++from __future__ import annotations
++
++import struct
++import zlib
++
++
++class InvalidImage(ValueError):
++    pass
++
++
++def image_dimensions(content: bytes, mime: str) -> tuple[int, int]:
++    if mime == "image/png":
++        return _png_dimensions(content)
++    if mime == "image/jpeg":
++        return _jpeg_dimensions(content)
++    if mime == "image/webp":
++        return _webp_dimensions(content)
++    raise InvalidImage("unsupported format")
++
++
++def detect_image_mime(content: bytes) -> str | None:
++    if content.startswith(b"\x89PNG\r\n\x1a\n"):
++        return "image/png"
++    if content.startswith(b"\xff\xd8"):
++        return "image/jpeg"
++    if content.startswith(b"RIFF") and content[8:12] == b"WEBP":
++        return "image/webp"
++    return None
++
++
++def _png_dimensions(data: bytes) -> tuple[int, int]:
++    pos = 8
++    dimensions = None
++    has_data = False
++    while pos + 12 <= len(data):
++        length = int.from_bytes(data[pos:pos + 4], "big")
++        end = pos + 12 + length
++        if end > len(data):
++            raise InvalidImage("truncated PNG")
++        kind = data[pos + 4:pos + 8]
++        payload = data[pos + 8:pos + 8 + length]
++        expected_crc = int.from_bytes(data[pos + 8 + length:end], "big")
++        if zlib.crc32(kind + payload) & 0xFFFFFFFF != expected_crc:
++            raise InvalidImage("invalid PNG checksum")
++        if pos == 8:
++            if kind != b"IHDR" or length != 13:
++                raise InvalidImage("missing PNG header")
++            dimensions = struct.unpack(">II", payload[:8])
++        elif kind == b"IHDR":
++            raise InvalidImage("duplicate PNG header")
++        elif kind == b"IDAT":
++            has_data = True
++        elif kind == b"IEND":
++            if length != 0 or not has_data or end != len(data):
++                raise InvalidImage("invalid PNG end")
++            return dimensions
++        pos = end
++    raise InvalidImage("incomplete PNG")
++
++
++def _jpeg_dimensions(data: bytes) -> tuple[int, int]:
++    pos = 2
++    sof = {0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF}
++    dimensions = None
++    while pos + 3 < len(data):
++        if data[pos] != 0xFF:
++            raise InvalidImage("invalid JPEG marker")
++        while pos < len(data) and data[pos] == 0xFF:
++            pos += 1
++        if pos >= len(data):
++            break
++        marker = data[pos]
++        pos += 1
++        if marker == 0xDA:
++            if dimensions is None or pos + 2 > len(data):
++                break
++            scan_header_length = int.from_bytes(data[pos:pos + 2], "big")
++            scan_start = pos + scan_header_length
++            if scan_header_length < 2 or scan_start >= len(data) or data.find(b"\xff\xd9", scan_start) < 0:
++                raise InvalidImage("incomplete JPEG scan")
++            return dimensions
++        if marker in {0x01, 0xD8, *range(0xD0, 0xD8)}:
++            continue
++        if pos + 2 > len(data):
++            break
++        length = int.from_bytes(data[pos:pos + 2], "big")
++        if length < 2 or pos + length > len(data):
++            raise InvalidImage("invalid JPEG segment")
++        if marker in sof:
++            if length < 8:
++                raise InvalidImage("invalid JPEG frame")
++            height, width = struct.unpack(">HH", data[pos + 3:pos + 7])
++            frame_dimensions = (width, height)
++            if dimensions is not None and dimensions != frame_dimensions:
++                raise InvalidImage("conflicting JPEG frame dimensions")
++            dimensions = frame_dimensions
++        pos += length
++    raise InvalidImage("missing JPEG frame")
++
++
++def _webp_dimensions(data: bytes) -> tuple[int, int]:
++    if len(data) < 20 or int.from_bytes(data[4:8], "little") + 8 != len(data):
++        raise InvalidImage("incomplete WebP")
++    pos = 12
++    dimensions = None
++    frame_dimensions = None
++    has_image = False
++    while pos + 8 <= len(data):
++        kind = data[pos:pos + 4]
++        size = int.from_bytes(data[pos + 4:pos + 8], "little")
++        end = pos + 8 + size
++        if end > len(data) or end + (size & 1) > len(data):
++            raise InvalidImage("truncated WebP chunk")
++        chunk = data[pos + 8:end]
++        if kind == b"VP8X" and len(chunk) >= 10:
++            if chunk[0] & 0x02:
++                raise InvalidImage("animated WebP is not supported")
++            dimensions = (1 + int.from_bytes(chunk[4:7], "little"), 1 + int.from_bytes(chunk[7:10], "little"))
++        elif kind == b"VP8 " and len(chunk) >= 10 and chunk[3:6] == b"\x9d\x01\x2a":
++            if has_image:
++                raise InvalidImage("multiple WebP image frames are not supported")
++            has_image = True
++            frame_dimensions = (int.from_bytes(chunk[6:8], "little") & 0x3FFF, int.from_bytes(chunk[8:10], "little") & 0x3FFF)
++        elif kind == b"VP8L" and len(chunk) >= 5 and chunk[0] == 0x2F:
++            if has_image:
++                raise InvalidImage("multiple WebP image frames are not supported")
++            has_image = True
++            bits = int.from_bytes(chunk[1:5], "little")
++            frame_dimensions = ((bits & 0x3FFF) + 1, ((bits >> 14) & 0x3FFF) + 1)
++        elif kind == b"ANMF":
++            raise InvalidImage("animated WebP is not supported")
++        pos = end + (size & 1)
++    if dimensions is None:
++        dimensions = frame_dimensions
++    if pos != len(data) or not dimensions or not has_image or dimensions != frame_dimensions:
++        raise InvalidImage("missing WebP image")
++    return dimensions
+diff --git a/backend/app/tests/fixtures/images/tiny.jpg b/backend/app/tests/fixtures/images/tiny.jpg
+new file mode 100644
+index 0000000000000000000000000000000000000000..6fb9aed7c88160a18eb8cb0b412f80a7a47ffced
+GIT binary patch
+literal 633
+zcmex=<NpH&0WUXCHwH#V1_nkTWcYuZ!I^=Bjg6g+m4ls~os*M;i${c)hnt&6Qb?Fz
+zL{>^(PF6}rMnOeST|r4lSw=>~TvNxu(8R<<Uft5x!pKI?*u)5A2qPyaCl5D|1TU|I
+zk)n*E5y{~H0R}-124)5(W=16jCP7AKLB{__803NOWMu>c1}I=;VrF4wW9Q)H;sz?%
+zD!{<R$jr>d!pzFb!U9xX3zTPI5o8roG<0MW4oqZMDikqloVbuf*=gfJ(V&YTRE(2~
+znmD<{#3dx9RMpfqG__1j&CD$<t(;w4-P}Dqy@EqR!@?sXqmoln)6z3Cvx-Yf%gQS%
+ztD0L{+uA!iyCzMZGIiSY88c@sTD)ZGvgIpQuG+MD%hqk%ckJAC=<t!F$Bv&kdFs;T
+zD_5^wzj5={!$*&wJbm{3#miS8KYjl4_1pI!KYxMz#mK-6@fMJTcnr;7f<S*Uv9K_+
+zu!H=?$W#u*%z`YeiiT`Lj)Clng~CckjT|CQ6Blkg$f;}`^g%SK=pvVxipfLOk07ss
+oeMX$en#l4Q++zrT-D2QjW&}navmk>#!=o3Ax_(anF8u!{0FnsMm;e9(
+
+literal 0
+HcmV?d00001
+
+diff --git a/backend/app/tests/fixtures/images/tiny.png b/backend/app/tests/fixtures/images/tiny.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..444b844660d281d69f7d4c21630075e1e2d5500f
+GIT binary patch
+literal 74
+zcmeAS@N?(olHy`uVBq!ia0vp^OhC-c0V2&hJg)&MK~ERQkcv6Uf6g;7`6LLrF*1la
+WFtP?*)w2LfGI+ZBxvX<aXaWG`+z%Z9
+
+literal 0
+HcmV?d00001
+
+diff --git a/backend/app/tests/fixtures/images/tiny.webp b/backend/app/tests/fixtures/images/tiny.webp
+new file mode 100644
+index 0000000000000000000000000000000000000000..36aaab47280ff03a0952b2023349fdd2b9ac09d9
+GIT binary patch
+literal 68
+zcmWIYbaS&|U|<M$bqWXzuuw1nvM(?)%w^PKVqj)qbWl@Wz*Mq}@dpF*28Ms1Uf2J*
+YA$qp>{rCTu9{kngzx3e$r3nlS0E^)n%>V!Z
+
+literal 0
+HcmV?d00001
+
+diff --git a/backend/app/tests/test_bounded_body.py b/backend/app/tests/test_bounded_body.py
+new file mode 100644
+index 0000000..37f0282
+--- /dev/null
++++ b/backend/app/tests/test_bounded_body.py
+@@ -0,0 +1,30 @@
++import asyncio
++
++import pytest
++from fastapi import HTTPException
++
++from app.api.bounded_body import read_bounded_body
++
++
++class ChunkedRequest:
++    def __init__(self, chunks):
++        self.chunks = chunks
++        self.consumed = 0
++
++    async def stream(self):
++        for chunk in self.chunks:
++            self.consumed += 1
++            yield chunk
++
++
++def test_body_limit_stops_reading_when_stream_exceeds_limit():
++    request = ChunkedRequest([b"1234", b"5678", b"must-not-be-read"])
++    with pytest.raises(HTTPException) as exc:
++        asyncio.run(read_bounded_body(request, 7))
++    assert exc.value.status_code == 413
++    assert request.consumed == 2
++
++
++def test_body_accepts_chunked_data_at_exact_limit():
++    request = ChunkedRequest([b"123", b"4567"])
++    assert asyncio.run(read_bounded_body(request, 7)) == b"1234567"
+diff --git a/backend/app/tests/test_capacity.py b/backend/app/tests/test_capacity.py
+new file mode 100644
+index 0000000..0a9f43c
+--- /dev/null
++++ b/backend/app/tests/test_capacity.py
+@@ -0,0 +1,14 @@
++from app.services.capacity import CapacityLimiter
++
++
++def test_capacity_rejects_overload_and_releases_once():
++    limiter = CapacityLimiter({"vision": 1})
++    first = limiter.try_acquire("vision")
++    assert first is not None
++    assert limiter.try_acquire("vision") is None
++    first.release()
++    first.release()
++    second = limiter.try_acquire("vision")
++    assert second is not None
++    assert limiter.try_acquire("vision") is None
++    second.release()
+diff --git a/backend/app/tests/test_chat_stream_api.py b/backend/app/tests/test_chat_stream_api.py
+index 2894fa7..5a39e82 100644
+--- a/backend/app/tests/test_chat_stream_api.py
++++ b/backend/app/tests/test_chat_stream_api.py
+@@ -1,12 +1,14 @@
+ from __future__ import annotations
+
+-from fastapi import FastAPI
++import asyncio
++from fastapi import FastAPI, Request
+ from fastapi.testclient import TestClient
+
+ from app.api import chat as chat_api
+ from app.core.config import Settings
+ from app.core.deps import get_app_settings, get_db_session
+ from app.services.qa.stream_events import StreamEvent
++from app.services.capacity import CapacityLimiter
+
+
+ class _FakePipeline:
+@@ -58,3 +60,87 @@ def test_stream_converts_pipeline_failure_to_sse_error(monkeypatch) -> None:
+     assert "event: status" in response.text
+     assert "event: error" in response.text
+     assert "导览服务处理回答时发生错误" in response.text
++
++
++def test_stream_does_not_print_private_user_question(monkeypatch, capsys) -> None:
++    response = _build_client(monkeypatch).post(
++        "/api/chat/stream", json={"query": "私密问题甲乙", "session_id": "private-session", "text_only": True}
++    )
++    assert response.status_code == 200
++    assert "私密问题甲乙" not in capsys.readouterr().out
++
++
++def test_heartbeat_keeps_stream_open_without_cancelling_slow_generator() -> None:
++    async def run():
++        async def slow():
++            yield b"first\n\n"
++            await asyncio.sleep(0.04)
++            yield b"last\n\n"
++
++        return [chunk async for chunk in chat_api.with_sse_heartbeat(slow(), interval=0.01)]
++
++    chunks = asyncio.run(run())
++    assert chunks[0] == b"first\n\n"
++    assert chunks[-1] == b"last\n\n"
++    assert any(chunk.startswith(b":") for chunk in chunks[1:-1])
++
++
++def test_heartbeat_closes_pending_producer_on_client_stop() -> None:
++    async def run():
++        cancelled = asyncio.Event()
++
++        async def producer():
++            try:
++                yield b"first\n\n"
++                await asyncio.Event().wait()
++            finally:
++                cancelled.set()
++
++        stream = chat_api.with_sse_heartbeat(producer(), interval=0.01)
++        assert await anext(stream) == b"first\n\n"
++        assert (await anext(stream)).startswith(b":")
++        await stream.aclose()
++        assert cancelled.is_set()
++
++    asyncio.run(run())
++
++
++def test_chat_rejects_over_capacity_before_starting_stream(monkeypatch) -> None:
++    client = _build_client(monkeypatch)
++    limiter = CapacityLimiter({"chat": 1})
++    lease = limiter.try_acquire("chat")
++    client.app.state.guide_capacity = limiter
++    try:
++        response = client.post("/api/chat/stream", json={"query": "问题", "session_id": "s"})
++        assert response.status_code == 429
++        assert "服务繁忙" in response.json()["detail"]
++    finally:
++        lease.release()
++
++
++def test_chat_capacity_is_released_after_success_and_failure(monkeypatch) -> None:
++    client = _build_client(monkeypatch, fail_build=True)
++    client.app.state.guide_capacity = CapacityLimiter({"chat": 1})
++    payload = {"query": "问题", "session_id": "s"}
++    first = client.post("/api/chat/stream", json=payload)
++    second = client.post("/api/chat/stream", json=payload)
++    assert first.status_code == second.status_code == 200
++    assert "event: error" in first.text
++
++
++def test_chat_capacity_released_when_client_closes_stream() -> None:
++    async def scenario():
++        app = FastAPI()
++        limiter = CapacityLimiter({"chat": 1})
++        app.state.guide_capacity = limiter
++        request = Request({"type": "http", "app": app, "headers": []})
++        response = await chat_api.stream_chat(
++            chat_api.ChatRequest(query="问题", session_id="s"), request, object(), Settings(),
++        )
++        assert limiter.try_acquire("chat") is None
++        await anext(response.body_iterator)
++        await response.body_iterator.aclose()
++        lease = limiter.try_acquire("chat")
++        assert lease is not None
++        lease.release()
++    asyncio.run(scenario())
+diff --git a/backend/app/tests/test_pipeline.py b/backend/app/tests/test_pipeline.py
+index 6c7182f..535c287 100644
+--- a/backend/app/tests/test_pipeline.py
++++ b/backend/app/tests/test_pipeline.py
+@@ -554,7 +554,22 @@ def test_streaming_word_timestamps_event_carries_raw_word_timeline() -> None:
+     ]
+
+
+-def test_pipeline_records_blind_spot_only_when_rag_has_no_evidence() -> None:
++def test_streamed_audio_uses_the_provider_sample_rate() -> None:
++    pipeline = QAPipeline(
++        query_rewriter=QueryRewriter(), faq_matcher=FAQMatcher(),
++        qa_cache=QACache(DummyCacheRepo(), ttl_seconds=60), rag_service=DummyRAGService(),
++        llm_service=DummyLLMService(), tts_service=StubTTSService(), avatar_service=StubAvatarService(),
++        chat_log_repository=DummyChatLogRepo(), guided_selector=DummyGuidedSelector(),
++        followup_suggestions=FollowUpSuggestionService(),
++    )
++    event = StreamingTTSEvent(type="audio_chunk", data=b"\0\0", sample_rate=16000)
++    chunk = pipeline._handle_streaming_tts_event(event)[0]
++    assert chunk.data["sample_rate"] == 16000
++
++
++def test_pipeline_records_blind_spot_only_when_rag_has_no_evidence(caplog) -> None:
++    import logging
++    caplog.set_level(logging.INFO, logger="app.services.qa.pipeline")
+     tracker = RecordingBlindSpotTracker()
+     pipeline = QAPipeline(
+         query_rewriter=QueryRewriter(),
+@@ -588,6 +603,7 @@ def test_pipeline_records_blind_spot_only_when_rag_has_no_evidence() -> None:
+         }
+     ]
+     assert events[-1].type == "done"
++    assert "卫生间在哪里" not in caplog.text
+
+
+ def test_pipeline_does_not_cache_provider_fallback_answer() -> None:
+@@ -619,6 +635,138 @@ def test_pipeline_does_not_cache_provider_fallback_answer() -> None:
+     assert events[-1].type == "done"
+
+
++def test_partial_model_interruption_marks_answer_incomplete() -> None:
++    from app.services.llm.types import LLMStreamEvent
++
++    class InterruptedLLM:
++        async def stream_generate(self, *args, **kwargs):
++            yield LLMStreamEvent(type="content", text="尚未讲完")
++            yield LLMStreamEvent(type="finish", finish_reason="interrupted_network")
++
++    pipeline = QAPipeline(
++        query_rewriter=QueryRewriter(), faq_matcher=FAQMatcher(),
++        qa_cache=QACache(DummyCacheRepo(), ttl_seconds=60),
++        rag_service=RecordingRAGService(), llm_service=InterruptedLLM(),
++        tts_service=StubTTSService(), avatar_service=StubAvatarService(),
++        chat_log_repository=DummyChatLogRepo(), guided_selector=DummyGuidedSelector(),
++        followup_suggestions=FollowUpSuggestionService(),
++    )
++
++    async def run():
++        return [event async for event in pipeline.stream_chat(
++            ChatRequest(query="讲解景点", session_id="interrupted", text_only=True)
++        )]
++
++    events = asyncio.run(run())
++    final_text = next(event for event in events if event.type == "text")
++    assert final_text.data["text"] == "尚未讲完"
++    assert final_text.data["is_complete"] is False
++    assert events[-1].type == "done"
++    assert events[-1].data["completion"] == "incomplete"
++
++
++def test_http_tts_preserves_sentence_order_when_later_synthesis_finishes_first() -> None:
++    from app.services.tts.base import TTSAudio
++
++    class SentencesLLM:
++        async def stream_generate(self, *args, **kwargs):
++            yield "第一句话。"
++            await asyncio.sleep(0.002)
++            yield "第二句话。"
++
++    class OutOfOrderTTS:
++        async def synthesize(self, text):
++            await asyncio.sleep(0.02 if text.startswith("第一") else 0.001)
++            return TTSAudio(base64_audio="AA==", duration_ms=100, provider="fake")
++
++    pipeline = QAPipeline(
++        query_rewriter=QueryRewriter(), faq_matcher=FAQMatcher(),
++        qa_cache=QACache(DummyCacheRepo(), ttl_seconds=60), rag_service=RecordingRAGService(),
++        llm_service=SentencesLLM(), tts_service=OutOfOrderTTS(), avatar_service=StubAvatarService(),
++        chat_log_repository=DummyChatLogRepo(), guided_selector=DummyGuidedSelector(),
++        followup_suggestions=FollowUpSuggestionService(),
++    )
++
++    async def run():
++        return [event async for event in pipeline.stream_chat(
++            ChatRequest(query="讲解景点", session_id="ordered-audio", text_only=False)
++        )]
++
++    events = asyncio.run(run())
++    assert [event.data["text"] for event in events if event.type == "audio"] == ["第一句话。", "第二句话。"]
++
++
++def test_stopping_generation_cancels_pending_http_tts() -> None:
++    async def run():
++        started = asyncio.Event()
++        cancelled = asyncio.Event()
++
++        class WaitingLLM:
++            async def stream_generate(self, *args, **kwargs):
++                yield "第一句话。"
++                await asyncio.Event().wait()
++
++        class WaitingTTS:
++            async def synthesize(self, text):
++                started.set()
++                try:
++                    await asyncio.Event().wait()
++                except asyncio.CancelledError:
++                    cancelled.set()
++                    raise
++
++        pipeline = QAPipeline(
++            query_rewriter=QueryRewriter(), faq_matcher=FAQMatcher(),
++            qa_cache=QACache(DummyCacheRepo(), ttl_seconds=60), rag_service=RecordingRAGService(),
++            llm_service=WaitingLLM(), tts_service=WaitingTTS(), avatar_service=StubAvatarService(),
++            chat_log_repository=DummyChatLogRepo(), guided_selector=DummyGuidedSelector(),
++            followup_suggestions=FollowUpSuggestionService(),
++        )
++
++        async def consume():
++            async for _ in pipeline.stream_chat(ChatRequest(query="讲解景点", session_id="stop-tts", text_only=False)):
++                pass
++
++        consumer = asyncio.create_task(consume())
++        await asyncio.wait_for(started.wait(), timeout=1)
++        consumer.cancel()
++        try:
++            await consumer
++        except asyncio.CancelledError:
++            pass
++        assert cancelled.is_set()
++
++    asyncio.run(run())
++
++
++def test_first_http_tts_audio_is_emitted_while_llm_waits_for_next_sentence() -> None:
++    async def run():
++        release_llm = asyncio.Event()
++
++        class PausedLLM:
++            async def stream_generate(self, *args, **kwargs):
++                yield "第一句话。"
++                await release_llm.wait()
++                yield "第二句话。"
++
++        pipeline = QAPipeline(
++            query_rewriter=QueryRewriter(), faq_matcher=FAQMatcher(),
++            qa_cache=QACache(DummyCacheRepo(), ttl_seconds=60), rag_service=RecordingRAGService(),
++            llm_service=PausedLLM(), tts_service=StubTTSService(), avatar_service=StubAvatarService(),
++            chat_log_repository=DummyChatLogRepo(), guided_selector=DummyGuidedSelector(),
++            followup_suggestions=FollowUpSuggestionService(),
++        )
++        async def first_audio():
++            async for event in pipeline.stream_chat(ChatRequest(query="讲解景点", session_id="early-audio", text_only=False)):
++                if event.type == "audio":
++                    release_llm.set()
++                    return event.data["text"]
++
++        assert await asyncio.wait_for(first_audio(), timeout=0.2) == "第一句话。"
++
++    asyncio.run(run())
++
++
+ def test_direct_answer_appends_inline_citation_when_sources_exist() -> None:
+     answer = QAPipeline._ensure_inline_citations(
+         "灵山大佛高88米。",
+@@ -782,3 +930,27 @@ def test_faq_answer_survives_llm_outage_for_non_default_audience() -> None:
+     assert events[-1].data["degraded"] is True
+     assert events[-1].data["hit_level"] == "faq_exact_styled_llm_fallback"
+     assert cache_repository.set_keys == [], "未按受众改写的答案不得写入受众专属缓存"
++
++
++def test_interrupted_faq_restyle_never_speaks_discarded_partial_answer() -> None:
++    from app.services.llm.types import LLMStreamEvent
++
++    class InterruptedFAQ:
++        async def stream_generate(self, *args, **kwargs):
++            yield LLMStreamEvent(type="content", text="景区晚上十点开门。")
++            await asyncio.sleep(0.01)
++            yield LLMStreamEvent(type="finish", finish_reason="interrupted_network")
++
++    pipeline = _build_test_pipeline(
++        faq_matcher=_faq_matcher(), llm_service=InterruptedFAQ(),
++        streaming_tts_service=FakeStreamingTTSService(),
++    )
++    events = _run_turn(pipeline, query="几点开门", audience="child", text_only=False)
++    final_text = next(event.data["text"] for event in events if event.type == "text")
++    spoken = [event.data["text"] for event in events if event.type == "audio"]
++    assert "8:00" in final_text
++    assert spoken == [final_text]
++    assert not any(event.type == "text_chunk" and "晚上十点" in event.data.get("token", "") for event in events)
++    assert not any(event.type == "audio_chunk" for event in events)
++    assert next(i for i, event in enumerate(events) if event.type == "text") < next(i for i, event in enumerate(events) if event.type == "audio")
++    assert events[-1].data["completion"] == "complete"
+diff --git a/backend/app/tests/test_stream_knowledge_integration.py b/backend/app/tests/test_stream_knowledge_integration.py
+new file mode 100644
+index 0000000..d0c3912
+--- /dev/null
++++ b/backend/app/tests/test_stream_knowledge_integration.py
+@@ -0,0 +1,80 @@
++"""Cross-check K01 epoch visibility once its branch is present."""
++import asyncio
++import inspect
++
++import pytest
++
++from app.schemas.chat import ChatRequest
++from app.services.tts.base import TTSAudio
++from app.services.qa.pipeline import QAPipeline
++from app.tests.test_pipeline import _build_test_pipeline
++
++
++def _require_visibility_support():
++    if "visibility_service" not in inspect.signature(QAPipeline).parameters:
++        pytest.skip("K01 visibility implementation is not present on this checkout")
++
++
++def test_epoch_change_cancels_pending_http_speech():
++    _require_visibility_support()
++
++    async def scenario():
++        started = asyncio.Event()
++        canceled = asyncio.Event()
++        state = {"epoch": 1}
++
++        class Visibility:
++            async def read_epoch(self):
++                return state["epoch"]
++
++        class LLM:
++            async def stream_generate(self, *args, **kwargs):
++                yield "第一句。"
++                await started.wait()
++                state["epoch"] = 2
++                yield "不能继续。"
++
++        class TTS:
++            async def synthesize(self, text):
++                started.set()
++                try:
++                    await asyncio.Event().wait()
++                except asyncio.CancelledError:
++                    canceled.set()
++                    raise
++
++        pipeline = _build_test_pipeline(visibility_service=Visibility(), llm_service=LLM(), tts_service=TTS())
++        events = [event async for event in pipeline.stream_chat(ChatRequest(query="讲解景点", session_id="epoch-change", text_only=False))]
++        assert canceled.is_set()
++        assert events[-1].type == "error"
++        assert not any(event.type == "audio" for event in events)
++
++    asyncio.run(scenario())
++
++
++def test_epoch_change_during_final_audio_does_not_emit_stale_speech():
++    _require_visibility_support()
++
++    async def scenario():
++        state = {"epoch": 1}
++
++        class Visibility:
++            async def read_epoch(self):
++                return state["epoch"]
++
++        class LLM:
++            async def stream_generate(self, *args, **kwargs):
++                yield "第一句。"
++
++        class TTS:
++            async def synthesize(self, text):
++                state["epoch"] = 2
++                await asyncio.sleep(0)
++                return TTSAudio(base64_audio="AA==", duration_ms=100, provider="fake")
++
++        pipeline = _build_test_pipeline(visibility_service=Visibility(), llm_service=LLM(), tts_service=TTS())
++        events = [event async for event in pipeline.stream_chat(ChatRequest(query="讲解景点", session_id="epoch-audio", text_only=False))]
++        assert events[-1].type == "error"
++        assert not any(event.type == "audio" for event in events)
++
++    asyncio.run(scenario())
+diff --git a/backend/app/tests/test_tts_factory.py b/backend/app/tests/test_tts_factory.py
+index 264803f..8c66e7c 100644
+--- a/backend/app/tests/test_tts_factory.py
++++ b/backend/app/tests/test_tts_factory.py
+@@ -86,5 +86,10 @@ def test_build_streaming_tts_service_volcengine() -> None:
+     assert session is not None
+
+
++def test_streaming_tts_uses_pcm_even_when_nonstreaming_format_is_mp3() -> None:
++    service = factory.build_streaming_tts_service(_settings(volcengine_tts_format="mp3"))
++    assert service.create_session()._format == "pcm"
++
++
+ def test_build_streaming_tts_service_unconfigured_returns_none() -> None:
+     assert factory.build_streaming_tts_service(_settings(volcengine_tts_api_key="")) is None
+diff --git a/backend/app/tests/test_vision_api.py b/backend/app/tests/test_vision_api.py
+index ae2dd09..69ebb7d 100644
+--- a/backend/app/tests/test_vision_api.py
++++ b/backend/app/tests/test_vision_api.py
+@@ -1,13 +1,20 @@
+ from __future__ import annotations
+
+ import asyncio
++from pathlib import Path
+
+ from fastapi.testclient import TestClient
+
+ from app.api.vision import get_vision_service
++from app.core.config import Settings
++from app.core.deps import get_app_settings
+ from app.services.vision import BaseVisionService, VisionResult
++from app.services.capacity import CapacityLimiter
+ from main import app
+
++_IMAGES = Path(__file__).parent / "fixtures" / "images"
++
++
+
+ class FakeVisionService(BaseVisionService):
+     async def analyze(
+@@ -18,7 +25,7 @@ class FakeVisionService(BaseVisionService):
+         mime_type: str | None = None,
+         prompt: str | None = None,
+     ) -> VisionResult:
+-        assert content == b"fake-jpeg-bytes"
++        assert content == (_IMAGES / "tiny.jpg").read_bytes()
+         assert filename == "lingshan.jpg"
+         assert mime_type == "image/jpeg"
+         assert prompt == "这张图是什么"
+@@ -36,9 +43,12 @@ class FakeVisionService(BaseVisionService):
+         return None
+
+
+-def _post_vision(content=b"test-image", content_type="image/jpeg", params=None):
++def _post_vision(content=None, content_type="image/jpeg", params=None):
+     """helper to reduce boilerplate in MIME/size tests"""
+     headers = {}
++    if content is None:
++        name = {"image/jpeg": "tiny.jpg", "image/png": "tiny.png", "image/webp": "tiny.webp"}.get((content_type or "").split(";")[0], "tiny.jpg")
++        content = (_IMAGES / name).read_bytes()
+     if content_type is not None:
+         headers["Content-Type"] = content_type
+     return TestClient(app).post(
+@@ -55,7 +65,7 @@ def test_vision_analyze_api_returns_retrieval_query() -> None:
+         response = TestClient(app).post(
+             "/api/vision/analyze",
+             params={"question": "这张图是什么", "filename": "lingshan.jpg"},
+-            content=b"fake-jpeg-bytes",
++            content=(_IMAGES / "tiny.jpg").read_bytes(),
+             headers={"Content-Type": "image/jpeg"},
+         )
+     finally:
+@@ -130,3 +140,77 @@ def test_vision_rejects_over_5mb() -> None:
+     big = b"x" * (5 * 1024 * 1024 + 1)
+     response = _post_vision(content=big, content_type="image/jpeg")
+     assert response.status_code == 413
++
++
++def test_vision_rejects_mime_that_does_not_match_actual_image() -> None:
++    response = _post_vision(content=(_IMAGES / "tiny.png").read_bytes(), content_type="image/jpeg")
++    assert response.status_code == 415
++
++
++def test_vision_rejects_a_truncated_image() -> None:
++    response = _post_vision(content=(_IMAGES / "tiny.png").read_bytes()[:25], content_type="image/png")
++    assert response.status_code == 400
++
++
++def test_vision_rejects_image_exceeding_pixel_limit() -> None:
++    app.dependency_overrides[get_app_settings] = lambda: Settings(vision_max_image_pixels=5)
++    try:
++        response = _post_vision(content=(_IMAGES / "tiny.png").read_bytes(), content_type="image/png")
++    finally:
++        app.dependency_overrides.clear()
++    assert response.status_code == 413
++
++
++def test_webp_rejects_canvas_that_lies_about_encoded_dimensions() -> None:
++    original = (_IMAGES / "tiny.webp").read_bytes()
++    # Extended 1x1 canvas wrapping a real 2x3 VP8 frame.
++    vp8x = b"VP8X" + (10).to_bytes(4, "little") + b"\0" * 10
++    chunks = vp8x + original[12:]
++    forged = b"RIFF" + (len(chunks) + 4).to_bytes(4, "little") + b"WEBP" + chunks
++    assert _post_vision(content=forged, content_type="image/webp").status_code == 400
++
++
++def test_webp_rejects_a_second_encoded_image_frame() -> None:
++    original = (_IMAGES / "tiny.webp").read_bytes()
++    chunk = original[12:]
++    # Reuse the real image chunk with a corrected RIFF length.
++    chunks = chunk + chunk
++    forged = b"RIFF" + (len(chunks) + 4).to_bytes(4, "little") + b"WEBP" + chunks
++    assert _post_vision(content=forged, content_type="image/webp").status_code == 400
++
++
++def test_jpeg_rejects_conflicting_frame_dimensions() -> None:
++    original = (_IMAGES / "tiny.jpg").read_bytes()
++    # The fixture has one baseline SOF segment at byte 158. Add a second
++    # frame declaration with a different width before the first scan.
++    second_sof = bytearray(original[158:177])
++    second_sof[7] ^= 1
++    forged = original[:177] + bytes(second_sof) + original[177:]
++    assert _post_vision(content=forged, content_type="image/jpeg").status_code == 400
++
++
++def test_jpeg_with_trailing_camera_metadata_is_accepted() -> None:
++    content = (_IMAGES / "tiny.jpg").read_bytes() + b"camera extra metadata"
++    assert _post_vision(content=content, content_type="image/jpeg").status_code == 200
++
++
++def test_animated_webp_has_a_clear_unsupported_format_error() -> None:
++    original = (_IMAGES / "tiny.webp").read_bytes()
++    vp8x = b"VP8X" + (10).to_bytes(4, "little") + b"\x02" + b"\0" * 9
++    chunks = vp8x + original[12:]
++    content = b"RIFF" + (len(chunks) + 4).to_bytes(4, "little") + b"WEBP" + chunks
++    response = _post_vision(content=content, content_type="image/webp")
++    assert response.status_code == 415
++    assert "动态" in response.json()["detail"]
++
++
++def test_vision_over_capacity_returns_clear_busy_status() -> None:
++    limiter = CapacityLimiter({"vision": 1})
++    lease = limiter.try_acquire("vision")
++    app.state.guide_capacity = limiter
++    try:
++        response = _post_vision(content=(_IMAGES / "tiny.png").read_bytes(), content_type="image/png")
++        assert response.status_code == 429
++    finally:
++        lease.release()
++        del app.state.guide_capacity
+diff --git a/backend/app/tests/test_voice_api.py b/backend/app/tests/test_voice_api.py
+index ffaffa1..608262d 100644
+--- a/backend/app/tests/test_voice_api.py
++++ b/backend/app/tests/test_voice_api.py
+@@ -1,5 +1,7 @@
+ from __future__ import annotations
+
++import io
++import wave
+ from fastapi import FastAPI
+ from fastapi.testclient import TestClient
+
+@@ -66,3 +68,37 @@ def test_bailian_without_public_audio_base_returns_clear_degradation() -> None:
+     assert payload["confidence_source"] == "unavailable"
+     assert payload["needs_confirmation"] is True
+     assert "公网访问" in payload["error_message"]
++
++
++def _wav(seconds: float) -> bytes:
++    data = io.BytesIO()
++    with wave.open(data, "wb") as audio:
++        audio.setnchannels(1)
++        audio.setsampwidth(2)
++        audio.setframerate(8000)
++        audio.writeframes(b"\0\0" * int(8000 * seconds))
++    return data.getvalue()
++
++
++def test_audio_rejects_invalid_wav_before_calling_provider() -> None:
++    client = build_client(Settings(asr_provider="stub"))
++    response = client.post("/api/asr/transcribe", content=b"not a wav", headers={"Content-Type": "audio/wav"})
++    assert response.status_code == 400
++
++
++def test_audio_enforces_wav_duration_limit() -> None:
++    client = build_client(Settings(asr_provider="stub", asr_max_audio_seconds=1))
++    response = client.post("/api/asr/transcribe", content=_wav(2), headers={"Content-Type": "audio/wav"})
++    assert response.status_code == 413
++
++
++def test_audio_accepts_real_wav_within_duration_limit() -> None:
++    client = build_client(Settings(asr_provider="stub", asr_max_audio_seconds=1))
++    response = client.post("/api/asr/transcribe", content=_wav(0.5), headers={"Content-Type": "audio/wav"})
++    assert response.status_code == 200
++
++
++def test_wav_cannot_bypass_duration_by_claiming_webm() -> None:
++    client = build_client(Settings(asr_provider="stub", asr_max_audio_seconds=1))
++    response = client.post("/api/asr/transcribe", content=_wav(2), headers={"Content-Type": "audio/webm"})
++    assert response.status_code in {413, 415}
+diff --git a/frontend/package.json b/frontend/package.json
+index 0f9692a..0f19f54 100644
+--- a/frontend/package.json
++++ b/frontend/package.json
+@@ -6,6 +6,7 @@
+   "scripts": {
+     "dev": "vite",
+     "build": "vite build",
++    "test": "node --test",
+     "preview": "vite preview"
+   },
+   "dependencies": {
+diff --git a/frontend/src/api/knowledgePublications.js b/frontend/src/api/knowledgePublications.js
+index 426401b..1808168 100644
+--- a/frontend/src/api/knowledgePublications.js
++++ b/frontend/src/api/knowledgePublications.js
+@@ -1,8 +1,8 @@
+ import http from "./http";
+
+-export async function createKnowledgePublication(items) {
++export async function createKnowledgePublication(items, idempotencyKey = crypto.randomUUID()) {
+   const { data } = await http.post("/knowledge-publications/", {
+-    idempotency_key: crypto.randomUUID(),
++    idempotency_key: idempotencyKey,
+     items,
+   });
+   return data;
+diff --git a/frontend/src/api/narration.js b/frontend/src/api/narration.js
+index b915479..3d9cc6a 100644
+--- a/frontend/src/api/narration.js
++++ b/frontend/src/api/narration.js
+@@ -7,9 +7,9 @@ import http from "./http";
+  * @param {string} [ttsVoice] 可选音色
+  * @returns {Promise<{attraction:string,text:string,base64_audio:string,duration_ms:number,provider:string,cached:boolean,available:boolean,reason:string}>}
+  */
+-export async function fetchSpotNarration(attraction, ttsVoice) {
++export async function fetchSpotNarration(attraction, ttsVoice, options = {}) {
+   const payload = { attraction };
+   if (ttsVoice) payload.tts_voice = ttsVoice;
+-  const { data } = await http.post("/guide/narration", payload, { timeout: 30000 });
++  const { data } = await http.post("/guide/narration", payload, { timeout: 30000, signal: options.signal });
+   return data;
+ }
+diff --git a/frontend/src/api/vision.js b/frontend/src/api/vision.js
+index 62c1f88..2e2f24c 100644
+--- a/frontend/src/api/vision.js
++++ b/frontend/src/api/vision.js
+@@ -1,6 +1,6 @@
+ import http from "./http";
+
+-export async function analyzeImage(file, question = "这张图片可能对应景区哪个位置？") {
++export async function analyzeImage(file, question = "这张图片可能对应景区哪个位置？", options = {}) {
+   const response = await http.post("/vision/analyze", file, {
+     params: {
+       question,
+@@ -10,6 +10,19 @@ export async function analyzeImage(file, question = "这张图片可能对应景
+       "Content-Type": file.type || "application/octet-stream",
+     },
+     timeout: 120000,
++    signal: options.signal,
+   });
+   return response.data;
+ }
++
++export function getVisionErrorMessage(error) {
++  const status = error?.response?.status;
++  const detail = error?.response?.data?.detail;
++  if (status === 429) return "图片识别服务繁忙，请稍后重试。";
++  if (status === 413) return "图片过大，请压缩后重新选择。";
++  if (status === 415 && typeof detail === "string" && detail.includes("动态")) return "暂不支持动态 WebP，请选择静态图片。";
++  if (status === 415) return "图片格式不受支持，请选择 JPEG、PNG 或 WebP。";
++  if (status === 400) return "图片文件损坏或不完整，请重新选择。";
++  if (["ECONNABORTED", "ETIMEDOUT"].includes(error?.code)) return "识别等待超时，请重试。";
++  return "图片识别暂时不可用，请检查网络后重试。";
++}
+diff --git a/frontend/src/api/voice.js b/frontend/src/api/voice.js
+index d0f09dc..600633c 100644
+--- a/frontend/src/api/voice.js
++++ b/frontend/src/api/voice.js
+@@ -1,12 +1,13 @@
+ import http from "./http";
+
+-export async function transcribeAudio(audioBlob) {
++export async function transcribeAudio(audioBlob, options = {}) {
+   const response = await http.post("/asr/transcribe", audioBlob, {
+     headers: {
+       "Content-Type": audioBlob.type || "audio/webm",
+     },
+     // Local SenseVoice can take longer on its first model load.
+     timeout: 45000,
++    signal: options.signal,
+   });
+
+   return response.data;
+@@ -24,7 +25,10 @@ export function getTranscriptionErrorMessage(error) {
+
+   const status = error.response.status;
+   const detail = error.response.data?.detail || error.response.data?.message;
+-  if (status === 413) return "录音文件过大，请缩短录音后重试。";
++  if (status === 429) return "语音识别服务繁忙，请稍后重试或改用文字输入。";
++  if (status === 413) return typeof detail === "string" && detail.includes("时间")
++    ? "录音时间过长，请缩短录音后重试。"
++    : "录音文件过大，请缩短录音后重试。";
+   if (status === 415) return "当前录音格式不受支持，请更换浏览器后重试。";
+   if (status >= 500) return "语音识别服务暂时不可用，请稍后重试。";
+   if (typeof detail === "string" && detail.trim()) return detail;
+diff --git a/frontend/src/components/SpotNarrationCard.vue b/frontend/src/components/SpotNarrationCard.vue
+index 329944e..2f739c2 100644
+--- a/frontend/src/components/SpotNarrationCard.vue
++++ b/frontend/src/components/SpotNarrationCard.vue
+@@ -14,7 +14,7 @@
+       <button type="button" class="nc-btn" :disabled="loading" @click="$emit('replay')">
+         {{ loading ? "讲解生成中…" : "重听" }}
+       </button>
+-      <button type="button" class="nc-btn ghost" :disabled="!playing" @click="$emit('stop')">停止</button>
++      <button type="button" class="nc-btn ghost" :disabled="!playing && !loading" @click="$emit('stop')">停止</button>
+     </div>
+   </div>
+ </template>
+@@ -32,7 +32,7 @@ const props = defineProps({
+ });
+ defineEmits(["close", "replay", "stop"]);
+
+-const subtitle = computed(() => (props.degraded ? "离线讲解 · 浏览器朗读" : "数字人语音讲解"));
++const subtitle = computed(() => (props.degraded ? "备用讲解" : "数字人语音讲解"));
+ </script>
+
+ <style scoped>
+diff --git a/frontend/src/components/knowledge/PublicationStatus.vue b/frontend/src/components/knowledge/PublicationStatus.vue
+index 7898742..3f73ec0 100644
+--- a/frontend/src/components/knowledge/PublicationStatus.vue
++++ b/frontend/src/components/knowledge/PublicationStatus.vue
+@@ -10,6 +10,8 @@
+       <div class="publication-status">
+         <span v-if="job.error">{{ job.error }}</span>
+         <el-button v-if="job.state === 'failed'" link type="primary" :loading="retrying" @click="$emit('retry')">重试发布</el-button>
++        <el-button v-if="job.state === 'unknown' && !job.id" link type="primary" :loading="retrying" @click="$emit('resume')">继续确认原请求</el-button>
++        <el-button v-if="job.state === 'unknown' && job.id" link type="primary" :loading="retrying" @click="$emit('recover')">查询原任务</el-button>
+       </div>
+     </template>
+   </el-alert>
+@@ -18,8 +20,8 @@
+ <script setup>
+ import { computed } from "vue";
+ const props = defineProps({ job: { type: Object, default: null }, retrying: Boolean });
+-defineEmits(["retry"]);
+-const statusTitle = computed(() => ({ queued: "发布任务已排队", preparing: "正在准备并校验发布内容", succeeded: "发布完成", failed: "发布失败" }[props.job?.state] || "发布状态"));
++defineEmits(["retry", "resume", "recover"]);
++const statusTitle = computed(() => ({ queued: "发布任务已排队", preparing: "正在准备并校验发布内容", succeeded: "发布完成", failed: "发布失败", unknown: "发布状态待确认" }[props.job?.state] || "发布状态"));
+ </script>
+
+ <style scoped>
+diff --git a/frontend/src/composables/useAudioPlayer.js b/frontend/src/composables/useAudioPlayer.js
+index 79cf9a3..7a0e66c 100644
+--- a/frontend/src/composables/useAudioPlayer.js
++++ b/frontend/src/composables/useAudioPlayer.js
+@@ -1,4 +1,5 @@
+ import { ref } from "vue";
++import { createAdaptiveAudioBuffer } from "../utils/adaptiveAudioBuffer";
+
+ let sharedAudioPlayer = null;
+
+@@ -14,6 +15,7 @@ export function useAudioPlayer() {
+   let audioContext = null;
+   let currentSource = null;
+   let currentUtterance = null;
++  let currentUtteranceFinish = null;
+   let stopGeneration = 0;
+   let analyserNode = null;
+   let analysisSinkNode = null;
+@@ -96,6 +98,7 @@ export function useAudioPlayer() {
+   async function playAudioBuffer(audioBuffer, onProgress, playbackOptions = {}) {
+     const ctx = ensureContext();
+     if (!ctx || audioBuffer === null) return 0;
++    const generation = stopGeneration;
+     return new Promise((resolve) => {
+       const source = ctx.createBufferSource();
+       currentSource = source;
+@@ -118,19 +121,24 @@ export function useAudioPlayer() {
+       let progressTimer = null;
+       if (onProgress) {
+         progressTimer = setInterval(() => {
++          if (generation !== stopGeneration) return;
+           const elapsed = (ctx.currentTime - startTime) * 1000;
+           onProgress(Math.min(elapsed / (duration * 1000), 1), elapsed, duration * 1000);
+         }, 30);
+       }
+       source.onended = () => {
+-        currentSource = null;
++        if (currentSource === source) currentSource = null;
+         source.disconnect();
+         gainNode.disconnect();
+-        stopMouthLoop();
+-        if (progressTimer) { clearInterval(progressTimer); onProgress?.(1, duration * 1000, duration * 1000); }
++        if (generation === stopGeneration) stopMouthLoop();
++        if (progressTimer) {
++          clearInterval(progressTimer);
++          if (generation === stopGeneration) onProgress?.(1, duration * 1000, duration * 1000);
++        }
+         resolve(duration * 1000);
+       };
+       source.start(0);
++      if (ctx.state === "running") playbackOptions.onScheduled?.();
+     });
+   }
+
+@@ -175,6 +183,7 @@ export function useAudioPlayer() {
+
+   async function playSpeechSynthesis(text, durationMs, onProgress, playbackOptions = {}) {
+     if (!speechSynthSupported) return 0;
++    const generation = stopGeneration;
+     return new Promise((resolve) => {
+       if (currentUtterance) window.speechSynthesis.cancel();
+       const utterance = new SpeechSynthesisUtterance(text);
+@@ -187,18 +196,25 @@ export function useAudioPlayer() {
+       const estimatedDuration = Math.max((durationMs || text.length * 180) / playbackRate, 800);
+       const visemeTimeline = generateFrontendVisemeTimeline(text, estimatedDuration);
+       let progressTimer = null;
+-      const reportProgress = (p) => onProgress?.(
+-        Math.min(Math.max(p, 0), 1),
+-        Date.now() - startTime,
+-        estimatedDuration,
+-        visemeTimeline,
+-      );
+-      const finish = (d) => { if (progressTimer) { clearInterval(progressTimer); progressTimer = null; } stopMouthLoop(); reportProgress(1); currentUtterance = null; resolve(d); };
+-      utterance.onstart = () => { reportProgress(0); progressTimer = setInterval(() => reportProgress((Date.now() - startTime) / estimatedDuration), 50); };
+-      utterance.onboundary = (e) => { if (text.length > 0 && Number.isFinite(e.charIndex)) reportProgress(e.charIndex / text.length); };
++      let settled = false;
++      const reportProgress = (p) => {
++        if (generation !== stopGeneration || settled) return;
++        onProgress?.(Math.min(Math.max(p, 0), 1), Date.now() - startTime, estimatedDuration, visemeTimeline);
++      };
++      const finish = (d) => {
++        if (settled) return;
++        if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
++        if (generation === stopGeneration) { stopMouthLoop(); reportProgress(1); }
++        settled = true;
++        if (currentUtterance === utterance) currentUtterance = null;
++        if (currentUtteranceFinish === finish) currentUtteranceFinish = null;
++        resolve(d);
++      };
++      utterance.onstart = () => { if (generation !== stopGeneration || settled) return; reportProgress(0); progressTimer = setInterval(() => reportProgress((Date.now() - startTime) / estimatedDuration), 50); };
++      utterance.onboundary = (e) => { if (generation === stopGeneration && !settled && text.length > 0 && Number.isFinite(e.charIndex)) reportProgress(e.charIndex / text.length); };
+       utterance.onend = () => finish(Date.now() - startTime);
+       utterance.onerror = () => finish(0);
+-      waitForChineseVoice().then((zhVoice) => { if (zhVoice) utterance.voice = zhVoice; currentUtterance = utterance; window.speechSynthesis.speak(utterance); });
++      waitForChineseVoice().then((zhVoice) => { if (generation !== stopGeneration) { finish(0); return; } if (zhVoice) utterance.voice = zhVoice; currentUtterance = utterance; currentUtteranceFinish = finish; window.speechSynthesis.speak(utterance); });
+     });
+   }
+
+@@ -215,6 +231,7 @@ export function useAudioPlayer() {
+       if (generation !== stopGeneration) break;
+       const current = queue.value.shift();
+       const audioBuffer = await base64ToAudioBuffer(current.base64);
++      if (generation !== stopGeneration) break;
+       if (audioBuffer) {
+         current.playbackOptions?.onMode?.("audio");
+         await playAudioBuffer(audioBuffer, current.onProgress, current.playbackOptions);
+@@ -233,15 +250,23 @@ export function useAudioPlayer() {
+       }
+       if (generation === stopGeneration && current.onEnded) current.onEnded();
+     }
+-    isPlaying.value = false;
+-    stopMouthLoop();
++    if (generation === stopGeneration) {
++      isPlaying.value = false;
++      stopMouthLoop();
++    }
+   }
+
+   function stop() {
+     stopGeneration += 1;
+     stopMouthLoop();
+     if (currentSource) { try { currentSource.stop(); } catch {} currentSource = null; }
+-    if (currentUtterance) { window.speechSynthesis.cancel(); currentUtterance = null; }
++    if (currentUtterance) {
++      const finishUtterance = currentUtteranceFinish;
++      window.speechSynthesis.cancel();
++      finishUtterance?.(0);
++      currentUtterance = null;
++      currentUtteranceFinish = null;
++    }
+     queue.value = [];
+     // 同时停止 PCM 流
+     resetPCMStream(true);
+@@ -253,11 +278,22 @@ export function useAudioPlayer() {
+   let pcmAccumulatedMs = 0;
+   let pcmOnProgress = null;
+   let pcmOnAudioEnded = null;
++  let pcmOnScheduled = null;
+   let pcmProgressTimer = null;
+   let pcmEndTimer = null;
+   let pcmTimeline = [];
++  let pcmRunId = 0;
++  let pcmBufferPolicy = null;
++  let pcmOnBufferEvent = null;
++  let pcmOnUnavailable = null;
++  let pcmResumeTimer = null;
+
+   function resetPCMStream(stopSources = false) {
++    pcmRunId += 1;
++    pcmBufferPolicy = null;
++    pcmOnBufferEvent = null;
++    pcmOnUnavailable = null;
++    if (pcmResumeTimer) { clearTimeout(pcmResumeTimer); pcmResumeTimer = null; }
+     if (stopSources && pcmStream?.sources) {
+       pcmStream.sources.forEach((source) => { try { source.stop(); } catch {} });
+     }
+@@ -265,6 +301,7 @@ export function useAudioPlayer() {
+     pcmAccumulatedMs = 0;
+     pcmOnProgress = null;
+     pcmOnAudioEnded = null;
++    pcmOnScheduled = null;
+     pcmTimeline = [];
+     isPCMStreaming.value = false;
+     if (pcmProgressTimer) { clearInterval(pcmProgressTimer); pcmProgressTimer = null; }
+@@ -301,23 +338,45 @@ export function useAudioPlayer() {
+     } catch { return null; }
+   }
+
+-  function startPCMStream(onProgress, onAudioEnded) {
++  function startPCMStream(onProgress, onAudioEnded, onScheduled, options = {}) {
+     resetPCMStream(true);
++    if (!ensureContext()) return false;
++    pcmBufferPolicy = options.adaptive ? createAdaptiveAudioBuffer() : null;
++    pcmOnBufferEvent = options.onBufferEvent || null;
++    pcmOnUnavailable = options.onUnavailable || null;
+     pcmOnProgress = onProgress;
+     pcmOnAudioEnded = onAudioEnded;
++    pcmOnScheduled = onScheduled;
+     pcmAccumulatedMs = 0;
+     isPCMStreaming.value = true;
+     isPlaying.value = true;
+     startMouthLoop();
++    return true;
+   }
+
+   function feedPCMChunk(base64String, sampleRate = 24000, channels = 1, bits = 16) {
+     const ctx = ensureContext();
+-    if (!ctx || !base64String) return;
+-    if (ctx.state === "suspended") ctx.resume();
++    if (!ctx || !base64String) return false;
++    const runId = pcmRunId;
++    if (ctx.state === "suspended" && !pcmResumeTimer) {
++      const failResume = () => {
++        if (runId !== pcmRunId) return;
++        const onUnavailable = pcmOnUnavailable;
++        resetPCMStream(true);
++        isPlaying.value = false;
++        stopMouthLoop();
++        onUnavailable?.();
++      };
++      pcmResumeTimer = setTimeout(failResume, 3000);
++      Promise.resolve().then(() => ctx.resume()).then(() => {
++        if (runId !== pcmRunId) return;
++        if (ctx.state !== "running") { failResume(); return; }
++        if (pcmResumeTimer) { clearTimeout(pcmResumeTimer); pcmResumeTimer = null; }
++      }).catch(failResume);
++    }
+
+     const audioBuffer = base64PCMToAudioBuffer(base64String, sampleRate, channels, bits);
+-    if (!audioBuffer) return;
++    if (!audioBuffer) return false;
+
+     if (pcmEndTimer) { clearTimeout(pcmEndTimer); pcmEndTimer = null; }
+
+@@ -334,6 +393,7 @@ export function useAudioPlayer() {
+       const analyser = ensureAnalyser();
+       if (analyser) source.connect(analyser);
+       source.start(0);
++      if (ctx.state === "running") pcmOnScheduled?.();
+
+       pcmStream = {
+         startTime: ctx.currentTime,
+@@ -345,7 +405,8 @@ export function useAudioPlayer() {
+       // 进度上报
+       if (pcmOnProgress) {
+         pcmProgressTimer = setInterval(() => {
+-          const elapsedMs = Math.max((ctx.currentTime - pcmStream.startTime) * 1000, 0);
++          if (runId !== pcmRunId || !pcmStream) return;
++          const elapsedMs = Math.min(Math.max((ctx.currentTime - pcmStream.startTime) * 1000, 0), pcmAccumulatedMs);
+           const durationMs = Math.max(pcmAccumulatedMs, pcmTimeline.at(-1)?.end || 0, 1);
+           pcmOnProgress(
+             Math.min(elapsedMs / durationMs, 1),
+@@ -359,6 +420,7 @@ export function useAudioPlayer() {
+       source.onended = () => {
+         source.disconnect();
+         gainNode.disconnect();
++        if (runId !== pcmRunId) return;
+         pcmStream?.sources?.delete(source);
+         if (pcmStream?.lastSource === source) pcmStream.lastSource = null;
+       };
+@@ -372,15 +434,25 @@ export function useAudioPlayer() {
+       gainNode.connect(ctx.destination);
+       const analyser = ensureAnalyser();
+       if (analyser) source.connect(analyser);
+-      source.start(pcmStream.nextTime);
+-
+-      pcmStream.nextTime += audioBuffer.duration;
++      const scheduledTime = pcmBufferPolicy
++        ? pcmBufferPolicy.schedule(ctx.currentTime, pcmStream.nextTime)
++        : Math.max(pcmStream.nextTime, ctx.currentTime);
++      const gapMs = Math.max(ctx.currentTime - pcmStream.nextTime, 0) * 1000;
++      if (gapMs > 1) {
++        pcmOnBufferEvent?.({ gapMs, extraBufferMs: Math.max(scheduledTime - Math.max(ctx.currentTime, pcmStream.nextTime), 0) * 1000 });
++      }
++      // A network stall must not cause later chunks to overlap or advance
++      // subtitles through time in which no audio was available.
++      pcmStream.startTime += Math.max(scheduledTime - pcmStream.nextTime, 0);
++      source.start(scheduledTime);
++      pcmStream.nextTime = scheduledTime + audioBuffer.duration;
+       pcmStream.lastSource = source;
+       pcmStream.sources.add(source);
+
+       source.onended = () => {
+         source.disconnect();
+         gainNode.disconnect();
++        if (runId !== pcmRunId) return;
+         pcmStream?.sources?.delete(source);
+         if (pcmStream?.lastSource === source) {
+           pcmStream.lastSource = null;
+@@ -389,6 +461,7 @@ export function useAudioPlayer() {
+     }
+
+     pcmAccumulatedMs += chunkDurationMs;
++    return true;
+   }
+
+   function updatePCMVisemeTimeline(timeline = []) {
+@@ -400,22 +473,34 @@ export function useAudioPlayer() {
+
+   function endPCMStream() {
+     if (!isPCMStreaming.value) return;
++    const runId = pcmRunId;
+     const ctx = ensureContext();
+-    const remainingMs = pcmStream && ctx
+-      ? Math.max((pcmStream.nextTime - ctx.currentTime) * 1000, 0)
+-      : 0;
+-    const drainDelayMs = Math.max(remainingMs + 80, 120);
+-
+     if (pcmEndTimer) clearTimeout(pcmEndTimer);
+-    pcmEndTimer = setTimeout(() => {
++    const checkDrained = () => {
++      if (runId !== pcmRunId) return;
++      if (ctx?.state === "suspended") {
++        // Wall-clock time can pass while AudioContext time is stopped. Keep
++        // the scheduled sources available for explicit stop or resume.
++        pcmEndTimer = setTimeout(checkDrained, 250);
++        return;
++      }
++      const remainingMs = pcmStream && ctx
++        ? Math.max((pcmStream.nextTime - ctx.currentTime) * 1000, 0)
++        : 0;
++      if (remainingMs > 1 && ctx?.state !== "closed") {
++        pcmEndTimer = setTimeout(checkDrained, Math.max(remainingMs + 80, 120));
++        return;
++      }
+       pcmEndTimer = null;
+       stopMouthLoop();
+       if (pcmProgressTimer) { clearInterval(pcmProgressTimer); pcmProgressTimer = null; }
+       isPlaying.value = false;
+       const onAudioEnded = pcmOnAudioEnded;
+-      resetPCMStream();
++      resetPCMStream(ctx?.state === "closed");
+       onAudioEnded?.();
+-    }, drainDelayMs);
++    };
++    const remainingMs = pcmStream && ctx ? Math.max((pcmStream.nextTime - ctx.currentTime) * 1000, 0) : 0;
++    pcmEndTimer = setTimeout(checkDrained, Math.max(remainingMs + 80, 120));
+   }
+
+   sharedAudioPlayer = {
+diff --git a/frontend/src/composables/useSSEStream.js b/frontend/src/composables/useSSEStream.js
+index 04a0245..6e2440f 100644
+--- a/frontend/src/composables/useSSEStream.js
++++ b/frontend/src/composables/useSSEStream.js
+@@ -1,114 +1,113 @@
+ import { API_BASE_URL } from "../api/http";
+
+ function parseEventBlock(block) {
+-  const lines = block.split("\n");
+   let event = "message";
+-  let data = "";
+-
+-  lines.forEach((line) => {
+-    if (line.startsWith("event:")) {
+-      event = line.slice(6).trim();
+-    }
+-    if (line.startsWith("data:")) {
+-      data += `${data ? "\n" : ""}${line.slice(5).trimStart()}`;
+-    }
+-  });
+-
+-  return {
+-    event,
+-    data: data ? JSON.parse(data) : {},
+-  };
++  const data = [];
++  for (const line of block.split("\n")) {
++    if (line.startsWith("event:")) event = line.slice(6).trim();
++    if (line.startsWith("data:")) data.push(line.slice(5).replace(/^ /, ""));
++  }
++  // SSE comments and blank heartbeat frames carry no dispatchable event.
++  if (!data.length) return null;
++  return { event, data: JSON.parse(data.join("\n")) };
+ }
+
+ export function useSSEStream() {
+   async function postStream(path, payload, handlers = {}, options = {}) {
+     const controller = new AbortController();
+     const abortFromCaller = () => controller.abort(options.signal?.reason);
+-    if (options.signal?.aborted) {
+-      abortFromCaller();
+-    } else {
+-      options.signal?.addEventListener("abort", abortFromCaller, { once: true });
+-    }
++    if (options.signal?.aborted) abortFromCaller();
++    else options.signal?.addEventListener("abort", abortFromCaller, { once: true });
+
+     const connectionTimeoutMs = options.connectionTimeoutMs ?? 20000;
+-    const connectionTimer = globalThis.setTimeout(() => {
+-      controller.abort(new DOMException("流式连接建立超时", "TimeoutError"));
+-    }, connectionTimeoutMs);
++    const idleTimeoutMs = options.idleTimeoutMs ?? 45000;
++    const progressTimeoutMs = options.progressTimeoutMs ?? 90000;
++    const totalTimeoutMs = options.totalTimeoutMs ?? 180000;
++    const timers = new Map();
++    let reader;
++    let completed = false;
++    const schedule = (name, ms, message) => {
++      globalThis.clearTimeout(timers.get(name));
++      if (Number.isFinite(ms) && ms > 0) {
++        timers.set(name, globalThis.setTimeout(() => {
++          controller.abort(new DOMException(message, "TimeoutError"));
++        }, ms));
++      }
++    };
++    const resetIdle = () => schedule("idle", idleTimeoutMs, "导览连接等待数据超时，请重试。");
++    const resetProgress = () => schedule("progress", progressTimeoutMs, "导览等待进展超时，请重试。");
++    schedule("connection", connectionTimeoutMs, "导览服务连接超时，请重试。");
++    schedule("total", totalTimeoutMs, "导览处理时间过长，请重试。");
+
+-    let response;
+     try {
+-      response = await fetch(`${API_BASE_URL}${path}`, {
++      const response = await fetch(`${API_BASE_URL}${path}`, {
+         method: "POST",
+-        headers: {
+-          "Content-Type": "application/json",
+-          Accept: "text/event-stream",
+-        },
++        headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+         body: JSON.stringify(payload),
+         signal: controller.signal,
+       });
+-    } catch (error) {
+-      options.signal?.removeEventListener("abort", abortFromCaller);
+-      if (controller.signal.reason?.name === "TimeoutError") {
+-        throw new Error("导览服务连接超时，请确认后端已就绪后重试。");
++      globalThis.clearTimeout(timers.get("connection"));
++      timers.delete("connection");
++      if (!response.ok || !response.body) {
++        let detail = "";
++        try {
++          const raw = await response.text();
++          try { const json = JSON.parse(raw); detail = json?.detail || json?.message || ""; }
++          catch { detail = raw; }
++        } catch { /* use the HTTP status */ }
++        throw new Error(typeof detail === "string" && detail ? detail : `无法建立流式连接（HTTP ${response.status}）。`);
+       }
+-      throw error;
+-    } finally {
+-      globalThis.clearTimeout(connectionTimer);
+-    }
+
+-    if (!response.ok || !response.body) {
+-      options.signal?.removeEventListener("abort", abortFromCaller);
+-      let detail = "";
+-      try {
+-        const errorPayload = await response.json();
+-        detail = errorPayload?.detail || errorPayload?.message || "";
+-      } catch {
+-        detail = await response.text().catch(() => "");
+-      }
+-      throw new Error(detail || `无法建立流式连接（HTTP ${response.status}）。`);
+-    }
+-
+-    const reader = response.body.getReader();
+-    const decoder = new TextDecoder("utf-8");
+-    let buffer = "";
+-    let receivedEventCount = 0;
+-
+-    const dispatchBlock = (block) => {
+-      if (!block.trim()) return;
+-      const parsed = parseEventBlock(block);
+-      receivedEventCount += 1;
+-      handlers[parsed.event]?.(parsed.data);
+-    };
+-
+-    try {
++      reader = response.body.getReader();
++      const decoder = new TextDecoder("utf-8");
++      let buffer = "";
++      let receivedEventCount = 0;
++      let lastStatus = null;
++      const dispatchBlock = (block) => {
++        if (!block.trim()) return;
++        const parsed = parseEventBlock(block);
++        if (!parsed) return;
++        receivedEventCount += 1;
++        const status = parsed.event === "status" ? JSON.stringify(parsed.data) : null;
++        if (parsed.event !== "heartbeat" && (parsed.event !== "status" || status !== lastStatus)) resetProgress();
++        if (status !== null) lastStatus = status;
++        handlers[parsed.event]?.(parsed.data);
++      };
++      resetIdle();
++      resetProgress();
+       while (true) {
+         const { done, value } = await reader.read();
+-        if (done) {
+-          break;
+-        }
+-
++        if (done) break;
++        if (value?.byteLength) resetIdle();
+         buffer += decoder.decode(value, { stream: true });
+-        // Normalize after concatenation so a CRLF split across network chunks
+-        // cannot prevent event boundaries from being detected.
++        // Preserve a trailing CR until the next chunk, when it may form CRLF.
++        let trailingCR = "";
++        if (buffer.endsWith("\r")) { buffer = buffer.slice(0, -1); trailingCR = "\r"; }
+         buffer = buffer.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+         const parts = buffer.split("\n\n");
+-        buffer = parts.pop() || "";
+-
+-        for (const part of parts) {
+-          dispatchBlock(part);
+-        }
++        buffer = (parts.pop() || "") + trailingCR;
++        for (const part of parts) dispatchBlock(part);
+       }
+-
+-      buffer += decoder.decode();
+-      buffer = buffer.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+-      dispatchBlock(buffer);
++      // Only a blank-line terminated SSE frame is complete. An unterminated
++      // final fragment may have been cut off by an interrupted connection.
++      completed = true;
+       return { receivedEventCount };
++    } catch (error) {
++      if (controller.signal.reason?.name === "TimeoutError") {
++        const timeoutError = new Error(controller.signal.reason.message);
++        timeoutError.name = "TimeoutError";
++        throw timeoutError;
++      }
++      throw error;
+     } finally {
++      for (const timer of timers.values()) globalThis.clearTimeout(timer);
+       options.signal?.removeEventListener("abort", abortFromCaller);
++      if (reader && !completed) {
++        controller.abort();
++        await reader.cancel().catch(() => {});
++      }
++      reader?.releaseLock();
+     }
+   }
+-
+-  return {
+-    postStream,
+-  };
++  return { postStream };
+ }
+diff --git a/frontend/src/stores/chat.js b/frontend/src/stores/chat.js
+index d73fa64..3622bbd 100644
+--- a/frontend/src/stores/chat.js
++++ b/frontend/src/stores/chat.js
+@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
+ import { deleteVisitorMemory, streamChat } from "../api/chat";
+ import { submitVisitorFeedback } from "../api/insights";
+ import { useAudioPlayer } from "../composables/useAudioPlayer";
++import { createChatMetrics, rememberChatMetrics } from "../utils/chatMetrics";
+
+ const audioPlayer = useAudioPlayer();
+
+@@ -12,11 +13,13 @@ const UPDATED_CONTEXT_STATUS_TEXT = "已更新游览方向";
+ const ANSWER_DONE_STATUS_TEXT = "回答完成";
+ const FALLBACK_STATUS_TEXT = "云端语音暂不可用，已保留文字回答";
+ const FALLBACK_DONE_STATUS_TEXT = "文字回答完成，语音暂不可用";
+-const OFFLINE_STATUS_TEXT = "暂时离线";
++const INCOMPLETE_STATUS_TEXT = "讲解未完成";
+ const GENERIC_ERROR_TEXT = "抱歉，导览服务暂时没有响应。请稍后再试，或换一个问题问问我。";
+
+ let activeStreamController = null;
+ let activeStreamToken = 0;
++let activeFlushPending = null;
++let activePlaybackStopped = null;
+ let lastFailedRequest = null;
+ const SESSION_STORAGE_KEY = "a5-chat-session-id";
+ const VISITOR_STORAGE_KEY = "a5-visitor-id";
+@@ -121,8 +124,12 @@ export const useChatStore = defineStore("chat", {
+       this.resetConversationContext();
+     },
+     stopOutput() {
++      activeFlushPending?.();
++      activeFlushPending = null;
+       if (this.streaming) {
+         this.userStopped = true;
++        const currentMessage = this.messages.at(-1);
++        if (currentMessage?.role === "assistant") currentMessage.completion = "stopped";
+       }
+       activeStreamToken += 1;
+       if (activeStreamController) {
+@@ -130,6 +137,8 @@ export const useChatStore = defineStore("chat", {
+         activeStreamController = null;
+       }
+       audioPlayer.stop();
++      activePlaybackStopped?.();
++      activePlaybackStopped = null;
+       this.subtitleWords = [];
+       this.streaming = false;
+       this.voiceFallback = false;
+@@ -149,20 +158,29 @@ export const useChatStore = defineStore("chat", {
+       this.errorMessage = "";
+       this.userStopped = false;
+       const requestToken = activeStreamToken;
++      const metrics = createChatMetrics();
++      activePlaybackStopped = options.onPlaybackStopped || null;
+       const streamController = new AbortController();
+       activeStreamController = streamController;
+       const isCurrentRequest = () =>
+         requestToken === activeStreamToken && activeStreamController === streamController;
++      const isCurrentGeneration = () => requestToken === activeStreamToken;
+       let pcmStarted = false;
+       let receivedDone = false;
+
+-      const assistantMessage = {
+-        role: "assistant",
+-        content: "",
+-      };
+-
+       this.messages.push({ role: "user", content: options.displayQuery || query });
+-      this.messages.push(assistantMessage);
++      this.messages.push({ role: "assistant", content: "", completion: "streaming" });
++      // Mutate the reactive entry, not the original object pushed into Pinia.
++      const assistantMessage = this.messages.at(-1);
++      let pendingText = "";
++      let textTimer = null;
++      const flushPendingText = () => {
++        if (textTimer !== null) globalThis.clearTimeout(textTimer);
++        textTimer = null;
++        if (pendingText && isCurrentGeneration()) assistantMessage.content += pendingText;
++        pendingText = "";
++      };
++      activeFlushPending = flushPendingText;
+       this.sources = [];
+       this.emotionAnalysis = null;
+       this.followups = [];
+@@ -215,12 +233,16 @@ export const useChatStore = defineStore("chat", {
+               if (!isCurrentRequest()) {
+                 return;
+               }
+-              assistantMessage.content += token;
++              if (token) metrics.mark("text_received");
++              pendingText += token || "";
++              if (textTimer === null) textTimer = globalThis.setTimeout(flushPendingText, 16);
+             },
+             text: ({ text, is_complete }) => {
+               if (!isCurrentRequest()) {
+                 return;
+               }
++              flushPendingText();
++              if (text) metrics.mark("text_received");
+               assistantMessage.content = text;
+               if (is_complete) {
+                 this.statusText = ANSWER_DONE_STATUS_TEXT;
+@@ -230,8 +252,10 @@ export const useChatStore = defineStore("chat", {
+               if (!isCurrentRequest()) {
+                 return;
+               }
++              flushPendingText();
+               const isFallback = provider === "bailian_unavailable" || provider === "stub";
+               const hasAudio = typeof base64 === "string" && base64.trim().length > 0;
++              if (hasAudio) metrics.mark("audio_received");
+               if (isFallback || !hasAudio) {
+                 this.voiceFallback = true;
+                 this.statusText = FALLBACK_STATUS_TEXT;
+@@ -242,20 +266,19 @@ export const useChatStore = defineStore("chat", {
+               await audioPlayer.enqueue(
+                 base64,
+                 duration_ms,
+-                () => options.onAudioEnded?.(),
++                () => { if (isCurrentGeneration()) options.onAudioEnded?.(); },
+                 text || "",
+                 (progress, elapsedMs, actualDurationMs) =>
+-                  options.onSpeechProgress?.(
+-                    progress,
+-                    elapsedMs,
+-                    viseme_timeline || null,
+-                    actualDurationMs,
++                  isCurrentGeneration() && options.onSpeechProgress?.(
++                    progress, elapsedMs, viseme_timeline || null, actualDurationMs,
+                   ),
+                 {
+                   rate: (options.ttsConfig?.speechRate || 100) / 100,
+                   volume: (options.ttsConfig?.volume ?? 80) / 100,
+                   allowBrowserSpeech: false,
++                  onScheduled: () => { if (isCurrentGeneration()) metrics.mark("audio_scheduled"); },
+                   onMode: (mode) => {
++                    if (!isCurrentGeneration()) return;
+                     if (mode === "silent") {
+                       this.voiceFallback = true;
+                       this.statusText = FALLBACK_STATUS_TEXT;
+@@ -270,19 +293,49 @@ export const useChatStore = defineStore("chat", {
+               }
+               // 流式 PCM 音频块
+               if (base64) {
++                metrics.mark("audio_received");
+                 if (!audioPlayer.isPCMStreaming.value) {
+-                  pcmStarted = true;
+-                  options.onAudioStart?.();
+-                  audioPlayer.startPCMStream(
++                  const started = audioPlayer.startPCMStream(
+                     (progress, elapsedMs, durationMs, timeline) =>
+-                      options.onSpeechProgress?.(progress, elapsedMs, timeline, durationMs),
++                      isCurrentGeneration() && options.onSpeechProgress?.(progress, elapsedMs, timeline, durationMs),
+                     () => {
++                      if (!isCurrentGeneration()) return;
+                       options.onAudioEnded?.();
+                       audioPlayer.flush();
+                     },
++                    () => { if (isCurrentGeneration()) metrics.mark("audio_scheduled"); },
++                    {
++                      adaptive: import.meta.env.VITE_GUIDE_ADAPTIVE_AUDIO === "1",
++                      onBufferEvent: ({ gapMs, extraBufferMs }) => {
++                        if (isCurrentGeneration()) metrics.recordAudioGap(gapMs, extraBufferMs);
++                      },
++                      onUnavailable: () => {
++                        if (!isCurrentGeneration()) return;
++                        activePlaybackStopped?.();
++                        activePlaybackStopped = null;
++                        this.voiceFallback = true;
++                        this.statusText = FALLBACK_STATUS_TEXT;
++                        options.onAudioUnavailable?.({ provider: "browser_unavailable" });
++                      },
++                    },
+                   );
++                  if (!started) {
++                    this.voiceFallback = true;
++                    this.statusText = FALLBACK_STATUS_TEXT;
++                    options.onAudioUnavailable?.({ provider: "browser_unavailable" });
++                    return;
++                  }
++                  pcmStarted = true;
++                  options.onAudioStart?.();
++                }
++                if (!audioPlayer.feedPCMChunk(base64, sample_rate || 24000, channels || 1, bits || 16)) {
++                  audioPlayer.stop();
++                  activePlaybackStopped?.();
++                  activePlaybackStopped = null;
++                  this.voiceFallback = true;
++                  this.statusText = FALLBACK_STATUS_TEXT;
++                  options.onAudioUnavailable?.({ provider: "audio_decode_failed" });
+                 }
+-                audioPlayer.feedPCMChunk(base64, sample_rate || 24000, channels || 1, bits || 16);
+               }
+               // 字级别时间戳 → viseme 时间线
+               if (viseme_timeline) {
+@@ -325,11 +378,16 @@ export const useChatStore = defineStore("chat", {
+             error: ({ message } = {}) => {
+               throw new Error(message || "导览服务处理回答时发生错误。");
+             },
+-            done: ({ chat_log_id: chatLogId } = {}) => {
++            done: ({ chat_log_id: chatLogId, completion } = {}) => {
+               if (!isCurrentRequest()) {
+                 return;
+               }
++              flushPendingText();
++              if (completion === "incomplete") {
++                throw new Error("回答未完成，连接或生成过程已中断。可重新尝试。");
++              }
+               receivedDone = true;
++              assistantMessage.completion = "complete";
+               // 结束 PCM 流（如果在用流式模式）
+               if (pcmStarted || audioPlayer.isPCMStreaming.value) {
+                 audioPlayer.endPCMStream();
+@@ -350,38 +408,31 @@ export const useChatStore = defineStore("chat", {
+           },
+         );
+         if (isCurrentRequest() && !receivedDone) {
+-          if (!assistantMessage.content.trim()) {
+-            throw new Error("回答连接提前结束，未收到有效内容。");
+-          }
+-          if (pcmStarted || audioPlayer.isPCMStreaming.value) {
+-            audioPlayer.endPCMStream();
+-            pcmStarted = false;
+-          }
+-          this.streaming = false;
+-          this.statusText = this.voiceFallback
+-            ? FALLBACK_DONE_STATUS_TEXT
+-            : ANSWER_DONE_STATUS_TEXT;
+-          lastFailedRequest = null;
++          throw new Error("回答连接提前中断，内容未完成。可重新尝试。");
+         }
+       } catch (error) {
++        if (!isCurrentRequest()) return;
++        flushPendingText();
+         if (isAbortError(error)) {
+           if (this.userStopped) {
+             this.statusText = STOPPED_STATUS_TEXT;
+           }
+           return;
+         }
+-        if (pcmStarted || audioPlayer.isPCMStreaming.value) {
+-          audioPlayer.endPCMStream();
+-          pcmStarted = false;
+-        }
+-        assistantMessage.content = assistantMessage.content
+-          ? `${assistantMessage.content}\n\n（回答传输中断，可点击重试。）`
+-          : GENERIC_ERROR_TEXT;
++        audioPlayer.stop();
++        activePlaybackStopped?.();
++        activePlaybackStopped = null;
++        pcmStarted = false;
++        assistantMessage.completion = "incomplete";
++        if (!assistantMessage.content) assistantMessage.content = GENERIC_ERROR_TEXT;
+         this.streaming = false;
+-        this.statusText = OFFLINE_STATUS_TEXT;
++        this.statusText = INCOMPLETE_STATUS_TEXT;
+         this.errorMessage = error?.message || "导览服务暂时不可用，请稍后重试。";
+         lastFailedRequest = { query, selection, options };
+       } finally {
++        if (textTimer !== null) globalThis.clearTimeout(textTimer);
++        if (activeFlushPending === flushPendingText) activeFlushPending = null;
++        rememberChatMetrics(metrics.finish(assistantMessage.completion));
+         if (activeStreamController === streamController) {
+           activeStreamController = null;
+         }
+@@ -413,7 +464,6 @@ export const useChatStore = defineStore("chat", {
+     async retryLastMessage() {
+       if (!lastFailedRequest || this.streaming) return;
+       const request = lastFailedRequest;
+-      if (this.messages.length >= 2) this.messages.splice(-2, 2);
+       await this.sendMessage(request.query, request.selection, request.options);
+     },
+   },
+diff --git a/frontend/src/utils/adaptiveAudioBuffer.js b/frontend/src/utils/adaptiveAudioBuffer.js
+new file mode 100644
+index 0000000..f28db33
+--- /dev/null
++++ b/frontend/src/utils/adaptiveAudioBuffer.js
+@@ -0,0 +1,18 @@
++// Experimental policy for PCM playback after a network underrun. Times are
++// AudioContext seconds. It does not buffer the first chunk or change audio data.
++export function createAdaptiveAudioBuffer() {
++  const underrunThreshold = 0.08;
++  const recoveryBuffer = 0.08;
++  const cooldown = 2.0;
++  let lastAdjustment = -Infinity;
++  return {
++    schedule(now, nextTime) {
++      const earliest = Math.max(now, nextTime);
++      if (now - nextTime >= underrunThreshold && now - lastAdjustment >= cooldown) {
++        lastAdjustment = now;
++        return earliest + recoveryBuffer;
++      }
++      return earliest;
++    },
++  };
++}
+diff --git a/frontend/src/utils/chatMetrics.js b/frontend/src/utils/chatMetrics.js
+new file mode 100644
+index 0000000..0809407
+--- /dev/null
++++ b/frontend/src/utils/chatMetrics.js
+@@ -0,0 +1,48 @@
++const FIELDS = Object.freeze({
++  text_received: "text_received_ms",
++  audio_received: "audio_received_ms",
++  audio_scheduled: "audio_scheduled_ms",
++});
++const recent = [];
++const MAX_SAMPLES = 20;
++
++// Session-local diagnostics contain only relative durations and the outcome.
++// They are neither persisted nor sent over the network.
++export function createChatMetrics(now = () => globalThis.performance.now()) {
++  const started = now();
++  const sample = {};
++  return {
++    mark(name) {
++      const field = FIELDS[name];
++      if (field && sample[field] === undefined) sample[field] = Math.max(0, Math.round(now() - started));
++    },
++    recordAudioGap(gapMs, extraBufferMs) {
++      if (!Number.isFinite(gapMs) || gapMs <= 0) return;
++      sample.pcm_underrun_count = (sample.pcm_underrun_count || 0) + 1;
++      sample.pcm_gap_ms = (sample.pcm_gap_ms || 0) + Math.round(gapMs);
++      sample.pcm_extra_buffer_ms = (sample.pcm_extra_buffer_ms || 0)
++        + Math.max(0, Math.round(Number.isFinite(extraBufferMs) ? extraBufferMs : 0));
++    },
++    finish(outcome) {
++      if (sample.outcome === undefined) {
++        sample.outcome = ["complete", "incomplete", "stopped"].includes(outcome) ? outcome : "incomplete";
++        sample.duration_ms = Math.max(0, Math.round(now() - started));
++      }
++      return sample;
++    },
++  };
++}
++
++export function rememberChatMetrics(sample) {
++  recent.push(sample);
++  if (recent.length > MAX_SAMPLES) recent.shift();
++}
++
++export function getRecentChatMetrics() {
++  return recent.map((sample) => ({ ...sample }));
++}
++
++// Development-only inspection; production never exposes or uploads the samples.
++if (import.meta.env.DEV && typeof window !== "undefined") {
++  window.getGuideChatMetrics = getRecentChatMetrics;
++}
+diff --git a/frontend/src/utils/latestRequest.js b/frontend/src/utils/latestRequest.js
+new file mode 100644
+index 0000000..e52f1af
+--- /dev/null
++++ b/frontend/src/utils/latestRequest.js
+@@ -0,0 +1,18 @@
++// Keep one in-flight operation per consumer and ignore late outcomes after cancellation.
++export function createLatestRequest() {
++  let controller = null;
++  let generation = 0;
++  function cancel() {
++    generation += 1;
++    controller?.abort();
++    controller = null;
++  }
++  function begin() {
++    cancel();
++    controller = new AbortController();
++    const current = controller;
++    const token = generation;
++    return { signal: current.signal, isCurrent: () => generation === token && controller === current };
++  }
++  return { begin, cancel };
++}
+diff --git a/frontend/src/utils/publicationRecovery.js b/frontend/src/utils/publicationRecovery.js
+new file mode 100644
+index 0000000..f177baf
+--- /dev/null
++++ b/frontend/src/utils/publicationRecovery.js
+@@ -0,0 +1,73 @@
++const STORAGE_KEY = "guide-pending-publication-v1";
++const copy = (value) => JSON.parse(JSON.stringify(value));
++
++// Keep the exact idempotency key and selected revisions until the outcome of
++// a publication is known. Nothing here retries automatically.
++export function createPublicationRecovery({ storage, createKey, submit }) {
++  let pending;
++  let loaded = false;
++  let durable = !!storage;
++  let inFlight = null;
++
++  function load() {
++    if (loaded) return pending;
++    loaded = true;
++    try {
++      const raw = storage?.getItem(STORAGE_KEY);
++      if (!raw) return null;
++      const parsed = JSON.parse(raw);
++      if (!parsed || typeof parsed.key !== "string" || !parsed.key || !Array.isArray(parsed.items) || !parsed.items.length) {
++        throw new Error("发布记录损坏，无法安全确认原任务；请联系管理员核对。");
++      }
++      pending = parsed;
++      return pending;
++    } catch (error) {
++      if (error instanceof SyntaxError || error?.message?.includes("发布记录损坏")) {
++        loaded = false;
++        throw new Error("发布记录损坏，无法安全确认原任务；请联系管理员核对。");
++      }
++      durable = false;
++      return pending || null;
++    }
++  }
++
++  function save(value) {
++    pending = value;
++    loaded = true;
++    try {
++      if (!storage) throw new Error("storage unavailable");
++      if (value) storage.setItem(STORAGE_KEY, JSON.stringify(value));
++      else storage.removeItem(STORAGE_KEY);
++    } catch { durable = false; }
++  }
++
++  function getPending() {
++    const value = load();
++    return value ? copy(value) : null;
++  }
++
++  function begin(items) {
++    if (load()) throw new Error("已有发布任务待确认，请先恢复原任务。");
++    if (!Array.isArray(items) || !items.length) throw new Error("请选择需要发布的草稿。");
++    const value = { key: createKey(), items: copy(items), jobId: null };
++    if (!value.key) throw new Error("无法创建发布请求标识，请检查浏览器安全设置。");
++    save(value);
++    return getPending();
++  }
++
++  async function submitPending() {
++    const value = load();
++    if (!value) throw new Error("没有待确认的发布任务。");
++    if (value.jobId) throw new Error("发布任务已创建，请查询原任务状态。");
++    if (inFlight) return inFlight;
++    inFlight = (async () => {
++      const job = await submit(copy(value.items), value.key);
++      if (!job || typeof job.id !== "string" || !job.id) throw new Error("发布结果无任务标识，请恢复确认。");
++      save({ ...value, jobId: job.id });
++      return job;
++    })();
++    try { return await inFlight; } finally { inFlight = null; }
++  }
++
++  return { begin, getPending, submitPending, clear: () => save(null), isDurable: () => durable };
++}
+diff --git a/frontend/src/views/admin/KnowledgeManage.vue b/frontend/src/views/admin/KnowledgeManage.vue
+index 9a249b0..e64da80 100644
+--- a/frontend/src/views/admin/KnowledgeManage.vue
++++ b/frontend/src/views/admin/KnowledgeManage.vue
+@@ -42,7 +42,7 @@
+     </el-alert>
+
+     <ImportBatchPanel :entries="entries" @changed="loadEntries" />
+-    <PublicationStatus :job="publicationJob" :retrying="retryingPublication" @retry="retryPublication" />
++    <PublicationStatus :job="publicationJob" :retrying="retryingPublication" @retry="retryPublication" @resume="resumePublication" @recover="recoverPublication" />
+
+     <div class="stat-grid" v-loading="loading && !entries.length">
+       <article
+@@ -108,7 +108,7 @@
+
+         <div class="workspace-toolbar">
+           <span>{{ selectedRows.length }} 条草稿已选</span>
+-          <el-button type="primary" :disabled="!selectedRows.length" :loading="publishing" @click="publishSelected">发布选中草稿</el-button>
++          <el-button type="primary" :disabled="!selectedRows.length || hasPendingPublication" :loading="publishing" @click="publishSelected">发布选中草稿</el-button>
+         </div>
+
+         <el-skeleton v-if="loading" :rows="6" animated />
+@@ -335,7 +335,7 @@
+ </template>
+
+ <script setup>
+-import { computed, onMounted, ref, watch } from "vue";
++import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+ import {
+   Collection,
+   EditPen,
+@@ -359,6 +359,7 @@ import {
+ } from "../../api/knowledge";
+ import { rebuildVectorIndex, syncOfficialData } from "../../api/admin";
+ import { createKnowledgePublication, fetchKnowledgePublication, retryKnowledgePublication } from "../../api/knowledgePublications";
++import { createPublicationRecovery } from "../../utils/publicationRecovery";
+
+ const entries = ref([]);
+ const loading = ref(false);
+@@ -370,6 +371,19 @@ const selectedRows = ref([]);
+ const publicationJob = ref(null);
+ const publishing = ref(false);
+ const retryingPublication = ref(false);
++let publicationPollTimer = null;
++function getSessionStorage() {
++  try { return window.sessionStorage; } catch { return null; }
++}
++const publicationRecovery = createPublicationRecovery({
++  storage: getSessionStorage(),
++  createKey: () => globalThis.crypto?.randomUUID?.(),
++  submit: createKnowledgePublication,
++});
++const hasPendingPublication = computed(() => {
++  void publicationJob.value;
++  try { return Boolean(publicationRecovery.getPending()); } catch { return true; }
++});
+
+ const searchQuery = ref("");
+ const selectedCategory = ref("");
+@@ -717,27 +731,86 @@ async function publishSelected() {
+ }
+
+ async function publishRows(rows) {
++  if (hasPendingPublication.value) {
++    ElMessage.warning("存在尚未确认的发布请求，请先恢复原任务状态。");
++    return;
++  }
+   const items = rows
+     .filter((row) => row.draft_revision_id && !row.withdrawn_at)
+     .map((row) => ({ entry_id: row.id, revision_id: row.draft_revision_id, expected_version: row.lock_version }));
+   if (!items.length) return;
+   publishing.value = true;
+   try {
+-    publicationJob.value = await createKnowledgePublication(items);
+-    await pollPublication(publicationJob.value.id);
++    publicationRecovery.begin(items);
++    if (!publicationRecovery.isDurable()) {
++      ElMessage.warning("此浏览器无法保存待确认记录，请保持当前页面打开直到发布任务状态明确。");
++    }
++    publicationJob.value = { state: "unknown", error: "正在确认发布请求结果。" };
++    await resumePublication();
+   } catch (error) {
+-    ElMessage.error(`创建发布任务失败：${error?.response?.data?.detail || error.message}`);
++    publicationJob.value = { state: "unknown", error: "请求结果尚未确认。可继续使用原请求标识恢复，不会自动重复发布。" };
++    ElMessage.error(`发布状态待确认：${error?.response?.data?.detail || error.message}`);
+   } finally {
+     publishing.value = false;
+   }
+ }
+
++async function resumePublication() {
++  publishing.value = true;
++  try {
++    const job = await publicationRecovery.submitPending();
++    publicationJob.value = job;
++    await pollPublication(job.id);
++  } catch (error) {
++    let pending = null;
++    try { pending = publicationRecovery.getPending(); } catch { /* retain the blocking unknown state */ }
++    publicationJob.value = {
++      state: "unknown",
++      id: pending?.jobId || undefined,
++      error: "请求结果尚未确认。请使用原请求标识恢复，或先核对服务端任务状态。",
++    };
++    ElMessage.error(`恢复发布请求失败：${error?.response?.data?.detail || error.message}`);
++  } finally {
++    publishing.value = false;
++  }
++}
++
++async function recoverPublication() {
++  let pending;
++  try {
++    pending = publicationRecovery.getPending();
++  } catch (error) {
++    publicationJob.value = { state: "unknown", error: error.message };
++    return;
++  }
++  if (!pending) return;
++  if (!pending.jobId) {
++    await resumePublication();
++    return;
++  }
++  try {
++    await pollPublication(pending.jobId);
++  } catch (error) {
++    publicationJob.value = {
++      state: "unknown",
++      id: pending.jobId,
++      error: `读取原发布任务失败：${error?.response?.data?.detail || error.message}`,
++    };
++  }
++}
++
+ async function pollPublication(id) {
+   publicationJob.value = await fetchKnowledgePublication(id);
+   if (["queued", "preparing"].includes(publicationJob.value.state)) {
+-    window.setTimeout(() => pollPublication(id).catch((error) => ElMessage.error(`读取发布状态失败：${error.message}`)), 1400);
++    window.clearTimeout(publicationPollTimer);
++    publicationPollTimer = window.setTimeout(() => pollPublication(id).catch((error) => {
++      publicationJob.value = { state: "unknown", id, error: `读取发布状态失败：${error.message}` };
++    }), 1400);
+     return;
+   }
++  if (["succeeded", "failed"].includes(publicationJob.value.state)) {
++    publicationRecovery.clear();
++  }
+   if (publicationJob.value.state === "succeeded") {
+     ElMessage.success("所选草稿已发布");
+     selectedRows.value = [];
+@@ -758,6 +831,19 @@ async function retryPublication() {
+   }
+ }
+
++function restorePublication() {
++  try {
++    const pending = publicationRecovery.getPending();
++    if (!pending) return;
++    publicationJob.value = pending.jobId
++      ? { id: pending.jobId, state: "unknown", error: "正在恢复原发布任务状态。" }
++      : { state: "unknown", error: "发现尚未确认的发布请求，请继续确认原请求结果。" };
++    if (pending.jobId) void recoverPublication();
++  } catch (error) {
++    publicationJob.value = { state: "unknown", error: error.message };
++  }
++}
++
+ async function handleSync() {
+   syncing.value = true;
+   try {
+@@ -793,7 +879,9 @@ async function handleRebuildIndex() {
+
+ onMounted(() => {
+   loadEntries();
++  restorePublication();
+ });
++onBeforeUnmount(() => window.clearTimeout(publicationPollTimer));
+ </script>
+
+ <style scoped>
+diff --git a/frontend/src/views/tourist/ChatView.vue b/frontend/src/views/tourist/ChatView.vue
+index ca597f8..6a04fe7 100644
+--- a/frontend/src/views/tourist/ChatView.vue
++++ b/frontend/src/views/tourist/ChatView.vue
+@@ -35,6 +35,7 @@
+       <span class="speech-pulse" aria-hidden="true"></span>
+       <strong>正在识别</strong>
+       <span>首次加载语音模型可能需要更长时间…</span>
++      <button type="button" class="confirm-btn confirm-btn--dismiss" @click="cancelTranscription">取消识别</button>
+     </div>
+     <div v-if="speechListening || isRecording" class="speech-bar" aria-live="polite">
+       <span class="speech-pulse" aria-hidden="true"></span>
+@@ -86,7 +87,7 @@
+         <div class="rail-heading"><h2>讲解</h2><p>按你的需要调整讲解方式</p></div>
+         <label class="explanation-select"><GuideIcon name="settings" /><span>讲解方式</span><select v-model="explanationLevel" aria-label="讲解方式"><option v-for="style in styleOptions" :key="style.key" :value="style.key">{{ style.label }}讲解</option></select></label>
+         <div class="narration-note"><h3>当前讲解</h3><p v-if="narrationSummary">{{ narrationSummary }}</p><p v-else class="narration-empty">提问后，讲解摘要会显示在这里。</p><small v-if="narrationSummary">完整内容可在文字记录中查看</small></div>
+-        <p v-if="chatStore.errorMessage" class="rail-error" role="alert">{{ chatStore.errorMessage }}</p>
++        <p v-if="chatStore.errorMessage" class="rail-error" role="alert">{{ chatStore.errorMessage }} <button type="button" class="retry-btn" @click="chatStore.retryLastMessage()">重新尝试</button></p>
+         <button id="text-panel-trigger" type="button" class="text-panel-trigger" :aria-expanded="textExpanded" @click="toggleTextPanel"><GuideIcon name="book" />文字记录与资料<span>{{ chatStore.messages.length > 1 ? chatStore.messages.length - 1 : '' }}</span><GuideIcon name="chevron" /></button>
+       <dialog ref="textDialogRef" class="conversation-panel" aria-label="文字记录与参考资料" @cancel.prevent="closeTextPanel" @click="handleDialogBackdrop($event, closeTextPanel)">
+         <header class="conversation-header"><div><h2>文字记录</h2><p>需要时，回看讲解和参考资料。</p></div><button type="button" class="icon-button" aria-label="收起文字记录" @click="closeTextPanel"><GuideIcon name="close" /></button></header>
+@@ -104,7 +105,9 @@
+           <article v-for="(message, index) in chatStore.messages" v-show="!message.isWelcome || chatStore.messages.length > 1" :key="`${message.role}-${index}`" :class="['msg-item', message.role, { latest: index === chatStore.messages.length - 1 }]">
+             <div v-if="message.role === 'assistant'" class="msg-bubble" v-html="renderAnswer(message.content, index === chatStore.messages.length - 1)" @click="handleCitationClick"></div>
+             <div v-else class="msg-bubble">{{ message.content }}</div>
+-            <div v-if="message.role === 'assistant' && !message.isWelcome && message.content && !chatStore.streaming" class="answer-feedback" aria-label="回答评价">
++            <p v-if="message.completion === 'incomplete'" class="error-notice">回答未完成，已保留现有内容。</p>
++            <p v-else-if="message.completion === 'stopped'" class="error-notice">已停止生成。</p>
++            <div v-if="message.role === 'assistant' && !message.isWelcome && message.content && message.completion !== 'incomplete' && message.completion !== 'stopped' && !chatStore.streaming" class="answer-feedback" aria-label="回答评价">
+               <span>这条讲解有帮助吗？</span>
+               <button type="button" :class="{ active: message.feedbackRating === 'positive' }" :disabled="message.feedbackSubmitting" @click="chatStore.submitFeedback(message, 'positive')">有帮助</button>
+               <button type="button" :class="{ active: message.feedbackPendingRating === 'negative' || message.feedbackRating === 'negative' }" :disabled="message.feedbackSubmitting" @click="message.feedbackPendingRating = message.feedbackPendingRating === 'negative' ? null : 'negative'">需改进</button>
+@@ -246,7 +249,8 @@ import MapView from "./MapView.vue";
+ import RouteView from "./RouteView.vue";
+ import QuizView from "./QuizView.vue";
+ import "../../assets/guide-tools.css";
+-import { analyzeImage } from "../../api/vision";
++import { analyzeImage, getVisionErrorMessage } from "../../api/vision";
++import { createLatestRequest } from "../../utils/latestRequest";
+ import { getTranscriptionErrorMessage, transcribeAudio } from "../../api/voice";
+ import { useAudioPlayer } from "../../composables/useAudioPlayer";
+ import { renderMarkdown } from "../../composables/useMarkdown";
+@@ -352,6 +356,7 @@ const query = ref("");
+ const voiceMode = ref(false);
+ const explanationLevel = ref("adult");
+ const transcribing = ref(false);
++const transcriptionRequests = createLatestRequest();
+ const transcriptionConfidence = ref(-1);
+ const showConfirmBar = ref(false);
+ const transcriptionCandidates = ref([]);
+@@ -362,6 +367,7 @@ const speechSessionActive = ref(false);
+ const recorderError = ref("");
+ const messageListRef = ref(null);
+ const visionFileInputRef = ref(null);
++const visionRequests = createLatestRequest();
+ const visionFile = ref(null);
+ const visionPreviewUrl = ref("");
+ const visionResult = ref(null);
+@@ -424,6 +430,8 @@ function handleHotline(type) {
+
+ function closeVisionPanel() {
+   visionPanelOpen.value = false
++  visionRequests.cancel()
++  visionAnalyzing.value = false
+   stopCamera()
+ }
+
+@@ -708,6 +716,8 @@ onMounted(() => {
+
+ onBeforeUnmount(() => {
+   pageActive = false;
++  visionRequests.cancel();
++  transcriptionRequests.cancel();
+   toolMedia.removeEventListener("change", syncPanels);
+   stopCamera();
+   if (greetingTimer) {
+@@ -796,6 +806,15 @@ function submitQuery(rawQuery, extraOptions = {}) {
+           chatStore.clearSubtitleWords();
+         }
+       },
++      onPlaybackStopped: () => {
++        activeAudioSegments.value = 0;
++        avatar.setState("idle");
++        speechProgress.value = 0;
++        speechElapsedMs.value = 0;
++        speechDurationMs.value = 0;
++        visemeTimeline.value = null;
++        chatStore.clearSubtitleWords();
++      },
+       onSpeechProgress: (progress, elapsedMs, timeline, actualDurationMs) => {
+         speechProgress.value = progress;
+         speechElapsedMs.value = elapsedMs;
+@@ -845,9 +864,11 @@ async function toggleRecording() {
+       avatar.setState("idle");
+       return;
+     }
++    const transcriptionRequest = transcriptionRequests.begin();
+     transcribing.value = true;
+     try {
+-      const result = await transcribeAudio(audioBlob);
++      const result = await transcribeAudio(audioBlob, { signal: transcriptionRequest.signal });
++      if (!transcriptionRequest.isCurrent()) return;
+       pendingVoiceContext.value = {
+         audio_emotion: result?.emotion || null,
+         audio_confidence: typeof result?.emotion_confidence === "number"
+@@ -900,12 +921,15 @@ async function toggleRecording() {
+         }
+       }
+     } catch (error) {
++      if (!transcriptionRequest.isCurrent()) return;
+       recorderError.value = getTranscriptionErrorMessage(error);
+       showConfirmBar.value = false;
+       transcriptionConfidence.value = -1;
+     } finally {
+-      transcribing.value = false;
+-      voiceMode.value = false;
++      if (transcriptionRequest.isCurrent()) {
++        transcribing.value = false;
++        voiceMode.value = false;
++      }
+     }
+     avatar.setState("idle");
+     return;
+@@ -951,6 +975,15 @@ async function toggleRecording() {
+   }
+ }
+
++function cancelTranscription() {
++  transcriptionRequests.cancel();
++  transcribing.value = false;
++  voiceMode.value = false;
++  pendingVoiceContext.value = null;
++  recorderError.value = "已取消识别，可重新录音或使用文字输入。";
++  avatar.setState("idle");
++}
++
+ function dismissConfirmBar() {
+   showConfirmBar.value = false;
+   recorderError.value = "";
+@@ -1028,13 +1061,16 @@ function openVisionFilePicker() {
+
+ function handleVisionFileChange(event) {
+   const file = event.target.files?.[0];
++  visionRequests.cancel();
++  visionFile.value = null;
++  revokeVisionPreview();
+   visionError.value = "";
+   visionResult.value = null;
+   if (!file) {
+     return;
+   }
+-  if (!file.type.startsWith("image/")) {
+-    visionError.value = "请选择图片文件。";
++  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
++    visionError.value = "请选择 JPEG、PNG 或 WebP 图片。";
+     event.target.value = "";
+     return;
+   }
+@@ -1052,19 +1088,23 @@ async function handleAnalyzeImage() {
+   if (!visionFile.value || visionAnalyzing.value) {
+     return;
+   }
++  const request = visionRequests.begin();
+   visionAnalyzing.value = true;
+   avatar.triggerAction("look_around");
+   visionError.value = "";
+   visionResult.value = null;
+   try {
+-    visionResult.value = await analyzeImage(
++    const result = await analyzeImage(
+       visionFile.value,
+       "这张图片可能对应景区哪个位置？请提取可用于景区资料检索的线索。",
++      { signal: request.signal },
+     );
++    if (request.isCurrent()) visionResult.value = result;
+   } catch (error) {
+-    visionError.value = `图片识别失败：${error.message}`;
++    if (!request.isCurrent()) return;
++    visionError.value = getVisionErrorMessage(error);
+   } finally {
+-    visionAnalyzing.value = false;
++    if (request.isCurrent()) visionAnalyzing.value = false;
+   }
+ }
+
+@@ -1082,6 +1122,8 @@ function askFromImage() {
+ }
+
+ function clearVisionState() {
++  visionRequests.cancel();
++  visionAnalyzing.value = false;
+   visionFile.value = null;
+   visionResult.value = null;
+   visionError.value = "";
+diff --git a/frontend/src/views/tourist/MapView.vue b/frontend/src/views/tourist/MapView.vue
+index 7655310..cf28423 100644
+--- a/frontend/src/views/tourist/MapView.vue
++++ b/frontend/src/views/tourist/MapView.vue
+@@ -103,6 +103,7 @@ import { useGeolocation } from "../../composables/useGeolocation";
+ import { useNarration } from "../../composables/useNarration";
+ import { speechText } from "../../constants/narration";
+ import { fetchSpotNarration } from "../../api/narration";
++import { createLatestRequest } from "../../utils/latestRequest";
+
+ const props = defineProps({
+   busy: { type: Boolean, default: false },
+@@ -297,8 +298,18 @@ const modeLabel = computed(() => {
+   return map[geo.mode.value] || geo.mode.value;
+ });
+
++const narrationRequests = createLatestRequest();
++watch(() => props.busy, (busy) => {
++  if (busy) {
++    narrationRequests.cancel();
++    narrationLoading.value = false;
++  }
++});
++
+ async function playNarration(spot) {
+-  if (!spot) return;
++  if (!spot || props.busy) return;
++  const request = narrationRequests.begin();
++  if (audio.isPlaying.value) audio.stop();
+   narrationLoading.value = true;
+   narrationDegraded.value = false;
+   narrationText.value = spot.desc || "";
+@@ -306,22 +317,23 @@ async function playNarration(spot) {
+
+   let data = null;
+   try {
+-    data = await fetchSpotNarration(spot.name);
++    data = await fetchSpotNarration(spot.name, undefined, { signal: request.signal });
+   } catch {
+     data = null;
+   }
+
++  if (!request.isCurrent()) return;
+   narrationLoading.value = false;
+   if (data && data.available) {
+     // 卡片展示完整讲解词；浏览器朗读兜底只念开头，避免长时间占用播放通道
+     narrationText.value = data.text || spot.desc || "";
+     narrationDegraded.value = !data.base64_audio;
+-    audio.enqueue(data.base64_audio, data.duration_ms || 60000, () => finishNarration(), speechText(data.text), (p) => { narrationProgress.value = p; }, { allowBrowserSpeech: true });
++    audio.enqueue(data.base64_audio, data.duration_ms || 60000, () => { if (request.isCurrent()) finishNarration(); }, speechText(data.text), (p) => { if (request.isCurrent()) narrationProgress.value = p; }, { allowBrowserSpeech: true });
+   } else {
+     narrationDegraded.value = true;
+     const fallback = spot.desc || `${spot.name}`;
+     narrationText.value = fallback;
+-    audio.enqueue("", Math.max(fallback.length * 180, 1200), () => finishNarration(), speechText(fallback), (p) => { narrationProgress.value = p; }, { allowBrowserSpeech: true });
++    audio.enqueue("", Math.max(fallback.length * 180, 1200), () => { if (request.isCurrent()) finishNarration(); }, speechText(fallback), (p) => { if (request.isCurrent()) narrationProgress.value = p; }, { allowBrowserSpeech: true });
+   }
+ }
+
+@@ -332,6 +344,8 @@ function finishNarration() {
+ }
+
+ function stopNarration() {
++  narrationRequests.cancel();
++  narrationLoading.value = false;
+   audio.stop();
+   narrationProgress.value = 0;
+   narration.status.value = "idle";
+@@ -386,6 +400,8 @@ onMounted(() => {
+ });
+
+ onBeforeUnmount(() => {
++  narrationRequests.cancel();
++  if (!props.busy) audio.stop();
+   if (narrateTimer) { clearInterval(narrateTimer); narrateTimer = null; }
+   geo.stop();
+   if (resizeObserver) resizeObserver.disconnect();
+diff --git a/frontend/tests/adaptive-audio.test.mjs b/frontend/tests/adaptive-audio.test.mjs
+new file mode 100644
+index 0000000..ea74397
+--- /dev/null
++++ b/frontend/tests/adaptive-audio.test.mjs
+@@ -0,0 +1,44 @@
++import { test, before, after } from 'node:test';
++import assert from 'node:assert/strict';
++import { createServer } from 'vite';
++
++let vite;
++let createAdaptiveAudioBuffer;
++before(async () => {
++  vite = await createServer({ configFile: false, cacheDir: '/private/tmp/guide-vite-adaptive-tests', server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
++  ({ createAdaptiveAudioBuffer } = await vite.ssrLoadModule('/src/utils/adaptiveAudioBuffer.js'));
++});
++after(async () => { await vite?.close(); });
++
++test('healthy chunks are scheduled in order with no added delay', () => {
++  const policy = createAdaptiveAudioBuffer();
++  assert.equal(policy.schedule(0.08, 0.10), 0.10);
++  assert.equal(policy.schedule(0.15, 0.20), 0.20);
++});
++
++test('a large stall adds a bounded buffer at most once during cooldown', () => {
++  const policy = createAdaptiveAudioBuffer();
++  assert.equal(policy.schedule(1, 0.8), 1.08);
++  assert.equal(policy.schedule(1.3, 1.1), 1.3);
++  assert.equal(policy.schedule(3.5, 3.3), 3.58);
++});
++
++test('small jitter does not add delay', () => {
++  const policy = createAdaptiveAudioBuffer();
++  assert.equal(policy.schedule(1, 0.97), 1);
++});
++
++test('on a deterministic burst trace the extra buffer absorbs a later stall', () => {
++  const arrivals = [0, 0.25, 0.26, 0.27, 0.61, 0.62, 0.63];
++  const run = (policy) => {
++    let end = 0.1;
++    let stalls = 0;
++    for (const now of arrivals.slice(1)) {
++      if (now > end + 0.001) stalls++;
++      end = (policy ? policy.schedule(now, end) : Math.max(now, end)) + 0.1;
++    }
++    return stalls;
++  };
++  assert.equal(run(null), 2);
++  assert.equal(run(createAdaptiveAudioBuffer()), 1);
++});
+diff --git a/frontend/tests/audio-player.test.mjs b/frontend/tests/audio-player.test.mjs
+new file mode 100644
+index 0000000..b8cdc08
+--- /dev/null
++++ b/frontend/tests/audio-player.test.mjs
+@@ -0,0 +1,154 @@
++import { test, before, after } from 'node:test';
++import assert from 'node:assert/strict';
++import { createServer } from 'vite';
++
++let vite;
++let player;
++let releaseOldDecode;
++let starts = [];
++let startTimes = [];
++let nodes = [];
++let decodeCount = 0;
++let audioContext;
++
++before(async () => {
++  class FakeAudioContext {
++    constructor() { this.state = 'running'; this.currentTime = 0; this.destination = {}; audioContext = this; }
++    createAnalyser() { return { connect() {}, getByteTimeDomainData(data) { data.fill(128); } }; }
++    createGain() { return { gain: { value: 1 }, connect() {}, disconnect() {} }; }
++    resume() { return Promise.resolve(); }
++    createBuffer(channels, length, sampleRate) {
++      return { length, duration: length / sampleRate, getChannelData() { return new Float32Array(length); } };
++    }
++    createBufferSource() {
++      const node = { playbackRate: { value: 1 }, connect() {}, disconnect() {},
++        start(time = 0) { starts.push(node.buffer.id); startTimes.push(time); }, stop() { this.stopped = true; this.onended?.(); } };
++      nodes.push(node);
++      return node;
++    }
++    decodeAudioData() {
++      decodeCount++;
++      if (decodeCount === 1) return new Promise(resolve => { releaseOldDecode = resolve; });
++      return Promise.resolve({ id: 'new', duration: 1 });
++    }
++  }
++  globalThis.window = { AudioContext: FakeAudioContext };
++  globalThis.AudioContext = FakeAudioContext;
++  globalThis.requestAnimationFrame = () => 1;
++  globalThis.cancelAnimationFrame = () => {};
++  vite = await createServer({ configFile: false, cacheDir: '/private/tmp/guide-vite-audio-tests', server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
++  player = (await vite.ssrLoadModule('/src/composables/useAudioPlayer.js')).useAudioPlayer();
++});
++
++after(async () => { player?.stop(); await vite?.close(); });
++
++test('an audio decode finishing after stop cannot play or end a newer answer', async () => {
++  const old = player.enqueue('AA==');
++  await Promise.resolve();
++  player.stop();
++  const current = player.enqueue('AA==');
++  await new Promise(resolve => setTimeout(resolve, 0));
++  assert.deepEqual(starts, ['new']);
++  releaseOldDecode({ id: 'old', duration: 1 });
++  await new Promise(resolve => setTimeout(resolve, 0));
++  assert.deepEqual(starts, ['new']);
++  assert.equal(player.isPlaying.value, true);
++  nodes.at(-1).onended();
++  await Promise.all([old, current]);
++});
++
++test('a delayed PCM progress callback cannot update a newer stream', () => {
++  const originalSetInterval = globalThis.setInterval;
++  const originalClearInterval = globalThis.clearInterval;
++  const timers = [];
++  globalThis.setInterval = (callback) => { timers.push(callback); return timers.length; };
++  globalThis.clearInterval = () => {};
++  try {
++    let newerUpdates = 0;
++    player.startPCMStream(() => {}, () => {});
++    player.feedPCMChunk('AAA=', 24000, 1, 16);
++    const oldTick = timers[0];
++    player.stop();
++    player.startPCMStream(() => { newerUpdates++; }, () => {});
++    player.feedPCMChunk('AAA=', 24000, 1, 16);
++    oldTick();
++    assert.equal(newerUpdates, 0);
++  } finally {
++    player.stop();
++    globalThis.setInterval = originalSetInterval;
++    globalThis.clearInterval = originalClearInterval;
++  }
++});
++
++test('after a network stall PCM chunks resume in order without scheduling in the past', () => {
++  startTimes = [];
++  player.startPCMStream(null, null);
++  audioContext.currentTime = 0;
++  player.feedPCMChunk('AAA=', 24000, 1, 16);
++  audioContext.currentTime = 1;
++  player.feedPCMChunk('AAA=', 24000, 1, 16);
++  player.feedPCMChunk('AAA=', 24000, 1, 16);
++  assert.equal(startTimes[1], 1);
++  assert.ok(startTimes[2] > startTimes[1]);
++  player.stop();
++});
++
++test('experimental buffering adds a bounded recovery delay after a large stall', () => {
++  startTimes = [];
++  player.startPCMStream(null, null, null, { adaptive: true });
++  if (audioContext) audioContext.currentTime = 0;
++  player.feedPCMChunk('AAA=', 24000, 1, 16);
++  audioContext.currentTime = 0;
++  audioContext.currentTime = 1;
++  player.feedPCMChunk('AAA=', 24000, 1, 16);
++  assert.equal(startTimes[1], 1.08);
++  player.stop();
++});
++
++test('a suspended audio context keeps pending PCM stoppable until it can play', () => {
++  const originalSetTimeout = globalThis.setTimeout;
++  const originalClearTimeout = globalThis.clearTimeout;
++  const timers = [];
++  globalThis.setTimeout = (callback) => { timers.push(callback); return timers.length; };
++  globalThis.clearTimeout = () => {};
++  try {
++    player.startPCMStream(null, null);
++    player.feedPCMChunk('AAA=', 24000, 1, 16);
++    const source = nodes.at(-1);
++    audioContext.state = 'suspended';
++    player.endPCMStream();
++    timers[0]();
++    assert.equal(player.isPCMStreaming.value, true);
++    player.stop();
++    assert.equal(source.stopped, true);
++  } finally {
++    audioContext.state = 'running';
++    player.stop();
++    globalThis.setTimeout = originalSetTimeout;
++    globalThis.clearTimeout = originalClearTimeout;
++  }
++});
++
++test('a browser that never resumes audio eventually reports voice unavailable', async () => {
++  const originalSetTimeout = globalThis.setTimeout;
++  const originalClearTimeout = globalThis.clearTimeout;
++  const timers = [];
++  globalThis.setTimeout = (callback) => { timers.push(callback); return timers.length; };
++  globalThis.clearTimeout = () => {};
++  try {
++    let unavailable = 0;
++    player.startPCMStream(null, null, null, { onUnavailable: () => { unavailable++; } });
++    audioContext.state = 'suspended';
++    audioContext.resume = () => new Promise(() => {});
++    player.feedPCMChunk('AAA=', 24000, 1, 16);
++    await Promise.resolve();
++    timers[0]();
++    assert.equal(unavailable, 1);
++    assert.equal(player.isPlaying.value, false);
++  } finally {
++    audioContext.state = 'running';
++    player.stop();
++    globalThis.setTimeout = originalSetTimeout;
++    globalThis.clearTimeout = originalClearTimeout;
++  }
++});
+diff --git a/frontend/tests/chat-metrics.test.mjs b/frontend/tests/chat-metrics.test.mjs
+new file mode 100644
+index 0000000..863f643
+--- /dev/null
++++ b/frontend/tests/chat-metrics.test.mjs
+@@ -0,0 +1,45 @@
++import { test, before, after } from 'node:test';
++import assert from 'node:assert/strict';
++import { createServer } from 'vite';
++
++let vite;
++let createChatMetrics;
++before(async () => {
++  vite = await createServer({ configFile: false, cacheDir: '/private/tmp/guide-vite-metrics-tests', server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
++  ({ createChatMetrics } = await vite.ssrLoadModule('/src/utils/chatMetrics.js'));
++});
++after(async () => { await vite?.close(); });
++
++test('measures distinct first text received, audio received, and audio scheduled without user content', () => {
++  let now = 100;
++  const metrics = createChatMetrics(() => now);
++  now = 150; metrics.mark('text_received');
++  now = 175; metrics.mark('audio_received');
++  now = 200; metrics.mark('audio_scheduled');
++  now = 210; metrics.mark('text_received');
++  now = 300;
++  assert.deepEqual(metrics.finish('complete'), {
++    outcome: 'complete', duration_ms: 200, text_received_ms: 50,
++    audio_received_ms: 75, audio_scheduled_ms: 100,
++  });
++});
++
++test('unavailable audio timing remains absent', () => {
++  let now = 0;
++  const metrics = createChatMetrics(() => now);
++  now = 10; metrics.mark('text_received');
++  now = 50;
++  assert.deepEqual(metrics.finish('incomplete'), { outcome: 'incomplete', duration_ms: 50, text_received_ms: 10 });
++});
++
++test('PCM underruns and added recovery buffering are recorded without content', () => {
++  let now = 0;
++  const metrics = createChatMetrics(() => now);
++  metrics.recordAudioGap(100, 80);
++  metrics.recordAudioGap(40, 0);
++  now = 200;
++  assert.deepEqual(metrics.finish('complete'), {
++    outcome: 'complete', duration_ms: 200,
++    pcm_underrun_count: 2, pcm_gap_ms: 140, pcm_extra_buffer_ms: 80,
++  });
++});
+diff --git a/frontend/tests/chat-pcm-error.test.mjs b/frontend/tests/chat-pcm-error.test.mjs
+new file mode 100644
+index 0000000..0d189a4
+--- /dev/null
++++ b/frontend/tests/chat-pcm-error.test.mjs
+@@ -0,0 +1,43 @@
++import { test, before, after } from 'node:test';
++import assert from 'node:assert/strict';
++import { createServer } from 'vite';
++import { createPinia, setActivePinia } from 'pinia';
++let vite;
++let useChatStore;
++let realFetch;
++let source;
++
++before(async () => {
++  class Context {
++    constructor() { this.state = 'running'; this.currentTime = 0; this.destination = {}; }
++    createAnalyser() { return { connect() {}, getByteTimeDomainData(data) { data.fill(128); } }; }
++    createGain() { return { gain: { value: 1 }, connect() {}, disconnect() {} }; }
++    createBuffer(_channels, length, rate) { return { length, duration: length / rate, getChannelData: () => new Float32Array(length) }; }
++    createBufferSource() {
++      source = { connect() {}, disconnect() {}, start() {}, stop() { this.stopped = true; this.onended?.(); } };
++      return source;
++    }
++  }
++  globalThis.window = { AudioContext: Context };
++  globalThis.AudioContext = Context;
++  globalThis.requestAnimationFrame = () => 1;
++  globalThis.cancelAnimationFrame = () => {};
++  vite = await createServer({ configFile: false, cacheDir: '/private/tmp/guide-vite-pcm-error-tests', server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
++  ({ useChatStore } = await vite.ssrLoadModule('/src/stores/chat.js'));
++  realFetch = globalThis.fetch;
++});
++after(async () => { globalThis.fetch = realFetch; await vite?.close(); });
++
++test('a stream error immediately stops queued PCM and retains partial text', async () => {
++  globalThis.fetch = async () => new Response(
++    'event: text_chunk\ndata: {"token":"部分文字"}\n\n' +
++    'event: audio_chunk\ndata: {"base64":"AAA=","sample_rate":24000}\n\n' +
++    'event: error\ndata: {"message":"内容已更新"}\n\n'
++  );
++  setActivePinia(createPinia());
++  const store = useChatStore();
++  await store.sendMessage('问题');
++  assert.equal(store.messages.at(-1).content, '部分文字');
++  assert.equal(store.messages.at(-1).completion, 'incomplete');
++  assert.equal(source.stopped, true);
++});
+diff --git a/frontend/tests/chat-stream.test.mjs b/frontend/tests/chat-stream.test.mjs
+new file mode 100644
+index 0000000..b22230a
+--- /dev/null
++++ b/frontend/tests/chat-stream.test.mjs
+@@ -0,0 +1,135 @@
++import { test, before, after, beforeEach } from 'node:test';
++import assert from 'node:assert/strict';
++import { createServer } from 'vite';
++import { createPinia, setActivePinia } from 'pinia';
++import { watch } from 'vue';
++
++let vite;
++let useChatStore;
++let getRecentChatMetrics;
++let originalFetch;
++
++before(async () => {
++  vite = await createServer({ configFile: false, cacheDir: '/private/tmp/guide-vite-chat-tests', server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
++  ({ useChatStore } = await vite.ssrLoadModule('/src/stores/chat.js'));
++  ({ getRecentChatMetrics } = await vite.ssrLoadModule('/src/utils/chatMetrics.js'));
++  originalFetch = globalThis.fetch;
++});
++beforeEach(() => { setActivePinia(createPinia()); });
++after(async () => { globalThis.fetch = originalFetch; await vite?.close(); });
++
++const response = (events) => new Response(events, { headers: { 'content-type': 'text/event-stream' } });
++
++test('truncated stream retains partial answer and offers a retry', async () => {
++  globalThis.fetch = async () => response('event: text_chunk\ndata: {"token":"部分内容"}\n\n');
++  const store = useChatStore();
++  await store.sendMessage('问题');
++  assert.equal(store.messages.at(-1).content, '部分内容');
++  assert.equal(store.messages.at(-1).completion, 'incomplete');
++  assert.match(store.errorMessage, /中断|未完成/);
++  assert.equal(store.streaming, false);
++});
++
++test('server terminal incomplete status preserves result without claiming completion', async () => {
++  globalThis.fetch = async () => response('event: text_chunk\ndata: {"token":"部分内容"}\n\nevent: done\ndata: {"completion":"incomplete"}\n\n');
++  const store = useChatStore();
++  await store.sendMessage('问题');
++  assert.equal(store.messages.at(-1).content, '部分内容');
++  assert.equal(store.messages.at(-1).completion, 'incomplete');
++  assert.match(store.errorMessage, /中断|未完成/);
++});
++
++test('an old failed request cannot change the new request state', async () => {
++  let failOld;
++  let finishNew;
++  let calls = 0;
++  globalThis.fetch = async () => {
++    calls++;
++    if (calls === 1) return new Promise((resolve, reject) => { failOld = reject; });
++    return new Promise(resolve => { finishNew = resolve; });
++  };
++  const store = useChatStore();
++  const oldRequest = store.sendMessage('旧问题');
++  const newRequest = store.sendMessage('新问题');
++  failOld(new Error('旧请求失败'));
++  await oldRequest;
++  assert.equal(store.streaming, true);
++  assert.equal(store.errorMessage, '');
++  finishNew(response('event: text\ndata: {"text":"新答案","is_complete":true}\n\nevent: done\ndata: {}\n\n'));
++  await newRequest;
++  assert.equal(store.messages.at(-1).content, '新答案');
++  assert.equal(store.errorMessage, '');
++});
++
++test('successful chat records a first-text duration without recording the question or answer', async () => {
++  globalThis.fetch = async () => response('event: text_chunk\ndata: {"token":"私有答案"}\n\nevent: done\ndata: {}\n\n');
++  const store = useChatStore();
++  await store.sendMessage('私有问题');
++  await new Promise(resolve => setTimeout(resolve, 0));
++  const sample = getRecentChatMetrics().at(-1);
++  assert.equal(sample.outcome, 'complete');
++  assert.equal(typeof sample.text_received_ms, 'number');
++  assert.doesNotMatch(JSON.stringify(sample), /私有/);
++});
++
++test('incremental text updates are observable while the stream remains open', async () => {
++  let stream;
++  globalThis.fetch = async () => new Response(new ReadableStream({ start(controller) { stream = controller; } }));
++  const store = useChatStore();
++  const contentChanges = [];
++  const unwatch = watch(() => store.messages.at(-1)?.content, value => contentChanges.push(value), { flush: 'sync' });
++  const pending = store.sendMessage('问题');
++  await Promise.resolve();
++  stream.enqueue(new TextEncoder().encode('event: text_chunk\ndata: {"token":"实时"}\n\n'));
++  await new Promise(resolve => setTimeout(resolve, 25));
++  assert.equal(store.streaming, true);
++  assert.ok(contentChanges.includes('实时'));
++  stream.enqueue(new TextEncoder().encode('event: done\ndata: {}\n\n'));
++  stream.close();
++  await pending;
++  unwatch();
++});
++
++test('stopping before the next text flush preserves received text', async () => {
++  let stream;
++  globalThis.fetch = async (_path, options) => new Response(new ReadableStream({
++    start(controller) {
++      stream = controller;
++      options.signal.addEventListener('abort', () => { try { controller.error(options.signal.reason); } catch {} }, { once: true });
++    },
++  }));
++  const store = useChatStore();
++  const pending = store.sendMessage('问题');
++  await Promise.resolve();
++  stream.enqueue(new TextEncoder().encode('event: text_chunk\ndata: {"token":"已收到"}\n\n'));
++  await new Promise(resolve => setTimeout(resolve, 0));
++  store.stopOutput();
++  await pending;
++  assert.equal(store.messages.at(-1).content, '已收到');
++  assert.equal(store.messages.at(-1).completion, 'stopped');
++});
++
++test('a burst of text is coalesced before the terminal event without losing content', async () => {
++  const events = Array.from({ length: 12 }, () => 'event: text_chunk\ndata: {"token":"字"}\n\n').join('');
++  globalThis.fetch = async () => response(`${events}event: done\ndata: {}\n\n`);
++  const store = useChatStore();
++  let changes = 0;
++  const unwatch = watch(() => store.messages.at(-1)?.content, () => { changes++; }, { flush: 'sync' });
++  await store.sendMessage('问题');
++  unwatch();
++  assert.equal(store.messages.at(-1).content, '字'.repeat(12));
++  assert.ok(changes < 12, `rendered ${changes} updates for 12 chunks`);
++});
++
++test('unsupported PCM playback keeps the text and reports unavailable voice', async () => {
++  globalThis.fetch = async () => response(
++    'event: text_chunk\ndata: {"token":"文字讲解"}\n\n' +
++    'event: audio_chunk\ndata: {"base64":"AAA=","sample_rate":24000,"channels":1,"bits":16}\n\n' +
++    'event: done\ndata: {}\n\n'
++  );
++  const store = useChatStore();
++  await store.sendMessage('问题');
++  assert.equal(store.messages.at(-1).content, '文字讲解');
++  assert.equal(store.voiceFallback, true);
++  assert.match(store.statusText, /语音暂不可用/);
++});
+diff --git a/frontend/tests/latest-request.test.mjs b/frontend/tests/latest-request.test.mjs
+new file mode 100644
+index 0000000..199b101
+--- /dev/null
++++ b/frontend/tests/latest-request.test.mjs
+@@ -0,0 +1,22 @@
++import { test, before, after } from 'node:test';
++import assert from 'node:assert/strict';
++import { createServer } from 'vite';
++let vite;
++let createLatestRequest;
++before(async () => {
++  vite = await createServer({ configFile: false, cacheDir: '/private/tmp/guide-vite-latest-tests', server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
++  ({ createLatestRequest } = await vite.ssrLoadModule('/src/utils/latestRequest.js'));
++});
++after(async () => { await vite?.close(); });
++
++test('starting a new request aborts and invalidates the old request', () => {
++  const requests = createLatestRequest();
++  const old = requests.begin();
++  const current = requests.begin();
++  assert.equal(old.signal.aborted, true);
++  assert.equal(old.isCurrent(), false);
++  assert.equal(current.isCurrent(), true);
++  requests.cancel();
++  assert.equal(current.signal.aborted, true);
++  assert.equal(current.isCurrent(), false);
++});
+diff --git a/frontend/tests/publication-api-integration.test.mjs b/frontend/tests/publication-api-integration.test.mjs
+new file mode 100644
+index 0000000..a935a1f
+--- /dev/null
++++ b/frontend/tests/publication-api-integration.test.mjs
+@@ -0,0 +1,27 @@
++import { test } from 'node:test';
++import assert from 'node:assert/strict';
++import { existsSync } from 'node:fs';
++import { createServer } from 'vite';
++
++test('K01 publication API reuses the provided idempotency key', { skip: !existsSync('src/api/knowledgePublications.js') }, async () => {
++  const vite = await createServer({ configFile: false, cacheDir: '/private/tmp/guide-vite-k01-tests', server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
++  const { createKnowledgePublication } = await vite.ssrLoadModule('/src/api/knowledgePublications.js');
++  const { default: http } = await vite.ssrLoadModule('/src/api/http.js');
++  const original = http.defaults.adapter;
++  const storage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
++  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: () => null } });
++  let sent;
++  http.defaults.adapter = async config => {
++    sent = JSON.parse(config.data);
++    return { status: 202, statusText: 'Accepted', data: { id: 'job-1', state: 'queued' }, headers: {}, config };
++  };
++  try {
++    await createKnowledgePublication([{ entry_id: 1, revision_id: 'rev-1', expected_version: 1 }], 'original-key');
++    assert.equal(sent.idempotency_key, 'original-key');
++  } finally {
++    http.defaults.adapter = original;
++    if (storage) Object.defineProperty(globalThis, 'localStorage', storage);
++    else delete globalThis.localStorage;
++    await vite.close();
++  }
++});
+diff --git a/frontend/tests/publication-recovery.test.mjs b/frontend/tests/publication-recovery.test.mjs
+new file mode 100644
+index 0000000..3a4fa8c
+--- /dev/null
++++ b/frontend/tests/publication-recovery.test.mjs
+@@ -0,0 +1,59 @@
++import { test, before, after } from 'node:test';
++import assert from 'node:assert/strict';
++import { createServer } from 'vite';
++let vite;
++let createPublicationRecovery;
++before(async () => {
++  vite = await createServer({ configFile: false, cacheDir: '/private/tmp/guide-vite-pub-tests', server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
++  ({ createPublicationRecovery } = await vite.ssrLoadModule('/src/utils/publicationRecovery.js'));
++});
++after(async () => { await vite?.close(); });
++
++function memoryStorage() {
++  const values = new Map();
++  return { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key) };
++}
++
++test('a lost creation response can be recovered after refresh with the same idempotency key', async () => {
++  const storage = memoryStorage();
++  const jobs = new Map();
++  let calls = 0;
++  const submit = async (items, key) => {
++    calls++;
++    if (!jobs.has(key)) jobs.set(key, { id: 'job-1', state: 'queued', items });
++    if (calls === 1) throw new Error('response lost');
++    return jobs.get(key);
++  };
++  const items = [{ entry_id: 1, revision_id: 'rev-1', expected_version: 2 }];
++  const first = createPublicationRecovery({ storage, createKey: () => 'request-1', submit });
++  first.begin(items);
++  await assert.rejects(first.submitPending());
++  const afterRefresh = createPublicationRecovery({ storage, createKey: () => 'wrong-new-key', submit });
++  assert.equal(afterRefresh.getPending().key, 'request-1');
++  assert.equal((await afterRefresh.submitPending()).id, 'job-1');
++  assert.equal(jobs.size, 1);
++  assert.equal(afterRefresh.getPending().jobId, 'job-1');
++});
++
++test('an unresolved publication blocks creating a second operation', () => {
++  const recovery = createPublicationRecovery({ storage: memoryStorage(), createKey: () => 'request-1', submit: async () => ({ id: 'job-1' }) });
++  recovery.begin([{ entry_id: 1, revision_id: 'rev-1', expected_version: 1 }]);
++  assert.throws(() => recovery.begin([{ entry_id: 2, revision_id: 'rev-2', expected_version: 1 }]), /待确认/);
++});
++
++test('a corrupt pending record repeatedly blocks new submissions instead of being forgotten', () => {
++  const storage = memoryStorage();
++  storage.setItem('guide-pending-publication-v1', '{broken');
++  const recovery = createPublicationRecovery({ storage, createKey: () => 'new', submit: async () => ({ id: 'job' }) });
++  assert.throws(() => recovery.getPending(), /记录损坏/);
++  assert.throws(() => recovery.begin([{ entry_id: 1 }]), /记录损坏/);
++});
++
++test('publication recovery works when structuredClone is unavailable', () => {
++  const original = globalThis.structuredClone;
++  try {
++    globalThis.structuredClone = undefined;
++    const recovery = createPublicationRecovery({ storage: memoryStorage(), createKey: () => 'k', submit: async () => ({ id: 'job' }) });
++    assert.equal(recovery.begin([{ entry_id: 1, revision_id: 'r', expected_version: 1 }]).key, 'k');
++  } finally { globalThis.structuredClone = original; }
++});
+diff --git a/frontend/tests/speech-cancel.test.mjs b/frontend/tests/speech-cancel.test.mjs
+new file mode 100644
+index 0000000..4ea52aa
+--- /dev/null
++++ b/frontend/tests/speech-cancel.test.mjs
+@@ -0,0 +1,32 @@
++import { test, before, after } from 'node:test';
++import assert from 'node:assert/strict';
++import { createServer } from 'vite';
++let vite;
++let player;
++let utterance;
++
++before(async () => {
++  globalThis.window = { speechSynthesis: {
++    getVoices: () => [{ lang: 'zh-CN' }],
++    speak(value) { utterance = value; },
++    cancel() {}, addEventListener() {}, removeEventListener() {},
++  } };
++  globalThis.SpeechSynthesisUtterance = class { constructor(text) { this.text = text; } };
++  globalThis.requestAnimationFrame = () => 1;
++  globalThis.cancelAnimationFrame = () => {};
++  vite = await createServer({ configFile: false, cacheDir: '/private/tmp/guide-vite-speech-tests', server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
++  player = (await vite.ssrLoadModule('/src/composables/useAudioPlayer.js')).useAudioPlayer();
++});
++after(async () => { player?.stop(); await vite?.close(); });
++
++test('late speech callbacks after stop cannot report progress or restart timers', async () => {
++  let updates = 0;
++  const pending = player.enqueue('', 1000, null, '测试', () => { updates++; }, { allowBrowserSpeech: true });
++  await new Promise(resolve => setTimeout(resolve, 0));
++  assert.ok(utterance);
++  player.stop();
++  utterance.onstart?.();
++  utterance.onboundary?.({ charIndex: 1 });
++  assert.equal(updates, 0);
++  await Promise.race([pending, new Promise((_, reject) => setTimeout(() => reject(new Error('cancel did not finish')), 50))]);
++});
+diff --git a/frontend/tests/sse-stream.test.mjs b/frontend/tests/sse-stream.test.mjs
+new file mode 100644
+index 0000000..0a3cbdb
+--- /dev/null
++++ b/frontend/tests/sse-stream.test.mjs
+@@ -0,0 +1,85 @@
++import { test, before, after } from 'node:test';
++import assert from 'node:assert/strict';
++import { createServer as createViteServer } from 'vite';
++
++let vite;
++let postStream;
++let realFetch;
++
++before(async () => {
++  vite = await createViteServer({ configFile: false, cacheDir: '/private/tmp/guide-vite-tests', server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
++  ({ postStream } = (await vite.ssrLoadModule('/src/composables/useSSEStream.js')).useSSEStream());
++  realFetch = globalThis.fetch;
++  globalThis.fetch = async (path, options) => {
++    let timer;
++    const bytes = new TextEncoder();
++    const body = new ReadableStream({
++      start(controller) {
++        options.signal.addEventListener('abort', () => {
++          clearInterval(timer);
++          try { controller.error(options.signal.reason); } catch {}
++        }, { once: true });
++        if (path === '/split') {
++          const data = bytes.encode('event: text_chunk\r\ndata: {"token":"灵山"}\r\n\r\nevent: done\r\ndata: {}\r\n\r\n');
++          const utfSplit = Buffer.from(data).indexOf(Buffer.from('灵')) + 1;
++          const crSplit = Buffer.from(data).indexOf('\r\n') + 1;
++          controller.enqueue(data.slice(0, crSplit));
++          controller.enqueue(data.slice(crSplit, utfSplit));
++          controller.enqueue(data.slice(utfSplit));
++          controller.close();
++        } else if (path === '/partial') {
++          controller.enqueue(bytes.encode('event: text_chunk\ndata: {"token":"部分"}'));
++          controller.close();
++        } else {
++          controller.enqueue(bytes.encode('event: status\ndata: {"text":"开始"}\n\n'));
++          if (path === '/heartbeat') timer = setInterval(() => controller.enqueue(bytes.encode(': ping\n\n')), 10);
++          if (path === '/heartbeat-events') timer = setInterval(() => controller.enqueue(bytes.encode('event: heartbeat\ndata: {}\n\n')), 10);
++          if (path === '/repeated-status') timer = setInterval(() => controller.enqueue(bytes.encode('event: status\ndata: {"text":"开始"}\n\n')), 10);
++        }
++      },
++      cancel() { clearInterval(timer); },
++    });
++    return new Response(body, { headers: { 'content-type': 'text/event-stream' } });
++  };
++});
++
++after(async () => {
++  globalThis.fetch = realFetch;
++  await vite?.close();
++});
++
++test('SSE keeps UTF-8 and CRLF split between network chunks intact', async () => {
++  const tokens = [];
++  let finished = false;
++  await postStream('/split', {}, { text_chunk: ({ token }) => tokens.push(token), done: () => { finished = true; } });
++  assert.deepEqual(tokens, ['灵山']);
++  assert.equal(finished, true);
++});
++
++test('idle connection ends with a recoverable timeout', async () => {
++  await assert.rejects(postStream('/idle', {}, {}, { idleTimeoutMs: 50, progressTimeoutMs: 1000, totalTimeoutMs: 1000 }), /超时/);
++});
++
++test('heartbeats do not hide a lack of useful progress', async () => {
++  await assert.rejects(postStream('/heartbeat', {}, {}, { idleTimeoutMs: 100, progressTimeoutMs: 60, totalTimeoutMs: 1000 }), /超时/);
++});
++
++test('heartbeat events do not hide a lack of useful progress', async () => {
++  await assert.rejects(postStream('/heartbeat-events', {}, {}, { idleTimeoutMs: 100, progressTimeoutMs: 60, totalTimeoutMs: 200 }), /等待进展超时/);
++});
++
++test('repeated identical status does not hide a lack of useful progress', async () => {
++  await assert.rejects(postStream('/repeated-status', {}, {}, { idleTimeoutMs: 100, progressTimeoutMs: 60, totalTimeoutMs: 200 }), /等待进展超时/);
++});
++
++test('incomplete final event is not dispatched', async () => {
++  const tokens = [];
++  await postStream('/partial', {}, { text_chunk: ({ token }) => tokens.push(token) });
++  assert.deepEqual(tokens, []);
++});
++
++test('caller cancellation remains distinguishable from timeout', async () => {
++  const controller = new AbortController();
++  setTimeout(() => controller.abort(), 20);
++  await assert.rejects(postStream('/idle', {}, {}, { signal: controller.signal, idleTimeoutMs: 500 }), { name: 'AbortError' });
++});
+diff --git a/frontend/tests/vision-errors.test.mjs b/frontend/tests/vision-errors.test.mjs
+new file mode 100644
+index 0000000..2eafb19
+--- /dev/null
++++ b/frontend/tests/vision-errors.test.mjs
+@@ -0,0 +1,22 @@
++import { test, before, after } from 'node:test';
++import assert from 'node:assert/strict';
++import { createServer } from 'vite';
++let vite;
++let getVisionErrorMessage;
++before(async () => {
++  vite = await createServer({ configFile: false, cacheDir: '/private/tmp/guide-vite-vision-tests', server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
++  ({ getVisionErrorMessage } = await vite.ssrLoadModule('/src/api/vision.js'));
++});
++after(async () => { await vite?.close(); });
++
++test('animated WebP rejection tells the visitor to choose a static image', () => {
++  assert.match(getVisionErrorMessage({ response: { status: 415, data: { detail: '暂不支持动态 WebP，请选择静态图片。' } } }), /静态/);
++});
++
++test('timeouts offer a retry without exposing technical errors', () => {
++  assert.match(getVisionErrorMessage({ code: 'ECONNABORTED' }), /重试/);
++});
++
++test('capacity rejection describes a busy service', () => {
++  assert.match(getVisionErrorMessage({ response: { status: 429 } }), /繁忙/);
++});
+diff --git a/frontend/tests/voice-errors.test.mjs b/frontend/tests/voice-errors.test.mjs
+new file mode 100644
+index 0000000..2f1d29d
+--- /dev/null
++++ b/frontend/tests/voice-errors.test.mjs
+@@ -0,0 +1,49 @@
++import { test, before, after } from 'node:test';
++import assert from 'node:assert/strict';
++import { createServer } from 'vite';
++
++let vite;
++let getTranscriptionErrorMessage;
++let transcribeAudio;
++let http;
++before(async () => {
++  vite = await createServer({ configFile: false, cacheDir: '/private/tmp/guide-vite-voice-tests', server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
++  ({ getTranscriptionErrorMessage, transcribeAudio } = await vite.ssrLoadModule('/src/api/voice.js'));
++  ({ default: http } = await vite.ssrLoadModule('/src/api/http.js'));
++});
++after(async () => { await vite?.close(); });
++
++test('audio duration rejection tells user to shorten the recording', () => {
++  assert.match(getTranscriptionErrorMessage({ response: { status: 413, data: { detail: '录音时间过长，请缩短录音后重试。' } } }), /时间过长/);
++});
++
++test('network error retains a non-technical way to continue', () => {
++  assert.match(getTranscriptionErrorMessage({ code: 'ECONNABORTED' }), /文字输入/);
++});
++
++test('capacity rejection describes a busy service', () => {
++  assert.match(getTranscriptionErrorMessage({ response: { status: 429 } }), /繁忙/);
++});
++
++test('canceling a transcription propagates to the underlying request', async () => {
++  const original = http.defaults.adapter;
++  const storage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
++  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: () => null } });
++  let underlyingSignal;
++  http.defaults.adapter = config => new Promise((_resolve, reject) => {
++    underlyingSignal = config.signal;
++    config.signal.addEventListener('abort', () => reject(new Error('canceled')), { once: true });
++  });
++  try {
++    const controller = new AbortController();
++    const pending = transcribeAudio(new Blob(['abc'], { type: 'audio/wav' }), { signal: controller.signal });
++    await new Promise(resolve => setTimeout(resolve, 0));
++    controller.abort();
++    await assert.rejects(pending);
++    assert.equal(underlyingSignal.aborted, true);
++  } finally {
++    http.defaults.adapter = original;
++    if (storage) Object.defineProperty(globalThis, 'localStorage', storage);
++    else delete globalThis.localStorage;
++  }
++});

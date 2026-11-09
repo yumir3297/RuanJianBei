@@ -3,102 +3,39 @@
     <header class="panel-card avatar-hero">
       <div>
         <h2>数字人配置</h2>
-        <p>统一维护游客端导览形象与语音表现，让数字人页面既能讲得清楚，也能展示得更有景区气质。</p>
+        <p>设置游客端使用的形象和音色。语速、音量仅保存在当前浏览器。</p>
       </div>
       <div class="hero-actions">
+        <el-tag v-if="hasUnsavedChanges" type="warning" effect="plain">有未保存更改</el-tag>
         <span v-if="lastUpdatedAt" class="hero-updated">更新于 {{ lastUpdatedAt }}</span>
         <el-button :loading="pageLoading" @click="loadPageData">刷新配置</el-button>
       </div>
     </header>
 
-    <div class="stat-grid" v-loading="pageLoading && !initialized">
-      <article
-        v-for="card in summaryCards"
-        :key="card.key"
-        class="stat-card"
-        :style="{ '--accent': card.accent, '--accent-soft': card.soft }"
-      >
-        <span class="stat-kicker">{{ card.kicker }}</span>
-        <strong class="stat-value">{{ card.value }}</strong>
-        <span class="stat-label">{{ card.label }}</span>
-        <p class="stat-note">{{ card.note }}</p>
-      </article>
-    </div>
+    <el-alert
+      v-if="pageLoadError"
+      type="warning"
+      :title="pageLoadError"
+      :closable="false"
+      show-icon
+    >
+      <template #default><el-button link type="primary" @click="loadPageData">重新加载</el-button></template>
+    </el-alert>
 
     <article class="panel-card avatar-workbench">
       <div class="section-heading">
         <div>
           <h3>数字人工作台</h3>
-          <p>调整游客端当前使用的形象、语音音色和演示状态，保存后可直接应用到导览页。</p>
+            <p>选择要启用的形象与音色。表情、动作和口型只用于本页预览。</p>
         </div>
       </div>
 
       <div class="workbench-grid">
-        <div class="workbench-left">
-          <div class="sub-block">
-            <div class="block-head">
-              <strong>外观形象</strong>
-              <small>三套数字人导览气质可切换</small>
-            </div>
-            <div class="model-grid">
-              <button
-                v-for="model in modelList"
-                :key="model.key"
-                type="button"
-                :class="['model-card', { active: selectedPreset === model.key }]"
-                @click="selectModel(model.key)"
-              >
-                <div class="model-preview">
-                  <div class="model-placeholder" :class="`preview-${model.cssClass || model.key}`">
-                    <span class="model-initial">{{ model.label[0] }}</span>
-                  </div>
-                  <div v-if="selectedPreset === model.key" class="model-check">✓</div>
-                </div>
-                <div class="model-info">
-                  <strong>{{ model.label }}</strong>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          <div class="sub-block">
-            <div class="block-head">
-              <strong>语音音色</strong>
-              <small>保存后应用到游客端回答语音</small>
-            </div>
-
-            <el-form label-width="84px" class="voice-form">
-              <el-form-item label="音色">
-                <el-select v-model="voiceType" placeholder="选择音色">
-                  <el-option label="温柔女声 · 龙婉" value="gentle-female" />
-                  <el-option label="知性女声 · 龙小夏" value="calm-female" />
-                  <el-option label="沉稳男声 · 龙三叔" value="deep-male" />
-                  <el-option label="活泼女声 · 龙安亲" value="lively-female" />
-                </el-select>
-                <el-button class="voice-preview-btn" :loading="voicePreviewLoading" @click="handleVoicePreview">试听真实音色</el-button>
-                <div class="voice-provider-note">
-                  实际百炼音色：<code>{{ selectedVoiceOption.providerVoice }}</code>
-                  <span>{{ selectedVoiceOption.description }}</span>
-                </div>
-              </el-form-item>
-              <el-divider content-position="left">
-                <span style="font-size:12px;color:#6c757d">以下为本机演示偏好，不影响游客端</span>
-              </el-divider>
-              <el-form-item label="语速">
-                <el-slider v-model="speechRate" :min="80" :max="150" :step="5" show-input />
-              </el-form-item>
-              <el-form-item label="音量">
-                <el-slider v-model="volume" :min="50" :max="100" :step="5" show-input />
-              </el-form-item>
-            </el-form>
-          </div>
-        </div>
-
-        <div class="workbench-right">
+        <div class="workbench-preview">
           <div class="sub-block preview-block">
             <div class="block-head">
               <strong>实时预览</strong>
-              <small>用于答辩前快速确认人物状态</small>
+              <small>外观切换和表情动作在此预览</small>
             </div>
             <div class="preview-area">
               <div class="preview-canvas-wrapper">
@@ -135,38 +72,72 @@
                     <el-button @click="playPreviewAction('vrma_standard_greet')">VRMA 问候</el-button>
                   </el-button-group>
                 </div>
-                <el-button-group v-if="false">
-                  <el-button
-                    @click="previewEmotion = 'neutral'; previewSpeaking = false"
-                    :type="previewEmotion === 'neutral' && !previewSpeaking ? 'primary' : 'default'"
-                  >
-                    空闲
-                  </el-button>
-                  <el-button
-                    @click="previewEmotion = 'happy'; previewSpeaking = true; previewReactionToken += 1"
-                    :type="previewEmotion === 'happy' ? 'primary' : 'default'"
-                  >
-                    微笑
-                  </el-button>
-                  <el-button
-                    @click="previewEmotion = 'apology'; previewSpeaking = false; previewReactionToken += 1"
-                    :type="previewEmotion === 'apology' ? 'primary' : 'default'"
-                  >
-                    致歉
-                  </el-button>
-                </el-button-group>
-                <el-button v-if="false" @click="previewSpeaking = !previewSpeaking" :type="previewSpeaking ? 'warning' : 'default'">
-                  {{ previewSpeaking ? "停止说话" : "模拟说话" }}
-                </el-button>
                 <el-button @click="previewSpeaking = !previewSpeaking" :type="previewSpeaking ? 'warning' : 'default'">
                   {{ previewSpeaking ? "停止口型预览" : "预览讲解口型" }}
                 </el-button>
               </div>
             </div>
           </div>
+        </div>
+
+        <div class="workbench-settings">
+          <div class="sub-block">
+            <div class="block-head">
+              <strong>外观形象</strong>
+              <small>选择游客端使用的人物</small>
+            </div>
+            <div class="model-grid">
+              <button
+                v-for="model in modelList"
+                :key="model.key"
+                type="button"
+                :class="['model-card', { active: selectedPreset === model.key }]"
+                :aria-pressed="selectedPreset === model.key"
+                :disabled="initialized && !presetToConfigId[model.key]"
+                @click="selectModel(model.key)"
+              >
+                <div class="model-preview">
+                  <div class="model-placeholder" :class="`preview-${model.cssClass || model.key}`">
+                    <span class="model-initial">{{ model.label[0] }}</span>
+                  </div>
+                  <div v-if="selectedPreset === model.key" class="model-check">✓</div>
+                </div>
+                <div class="model-info"><strong>{{ model.label }}</strong></div>
+              </button>
+            </div>
+          </div>
+
+          <div class="sub-block">
+            <div class="block-head">
+              <strong>语音音色</strong>
+              <small>保存后用于游客端回答语音</small>
+            </div>
+            <el-form label-width="72px" class="voice-form">
+              <el-form-item label="音色">
+                <el-select v-model="voiceType" placeholder="选择音色">
+                  <el-option label="温柔女声 · 龙婉" value="gentle-female" />
+                  <el-option label="知性女声 · 龙小夏" value="calm-female" />
+                  <el-option label="沉稳男声 · 龙三叔" value="deep-male" />
+                  <el-option label="活泼女声 · 龙安亲" value="lively-female" />
+                </el-select>
+                <el-button class="voice-preview-btn" :loading="voicePreviewLoading" @click="handleVoicePreview">试听音色</el-button>
+                <div class="voice-provider-note">
+                  服务商音色：<code>{{ selectedVoiceOption.providerVoice }}</code>
+                  <span>{{ selectedVoiceOption.description }}</span>
+                </div>
+              </el-form-item>
+              <el-divider content-position="left">仅保存在当前浏览器</el-divider>
+              <el-form-item label="语速">
+                <el-slider v-model="speechRate" :min="80" :max="150" :step="5" show-input />
+              </el-form-item>
+              <el-form-item label="音量">
+                <el-slider v-model="volume" :min="50" :max="100" :step="5" show-input />
+              </el-form-item>
+            </el-form>
+          </div>
 
           <div class="workbench-actions">
-            <el-button type="primary" size="large" :loading="saving" @click="handleSave">保存数字人配置</el-button>
+            <el-button type="primary" size="large" :loading="saving" :disabled="!initialized || !presetToConfigId[selectedPreset]" @click="handleSave">保存数字人配置</el-button>
             <el-button size="large" :disabled="saving" @click="handleReset">恢复默认</el-button>
           </div>
         </div>
@@ -177,7 +148,8 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
+import { onBeforeRouteLeave } from "vue-router";
 
 import ThreeAvatar from "../../components/ThreeAvatar.vue";
 import {
@@ -228,6 +200,7 @@ function loadLocalPrefs() {
 const localPrefs = loadLocalPrefs();
 const initialized = ref(false);
 const pageLoading = ref(false);
+const pageLoadError = ref("");
 const saving = ref(false);
 const lastUpdatedAt = ref("");
 const presetToConfigId = ref({});
@@ -244,44 +217,19 @@ const selectedPreset = ref(DEFAULT_AVATAR_PRESET);
 const voiceType = ref(DEFAULT_AVATAR_VOICE);
 const speechRate = ref(localPrefs.speechRate);
 const volume = ref(localPrefs.volume);
-
-const currentAvatarLabel = computed(() => {
-  return modelList.find((item) => item.key === selectedPreset.value)?.label || "未选择";
-});
-
-const voiceLabel = computed(() => {
-  return {
-    "gentle-female": "温柔女声",
-    "calm-female": "知性女声",
-    "deep-male": "沉稳男声",
-    "lively-female": "活泼女声",
-  }[voiceType.value] || "默认音色";
-});
+const savedSettings = ref(null);
+const hasUnsavedChanges = computed(() =>
+  Boolean(savedSettings.value) && JSON.stringify({
+    preset: selectedPreset.value,
+    voice: voiceType.value,
+    speechRate: speechRate.value,
+    volume: volume.value,
+  }) !== JSON.stringify(savedSettings.value),
+);
 
 const selectedVoiceOption = computed(() =>
   voiceOptions.find((item) => item.value === voiceType.value) || voiceOptions[0],
 );
-
-const summaryCards = computed(() => [
-  {
-    key: "avatar",
-    kicker: "",
-    value: currentAvatarLabel.value,
-    label: "当前数字人形象",
-    note: "决定游客端的第一人物印象与讲解气质。",
-    accent: "#0f766e",
-    soft: "#dcf7f1",
-  },
-  {
-    key: "voice",
-    kicker: "",
-    value: voiceLabel.value,
-    label: "当前语音音色",
-    note: "会直接影响游客端回答播放时的服务感。",
-    accent: "#b8894f",
-    soft: "#f8ecd8",
-  },
-]);
 
 function formatNow() {
   return new Intl.DateTimeFormat("zh-CN", {
@@ -351,13 +299,31 @@ async function loadAvatarConfigs() {
 }
 
 async function loadPageData() {
+  if (hasUnsavedChanges.value) {
+    try {
+      await ElMessageBox.confirm("重新读取会覆盖当前未保存的设置。", "重新加载配置？", {
+        type: "warning",
+        confirmButtonText: "重新加载",
+        cancelButtonText: "继续编辑",
+      });
+    } catch {
+      return;
+    }
+  }
   pageLoading.value = true;
+  pageLoadError.value = "";
   try {
     await loadAvatarConfigs();
     initialized.value = true;
+    savedSettings.value = {
+      preset: selectedPreset.value,
+      voice: voiceType.value,
+      speechRate: speechRate.value,
+      volume: volume.value,
+    };
     lastUpdatedAt.value = formatNow();
   } catch (error) {
-    ElMessage.error(`配置读取失败：${error?.response?.data?.detail || error.message || "请检查后端服务"}`);
+    pageLoadError.value = `配置读取失败：${error?.response?.data?.detail || error.message || "请检查后端服务"}`;
   } finally {
     pageLoading.value = false;
   }
@@ -397,6 +363,12 @@ async function handleSave() {
   }));
 
   saving.value = false;
+  savedSettings.value = {
+    preset: selectedPreset.value,
+    voice: voiceType.value,
+    speechRate: speechRate.value,
+    volume: volume.value,
+  };
   lastUpdatedAt.value = formatNow();
   ElMessage.success("数字人配置已保存并同步到游客端");
 }
@@ -406,9 +378,22 @@ function handleReset() {
   voiceType.value = DEFAULT_AVATAR_VOICE;
   speechRate.value = 100;
   volume.value = 80;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ speechRate: 100, volume: 80 }));
-  ElMessage.info("已恢复默认配置");
+  ElMessage.info("已恢复表单默认值，保存后应用");
 }
+
+onBeforeRouteLeave(async () => {
+  if (!hasUnsavedChanges.value) return true;
+  try {
+    await ElMessageBox.confirm("离开后将丢弃当前未保存的数字人设置。", "离开配置页？", {
+      type: "warning",
+      confirmButtonText: "离开页面",
+      cancelButtonText: "继续编辑",
+    });
+    return true;
+  } catch {
+    return false;
+  }
+});
 
 onMounted(() => {
   loadPageData();
@@ -530,15 +515,16 @@ onBeforeUnmount(() => {
 
 .workbench-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
-  gap: 8px;
+  grid-template-columns: minmax(360px, 0.9fr) minmax(440px, 1.1fr);
+  gap: 18px;
   margin-top: 18px;
 }
 
-.workbench-left,
-.workbench-right {
+.workbench-preview,
+.workbench-settings {
   display: grid;
-  gap: 8px;
+  align-content: start;
+  gap: 16px;
 }
 
 .sub-block {
@@ -674,7 +660,7 @@ onBeforeUnmount(() => {
 .preview-canvas-wrapper {
   position: relative;
   width: 100%;
-  height: 520px;
+  height: 440px;
   border: 1px solid #d4c8b8;
   border-radius: 0;
   overflow: hidden;
@@ -722,10 +708,6 @@ onBeforeUnmount(() => {
   .workbench-grid {
     grid-template-columns: 1fr;
   }
-
-  .stat-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 760px) {
@@ -739,5 +721,7 @@ onBeforeUnmount(() => {
   .model-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .preview-canvas-wrapper { height: 360px; }
 }
 </style>

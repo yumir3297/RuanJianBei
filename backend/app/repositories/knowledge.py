@@ -87,7 +87,7 @@ class KnowledgeRepository:
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
-    async def create(self, payload: KnowledgeCreate) -> KnowledgeEntry:
+    async def create(self, payload: KnowledgeCreate, *, commit: bool = True) -> KnowledgeEntry:
         entry = KnowledgeEntry(
             title=payload.title,
             category=payload.category,
@@ -97,11 +97,20 @@ class KnowledgeRepository:
             metadata_json=payload.metadata_json,
         )
         self.session.add(entry)
-        await self.session.commit()
+        if commit:
+            await self.session.commit()
+        else:
+            await self.session.flush()
         await self.session.refresh(entry)
         return entry
 
-    async def update(self, entry: KnowledgeEntry, payload: KnowledgeUpdate) -> KnowledgeEntry:
+    async def update(
+        self,
+        entry: KnowledgeEntry,
+        payload: KnowledgeUpdate,
+        *,
+        commit: bool = True,
+    ) -> KnowledgeEntry:
         data = payload.model_dump(exclude_unset=True)
         for key, value in data.items():
             if key == "aliases" and value is not None:
@@ -109,10 +118,16 @@ class KnowledgeRepository:
             else:
                 setattr(entry, key, value)
         self.session.add(entry)
-        await self.session.commit()
+        if commit:
+            await self.session.commit()
+        else:
+            await self.session.flush()
         await self.session.refresh(entry)
         return entry
 
-    async def delete(self, entry: KnowledgeEntry) -> None:
+    async def delete(self, entry: KnowledgeEntry, *, commit: bool = True) -> None:
         await self.session.delete(entry)
-        await self.session.commit()
+        if commit:
+            await self.session.commit()
+        else:
+            await self.session.flush()

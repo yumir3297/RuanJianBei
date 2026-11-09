@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import Counter
 
 from app.repositories.knowledge import KnowledgeRepository
+from app.repositories.knowledge_chunk import KnowledgeChunkRepository
 from app.services.rag.base import BaseRAGService, RetrievalScope, RetrievedDocument
 from app.services.rag.query_rewriter import QueryRewriter
 from app.services.rag.reranker import Reranker
@@ -16,8 +17,19 @@ class RepositoryBackedRAGService(BaseRAGService):
         reranker: Reranker,
     ) -> None:
         self.knowledge_repository = knowledge_repository
+        session = getattr(knowledge_repository, "session", None)
+        self.chunk_repository = KnowledgeChunkRepository(session) if session is not None else None
         self.query_rewriter = query_rewriter
         self.reranker = reranker
+
+    async def is_current_vector_result(self, chunk_id: str, document: str) -> bool:
+        if self.chunk_repository is None:
+            return False
+        chunk = await self.chunk_repository.get(chunk_id)
+        if chunk is None:
+            return False
+        current_document = "\n".join([chunk.title, chunk.category, chunk.content])
+        return document == current_document
 
     async def retrieve(
         self,

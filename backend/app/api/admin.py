@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.auth import require_admin_token
 from app.core.config import Settings
 from app.core.deps import get_app_settings, get_db_session
+from app.core.exceptions import AppError
 from app.models.avatar_config import AvatarConfig
 from app.models.chat_log import ChatLog
 from app.repositories.behavior_summary import BehaviorSummaryRepository
@@ -17,6 +18,7 @@ from app.repositories.chat_log import ChatLogRepository
 from app.repositories.faq import FAQRepository
 from app.repositories.knowledge_chunk import KnowledgeChunkRepository
 from app.repositories.knowledge import KnowledgeRepository
+from app.repositories.knowledge_generation import KnowledgeGenerationRepository
 from app.repositories.knowledge_blind_spot import KnowledgeBlindSpotRepository
 from app.repositories.qa_cache import QACacheRepository
 from app.repositories.route import RouteRepository
@@ -30,6 +32,7 @@ from app.schemas.admin import (
     AvatarVoicePreviewResponse,
     DataSyncReport,
     DataSyncResponse,
+    KnowledgeIndexStatus,
     DisplayAssetsResponse,
     DisplayAssetUploadResponse,
     RAGIndexBuildResponse,
@@ -182,12 +185,33 @@ async def build_rag_index(
     session: AsyncSession = Depends(get_db_session),
     settings: Settings = Depends(get_app_settings),
 ) -> RAGIndexBuildResponse:
+    generation_repository = KnowledgeGenerationRepository(session)
+    state = await generation_repository.get()
+    building_generation = state.generation
+    vector_store = ChromaVectorStore(settings.chroma_persist_root, settings.rag_collection_name)
     report = await RAGIndexBuilder(
         KnowledgeChunkRepository(session),
         SentenceTransformerEmbedder(settings.embedding_model_name, cache_dir=settings.model_cache_root),
-        ChromaVectorStore(settings.chroma_persist_root, settings.rag_collection_name),
+        vector_store,
         batch_size=settings.rag_index_batch_size,
-    ).build()
+    ).build(activate=False)
+    await session.refresh(state)
+    if not report.prepared_generation_name:
+        raise AppError("RAG index builder returned no prepared collection.", error_code="rag_preparation_missing")
+    if not await generation_repository.mark_indexed(building_generation):
+        await session.rollback()
+        vector_store.discard_prepared(report.prepared_generation_name)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Knowledge changed during index build. The prior index remains active; retry the rebuild.",
+        )
+    try:
+        vector_store.activate_prepared(report.prepared_generation_name)
+        await session.commit()
+    except Exception:
+        await session.rollback()
+        vector_store.discard_prepared(report.prepared_generation_name)
+        raise
 
     return RAGIndexBuildResponse(
         message="RAG index built successfully.",
@@ -198,6 +222,18 @@ async def build_rag_index(
             embedding_model_name=report.embedding_model_name,
             duration_ms=report.duration_ms,
         ),
+    )
+
+
+@router.get("/knowledge-index-status", response_model=KnowledgeIndexStatus)
+async def knowledge_index_status(
+    session: AsyncSession = Depends(get_db_session),
+) -> KnowledgeIndexStatus:
+    state = await KnowledgeGenerationRepository(session).get()
+    return KnowledgeIndexStatus(
+        knowledge_generation=state.generation,
+        indexed_generation=state.indexed_generation,
+        current=state.generation == state.indexed_generation,
     )
 
 
