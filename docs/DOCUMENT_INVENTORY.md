@@ -173,6 +173,8 @@ Trae 来源工作树 `feature/offline-companion` 的 `docs/implementation/OFFLIN
 
 Trae `feat/location-guide-opt` 的未提交 `docs/design/location-guide-optimization-2026-11-02.md` 的定位触发、模拟降级和播放器协作方向归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)；2026-11-15 核对其与仓库外 `source-snapshots/location/untracked.tar` 中的原文 SHA-256 一致。原文留在来源工作区，历史参数和测试不代表当前主线或现场验收。
 
+2026-10-27 原版功能路线图曾在双端工作台规划时重写。原始 14 项需求与新工作包的对应关系保留在[待开发清单第 9 节](plans/2026-10-28-ai-workbench-backlog.md#9-原始-14-项需求追溯)，各项流程与边界分布在该清单、[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)和[验收总表](testing/TESTING_AND_ACCEPTANCE.md)。原版的阶段排序与勾选状态属于历史规划；需要核对原文时可运行 `git show 540568e:docs/plans/2026-10-27-feature-roadmap.md`。原稿中的美图和总结图片范围明确只是暂定理解，不应视为用户已确认的详细方案。
+
 连续导览来源工作区中未进入主线的 `docs/implementation/GUIDEWEAVE_PILOT.md`、`docs/superpowers/plans/2026-11-09-tour-context-rag-pilot.md`，以及 `tour-narration-policy` 的方法库、讲解策略、分层交付和来源审查等文档，其产品意图、研究参考与试验限制归入[连续讲解设计](research/CONTINUOUS_NARRATION_DESIGN.md)。原始文件和部分未提交实验数据留在来源工作区/本地快照，不因文档归并而视为代码或全部实验已进入主线。
 
 以下保留为代码所在模块的操作入口、数据血缘或资源许可；归属对应模块，不当作当前整体设计结论。
