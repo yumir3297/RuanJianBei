@@ -120,7 +120,7 @@
 - Modify: `docs/plans/2026-10-28-ai-workbench-backlog.md`
 - Modify: `docs/selling-points/w02-continuous-tour-recovery.md`
 - Modify: `docs/superpowers/specs/2026-10-29-w02-durable-execution-design.md`
-- Create: `docs/superpowers/plans/2026-10-29-w02-execution-ledger.md`
+- 原执行记录现可通过 `git show 9f01fc2:docs/superpowers/plans/2026-10-29-w02-execution-ledger.md` 查阅；后续实际集成见 [W02 集成记录](../../development/W02_INTEGRATION.md)。
 
 - [ ] Document that the kernel is not an end-to-end durable tourist workflow until one registered production feature uses it.
 - [ ] Keep K01's publication dispatcher and transaction as the owner of publication; add a projection adapter only after its actual job contract is available.
