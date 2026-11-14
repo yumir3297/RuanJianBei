@@ -43,7 +43,7 @@ from app.services.rag.bm25_reranker import BM25Reranker
 from app.services.rag.cross_encoder_reranker import CrossEncoderReranker
 from app.services.rag.query_rewriter import QueryRewriter
 from app.services.rag.chroma_retriever import VectorBackedRAGService
-from app.services.rag.embedder import SentenceTransformerEmbedder
+from app.services.rag.embedder import BaseEmbedder, SentenceTransformerEmbedder, SimpleEmbedder
 from app.services.rag.reranker import Reranker
 from app.services.rag.resilient_reranker import ResilientReranker
 from app.services.rag.retriever import RepositoryBackedRAGService
@@ -66,7 +66,11 @@ _cached_llm_service: OpenAICompatibleLLMService | None = None
 _cached_llm_signature: tuple | None = None
 _replay_audio_cache = ReplayAudioCache()
 @lru_cache(maxsize=2)
-def get_cached_embedder(model_name: str, cache_dir: str) -> SentenceTransformerEmbedder:
+def get_cached_embedder(model_name: str, cache_dir: str) -> BaseEmbedder:
+    # The deterministic embedder is an explicit local-demo escape hatch. It
+    # avoids silently treating a synthetic demo as a real model deployment.
+    if model_name == SimpleEmbedder.model_name:
+        return SimpleEmbedder()
     return SentenceTransformerEmbedder(
         model_name,
         cache_dir=Path(cache_dir),
@@ -228,6 +232,11 @@ async def build_pipeline(
         except Exception:
             logger.exception("TTS initialization failed; using stub.")
 
+    guidematch_gate = None
+    if settings.guidematch_enabled and settings.app_env.strip().lower() in {"development", "test"}:
+        from app.services.qa.guidematch_gate import load_gate
+        guidematch_gate = await asyncio.to_thread(load_gate, settings.guidematch_model_dir, settings.guidematch_device, settings.guidematch_reuse_threshold, settings.guidematch_min_confidence)
+
     return QAPipeline(
         query_rewriter=query_rewriter,
         faq_matcher=faq_matcher,
@@ -256,6 +265,9 @@ async def build_pipeline(
         visibility_service=visibility_service,
         vision_catalog=PublishedAttractionCatalog(K01PublishedAttractionSource(session, site_id=settings.site_id)),
         vision_site_id=settings.site_id,
+        guide_loop_session=session if (settings.guide_loop_pilot_enabled or settings.guide_loop_visitor_enabled) and settings.app_env.strip().lower() in {"development", "test"} else None,
+        guide_loop_visitor_enabled=settings.guide_loop_visitor_enabled and settings.app_env.strip().lower() in {"development", "test"},
+        guidematch_gate=guidematch_gate,
     )
 
 
@@ -265,6 +277,14 @@ async def stream_chat(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
     settings: Settings = Depends(get_app_settings),
+) -> StreamingResponse:
+    if payload.guide_loop is not None:
+        raise HTTPException(status_code=403, detail="GuideLoop replay requires administrator access")
+    return await _stream_chat(payload, request, session, settings)
+
+
+async def _stream_chat(
+    payload: ChatRequest, request: Request, session: AsyncSession, settings: Settings,
 ) -> StreamingResponse:
     lease = acquire_capacity(request, settings, "chat")
     logger.info("Chat stream accepted: input_mode=%s text_only=%s", payload.input_mode, payload.text_only)
@@ -289,7 +309,14 @@ async def stream_chat(
                 data={"message": "导览服务处理回答时发生错误，请稍后重试。"},
             ).to_sse()
         finally:
-            lease.release()
+            # FastAPI 0.116 may finalize yield dependencies before consuming
+            # StreamingResponse. The stream can reopen the AsyncSession after
+            # that cleanup, so the producer must also close it on completion,
+            # cancellation, or failure.
+            try:
+                await session.close()
+            finally:
+                lease.release()
 
     return StreamingResponse(
         with_sse_heartbeat(event_generator()),

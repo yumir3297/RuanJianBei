@@ -1,0 +1,31 @@
+{
+  "model_source": "BAAI/bge-small-zh-v1.5",
+  "max_length": 128,
+  "batch_size": 16,
+  "gradient_accumulation_steps": 1,
+  "epochs": 12,
+  "early_stopping_patience": 3,
+  "learning_rate_head": 0.001,
+  "learning_rate_encoder": 0.00002,
+  "weight_decay": 0.01,
+  "dropout": 0.15,
+  "label_smoothing": 0.03,
+  "aux_loss_weight": 0.25,
+  "false_reuse_penalty": 0.35,
+  "max_grad_norm": 1.0,
+  "seeds": [13, 42, 2026],
+  "stages": ["frozen", "last_layer"],
+  "require_cuda": true,
+  "num_workers": 0,
+  "augment_swap": true,
+  "selection_metric": "macro_f1",
+  "labels": ["reuse", "distinct", "clarify"],
+  "reasons": [
+    "same_target",
+    "cross_object",
+    "different_subintent",
+    "temporal_conflict",
+    "missing_reference",
+    "ambiguous_target"
+  ]
+}

@@ -16,6 +16,7 @@ from app.models.knowledge_workspace import (
     SourceDocumentVersion,
 )
 from app.models.knowledge_blind_spot import KnowledgeBlindSpot
+from app.models.guide_loop import GuideLoopCase, GuideLoopObservation, GuideLoopRevision, GuideLoopPointer, GuideLoopCheck
 from app.models.qa_cache import QACacheEntry
 from app.models.quick_topic import QuickTopic
 from app.models.route import RouteTemplate
@@ -37,6 +38,7 @@ from app.models.tour_session import (
 from app.models.tool_execution import ToolAttempt, ToolCommandReceipt, ToolEvent, ToolJob, ToolStep
 
 __all__ = [
+    "GuideLoopCase", "GuideLoopObservation", "GuideLoopRevision", "GuideLoopPointer", "GuideLoopCheck",
     "ToolJob", "ToolStep", "ToolAttempt", "ToolEvent", "ToolCommandReceipt",
     "AvatarConfig",
     "BehaviorSummary",

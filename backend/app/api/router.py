@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from app.api import admin, auth, chat, display_assets, guide, insights, itinerary, knowledge, knowledge_imports, knowledge_publications, quick_select, recommend, tool_execution, visitor_config, vision, voice, weather
-from app.api import tour_sessions
+from app.api import tour_sessions, guide_loop
 
 
 api_router = APIRouter(prefix="/api")
@@ -16,6 +16,7 @@ api_router.include_router(knowledge_imports.router, prefix="/knowledge-imports",
 api_router.include_router(recommend.router, prefix="/recommend", tags=["recommend"])
 api_router.include_router(quick_select.router, prefix="/quick-select", tags=["quick-select"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
+api_router.include_router(guide_loop.router, prefix="/admin/guide-loop", tags=["guide-loop-pilot"])
 api_router.include_router(display_assets.router, prefix="/display-assets", tags=["display-assets"])
 api_router.include_router(visitor_config.router, tags=["visitor-config"])
 api_router.include_router(vision.router, prefix="/vision", tags=["vision"])

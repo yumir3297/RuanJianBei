@@ -28,6 +28,10 @@
 `HomePage.vue`、`LandingPage.vue` 等文件的存在不代表当前有对应路由。
 当前数字人由 ThreeAvatar 使用 Three.js/VRM 实现；技术栈以当前组件与依赖为准。
 
+## GuideLoop 与 GuideMatch 接入
+
+管理端从 [知识盲区页面](../frontend/src/views/admin/BlindSpotManage.vue) 进入 [试验面板](../frontend/src/components/GuideLoopPilotPanel.vue)，后端由 [管理接口](../backend/app/api/guide_loop.py) 和 [GuideLoop 服务](../backend/app/services/guide_loop/) 处理审核、版本绑定及复测。游客问答经过 [聊天入口](../backend/app/api/chat.py) 和 [问答管线](../backend/app/services/qa/pipeline.py)；[GuideMatch 门控](../backend/app/services/qa/guidematch_gate.py) 判断相近问题能否复用。开关、模型安装、测试与限制见 [接入记录](integration/GUIDELOOP_GUIDEMATCH.md)。
+
 ## 游客功能
 
 | 功能 | 前端入口及状态 | 后端入口与业务 | 验证位置 |

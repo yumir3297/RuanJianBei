@@ -123,6 +123,62 @@
     },
     {
       "method": "GET",
+      "path": "/api/admin/guide-loop/cases",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/guide-loop/cases/{case_id}/draft",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/guide-loop/cases/{case_id}/publish",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/guide-loop/cases/{case_id}/verify",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/guide-loop/confirm-live",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/guide-loop/observations",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/guide-loop/replay",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/admin/overview",
       "boundary": "admin-token",
       "sites": [

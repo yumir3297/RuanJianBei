@@ -15,8 +15,8 @@ class ApiSurfaceTests(unittest.TestCase):
         checked_in = json.loads((ROOT / "deploy/api-surface.json").read_text(encoding="utf-8"))
         expected = build_surface()
         self.assertEqual(checked_in, expected)
-        self.assertEqual(len(checked_in["routes"]), 86)
-        self.assertEqual(len({(r["method"], r["path"]) for r in checked_in["routes"]}), 86)
+        self.assertEqual(len(checked_in["routes"]), 93)
+        self.assertEqual(len({(r["method"], r["path"]) for r in checked_in["routes"]}), 93)
 
     def test_boundary_is_method_sensitive_for_insights_and_owner_tasks(self):
         routes = {(r["method"], r["path"]): r for r in build_surface()["routes"]}
@@ -24,6 +24,9 @@ class ApiSurfaceTests(unittest.TestCase):
         self.assertEqual(routes[("POST", "/api/insights/feedback")]["sites"], ["tourist"])
         self.assertEqual(routes[("GET", "/api/tour-sessions/{session_id}/events")]["boundary"], "visitor-cookie")
         self.assertNotIn(("GET", "/api/insights/feedback"), routes)
+        guide_loop = [route for route in routes.values() if route["path"].startswith("/api/admin/guide-loop/")]
+        self.assertEqual(len(guide_loop), 7)
+        self.assertTrue(all(route["boundary"] == "admin-token" and route["sites"] == ["admin"] for route in guide_loop))
 
     def test_each_site_map_is_generated_from_its_allowlisted_routes(self):
         surface = build_surface()

@@ -5,6 +5,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from app.schemas.selection import SelectionContext
+from app.schemas.guide_loop import GuideLoopContext
 
 
 class ConversationContext(BaseModel):
@@ -64,6 +65,7 @@ class ChatRequest(BaseModel):
     selection: SelectionContext | None = None
     vision_context: VisionContext | None = None
     emotion_context: EmotionContext | None = None
+    guide_loop: GuideLoopContext | None = None
 
 
 class ChatReplayRequest(BaseModel):

@@ -5,6 +5,7 @@ export const frontendRoot = fileURLToPath(new URL(".", import.meta.url));
 export function makeAppConfig({ app, port }) {
   return {
     root: `${frontendRoot}/apps/${app}`,
+    cacheDir: `${frontendRoot}/node_modules/.vite/${app}`,
     envDir: frontendRoot,
     publicDir: `${frontendRoot}/.public-${app}`,
     server: {

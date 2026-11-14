@@ -1,0 +1,18 @@
+{
+  "bundle_name": "guidematch_windows_training_bundle_v1",
+  "bundle_version": "1.0.0",
+  "prepared_date": "2026-11-12",
+  "target_platform": "Windows 10/11 + NVIDIA RTX 3060",
+  "recommended_python": "3.11",
+  "torch_version": "2.12.0",
+  "default_torch_index": "https://download.pytorch.org/whl/cu128",
+  "base_model": "BAAI/bge-small-zh-v1.5",
+  "train_records": 765,
+  "dev_records": 135,
+  "seeds": [13, 42, 2026],
+  "stages": ["frozen", "last_layer"],
+  "entrypoint": "START_HERE.cmd",
+  "opencode_prompt": "OPENCODE_START_PROMPT.md",
+  "has_independent_test_set": false,
+  "data_boundary": "All records are synthetic; dev shares the same generator as train."
+}

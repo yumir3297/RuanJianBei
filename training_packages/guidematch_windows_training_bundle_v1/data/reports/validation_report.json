@@ -1,0 +1,119 @@
+{
+  "batch_files": [
+    "b01.jsonl",
+    "b02.jsonl",
+    "b03.jsonl",
+    "b04.jsonl",
+    "b05.jsonl",
+    "b06.jsonl",
+    "b07.jsonl",
+    "b08.jsonl",
+    "b09.jsonl"
+  ],
+  "batch_config": {
+    "b01": {
+      "simulated_today": "2026-11-12",
+      "date_range": [
+        "2026-11-10",
+        "2026-11-20"
+      ]
+    },
+    "b02": {
+      "simulated_today": "2026-11-11",
+      "date_range": [
+        "2026-11-10",
+        "2026-11-28"
+      ]
+    },
+    "b03": {
+      "simulated_today": "2026-11-12",
+      "date_range": [
+        "2026-11-10",
+        "2026-11-28"
+      ]
+    },
+    "b04": {
+      "simulated_today": "2026-11-13",
+      "date_range": [
+        "2026-11-10",
+        "2026-11-28"
+      ]
+    },
+    "b05": {
+      "simulated_today": "2026-11-14",
+      "date_range": [
+        "2026-11-10",
+        "2026-11-28"
+      ]
+    },
+    "b06": {
+      "simulated_today": "2026-11-15",
+      "date_range": [
+        "2026-11-10",
+        "2026-11-28"
+      ]
+    },
+    "b07": {
+      "simulated_today": "2026-11-16",
+      "date_range": [
+        "2026-11-10",
+        "2026-11-28"
+      ]
+    },
+    "b08": {
+      "simulated_today": "2026-11-17",
+      "date_range": [
+        "2026-11-10",
+        "2026-11-28"
+      ]
+    },
+    "b09": {
+      "simulated_today": "2026-11-18",
+      "date_range": [
+        "2026-11-10",
+        "2026-11-28"
+      ]
+    }
+  },
+  "raw_case_count": 900,
+  "valid_case_count": 900,
+  "deduped_case_count": 900,
+  "duplicate_count": 0,
+  "duplicates": [],
+  "label_distribution": {
+    "reuse": 301,
+    "distinct": 300,
+    "clarify": 299
+  },
+  "reason_distribution": {
+    "ambiguous_target": 60,
+    "cross_object": 180,
+    "different_subintent": 45,
+    "missing_reference": 239,
+    "same_target": 301,
+    "temporal_conflict": 75
+  },
+  "family_count": 900,
+  "family_size_distribution": {
+    "1": 900
+  },
+  "batch_distribution": {
+    "syn-train-b01": 100,
+    "syn-train-b02": 100,
+    "syn-train-b03": 100,
+    "syn-train-b04": 100,
+    "syn-train-b05": 100,
+    "syn-train-b06": 100,
+    "syn-train-b07": 100,
+    "syn-train-b08": 100,
+    "syn-train-b09": 100
+  },
+  "self_check": {
+    "clarify_reviewed": 299,
+    "hard_conflict_reviewed": 300,
+    "dated_case_reviewed": 158
+  },
+  "error_count": 0,
+  "errors": [],
+  "valid": true
+}

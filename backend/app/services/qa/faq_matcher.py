@@ -28,6 +28,7 @@ class FAQMatchResult:
     is_hit: bool
     level: str = "none"
     entry: FAQEntry | None = None
+    matched_alias: str | None = None
 
     @property
     def answer(self) -> str:
@@ -149,7 +150,7 @@ class FAQMatcher:
             return FAQMatchResult(is_hit=True, level="fuzzy", entry=fuzzy)
         semantic = self.match_semantic(query, embedding_fn)
         if semantic:
-            return FAQMatchResult(is_hit=True, level="semantic", entry=semantic.entry)
+            return FAQMatchResult(is_hit=True, level="semantic", entry=semantic.entry, matched_alias=semantic.alias)
         return FAQMatchResult(is_hit=False)
 
     @staticmethod

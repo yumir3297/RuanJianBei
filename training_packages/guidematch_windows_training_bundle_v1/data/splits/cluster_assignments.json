@@ -1,0 +1,4502 @@
+{
+  "syn-train-b01-001": {
+    "cluster_id": "c0000",
+    "split": "train",
+    "family_id": "syn-family-b01-001"
+  },
+  "syn-train-b01-002": {
+    "cluster_id": "c0001",
+    "split": "train",
+    "family_id": "syn-family-b01-002"
+  },
+  "syn-train-b01-003": {
+    "cluster_id": "c0002",
+    "split": "train",
+    "family_id": "syn-family-b01-003"
+  },
+  "syn-train-b01-004": {
+    "cluster_id": "c0003",
+    "split": "train",
+    "family_id": "syn-family-b01-004"
+  },
+  "syn-train-b01-005": {
+    "cluster_id": "c0004",
+    "split": "train",
+    "family_id": "syn-family-b01-005"
+  },
+  "syn-train-b01-006": {
+    "cluster_id": "c0005",
+    "split": "train",
+    "family_id": "syn-family-b01-006"
+  },
+  "syn-train-b01-007": {
+    "cluster_id": "c0006",
+    "split": "train",
+    "family_id": "syn-family-b01-007"
+  },
+  "syn-train-b01-008": {
+    "cluster_id": "c0007",
+    "split": "train",
+    "family_id": "syn-family-b01-008"
+  },
+  "syn-train-b01-009": {
+    "cluster_id": "c0008",
+    "split": "train",
+    "family_id": "syn-family-b01-009"
+  },
+  "syn-train-b01-010": {
+    "cluster_id": "c0009",
+    "split": "train",
+    "family_id": "syn-family-b01-010"
+  },
+  "syn-train-b01-011": {
+    "cluster_id": "c0010",
+    "split": "train",
+    "family_id": "syn-family-b01-011"
+  },
+  "syn-train-b01-012": {
+    "cluster_id": "c0011",
+    "split": "train",
+    "family_id": "syn-family-b01-012"
+  },
+  "syn-train-b01-013": {
+    "cluster_id": "c0012",
+    "split": "train",
+    "family_id": "syn-family-b01-013"
+  },
+  "syn-train-b01-014": {
+    "cluster_id": "c0013",
+    "split": "train",
+    "family_id": "syn-family-b01-014"
+  },
+  "syn-train-b01-015": {
+    "cluster_id": "c0014",
+    "split": "train",
+    "family_id": "syn-family-b01-015"
+  },
+  "syn-train-b01-016": {
+    "cluster_id": "c0015",
+    "split": "train",
+    "family_id": "syn-family-b01-016"
+  },
+  "syn-train-b01-017": {
+    "cluster_id": "c0016",
+    "split": "train",
+    "family_id": "syn-family-b01-017"
+  },
+  "syn-train-b01-018": {
+    "cluster_id": "c0017",
+    "split": "train",
+    "family_id": "syn-family-b01-018"
+  },
+  "syn-train-b01-019": {
+    "cluster_id": "c0018",
+    "split": "train",
+    "family_id": "syn-family-b01-019"
+  },
+  "syn-train-b01-020": {
+    "cluster_id": "c0019",
+    "split": "train",
+    "family_id": "syn-family-b01-020"
+  },
+  "syn-train-b01-021": {
+    "cluster_id": "c0020",
+    "split": "train",
+    "family_id": "syn-family-b01-021"
+  },
+  "syn-train-b01-022": {
+    "cluster_id": "c0021",
+    "split": "train",
+    "family_id": "syn-family-b01-022"
+  },
+  "syn-train-b01-023": {
+    "cluster_id": "c0022",
+    "split": "train",
+    "family_id": "syn-family-b01-023"
+  },
+  "syn-train-b01-024": {
+    "cluster_id": "c0023",
+    "split": "train",
+    "family_id": "syn-family-b01-024"
+  },
+  "syn-train-b01-025": {
+    "cluster_id": "c0024",
+    "split": "train",
+    "family_id": "syn-family-b01-025"
+  },
+  "syn-train-b01-026": {
+    "cluster_id": "c0025",
+    "split": "train",
+    "family_id": "syn-family-b01-026"
+  },
+  "syn-train-b01-027": {
+    "cluster_id": "c0026",
+    "split": "train",
+    "family_id": "syn-family-b01-027"
+  },
+  "syn-train-b01-028": {
+    "cluster_id": "c0027",
+    "split": "train",
+    "family_id": "syn-family-b01-028"
+  },
+  "syn-train-b01-029": {
+    "cluster_id": "c0028",
+    "split": "train",
+    "family_id": "syn-family-b01-029"
+  },
+  "syn-train-b01-030": {
+    "cluster_id": "c0029",
+    "split": "train",
+    "family_id": "syn-family-b01-030"
+  },
+  "syn-train-b01-031": {
+    "cluster_id": "c0030",
+    "split": "train",
+    "family_id": "syn-family-b01-031"
+  },
+  "syn-train-b01-032": {
+    "cluster_id": "c0031",
+    "split": "train",
+    "family_id": "syn-family-b01-032"
+  },
+  "syn-train-b01-033": {
+    "cluster_id": "c0032",
+    "split": "train",
+    "family_id": "syn-family-b01-033"
+  },
+  "syn-train-b01-034": {
+    "cluster_id": "c0033",
+    "split": "train",
+    "family_id": "syn-family-b01-034"
+  },
+  "syn-train-b01-035": {
+    "cluster_id": "c0034",
+    "split": "train",
+    "family_id": "syn-family-b01-035"
+  },
+  "syn-train-b01-036": {
+    "cluster_id": "c0035",
+    "split": "train",
+    "family_id": "syn-family-b01-036"
+  },
+  "syn-train-b01-037": {
+    "cluster_id": "c0036",
+    "split": "train",
+    "family_id": "syn-family-b01-037"
+  },
+  "syn-train-b01-038": {
+    "cluster_id": "c0037",
+    "split": "dev",
+    "family_id": "syn-family-b01-038"
+  },
+  "syn-train-b01-039": {
+    "cluster_id": "c0038",
+    "split": "train",
+    "family_id": "syn-family-b01-039"
+  },
+  "syn-train-b01-040": {
+    "cluster_id": "c0039",
+    "split": "train",
+    "family_id": "syn-family-b01-040"
+  },
+  "syn-train-b01-041": {
+    "cluster_id": "c0040",
+    "split": "train",
+    "family_id": "syn-family-b01-041"
+  },
+  "syn-train-b01-042": {
+    "cluster_id": "c0041",
+    "split": "dev",
+    "family_id": "syn-family-b01-042"
+  },
+  "syn-train-b01-043": {
+    "cluster_id": "c0042",
+    "split": "train",
+    "family_id": "syn-family-b01-043"
+  },
+  "syn-train-b01-044": {
+    "cluster_id": "c0043",
+    "split": "train",
+    "family_id": "syn-family-b01-044"
+  },
+  "syn-train-b01-045": {
+    "cluster_id": "c0044",
+    "split": "train",
+    "family_id": "syn-family-b01-045"
+  },
+  "syn-train-b01-046": {
+    "cluster_id": "c0045",
+    "split": "train",
+    "family_id": "syn-family-b01-046"
+  },
+  "syn-train-b01-047": {
+    "cluster_id": "c0046",
+    "split": "train",
+    "family_id": "syn-family-b01-047"
+  },
+  "syn-train-b01-048": {
+    "cluster_id": "c0047",
+    "split": "train",
+    "family_id": "syn-family-b01-048"
+  },
+  "syn-train-b01-049": {
+    "cluster_id": "c0048",
+    "split": "dev",
+    "family_id": "syn-family-b01-049"
+  },
+  "syn-train-b01-050": {
+    "cluster_id": "c0049",
+    "split": "train",
+    "family_id": "syn-family-b01-050"
+  },
+  "syn-train-b01-051": {
+    "cluster_id": "c0050",
+    "split": "train",
+    "family_id": "syn-family-b01-051"
+  },
+  "syn-train-b01-052": {
+    "cluster_id": "c0051",
+    "split": "train",
+    "family_id": "syn-family-b01-052"
+  },
+  "syn-train-b01-053": {
+    "cluster_id": "c0052",
+    "split": "dev",
+    "family_id": "syn-family-b01-053"
+  },
+  "syn-train-b01-054": {
+    "cluster_id": "c0053",
+    "split": "train",
+    "family_id": "syn-family-b01-054"
+  },
+  "syn-train-b01-055": {
+    "cluster_id": "c0054",
+    "split": "train",
+    "family_id": "syn-family-b01-055"
+  },
+  "syn-train-b01-056": {
+    "cluster_id": "c0055",
+    "split": "dev",
+    "family_id": "syn-family-b01-056"
+  },
+  "syn-train-b01-057": {
+    "cluster_id": "c0031",
+    "split": "train",
+    "family_id": "syn-family-b01-057"
+  },
+  "syn-train-b01-058": {
+    "cluster_id": "c0056",
+    "split": "train",
+    "family_id": "syn-family-b01-058"
+  },
+  "syn-train-b01-059": {
+    "cluster_id": "c0057",
+    "split": "train",
+    "family_id": "syn-family-b01-059"
+  },
+  "syn-train-b01-060": {
+    "cluster_id": "c0058",
+    "split": "train",
+    "family_id": "syn-family-b01-060"
+  },
+  "syn-train-b01-061": {
+    "cluster_id": "c0059",
+    "split": "train",
+    "family_id": "syn-family-b01-061"
+  },
+  "syn-train-b01-062": {
+    "cluster_id": "c0060",
+    "split": "train",
+    "family_id": "syn-family-b01-062"
+  },
+  "syn-train-b01-063": {
+    "cluster_id": "c0061",
+    "split": "train",
+    "family_id": "syn-family-b01-063"
+  },
+  "syn-train-b01-064": {
+    "cluster_id": "c0062",
+    "split": "train",
+    "family_id": "syn-family-b01-064"
+  },
+  "syn-train-b01-065": {
+    "cluster_id": "c0063",
+    "split": "train",
+    "family_id": "syn-family-b01-065"
+  },
+  "syn-train-b01-066": {
+    "cluster_id": "c0064",
+    "split": "train",
+    "family_id": "syn-family-b01-066"
+  },
+  "syn-train-b01-067": {
+    "cluster_id": "c0065",
+    "split": "train",
+    "family_id": "syn-family-b01-067"
+  },
+  "syn-train-b01-068": {
+    "cluster_id": "c0066",
+    "split": "train",
+    "family_id": "syn-family-b01-068"
+  },
+  "syn-train-b01-069": {
+    "cluster_id": "c0002",
+    "split": "train",
+    "family_id": "syn-family-b01-069"
+  },
+  "syn-train-b01-070": {
+    "cluster_id": "c0067",
+    "split": "train",
+    "family_id": "syn-family-b01-070"
+  },
+  "syn-train-b01-071": {
+    "cluster_id": "c0045",
+    "split": "train",
+    "family_id": "syn-family-b01-071"
+  },
+  "syn-train-b01-072": {
+    "cluster_id": "c0068",
+    "split": "train",
+    "family_id": "syn-family-b01-072"
+  },
+  "syn-train-b01-073": {
+    "cluster_id": "c0069",
+    "split": "train",
+    "family_id": "syn-family-b01-073"
+  },
+  "syn-train-b01-074": {
+    "cluster_id": "c0061",
+    "split": "train",
+    "family_id": "syn-family-b01-074"
+  },
+  "syn-train-b01-075": {
+    "cluster_id": "c0070",
+    "split": "train",
+    "family_id": "syn-family-b01-075"
+  },
+  "syn-train-b01-076": {
+    "cluster_id": "c0065",
+    "split": "train",
+    "family_id": "syn-family-b01-076"
+  },
+  "syn-train-b01-077": {
+    "cluster_id": "c0071",
+    "split": "train",
+    "family_id": "syn-family-b01-077"
+  },
+  "syn-train-b01-078": {
+    "cluster_id": "c0072",
+    "split": "dev",
+    "family_id": "syn-family-b01-078"
+  },
+  "syn-train-b01-079": {
+    "cluster_id": "c0073",
+    "split": "train",
+    "family_id": "syn-family-b01-079"
+  },
+  "syn-train-b01-080": {
+    "cluster_id": "c0074",
+    "split": "train",
+    "family_id": "syn-family-b01-080"
+  },
+  "syn-train-b01-081": {
+    "cluster_id": "c0075",
+    "split": "train",
+    "family_id": "syn-family-b01-081"
+  },
+  "syn-train-b01-082": {
+    "cluster_id": "c0066",
+    "split": "train",
+    "family_id": "syn-family-b01-082"
+  },
+  "syn-train-b01-083": {
+    "cluster_id": "c0076",
+    "split": "train",
+    "family_id": "syn-family-b01-083"
+  },
+  "syn-train-b01-084": {
+    "cluster_id": "c0077",
+    "split": "train",
+    "family_id": "syn-family-b01-084"
+  },
+  "syn-train-b01-085": {
+    "cluster_id": "c0078",
+    "split": "train",
+    "family_id": "syn-family-b01-085"
+  },
+  "syn-train-b01-086": {
+    "cluster_id": "c0079",
+    "split": "train",
+    "family_id": "syn-family-b01-086"
+  },
+  "syn-train-b01-087": {
+    "cluster_id": "c0080",
+    "split": "dev",
+    "family_id": "syn-family-b01-087"
+  },
+  "syn-train-b01-088": {
+    "cluster_id": "c0081",
+    "split": "train",
+    "family_id": "syn-family-b01-088"
+  },
+  "syn-train-b01-089": {
+    "cluster_id": "c0082",
+    "split": "dev",
+    "family_id": "syn-family-b01-089"
+  },
+  "syn-train-b01-090": {
+    "cluster_id": "c0083",
+    "split": "train",
+    "family_id": "syn-family-b01-090"
+  },
+  "syn-train-b01-091": {
+    "cluster_id": "c0084",
+    "split": "train",
+    "family_id": "syn-family-b01-091"
+  },
+  "syn-train-b01-092": {
+    "cluster_id": "c0085",
+    "split": "train",
+    "family_id": "syn-family-b01-092"
+  },
+  "syn-train-b01-093": {
+    "cluster_id": "c0086",
+    "split": "dev",
+    "family_id": "syn-family-b01-093"
+  },
+  "syn-train-b01-094": {
+    "cluster_id": "c0087",
+    "split": "train",
+    "family_id": "syn-family-b01-094"
+  },
+  "syn-train-b01-095": {
+    "cluster_id": "c0074",
+    "split": "train",
+    "family_id": "syn-family-b01-095"
+  },
+  "syn-train-b01-096": {
+    "cluster_id": "c0088",
+    "split": "dev",
+    "family_id": "syn-family-b01-096"
+  },
+  "syn-train-b01-097": {
+    "cluster_id": "c0089",
+    "split": "train",
+    "family_id": "syn-family-b01-097"
+  },
+  "syn-train-b01-098": {
+    "cluster_id": "c0090",
+    "split": "train",
+    "family_id": "syn-family-b01-098"
+  },
+  "syn-train-b01-099": {
+    "cluster_id": "c0091",
+    "split": "train",
+    "family_id": "syn-family-b01-099"
+  },
+  "syn-train-b01-100": {
+    "cluster_id": "c0092",
+    "split": "train",
+    "family_id": "syn-family-b01-100"
+  },
+  "syn-train-b02-001": {
+    "cluster_id": "c0093",
+    "split": "train",
+    "family_id": "syn-family-b02-001"
+  },
+  "syn-train-b02-002": {
+    "cluster_id": "c0094",
+    "split": "train",
+    "family_id": "syn-family-b02-002"
+  },
+  "syn-train-b02-003": {
+    "cluster_id": "c0095",
+    "split": "train",
+    "family_id": "syn-family-b02-003"
+  },
+  "syn-train-b02-004": {
+    "cluster_id": "c0096",
+    "split": "train",
+    "family_id": "syn-family-b02-004"
+  },
+  "syn-train-b02-005": {
+    "cluster_id": "c0097",
+    "split": "train",
+    "family_id": "syn-family-b02-005"
+  },
+  "syn-train-b02-006": {
+    "cluster_id": "c0098",
+    "split": "train",
+    "family_id": "syn-family-b02-006"
+  },
+  "syn-train-b02-007": {
+    "cluster_id": "c0099",
+    "split": "train",
+    "family_id": "syn-family-b02-007"
+  },
+  "syn-train-b02-008": {
+    "cluster_id": "c0100",
+    "split": "train",
+    "family_id": "syn-family-b02-008"
+  },
+  "syn-train-b02-009": {
+    "cluster_id": "c0101",
+    "split": "dev",
+    "family_id": "syn-family-b02-009"
+  },
+  "syn-train-b02-010": {
+    "cluster_id": "c0102",
+    "split": "train",
+    "family_id": "syn-family-b02-010"
+  },
+  "syn-train-b02-011": {
+    "cluster_id": "c0103",
+    "split": "train",
+    "family_id": "syn-family-b02-011"
+  },
+  "syn-train-b02-012": {
+    "cluster_id": "c0104",
+    "split": "train",
+    "family_id": "syn-family-b02-012"
+  },
+  "syn-train-b02-013": {
+    "cluster_id": "c0105",
+    "split": "train",
+    "family_id": "syn-family-b02-013"
+  },
+  "syn-train-b02-014": {
+    "cluster_id": "c0106",
+    "split": "train",
+    "family_id": "syn-family-b02-014"
+  },
+  "syn-train-b02-015": {
+    "cluster_id": "c0107",
+    "split": "train",
+    "family_id": "syn-family-b02-015"
+  },
+  "syn-train-b02-016": {
+    "cluster_id": "c0108",
+    "split": "train",
+    "family_id": "syn-family-b02-016"
+  },
+  "syn-train-b02-017": {
+    "cluster_id": "c0109",
+    "split": "dev",
+    "family_id": "syn-family-b02-017"
+  },
+  "syn-train-b02-018": {
+    "cluster_id": "c0110",
+    "split": "dev",
+    "family_id": "syn-family-b02-018"
+  },
+  "syn-train-b02-019": {
+    "cluster_id": "c0111",
+    "split": "dev",
+    "family_id": "syn-family-b02-019"
+  },
+  "syn-train-b02-020": {
+    "cluster_id": "c0112",
+    "split": "train",
+    "family_id": "syn-family-b02-020"
+  },
+  "syn-train-b02-021": {
+    "cluster_id": "c0113",
+    "split": "train",
+    "family_id": "syn-family-b02-021"
+  },
+  "syn-train-b02-022": {
+    "cluster_id": "c0114",
+    "split": "train",
+    "family_id": "syn-family-b02-022"
+  },
+  "syn-train-b02-023": {
+    "cluster_id": "c0115",
+    "split": "train",
+    "family_id": "syn-family-b02-023"
+  },
+  "syn-train-b02-024": {
+    "cluster_id": "c0116",
+    "split": "train",
+    "family_id": "syn-family-b02-024"
+  },
+  "syn-train-b02-025": {
+    "cluster_id": "c0117",
+    "split": "train",
+    "family_id": "syn-family-b02-025"
+  },
+  "syn-train-b02-026": {
+    "cluster_id": "c0037",
+    "split": "dev",
+    "family_id": "syn-family-b02-026"
+  },
+  "syn-train-b02-027": {
+    "cluster_id": "c0078",
+    "split": "train",
+    "family_id": "syn-family-b02-027"
+  },
+  "syn-train-b02-028": {
+    "cluster_id": "c0070",
+    "split": "train",
+    "family_id": "syn-family-b02-028"
+  },
+  "syn-train-b02-029": {
+    "cluster_id": "c0118",
+    "split": "train",
+    "family_id": "syn-family-b02-029"
+  },
+  "syn-train-b02-030": {
+    "cluster_id": "c0048",
+    "split": "dev",
+    "family_id": "syn-family-b02-030"
+  },
+  "syn-train-b02-031": {
+    "cluster_id": "c0119",
+    "split": "train",
+    "family_id": "syn-family-b02-031"
+  },
+  "syn-train-b02-032": {
+    "cluster_id": "c0120",
+    "split": "train",
+    "family_id": "syn-family-b02-032"
+  },
+  "syn-train-b02-033": {
+    "cluster_id": "c0121",
+    "split": "train",
+    "family_id": "syn-family-b02-033"
+  },
+  "syn-train-b02-034": {
+    "cluster_id": "c0122",
+    "split": "train",
+    "family_id": "syn-family-b02-034"
+  },
+  "syn-train-b02-035": {
+    "cluster_id": "c0123",
+    "split": "train",
+    "family_id": "syn-family-b02-035"
+  },
+  "syn-train-b02-036": {
+    "cluster_id": "c0124",
+    "split": "train",
+    "family_id": "syn-family-b02-036"
+  },
+  "syn-train-b02-037": {
+    "cluster_id": "c0125",
+    "split": "train",
+    "family_id": "syn-family-b02-037"
+  },
+  "syn-train-b02-038": {
+    "cluster_id": "c0126",
+    "split": "train",
+    "family_id": "syn-family-b02-038"
+  },
+  "syn-train-b02-039": {
+    "cluster_id": "c0127",
+    "split": "train",
+    "family_id": "syn-family-b02-039"
+  },
+  "syn-train-b02-040": {
+    "cluster_id": "c0128",
+    "split": "train",
+    "family_id": "syn-family-b02-040"
+  },
+  "syn-train-b02-041": {
+    "cluster_id": "c0129",
+    "split": "train",
+    "family_id": "syn-family-b02-041"
+  },
+  "syn-train-b02-042": {
+    "cluster_id": "c0130",
+    "split": "dev",
+    "family_id": "syn-family-b02-042"
+  },
+  "syn-train-b02-043": {
+    "cluster_id": "c0131",
+    "split": "train",
+    "family_id": "syn-family-b02-043"
+  },
+  "syn-train-b02-044": {
+    "cluster_id": "c0132",
+    "split": "train",
+    "family_id": "syn-family-b02-044"
+  },
+  "syn-train-b02-045": {
+    "cluster_id": "c0133",
+    "split": "train",
+    "family_id": "syn-family-b02-045"
+  },
+  "syn-train-b02-046": {
+    "cluster_id": "c0134",
+    "split": "train",
+    "family_id": "syn-family-b02-046"
+  },
+  "syn-train-b02-047": {
+    "cluster_id": "c0135",
+    "split": "train",
+    "family_id": "syn-family-b02-047"
+  },
+  "syn-train-b02-048": {
+    "cluster_id": "c0136",
+    "split": "train",
+    "family_id": "syn-family-b02-048"
+  },
+  "syn-train-b02-049": {
+    "cluster_id": "c0137",
+    "split": "train",
+    "family_id": "syn-family-b02-049"
+  },
+  "syn-train-b02-050": {
+    "cluster_id": "c0138",
+    "split": "train",
+    "family_id": "syn-family-b02-050"
+  },
+  "syn-train-b02-051": {
+    "cluster_id": "c0139",
+    "split": "train",
+    "family_id": "syn-family-b02-051"
+  },
+  "syn-train-b02-052": {
+    "cluster_id": "c0140",
+    "split": "train",
+    "family_id": "syn-family-b02-052"
+  },
+  "syn-train-b02-053": {
+    "cluster_id": "c0141",
+    "split": "train",
+    "family_id": "syn-family-b02-053"
+  },
+  "syn-train-b02-054": {
+    "cluster_id": "c0142",
+    "split": "dev",
+    "family_id": "syn-family-b02-054"
+  },
+  "syn-train-b02-055": {
+    "cluster_id": "c0143",
+    "split": "train",
+    "family_id": "syn-family-b02-055"
+  },
+  "syn-train-b02-056": {
+    "cluster_id": "c0144",
+    "split": "train",
+    "family_id": "syn-family-b02-056"
+  },
+  "syn-train-b02-057": {
+    "cluster_id": "c0145",
+    "split": "train",
+    "family_id": "syn-family-b02-057"
+  },
+  "syn-train-b02-058": {
+    "cluster_id": "c0146",
+    "split": "train",
+    "family_id": "syn-family-b02-058"
+  },
+  "syn-train-b02-059": {
+    "cluster_id": "c0147",
+    "split": "train",
+    "family_id": "syn-family-b02-059"
+  },
+  "syn-train-b02-060": {
+    "cluster_id": "c0148",
+    "split": "train",
+    "family_id": "syn-family-b02-060"
+  },
+  "syn-train-b02-061": {
+    "cluster_id": "c0149",
+    "split": "dev",
+    "family_id": "syn-family-b02-061"
+  },
+  "syn-train-b02-062": {
+    "cluster_id": "c0031",
+    "split": "train",
+    "family_id": "syn-family-b02-062"
+  },
+  "syn-train-b02-063": {
+    "cluster_id": "c0150",
+    "split": "dev",
+    "family_id": "syn-family-b02-063"
+  },
+  "syn-train-b02-064": {
+    "cluster_id": "c0045",
+    "split": "train",
+    "family_id": "syn-family-b02-064"
+  },
+  "syn-train-b02-065": {
+    "cluster_id": "c0151",
+    "split": "train",
+    "family_id": "syn-family-b02-065"
+  },
+  "syn-train-b02-066": {
+    "cluster_id": "c0152",
+    "split": "train",
+    "family_id": "syn-family-b02-066"
+  },
+  "syn-train-b02-067": {
+    "cluster_id": "c0153",
+    "split": "train",
+    "family_id": "syn-family-b02-067"
+  },
+  "syn-train-b02-068": {
+    "cluster_id": "c0154",
+    "split": "train",
+    "family_id": "syn-family-b02-068"
+  },
+  "syn-train-b02-069": {
+    "cluster_id": "c0155",
+    "split": "dev",
+    "family_id": "syn-family-b02-069"
+  },
+  "syn-train-b02-070": {
+    "cluster_id": "c0066",
+    "split": "train",
+    "family_id": "syn-family-b02-070"
+  },
+  "syn-train-b02-071": {
+    "cluster_id": "c0156",
+    "split": "train",
+    "family_id": "syn-family-b02-071"
+  },
+  "syn-train-b02-072": {
+    "cluster_id": "c0157",
+    "split": "train",
+    "family_id": "syn-family-b02-072"
+  },
+  "syn-train-b02-073": {
+    "cluster_id": "c0158",
+    "split": "train",
+    "family_id": "syn-family-b02-073"
+  },
+  "syn-train-b02-074": {
+    "cluster_id": "c0159",
+    "split": "train",
+    "family_id": "syn-family-b02-074"
+  },
+  "syn-train-b02-075": {
+    "cluster_id": "c0072",
+    "split": "dev",
+    "family_id": "syn-family-b02-075"
+  },
+  "syn-train-b02-076": {
+    "cluster_id": "c0160",
+    "split": "train",
+    "family_id": "syn-family-b02-076"
+  },
+  "syn-train-b02-077": {
+    "cluster_id": "c0161",
+    "split": "train",
+    "family_id": "syn-family-b02-077"
+  },
+  "syn-train-b02-078": {
+    "cluster_id": "c0162",
+    "split": "dev",
+    "family_id": "syn-family-b02-078"
+  },
+  "syn-train-b02-079": {
+    "cluster_id": "c0163",
+    "split": "train",
+    "family_id": "syn-family-b02-079"
+  },
+  "syn-train-b02-080": {
+    "cluster_id": "c0164",
+    "split": "train",
+    "family_id": "syn-family-b02-080"
+  },
+  "syn-train-b02-081": {
+    "cluster_id": "c0165",
+    "split": "train",
+    "family_id": "syn-family-b02-081"
+  },
+  "syn-train-b02-082": {
+    "cluster_id": "c0166",
+    "split": "train",
+    "family_id": "syn-family-b02-082"
+  },
+  "syn-train-b02-083": {
+    "cluster_id": "c0167",
+    "split": "train",
+    "family_id": "syn-family-b02-083"
+  },
+  "syn-train-b02-084": {
+    "cluster_id": "c0101",
+    "split": "dev",
+    "family_id": "syn-family-b02-084"
+  },
+  "syn-train-b02-085": {
+    "cluster_id": "c0168",
+    "split": "train",
+    "family_id": "syn-family-b02-085"
+  },
+  "syn-train-b02-086": {
+    "cluster_id": "c0169",
+    "split": "train",
+    "family_id": "syn-family-b02-086"
+  },
+  "syn-train-b02-087": {
+    "cluster_id": "c0170",
+    "split": "dev",
+    "family_id": "syn-family-b02-087"
+  },
+  "syn-train-b02-088": {
+    "cluster_id": "c0171",
+    "split": "train",
+    "family_id": "syn-family-b02-088"
+  },
+  "syn-train-b02-089": {
+    "cluster_id": "c0082",
+    "split": "dev",
+    "family_id": "syn-family-b02-089"
+  },
+  "syn-train-b02-090": {
+    "cluster_id": "c0172",
+    "split": "train",
+    "family_id": "syn-family-b02-090"
+  },
+  "syn-train-b02-091": {
+    "cluster_id": "c0173",
+    "split": "train",
+    "family_id": "syn-family-b02-091"
+  },
+  "syn-train-b02-092": {
+    "cluster_id": "c0085",
+    "split": "train",
+    "family_id": "syn-family-b02-092"
+  },
+  "syn-train-b02-093": {
+    "cluster_id": "c0086",
+    "split": "dev",
+    "family_id": "syn-family-b02-093"
+  },
+  "syn-train-b02-094": {
+    "cluster_id": "c0174",
+    "split": "train",
+    "family_id": "syn-family-b02-094"
+  },
+  "syn-train-b02-095": {
+    "cluster_id": "c0074",
+    "split": "train",
+    "family_id": "syn-family-b02-095"
+  },
+  "syn-train-b02-096": {
+    "cluster_id": "c0175",
+    "split": "dev",
+    "family_id": "syn-family-b02-096"
+  },
+  "syn-train-b02-097": {
+    "cluster_id": "c0176",
+    "split": "train",
+    "family_id": "syn-family-b02-097"
+  },
+  "syn-train-b02-098": {
+    "cluster_id": "c0177",
+    "split": "train",
+    "family_id": "syn-family-b02-098"
+  },
+  "syn-train-b02-099": {
+    "cluster_id": "c0178",
+    "split": "train",
+    "family_id": "syn-family-b02-099"
+  },
+  "syn-train-b02-100": {
+    "cluster_id": "c0179",
+    "split": "dev",
+    "family_id": "syn-family-b02-100"
+  },
+  "syn-train-b03-001": {
+    "cluster_id": "c0180",
+    "split": "train",
+    "family_id": "syn-family-b03-001"
+  },
+  "syn-train-b03-002": {
+    "cluster_id": "c0181",
+    "split": "train",
+    "family_id": "syn-family-b03-002"
+  },
+  "syn-train-b03-003": {
+    "cluster_id": "c0182",
+    "split": "train",
+    "family_id": "syn-family-b03-003"
+  },
+  "syn-train-b03-004": {
+    "cluster_id": "c0183",
+    "split": "dev",
+    "family_id": "syn-family-b03-004"
+  },
+  "syn-train-b03-005": {
+    "cluster_id": "c0184",
+    "split": "train",
+    "family_id": "syn-family-b03-005"
+  },
+  "syn-train-b03-006": {
+    "cluster_id": "c0185",
+    "split": "train",
+    "family_id": "syn-family-b03-006"
+  },
+  "syn-train-b03-007": {
+    "cluster_id": "c0186",
+    "split": "train",
+    "family_id": "syn-family-b03-007"
+  },
+  "syn-train-b03-008": {
+    "cluster_id": "c0187",
+    "split": "train",
+    "family_id": "syn-family-b03-008"
+  },
+  "syn-train-b03-009": {
+    "cluster_id": "c0188",
+    "split": "train",
+    "family_id": "syn-family-b03-009"
+  },
+  "syn-train-b03-010": {
+    "cluster_id": "c0189",
+    "split": "train",
+    "family_id": "syn-family-b03-010"
+  },
+  "syn-train-b03-011": {
+    "cluster_id": "c0190",
+    "split": "train",
+    "family_id": "syn-family-b03-011"
+  },
+  "syn-train-b03-012": {
+    "cluster_id": "c0191",
+    "split": "train",
+    "family_id": "syn-family-b03-012"
+  },
+  "syn-train-b03-013": {
+    "cluster_id": "c0192",
+    "split": "train",
+    "family_id": "syn-family-b03-013"
+  },
+  "syn-train-b03-014": {
+    "cluster_id": "c0193",
+    "split": "train",
+    "family_id": "syn-family-b03-014"
+  },
+  "syn-train-b03-015": {
+    "cluster_id": "c0194",
+    "split": "train",
+    "family_id": "syn-family-b03-015"
+  },
+  "syn-train-b03-016": {
+    "cluster_id": "c0195",
+    "split": "dev",
+    "family_id": "syn-family-b03-016"
+  },
+  "syn-train-b03-017": {
+    "cluster_id": "c0196",
+    "split": "dev",
+    "family_id": "syn-family-b03-017"
+  },
+  "syn-train-b03-018": {
+    "cluster_id": "c0197",
+    "split": "train",
+    "family_id": "syn-family-b03-018"
+  },
+  "syn-train-b03-019": {
+    "cluster_id": "c0198",
+    "split": "train",
+    "family_id": "syn-family-b03-019"
+  },
+  "syn-train-b03-020": {
+    "cluster_id": "c0199",
+    "split": "dev",
+    "family_id": "syn-family-b03-020"
+  },
+  "syn-train-b03-021": {
+    "cluster_id": "c0200",
+    "split": "train",
+    "family_id": "syn-family-b03-021"
+  },
+  "syn-train-b03-022": {
+    "cluster_id": "c0201",
+    "split": "train",
+    "family_id": "syn-family-b03-022"
+  },
+  "syn-train-b03-023": {
+    "cluster_id": "c0202",
+    "split": "train",
+    "family_id": "syn-family-b03-023"
+  },
+  "syn-train-b03-024": {
+    "cluster_id": "c0203",
+    "split": "train",
+    "family_id": "syn-family-b03-024"
+  },
+  "syn-train-b03-025": {
+    "cluster_id": "c0204",
+    "split": "train",
+    "family_id": "syn-family-b03-025"
+  },
+  "syn-train-b03-026": {
+    "cluster_id": "c0205",
+    "split": "train",
+    "family_id": "syn-family-b03-026"
+  },
+  "syn-train-b03-027": {
+    "cluster_id": "c0206",
+    "split": "train",
+    "family_id": "syn-family-b03-027"
+  },
+  "syn-train-b03-028": {
+    "cluster_id": "c0207",
+    "split": "train",
+    "family_id": "syn-family-b03-028"
+  },
+  "syn-train-b03-029": {
+    "cluster_id": "c0208",
+    "split": "train",
+    "family_id": "syn-family-b03-029"
+  },
+  "syn-train-b03-030": {
+    "cluster_id": "c0192",
+    "split": "train",
+    "family_id": "syn-family-b03-030"
+  },
+  "syn-train-b03-031": {
+    "cluster_id": "c0209",
+    "split": "train",
+    "family_id": "syn-family-b03-031"
+  },
+  "syn-train-b03-032": {
+    "cluster_id": "c0210",
+    "split": "train",
+    "family_id": "syn-family-b03-032"
+  },
+  "syn-train-b03-033": {
+    "cluster_id": "c0211",
+    "split": "dev",
+    "family_id": "syn-family-b03-033"
+  },
+  "syn-train-b03-034": {
+    "cluster_id": "c0212",
+    "split": "train",
+    "family_id": "syn-family-b03-034"
+  },
+  "syn-train-b03-035": {
+    "cluster_id": "c0213",
+    "split": "train",
+    "family_id": "syn-family-b03-035"
+  },
+  "syn-train-b03-036": {
+    "cluster_id": "c0214",
+    "split": "train",
+    "family_id": "syn-family-b03-036"
+  },
+  "syn-train-b03-037": {
+    "cluster_id": "c0215",
+    "split": "train",
+    "family_id": "syn-family-b03-037"
+  },
+  "syn-train-b03-038": {
+    "cluster_id": "c0216",
+    "split": "train",
+    "family_id": "syn-family-b03-038"
+  },
+  "syn-train-b03-039": {
+    "cluster_id": "c0217",
+    "split": "train",
+    "family_id": "syn-family-b03-039"
+  },
+  "syn-train-b03-040": {
+    "cluster_id": "c0218",
+    "split": "train",
+    "family_id": "syn-family-b03-040"
+  },
+  "syn-train-b03-041": {
+    "cluster_id": "c0219",
+    "split": "train",
+    "family_id": "syn-family-b03-041"
+  },
+  "syn-train-b03-042": {
+    "cluster_id": "c0220",
+    "split": "dev",
+    "family_id": "syn-family-b03-042"
+  },
+  "syn-train-b03-043": {
+    "cluster_id": "c0221",
+    "split": "train",
+    "family_id": "syn-family-b03-043"
+  },
+  "syn-train-b03-044": {
+    "cluster_id": "c0222",
+    "split": "train",
+    "family_id": "syn-family-b03-044"
+  },
+  "syn-train-b03-045": {
+    "cluster_id": "c0223",
+    "split": "train",
+    "family_id": "syn-family-b03-045"
+  },
+  "syn-train-b03-046": {
+    "cluster_id": "c0224",
+    "split": "train",
+    "family_id": "syn-family-b03-046"
+  },
+  "syn-train-b03-047": {
+    "cluster_id": "c0225",
+    "split": "train",
+    "family_id": "syn-family-b03-047"
+  },
+  "syn-train-b03-048": {
+    "cluster_id": "c0226",
+    "split": "train",
+    "family_id": "syn-family-b03-048"
+  },
+  "syn-train-b03-049": {
+    "cluster_id": "c0227",
+    "split": "train",
+    "family_id": "syn-family-b03-049"
+  },
+  "syn-train-b03-050": {
+    "cluster_id": "c0228",
+    "split": "train",
+    "family_id": "syn-family-b03-050"
+  },
+  "syn-train-b03-051": {
+    "cluster_id": "c0229",
+    "split": "train",
+    "family_id": "syn-family-b03-051"
+  },
+  "syn-train-b03-052": {
+    "cluster_id": "c0230",
+    "split": "train",
+    "family_id": "syn-family-b03-052"
+  },
+  "syn-train-b03-053": {
+    "cluster_id": "c0231",
+    "split": "train",
+    "family_id": "syn-family-b03-053"
+  },
+  "syn-train-b03-054": {
+    "cluster_id": "c0232",
+    "split": "dev",
+    "family_id": "syn-family-b03-054"
+  },
+  "syn-train-b03-055": {
+    "cluster_id": "c0233",
+    "split": "dev",
+    "family_id": "syn-family-b03-055"
+  },
+  "syn-train-b03-056": {
+    "cluster_id": "c0234",
+    "split": "train",
+    "family_id": "syn-family-b03-056"
+  },
+  "syn-train-b03-057": {
+    "cluster_id": "c0235",
+    "split": "train",
+    "family_id": "syn-family-b03-057"
+  },
+  "syn-train-b03-058": {
+    "cluster_id": "c0236",
+    "split": "train",
+    "family_id": "syn-family-b03-058"
+  },
+  "syn-train-b03-059": {
+    "cluster_id": "c0031",
+    "split": "train",
+    "family_id": "syn-family-b03-059"
+  },
+  "syn-train-b03-060": {
+    "cluster_id": "c0237",
+    "split": "train",
+    "family_id": "syn-family-b03-060"
+  },
+  "syn-train-b03-061": {
+    "cluster_id": "c0238",
+    "split": "train",
+    "family_id": "syn-family-b03-061"
+  },
+  "syn-train-b03-062": {
+    "cluster_id": "c0031",
+    "split": "train",
+    "family_id": "syn-family-b03-062"
+  },
+  "syn-train-b03-063": {
+    "cluster_id": "c0002",
+    "split": "train",
+    "family_id": "syn-family-b03-063"
+  },
+  "syn-train-b03-064": {
+    "cluster_id": "c0239",
+    "split": "train",
+    "family_id": "syn-family-b03-064"
+  },
+  "syn-train-b03-065": {
+    "cluster_id": "c0183",
+    "split": "dev",
+    "family_id": "syn-family-b03-065"
+  },
+  "syn-train-b03-066": {
+    "cluster_id": "c0192",
+    "split": "train",
+    "family_id": "syn-family-b03-066"
+  },
+  "syn-train-b03-067": {
+    "cluster_id": "c0195",
+    "split": "dev",
+    "family_id": "syn-family-b03-067"
+  },
+  "syn-train-b03-068": {
+    "cluster_id": "c0232",
+    "split": "dev",
+    "family_id": "syn-family-b03-068"
+  },
+  "syn-train-b03-069": {
+    "cluster_id": "c0240",
+    "split": "train",
+    "family_id": "syn-family-b03-069"
+  },
+  "syn-train-b03-070": {
+    "cluster_id": "c0241",
+    "split": "train",
+    "family_id": "syn-family-b03-070"
+  },
+  "syn-train-b03-071": {
+    "cluster_id": "c0192",
+    "split": "train",
+    "family_id": "syn-family-b03-071"
+  },
+  "syn-train-b03-072": {
+    "cluster_id": "c0242",
+    "split": "train",
+    "family_id": "syn-family-b03-072"
+  },
+  "syn-train-b03-073": {
+    "cluster_id": "c0243",
+    "split": "train",
+    "family_id": "syn-family-b03-073"
+  },
+  "syn-train-b03-074": {
+    "cluster_id": "c0244",
+    "split": "train",
+    "family_id": "syn-family-b03-074"
+  },
+  "syn-train-b03-075": {
+    "cluster_id": "c0245",
+    "split": "train",
+    "family_id": "syn-family-b03-075"
+  },
+  "syn-train-b03-076": {
+    "cluster_id": "c0246",
+    "split": "train",
+    "family_id": "syn-family-b03-076"
+  },
+  "syn-train-b03-077": {
+    "cluster_id": "c0247",
+    "split": "train",
+    "family_id": "syn-family-b03-077"
+  },
+  "syn-train-b03-078": {
+    "cluster_id": "c0248",
+    "split": "train",
+    "family_id": "syn-family-b03-078"
+  },
+  "syn-train-b03-079": {
+    "cluster_id": "c0070",
+    "split": "train",
+    "family_id": "syn-family-b03-079"
+  },
+  "syn-train-b03-080": {
+    "cluster_id": "c0061",
+    "split": "train",
+    "family_id": "syn-family-b03-080"
+  },
+  "syn-train-b03-081": {
+    "cluster_id": "c0249",
+    "split": "train",
+    "family_id": "syn-family-b03-081"
+  },
+  "syn-train-b03-082": {
+    "cluster_id": "c0250",
+    "split": "train",
+    "family_id": "syn-family-b03-082"
+  },
+  "syn-train-b03-083": {
+    "cluster_id": "c0028",
+    "split": "train",
+    "family_id": "syn-family-b03-083"
+  },
+  "syn-train-b03-084": {
+    "cluster_id": "c0214",
+    "split": "train",
+    "family_id": "syn-family-b03-084"
+  },
+  "syn-train-b03-085": {
+    "cluster_id": "c0216",
+    "split": "train",
+    "family_id": "syn-family-b03-085"
+  },
+  "syn-train-b03-086": {
+    "cluster_id": "c0251",
+    "split": "train",
+    "family_id": "syn-family-b03-086"
+  },
+  "syn-train-b03-087": {
+    "cluster_id": "c0170",
+    "split": "dev",
+    "family_id": "syn-family-b03-087"
+  },
+  "syn-train-b03-088": {
+    "cluster_id": "c0252",
+    "split": "train",
+    "family_id": "syn-family-b03-088"
+  },
+  "syn-train-b03-089": {
+    "cluster_id": "c0253",
+    "split": "train",
+    "family_id": "syn-family-b03-089"
+  },
+  "syn-train-b03-090": {
+    "cluster_id": "c0083",
+    "split": "train",
+    "family_id": "syn-family-b03-090"
+  },
+  "syn-train-b03-091": {
+    "cluster_id": "c0254",
+    "split": "train",
+    "family_id": "syn-family-b03-091"
+  },
+  "syn-train-b03-092": {
+    "cluster_id": "c0255",
+    "split": "train",
+    "family_id": "syn-family-b03-092"
+  },
+  "syn-train-b03-093": {
+    "cluster_id": "c0256",
+    "split": "train",
+    "family_id": "syn-family-b03-093"
+  },
+  "syn-train-b03-094": {
+    "cluster_id": "c0257",
+    "split": "train",
+    "family_id": "syn-family-b03-094"
+  },
+  "syn-train-b03-095": {
+    "cluster_id": "c0002",
+    "split": "train",
+    "family_id": "syn-family-b03-095"
+  },
+  "syn-train-b03-096": {
+    "cluster_id": "c0258",
+    "split": "train",
+    "family_id": "syn-family-b03-096"
+  },
+  "syn-train-b03-097": {
+    "cluster_id": "c0259",
+    "split": "train",
+    "family_id": "syn-family-b03-097"
+  },
+  "syn-train-b03-098": {
+    "cluster_id": "c0260",
+    "split": "train",
+    "family_id": "syn-family-b03-098"
+  },
+  "syn-train-b03-099": {
+    "cluster_id": "c0240",
+    "split": "train",
+    "family_id": "syn-family-b03-099"
+  },
+  "syn-train-b03-100": {
+    "cluster_id": "c0261",
+    "split": "train",
+    "family_id": "syn-family-b03-100"
+  },
+  "syn-train-b04-001": {
+    "cluster_id": "c0262",
+    "split": "train",
+    "family_id": "syn-family-b04-001"
+  },
+  "syn-train-b04-002": {
+    "cluster_id": "c0263",
+    "split": "train",
+    "family_id": "syn-family-b04-002"
+  },
+  "syn-train-b04-003": {
+    "cluster_id": "c0264",
+    "split": "train",
+    "family_id": "syn-family-b04-003"
+  },
+  "syn-train-b04-004": {
+    "cluster_id": "c0265",
+    "split": "dev",
+    "family_id": "syn-family-b04-004"
+  },
+  "syn-train-b04-005": {
+    "cluster_id": "c0266",
+    "split": "train",
+    "family_id": "syn-family-b04-005"
+  },
+  "syn-train-b04-006": {
+    "cluster_id": "c0192",
+    "split": "train",
+    "family_id": "syn-family-b04-006"
+  },
+  "syn-train-b04-007": {
+    "cluster_id": "c0267",
+    "split": "train",
+    "family_id": "syn-family-b04-007"
+  },
+  "syn-train-b04-008": {
+    "cluster_id": "c0268",
+    "split": "train",
+    "family_id": "syn-family-b04-008"
+  },
+  "syn-train-b04-009": {
+    "cluster_id": "c0269",
+    "split": "train",
+    "family_id": "syn-family-b04-009"
+  },
+  "syn-train-b04-010": {
+    "cluster_id": "c0270",
+    "split": "train",
+    "family_id": "syn-family-b04-010"
+  },
+  "syn-train-b04-011": {
+    "cluster_id": "c0271",
+    "split": "train",
+    "family_id": "syn-family-b04-011"
+  },
+  "syn-train-b04-012": {
+    "cluster_id": "c0272",
+    "split": "train",
+    "family_id": "syn-family-b04-012"
+  },
+  "syn-train-b04-013": {
+    "cluster_id": "c0273",
+    "split": "train",
+    "family_id": "syn-family-b04-013"
+  },
+  "syn-train-b04-014": {
+    "cluster_id": "c0274",
+    "split": "train",
+    "family_id": "syn-family-b04-014"
+  },
+  "syn-train-b04-015": {
+    "cluster_id": "c0275",
+    "split": "train",
+    "family_id": "syn-family-b04-015"
+  },
+  "syn-train-b04-016": {
+    "cluster_id": "c0276",
+    "split": "train",
+    "family_id": "syn-family-b04-016"
+  },
+  "syn-train-b04-017": {
+    "cluster_id": "c0277",
+    "split": "train",
+    "family_id": "syn-family-b04-017"
+  },
+  "syn-train-b04-018": {
+    "cluster_id": "c0278",
+    "split": "train",
+    "family_id": "syn-family-b04-018"
+  },
+  "syn-train-b04-019": {
+    "cluster_id": "c0279",
+    "split": "train",
+    "family_id": "syn-family-b04-019"
+  },
+  "syn-train-b04-020": {
+    "cluster_id": "c0280",
+    "split": "train",
+    "family_id": "syn-family-b04-020"
+  },
+  "syn-train-b04-021": {
+    "cluster_id": "c0281",
+    "split": "train",
+    "family_id": "syn-family-b04-021"
+  },
+  "syn-train-b04-022": {
+    "cluster_id": "c0282",
+    "split": "train",
+    "family_id": "syn-family-b04-022"
+  },
+  "syn-train-b04-023": {
+    "cluster_id": "c0283",
+    "split": "dev",
+    "family_id": "syn-family-b04-023"
+  },
+  "syn-train-b04-024": {
+    "cluster_id": "c0196",
+    "split": "dev",
+    "family_id": "syn-family-b04-024"
+  },
+  "syn-train-b04-025": {
+    "cluster_id": "c0284",
+    "split": "train",
+    "family_id": "syn-family-b04-025"
+  },
+  "syn-train-b04-026": {
+    "cluster_id": "c0285",
+    "split": "train",
+    "family_id": "syn-family-b04-026"
+  },
+  "syn-train-b04-027": {
+    "cluster_id": "c0286",
+    "split": "train",
+    "family_id": "syn-family-b04-027"
+  },
+  "syn-train-b04-028": {
+    "cluster_id": "c0287",
+    "split": "train",
+    "family_id": "syn-family-b04-028"
+  },
+  "syn-train-b04-029": {
+    "cluster_id": "c0192",
+    "split": "train",
+    "family_id": "syn-family-b04-029"
+  },
+  "syn-train-b04-030": {
+    "cluster_id": "c0284",
+    "split": "train",
+    "family_id": "syn-family-b04-030"
+  },
+  "syn-train-b04-031": {
+    "cluster_id": "c0288",
+    "split": "train",
+    "family_id": "syn-family-b04-031"
+  },
+  "syn-train-b04-032": {
+    "cluster_id": "c0289",
+    "split": "train",
+    "family_id": "syn-family-b04-032"
+  },
+  "syn-train-b04-033": {
+    "cluster_id": "c0290",
+    "split": "train",
+    "family_id": "syn-family-b04-033"
+  },
+  "syn-train-b04-034": {
+    "cluster_id": "c0291",
+    "split": "train",
+    "family_id": "syn-family-b04-034"
+  },
+  "syn-train-b04-035": {
+    "cluster_id": "c0292",
+    "split": "train",
+    "family_id": "syn-family-b04-035"
+  },
+  "syn-train-b04-036": {
+    "cluster_id": "c0293",
+    "split": "train",
+    "family_id": "syn-family-b04-036"
+  },
+  "syn-train-b04-037": {
+    "cluster_id": "c0294",
+    "split": "train",
+    "family_id": "syn-family-b04-037"
+  },
+  "syn-train-b04-038": {
+    "cluster_id": "c0295",
+    "split": "train",
+    "family_id": "syn-family-b04-038"
+  },
+  "syn-train-b04-039": {
+    "cluster_id": "c0296",
+    "split": "train",
+    "family_id": "syn-family-b04-039"
+  },
+  "syn-train-b04-040": {
+    "cluster_id": "c0297",
+    "split": "train",
+    "family_id": "syn-family-b04-040"
+  },
+  "syn-train-b04-041": {
+    "cluster_id": "c0298",
+    "split": "train",
+    "family_id": "syn-family-b04-041"
+  },
+  "syn-train-b04-042": {
+    "cluster_id": "c0299",
+    "split": "train",
+    "family_id": "syn-family-b04-042"
+  },
+  "syn-train-b04-043": {
+    "cluster_id": "c0300",
+    "split": "dev",
+    "family_id": "syn-family-b04-043"
+  },
+  "syn-train-b04-044": {
+    "cluster_id": "c0278",
+    "split": "train",
+    "family_id": "syn-family-b04-044"
+  },
+  "syn-train-b04-045": {
+    "cluster_id": "c0301",
+    "split": "train",
+    "family_id": "syn-family-b04-045"
+  },
+  "syn-train-b04-046": {
+    "cluster_id": "c0265",
+    "split": "dev",
+    "family_id": "syn-family-b04-046"
+  },
+  "syn-train-b04-047": {
+    "cluster_id": "c0302",
+    "split": "train",
+    "family_id": "syn-family-b04-047"
+  },
+  "syn-train-b04-048": {
+    "cluster_id": "c0270",
+    "split": "train",
+    "family_id": "syn-family-b04-048"
+  },
+  "syn-train-b04-049": {
+    "cluster_id": "c0196",
+    "split": "dev",
+    "family_id": "syn-family-b04-049"
+  },
+  "syn-train-b04-050": {
+    "cluster_id": "c0303",
+    "split": "train",
+    "family_id": "syn-family-b04-050"
+  },
+  "syn-train-b04-051": {
+    "cluster_id": "c0304",
+    "split": "train",
+    "family_id": "syn-family-b04-051"
+  },
+  "syn-train-b04-052": {
+    "cluster_id": "c0305",
+    "split": "train",
+    "family_id": "syn-family-b04-052"
+  },
+  "syn-train-b04-053": {
+    "cluster_id": "c0306",
+    "split": "train",
+    "family_id": "syn-family-b04-053"
+  },
+  "syn-train-b04-054": {
+    "cluster_id": "c0307",
+    "split": "train",
+    "family_id": "syn-family-b04-054"
+  },
+  "syn-train-b04-055": {
+    "cluster_id": "c0308",
+    "split": "dev",
+    "family_id": "syn-family-b04-055"
+  },
+  "syn-train-b04-056": {
+    "cluster_id": "c0309",
+    "split": "dev",
+    "family_id": "syn-family-b04-056"
+  },
+  "syn-train-b04-057": {
+    "cluster_id": "c0060",
+    "split": "train",
+    "family_id": "syn-family-b04-057"
+  },
+  "syn-train-b04-058": {
+    "cluster_id": "c0031",
+    "split": "train",
+    "family_id": "syn-family-b04-058"
+  },
+  "syn-train-b04-059": {
+    "cluster_id": "c0310",
+    "split": "train",
+    "family_id": "syn-family-b04-059"
+  },
+  "syn-train-b04-060": {
+    "cluster_id": "c0236",
+    "split": "train",
+    "family_id": "syn-family-b04-060"
+  },
+  "syn-train-b04-061": {
+    "cluster_id": "c0311",
+    "split": "dev",
+    "family_id": "syn-family-b04-061"
+  },
+  "syn-train-b04-062": {
+    "cluster_id": "c0150",
+    "split": "dev",
+    "family_id": "syn-family-b04-062"
+  },
+  "syn-train-b04-063": {
+    "cluster_id": "c0270",
+    "split": "train",
+    "family_id": "syn-family-b04-063"
+  },
+  "syn-train-b04-064": {
+    "cluster_id": "c0265",
+    "split": "dev",
+    "family_id": "syn-family-b04-064"
+  },
+  "syn-train-b04-065": {
+    "cluster_id": "c0192",
+    "split": "train",
+    "family_id": "syn-family-b04-065"
+  },
+  "syn-train-b04-066": {
+    "cluster_id": "c0302",
+    "split": "train",
+    "family_id": "syn-family-b04-066"
+  },
+  "syn-train-b04-067": {
+    "cluster_id": "c0312",
+    "split": "train",
+    "family_id": "syn-family-b04-067"
+  },
+  "syn-train-b04-068": {
+    "cluster_id": "c0313",
+    "split": "train",
+    "family_id": "syn-family-b04-068"
+  },
+  "syn-train-b04-069": {
+    "cluster_id": "c0284",
+    "split": "train",
+    "family_id": "syn-family-b04-069"
+  },
+  "syn-train-b04-070": {
+    "cluster_id": "c0162",
+    "split": "dev",
+    "family_id": "syn-family-b04-070"
+  },
+  "syn-train-b04-071": {
+    "cluster_id": "c0270",
+    "split": "train",
+    "family_id": "syn-family-b04-071"
+  },
+  "syn-train-b04-072": {
+    "cluster_id": "c0278",
+    "split": "train",
+    "family_id": "syn-family-b04-072"
+  },
+  "syn-train-b04-073": {
+    "cluster_id": "c0314",
+    "split": "train",
+    "family_id": "syn-family-b04-073"
+  },
+  "syn-train-b04-074": {
+    "cluster_id": "c0192",
+    "split": "train",
+    "family_id": "syn-family-b04-074"
+  },
+  "syn-train-b04-075": {
+    "cluster_id": "c0315",
+    "split": "train",
+    "family_id": "syn-family-b04-075"
+  },
+  "syn-train-b04-076": {
+    "cluster_id": "c0316",
+    "split": "train",
+    "family_id": "syn-family-b04-076"
+  },
+  "syn-train-b04-077": {
+    "cluster_id": "c0317",
+    "split": "train",
+    "family_id": "syn-family-b04-077"
+  },
+  "syn-train-b04-078": {
+    "cluster_id": "c0270",
+    "split": "train",
+    "family_id": "syn-family-b04-078"
+  },
+  "syn-train-b04-079": {
+    "cluster_id": "c0318",
+    "split": "train",
+    "family_id": "syn-family-b04-079"
+  },
+  "syn-train-b04-080": {
+    "cluster_id": "c0302",
+    "split": "train",
+    "family_id": "syn-family-b04-080"
+  },
+  "syn-train-b04-081": {
+    "cluster_id": "c0319",
+    "split": "train",
+    "family_id": "syn-family-b04-081"
+  },
+  "syn-train-b04-082": {
+    "cluster_id": "c0320",
+    "split": "train",
+    "family_id": "syn-family-b04-082"
+  },
+  "syn-train-b04-083": {
+    "cluster_id": "c0294",
+    "split": "train",
+    "family_id": "syn-family-b04-083"
+  },
+  "syn-train-b04-084": {
+    "cluster_id": "c0321",
+    "split": "train",
+    "family_id": "syn-family-b04-084"
+  },
+  "syn-train-b04-085": {
+    "cluster_id": "c0322",
+    "split": "train",
+    "family_id": "syn-family-b04-085"
+  },
+  "syn-train-b04-086": {
+    "cluster_id": "c0323",
+    "split": "train",
+    "family_id": "syn-family-b04-086"
+  },
+  "syn-train-b04-087": {
+    "cluster_id": "c0324",
+    "split": "train",
+    "family_id": "syn-family-b04-087"
+  },
+  "syn-train-b04-088": {
+    "cluster_id": "c0325",
+    "split": "train",
+    "family_id": "syn-family-b04-088"
+  },
+  "syn-train-b04-089": {
+    "cluster_id": "c0326",
+    "split": "train",
+    "family_id": "syn-family-b04-089"
+  },
+  "syn-train-b04-090": {
+    "cluster_id": "c0327",
+    "split": "train",
+    "family_id": "syn-family-b04-090"
+  },
+  "syn-train-b04-091": {
+    "cluster_id": "c0328",
+    "split": "train",
+    "family_id": "syn-family-b04-091"
+  },
+  "syn-train-b04-092": {
+    "cluster_id": "c0329",
+    "split": "train",
+    "family_id": "syn-family-b04-092"
+  },
+  "syn-train-b04-093": {
+    "cluster_id": "c0330",
+    "split": "train",
+    "family_id": "syn-family-b04-093"
+  },
+  "syn-train-b04-094": {
+    "cluster_id": "c0175",
+    "split": "dev",
+    "family_id": "syn-family-b04-094"
+  },
+  "syn-train-b04-095": {
+    "cluster_id": "c0331",
+    "split": "train",
+    "family_id": "syn-family-b04-095"
+  },
+  "syn-train-b04-096": {
+    "cluster_id": "c0332",
+    "split": "train",
+    "family_id": "syn-family-b04-096"
+  },
+  "syn-train-b04-097": {
+    "cluster_id": "c0278",
+    "split": "train",
+    "family_id": "syn-family-b04-097"
+  },
+  "syn-train-b04-098": {
+    "cluster_id": "c0192",
+    "split": "train",
+    "family_id": "syn-family-b04-098"
+  },
+  "syn-train-b04-099": {
+    "cluster_id": "c0333",
+    "split": "train",
+    "family_id": "syn-family-b04-099"
+  },
+  "syn-train-b04-100": {
+    "cluster_id": "c0334",
+    "split": "train",
+    "family_id": "syn-family-b04-100"
+  },
+  "syn-train-b05-001": {
+    "cluster_id": "c0335",
+    "split": "train",
+    "family_id": "syn-family-b05-001"
+  },
+  "syn-train-b05-002": {
+    "cluster_id": "c0336",
+    "split": "train",
+    "family_id": "syn-family-b05-002"
+  },
+  "syn-train-b05-003": {
+    "cluster_id": "c0337",
+    "split": "train",
+    "family_id": "syn-family-b05-003"
+  },
+  "syn-train-b05-004": {
+    "cluster_id": "c0338",
+    "split": "train",
+    "family_id": "syn-family-b05-004"
+  },
+  "syn-train-b05-005": {
+    "cluster_id": "c0339",
+    "split": "train",
+    "family_id": "syn-family-b05-005"
+  },
+  "syn-train-b05-006": {
+    "cluster_id": "c0340",
+    "split": "train",
+    "family_id": "syn-family-b05-006"
+  },
+  "syn-train-b05-007": {
+    "cluster_id": "c0341",
+    "split": "train",
+    "family_id": "syn-family-b05-007"
+  },
+  "syn-train-b05-008": {
+    "cluster_id": "c0342",
+    "split": "train",
+    "family_id": "syn-family-b05-008"
+  },
+  "syn-train-b05-009": {
+    "cluster_id": "c0343",
+    "split": "train",
+    "family_id": "syn-family-b05-009"
+  },
+  "syn-train-b05-010": {
+    "cluster_id": "c0344",
+    "split": "train",
+    "family_id": "syn-family-b05-010"
+  },
+  "syn-train-b05-011": {
+    "cluster_id": "c0345",
+    "split": "train",
+    "family_id": "syn-family-b05-011"
+  },
+  "syn-train-b05-012": {
+    "cluster_id": "c0346",
+    "split": "train",
+    "family_id": "syn-family-b05-012"
+  },
+  "syn-train-b05-013": {
+    "cluster_id": "c0078",
+    "split": "train",
+    "family_id": "syn-family-b05-013"
+  },
+  "syn-train-b05-014": {
+    "cluster_id": "c0347",
+    "split": "train",
+    "family_id": "syn-family-b05-014"
+  },
+  "syn-train-b05-015": {
+    "cluster_id": "c0348",
+    "split": "train",
+    "family_id": "syn-family-b05-015"
+  },
+  "syn-train-b05-016": {
+    "cluster_id": "c0349",
+    "split": "train",
+    "family_id": "syn-family-b05-016"
+  },
+  "syn-train-b05-017": {
+    "cluster_id": "c0350",
+    "split": "train",
+    "family_id": "syn-family-b05-017"
+  },
+  "syn-train-b05-018": {
+    "cluster_id": "c0351",
+    "split": "dev",
+    "family_id": "syn-family-b05-018"
+  },
+  "syn-train-b05-019": {
+    "cluster_id": "c0352",
+    "split": "train",
+    "family_id": "syn-family-b05-019"
+  },
+  "syn-train-b05-020": {
+    "cluster_id": "c0353",
+    "split": "train",
+    "family_id": "syn-family-b05-020"
+  },
+  "syn-train-b05-021": {
+    "cluster_id": "c0354",
+    "split": "dev",
+    "family_id": "syn-family-b05-021"
+  },
+  "syn-train-b05-022": {
+    "cluster_id": "c0355",
+    "split": "train",
+    "family_id": "syn-family-b05-022"
+  },
+  "syn-train-b05-023": {
+    "cluster_id": "c0356",
+    "split": "train",
+    "family_id": "syn-family-b05-023"
+  },
+  "syn-train-b05-024": {
+    "cluster_id": "c0028",
+    "split": "train",
+    "family_id": "syn-family-b05-024"
+  },
+  "syn-train-b05-025": {
+    "cluster_id": "c0357",
+    "split": "train",
+    "family_id": "syn-family-b05-025"
+  },
+  "syn-train-b05-026": {
+    "cluster_id": "c0358",
+    "split": "train",
+    "family_id": "syn-family-b05-026"
+  },
+  "syn-train-b05-027": {
+    "cluster_id": "c0359",
+    "split": "train",
+    "family_id": "syn-family-b05-027"
+  },
+  "syn-train-b05-028": {
+    "cluster_id": "c0048",
+    "split": "dev",
+    "family_id": "syn-family-b05-028"
+  },
+  "syn-train-b05-029": {
+    "cluster_id": "c0130",
+    "split": "dev",
+    "family_id": "syn-family-b05-029"
+  },
+  "syn-train-b05-030": {
+    "cluster_id": "c0109",
+    "split": "dev",
+    "family_id": "syn-family-b05-030"
+  },
+  "syn-train-b05-031": {
+    "cluster_id": "c0360",
+    "split": "train",
+    "family_id": "syn-family-b05-031"
+  },
+  "syn-train-b05-032": {
+    "cluster_id": "c0361",
+    "split": "train",
+    "family_id": "syn-family-b05-032"
+  },
+  "syn-train-b05-033": {
+    "cluster_id": "c0362",
+    "split": "train",
+    "family_id": "syn-family-b05-033"
+  },
+  "syn-train-b05-034": {
+    "cluster_id": "c0363",
+    "split": "train",
+    "family_id": "syn-family-b05-034"
+  },
+  "syn-train-b05-035": {
+    "cluster_id": "c0364",
+    "split": "dev",
+    "family_id": "syn-family-b05-035"
+  },
+  "syn-train-b05-036": {
+    "cluster_id": "c0365",
+    "split": "dev",
+    "family_id": "syn-family-b05-036"
+  },
+  "syn-train-b05-037": {
+    "cluster_id": "c0366",
+    "split": "train",
+    "family_id": "syn-family-b05-037"
+  },
+  "syn-train-b05-038": {
+    "cluster_id": "c0367",
+    "split": "train",
+    "family_id": "syn-family-b05-038"
+  },
+  "syn-train-b05-039": {
+    "cluster_id": "c0368",
+    "split": "train",
+    "family_id": "syn-family-b05-039"
+  },
+  "syn-train-b05-040": {
+    "cluster_id": "c0369",
+    "split": "train",
+    "family_id": "syn-family-b05-040"
+  },
+  "syn-train-b05-041": {
+    "cluster_id": "c0370",
+    "split": "train",
+    "family_id": "syn-family-b05-041"
+  },
+  "syn-train-b05-042": {
+    "cluster_id": "c0371",
+    "split": "dev",
+    "family_id": "syn-family-b05-042"
+  },
+  "syn-train-b05-043": {
+    "cluster_id": "c0372",
+    "split": "train",
+    "family_id": "syn-family-b05-043"
+  },
+  "syn-train-b05-044": {
+    "cluster_id": "c0373",
+    "split": "train",
+    "family_id": "syn-family-b05-044"
+  },
+  "syn-train-b05-045": {
+    "cluster_id": "c0374",
+    "split": "train",
+    "family_id": "syn-family-b05-045"
+  },
+  "syn-train-b05-046": {
+    "cluster_id": "c0375",
+    "split": "train",
+    "family_id": "syn-family-b05-046"
+  },
+  "syn-train-b05-047": {
+    "cluster_id": "c0376",
+    "split": "train",
+    "family_id": "syn-family-b05-047"
+  },
+  "syn-train-b05-048": {
+    "cluster_id": "c0377",
+    "split": "train",
+    "family_id": "syn-family-b05-048"
+  },
+  "syn-train-b05-049": {
+    "cluster_id": "c0378",
+    "split": "train",
+    "family_id": "syn-family-b05-049"
+  },
+  "syn-train-b05-050": {
+    "cluster_id": "c0379",
+    "split": "train",
+    "family_id": "syn-family-b05-050"
+  },
+  "syn-train-b05-051": {
+    "cluster_id": "c0109",
+    "split": "dev",
+    "family_id": "syn-family-b05-051"
+  },
+  "syn-train-b05-052": {
+    "cluster_id": "c0380",
+    "split": "train",
+    "family_id": "syn-family-b05-052"
+  },
+  "syn-train-b05-053": {
+    "cluster_id": "c0381",
+    "split": "train",
+    "family_id": "syn-family-b05-053"
+  },
+  "syn-train-b05-054": {
+    "cluster_id": "c0382",
+    "split": "train",
+    "family_id": "syn-family-b05-054"
+  },
+  "syn-train-b05-055": {
+    "cluster_id": "c0288",
+    "split": "train",
+    "family_id": "syn-family-b05-055"
+  },
+  "syn-train-b05-056": {
+    "cluster_id": "c0235",
+    "split": "train",
+    "family_id": "syn-family-b05-056"
+  },
+  "syn-train-b05-057": {
+    "cluster_id": "c0060",
+    "split": "train",
+    "family_id": "syn-family-b05-057"
+  },
+  "syn-train-b05-058": {
+    "cluster_id": "c0031",
+    "split": "train",
+    "family_id": "syn-family-b05-058"
+  },
+  "syn-train-b05-059": {
+    "cluster_id": "c0237",
+    "split": "train",
+    "family_id": "syn-family-b05-059"
+  },
+  "syn-train-b05-060": {
+    "cluster_id": "c0236",
+    "split": "train",
+    "family_id": "syn-family-b05-060"
+  },
+  "syn-train-b05-061": {
+    "cluster_id": "c0146",
+    "split": "train",
+    "family_id": "syn-family-b05-061"
+  },
+  "syn-train-b05-062": {
+    "cluster_id": "c0383",
+    "split": "train",
+    "family_id": "syn-family-b05-062"
+  },
+  "syn-train-b05-063": {
+    "cluster_id": "c0045",
+    "split": "train",
+    "family_id": "syn-family-b05-063"
+  },
+  "syn-train-b05-064": {
+    "cluster_id": "c0384",
+    "split": "train",
+    "family_id": "syn-family-b05-064"
+  },
+  "syn-train-b05-065": {
+    "cluster_id": "c0385",
+    "split": "train",
+    "family_id": "syn-family-b05-065"
+  },
+  "syn-train-b05-066": {
+    "cluster_id": "c0386",
+    "split": "train",
+    "family_id": "syn-family-b05-066"
+  },
+  "syn-train-b05-067": {
+    "cluster_id": "c0387",
+    "split": "train",
+    "family_id": "syn-family-b05-067"
+  },
+  "syn-train-b05-068": {
+    "cluster_id": "c0388",
+    "split": "train",
+    "family_id": "syn-family-b05-068"
+  },
+  "syn-train-b05-069": {
+    "cluster_id": "c0355",
+    "split": "train",
+    "family_id": "syn-family-b05-069"
+  },
+  "syn-train-b05-070": {
+    "cluster_id": "c0340",
+    "split": "train",
+    "family_id": "syn-family-b05-070"
+  },
+  "syn-train-b05-071": {
+    "cluster_id": "c0045",
+    "split": "train",
+    "family_id": "syn-family-b05-071"
+  },
+  "syn-train-b05-072": {
+    "cluster_id": "c0364",
+    "split": "dev",
+    "family_id": "syn-family-b05-072"
+  },
+  "syn-train-b05-073": {
+    "cluster_id": "c0389",
+    "split": "train",
+    "family_id": "syn-family-b05-073"
+  },
+  "syn-train-b05-074": {
+    "cluster_id": "c0390",
+    "split": "train",
+    "family_id": "syn-family-b05-074"
+  },
+  "syn-train-b05-075": {
+    "cluster_id": "c0155",
+    "split": "dev",
+    "family_id": "syn-family-b05-075"
+  },
+  "syn-train-b05-076": {
+    "cluster_id": "c0344",
+    "split": "train",
+    "family_id": "syn-family-b05-076"
+  },
+  "syn-train-b05-077": {
+    "cluster_id": "c0391",
+    "split": "train",
+    "family_id": "syn-family-b05-077"
+  },
+  "syn-train-b05-078": {
+    "cluster_id": "c0163",
+    "split": "train",
+    "family_id": "syn-family-b05-078"
+  },
+  "syn-train-b05-079": {
+    "cluster_id": "c0363",
+    "split": "train",
+    "family_id": "syn-family-b05-079"
+  },
+  "syn-train-b05-080": {
+    "cluster_id": "c0302",
+    "split": "train",
+    "family_id": "syn-family-b05-080"
+  },
+  "syn-train-b05-081": {
+    "cluster_id": "c0371",
+    "split": "dev",
+    "family_id": "syn-family-b05-081"
+  },
+  "syn-train-b05-082": {
+    "cluster_id": "c0340",
+    "split": "train",
+    "family_id": "syn-family-b05-082"
+  },
+  "syn-train-b05-083": {
+    "cluster_id": "c0366",
+    "split": "train",
+    "family_id": "syn-family-b05-083"
+  },
+  "syn-train-b05-084": {
+    "cluster_id": "c0369",
+    "split": "train",
+    "family_id": "syn-family-b05-084"
+  },
+  "syn-train-b05-085": {
+    "cluster_id": "c0365",
+    "split": "dev",
+    "family_id": "syn-family-b05-085"
+  },
+  "syn-train-b05-086": {
+    "cluster_id": "c0220",
+    "split": "dev",
+    "family_id": "syn-family-b05-086"
+  },
+  "syn-train-b05-087": {
+    "cluster_id": "c0392",
+    "split": "train",
+    "family_id": "syn-family-b05-087"
+  },
+  "syn-train-b05-088": {
+    "cluster_id": "c0393",
+    "split": "train",
+    "family_id": "syn-family-b05-088"
+  },
+  "syn-train-b05-089": {
+    "cluster_id": "c0394",
+    "split": "train",
+    "family_id": "syn-family-b05-089"
+  },
+  "syn-train-b05-090": {
+    "cluster_id": "c0395",
+    "split": "train",
+    "family_id": "syn-family-b05-090"
+  },
+  "syn-train-b05-091": {
+    "cluster_id": "c0396",
+    "split": "train",
+    "family_id": "syn-family-b05-091"
+  },
+  "syn-train-b05-092": {
+    "cluster_id": "c0397",
+    "split": "train",
+    "family_id": "syn-family-b05-092"
+  },
+  "syn-train-b05-093": {
+    "cluster_id": "c0398",
+    "split": "train",
+    "family_id": "syn-family-b05-093"
+  },
+  "syn-train-b05-094": {
+    "cluster_id": "c0399",
+    "split": "train",
+    "family_id": "syn-family-b05-094"
+  },
+  "syn-train-b05-095": {
+    "cluster_id": "c0045",
+    "split": "train",
+    "family_id": "syn-family-b05-095"
+  },
+  "syn-train-b05-096": {
+    "cluster_id": "c0400",
+    "split": "train",
+    "family_id": "syn-family-b05-096"
+  },
+  "syn-train-b05-097": {
+    "cluster_id": "c0401",
+    "split": "train",
+    "family_id": "syn-family-b05-097"
+  },
+  "syn-train-b05-098": {
+    "cluster_id": "c0402",
+    "split": "dev",
+    "family_id": "syn-family-b05-098"
+  },
+  "syn-train-b05-099": {
+    "cluster_id": "c0045",
+    "split": "train",
+    "family_id": "syn-family-b05-099"
+  },
+  "syn-train-b05-100": {
+    "cluster_id": "c0355",
+    "split": "train",
+    "family_id": "syn-family-b05-100"
+  },
+  "syn-train-b06-001": {
+    "cluster_id": "c0403",
+    "split": "train",
+    "family_id": "syn-family-b06-001"
+  },
+  "syn-train-b06-002": {
+    "cluster_id": "c0404",
+    "split": "train",
+    "family_id": "syn-family-b06-002"
+  },
+  "syn-train-b06-003": {
+    "cluster_id": "c0405",
+    "split": "train",
+    "family_id": "syn-family-b06-003"
+  },
+  "syn-train-b06-004": {
+    "cluster_id": "c0406",
+    "split": "train",
+    "family_id": "syn-family-b06-004"
+  },
+  "syn-train-b06-005": {
+    "cluster_id": "c0407",
+    "split": "train",
+    "family_id": "syn-family-b06-005"
+  },
+  "syn-train-b06-006": {
+    "cluster_id": "c0408",
+    "split": "train",
+    "family_id": "syn-family-b06-006"
+  },
+  "syn-train-b06-007": {
+    "cluster_id": "c0409",
+    "split": "dev",
+    "family_id": "syn-family-b06-007"
+  },
+  "syn-train-b06-008": {
+    "cluster_id": "c0410",
+    "split": "dev",
+    "family_id": "syn-family-b06-008"
+  },
+  "syn-train-b06-009": {
+    "cluster_id": "c0411",
+    "split": "train",
+    "family_id": "syn-family-b06-009"
+  },
+  "syn-train-b06-010": {
+    "cluster_id": "c0412",
+    "split": "train",
+    "family_id": "syn-family-b06-010"
+  },
+  "syn-train-b06-011": {
+    "cluster_id": "c0413",
+    "split": "train",
+    "family_id": "syn-family-b06-011"
+  },
+  "syn-train-b06-012": {
+    "cluster_id": "c0414",
+    "split": "train",
+    "family_id": "syn-family-b06-012"
+  },
+  "syn-train-b06-013": {
+    "cluster_id": "c0415",
+    "split": "train",
+    "family_id": "syn-family-b06-013"
+  },
+  "syn-train-b06-014": {
+    "cluster_id": "c0416",
+    "split": "dev",
+    "family_id": "syn-family-b06-014"
+  },
+  "syn-train-b06-015": {
+    "cluster_id": "c0417",
+    "split": "train",
+    "family_id": "syn-family-b06-015"
+  },
+  "syn-train-b06-016": {
+    "cluster_id": "c0418",
+    "split": "train",
+    "family_id": "syn-family-b06-016"
+  },
+  "syn-train-b06-017": {
+    "cluster_id": "c0419",
+    "split": "train",
+    "family_id": "syn-family-b06-017"
+  },
+  "syn-train-b06-018": {
+    "cluster_id": "c0420",
+    "split": "train",
+    "family_id": "syn-family-b06-018"
+  },
+  "syn-train-b06-019": {
+    "cluster_id": "c0421",
+    "split": "train",
+    "family_id": "syn-family-b06-019"
+  },
+  "syn-train-b06-020": {
+    "cluster_id": "c0422",
+    "split": "train",
+    "family_id": "syn-family-b06-020"
+  },
+  "syn-train-b06-021": {
+    "cluster_id": "c0423",
+    "split": "train",
+    "family_id": "syn-family-b06-021"
+  },
+  "syn-train-b06-022": {
+    "cluster_id": "c0424",
+    "split": "train",
+    "family_id": "syn-family-b06-022"
+  },
+  "syn-train-b06-023": {
+    "cluster_id": "c0425",
+    "split": "train",
+    "family_id": "syn-family-b06-023"
+  },
+  "syn-train-b06-024": {
+    "cluster_id": "c0426",
+    "split": "train",
+    "family_id": "syn-family-b06-024"
+  },
+  "syn-train-b06-025": {
+    "cluster_id": "c0427",
+    "split": "train",
+    "family_id": "syn-family-b06-025"
+  },
+  "syn-train-b06-026": {
+    "cluster_id": "c0428",
+    "split": "dev",
+    "family_id": "syn-family-b06-026"
+  },
+  "syn-train-b06-027": {
+    "cluster_id": "c0410",
+    "split": "dev",
+    "family_id": "syn-family-b06-027"
+  },
+  "syn-train-b06-028": {
+    "cluster_id": "c0429",
+    "split": "train",
+    "family_id": "syn-family-b06-028"
+  },
+  "syn-train-b06-029": {
+    "cluster_id": "c0430",
+    "split": "train",
+    "family_id": "syn-family-b06-029"
+  },
+  "syn-train-b06-030": {
+    "cluster_id": "c0039",
+    "split": "train",
+    "family_id": "syn-family-b06-030"
+  },
+  "syn-train-b06-031": {
+    "cluster_id": "c0431",
+    "split": "train",
+    "family_id": "syn-family-b06-031"
+  },
+  "syn-train-b06-032": {
+    "cluster_id": "c0309",
+    "split": "dev",
+    "family_id": "syn-family-b06-032"
+  },
+  "syn-train-b06-033": {
+    "cluster_id": "c0211",
+    "split": "dev",
+    "family_id": "syn-family-b06-033"
+  },
+  "syn-train-b06-034": {
+    "cluster_id": "c0432",
+    "split": "train",
+    "family_id": "syn-family-b06-034"
+  },
+  "syn-train-b06-035": {
+    "cluster_id": "c0433",
+    "split": "train",
+    "family_id": "syn-family-b06-035"
+  },
+  "syn-train-b06-036": {
+    "cluster_id": "c0434",
+    "split": "dev",
+    "family_id": "syn-family-b06-036"
+  },
+  "syn-train-b06-037": {
+    "cluster_id": "c0435",
+    "split": "train",
+    "family_id": "syn-family-b06-037"
+  },
+  "syn-train-b06-038": {
+    "cluster_id": "c0436",
+    "split": "train",
+    "family_id": "syn-family-b06-038"
+  },
+  "syn-train-b06-039": {
+    "cluster_id": "c0437",
+    "split": "train",
+    "family_id": "syn-family-b06-039"
+  },
+  "syn-train-b06-040": {
+    "cluster_id": "c0438",
+    "split": "dev",
+    "family_id": "syn-family-b06-040"
+  },
+  "syn-train-b06-041": {
+    "cluster_id": "c0439",
+    "split": "train",
+    "family_id": "syn-family-b06-041"
+  },
+  "syn-train-b06-042": {
+    "cluster_id": "c0440",
+    "split": "train",
+    "family_id": "syn-family-b06-042"
+  },
+  "syn-train-b06-043": {
+    "cluster_id": "c0441",
+    "split": "dev",
+    "family_id": "syn-family-b06-043"
+  },
+  "syn-train-b06-044": {
+    "cluster_id": "c0442",
+    "split": "train",
+    "family_id": "syn-family-b06-044"
+  },
+  "syn-train-b06-045": {
+    "cluster_id": "c0443",
+    "split": "train",
+    "family_id": "syn-family-b06-045"
+  },
+  "syn-train-b06-046": {
+    "cluster_id": "c0444",
+    "split": "train",
+    "family_id": "syn-family-b06-046"
+  },
+  "syn-train-b06-047": {
+    "cluster_id": "c0302",
+    "split": "train",
+    "family_id": "syn-family-b06-047"
+  },
+  "syn-train-b06-048": {
+    "cluster_id": "c0441",
+    "split": "dev",
+    "family_id": "syn-family-b06-048"
+  },
+  "syn-train-b06-049": {
+    "cluster_id": "c0110",
+    "split": "dev",
+    "family_id": "syn-family-b06-049"
+  },
+  "syn-train-b06-050": {
+    "cluster_id": "c0445",
+    "split": "train",
+    "family_id": "syn-family-b06-050"
+  },
+  "syn-train-b06-051": {
+    "cluster_id": "c0446",
+    "split": "train",
+    "family_id": "syn-family-b06-051"
+  },
+  "syn-train-b06-052": {
+    "cluster_id": "c0447",
+    "split": "train",
+    "family_id": "syn-family-b06-052"
+  },
+  "syn-train-b06-053": {
+    "cluster_id": "c0448",
+    "split": "train",
+    "family_id": "syn-family-b06-053"
+  },
+  "syn-train-b06-054": {
+    "cluster_id": "c0449",
+    "split": "dev",
+    "family_id": "syn-family-b06-054"
+  },
+  "syn-train-b06-055": {
+    "cluster_id": "c0288",
+    "split": "train",
+    "family_id": "syn-family-b06-055"
+  },
+  "syn-train-b06-056": {
+    "cluster_id": "c0142",
+    "split": "dev",
+    "family_id": "syn-family-b06-056"
+  },
+  "syn-train-b06-057": {
+    "cluster_id": "c0031",
+    "split": "train",
+    "family_id": "syn-family-b06-057"
+  },
+  "syn-train-b06-058": {
+    "cluster_id": "c0060",
+    "split": "train",
+    "family_id": "syn-family-b06-058"
+  },
+  "syn-train-b06-059": {
+    "cluster_id": "c0031",
+    "split": "train",
+    "family_id": "syn-family-b06-059"
+  },
+  "syn-train-b06-060": {
+    "cluster_id": "c0237",
+    "split": "train",
+    "family_id": "syn-family-b06-060"
+  },
+  "syn-train-b06-061": {
+    "cluster_id": "c0450",
+    "split": "train",
+    "family_id": "syn-family-b06-061"
+  },
+  "syn-train-b06-062": {
+    "cluster_id": "c0235",
+    "split": "train",
+    "family_id": "syn-family-b06-062"
+  },
+  "syn-train-b06-063": {
+    "cluster_id": "c0356",
+    "split": "train",
+    "family_id": "syn-family-b06-063"
+  },
+  "syn-train-b06-064": {
+    "cluster_id": "c0028",
+    "split": "train",
+    "family_id": "syn-family-b06-064"
+  },
+  "syn-train-b06-065": {
+    "cluster_id": "c0409",
+    "split": "dev",
+    "family_id": "syn-family-b06-065"
+  },
+  "syn-train-b06-066": {
+    "cluster_id": "c0039",
+    "split": "train",
+    "family_id": "syn-family-b06-066"
+  },
+  "syn-train-b06-067": {
+    "cluster_id": "c0302",
+    "split": "train",
+    "family_id": "syn-family-b06-067"
+  },
+  "syn-train-b06-068": {
+    "cluster_id": "c0428",
+    "split": "dev",
+    "family_id": "syn-family-b06-068"
+  },
+  "syn-train-b06-069": {
+    "cluster_id": "c0449",
+    "split": "dev",
+    "family_id": "syn-family-b06-069"
+  },
+  "syn-train-b06-070": {
+    "cluster_id": "c0356",
+    "split": "train",
+    "family_id": "syn-family-b06-070"
+  },
+  "syn-train-b06-071": {
+    "cluster_id": "c0451",
+    "split": "train",
+    "family_id": "syn-family-b06-071"
+  },
+  "syn-train-b06-072": {
+    "cluster_id": "c0351",
+    "split": "dev",
+    "family_id": "syn-family-b06-072"
+  },
+  "syn-train-b06-073": {
+    "cluster_id": "c0452",
+    "split": "train",
+    "family_id": "syn-family-b06-073"
+  },
+  "syn-train-b06-074": {
+    "cluster_id": "c0045",
+    "split": "train",
+    "family_id": "syn-family-b06-074"
+  },
+  "syn-train-b06-075": {
+    "cluster_id": "c0453",
+    "split": "train",
+    "family_id": "syn-family-b06-075"
+  },
+  "syn-train-b06-076": {
+    "cluster_id": "c0434",
+    "split": "dev",
+    "family_id": "syn-family-b06-076"
+  },
+  "syn-train-b06-077": {
+    "cluster_id": "c0454",
+    "split": "train",
+    "family_id": "syn-family-b06-077"
+  },
+  "syn-train-b06-078": {
+    "cluster_id": "c0455",
+    "split": "train",
+    "family_id": "syn-family-b06-078"
+  },
+  "syn-train-b06-079": {
+    "cluster_id": "c0456",
+    "split": "train",
+    "family_id": "syn-family-b06-079"
+  },
+  "syn-train-b06-080": {
+    "cluster_id": "c0457",
+    "split": "train",
+    "family_id": "syn-family-b06-080"
+  },
+  "syn-train-b06-081": {
+    "cluster_id": "c0451",
+    "split": "train",
+    "family_id": "syn-family-b06-081"
+  },
+  "syn-train-b06-082": {
+    "cluster_id": "c0458",
+    "split": "train",
+    "family_id": "syn-family-b06-082"
+  },
+  "syn-train-b06-083": {
+    "cluster_id": "c0459",
+    "split": "train",
+    "family_id": "syn-family-b06-083"
+  },
+  "syn-train-b06-084": {
+    "cluster_id": "c0440",
+    "split": "train",
+    "family_id": "syn-family-b06-084"
+  },
+  "syn-train-b06-085": {
+    "cluster_id": "c0295",
+    "split": "train",
+    "family_id": "syn-family-b06-085"
+  },
+  "syn-train-b06-086": {
+    "cluster_id": "c0438",
+    "split": "dev",
+    "family_id": "syn-family-b06-086"
+  },
+  "syn-train-b06-087": {
+    "cluster_id": "c0460",
+    "split": "train",
+    "family_id": "syn-family-b06-087"
+  },
+  "syn-train-b06-088": {
+    "cluster_id": "c0171",
+    "split": "train",
+    "family_id": "syn-family-b06-088"
+  },
+  "syn-train-b06-089": {
+    "cluster_id": "c0461",
+    "split": "train",
+    "family_id": "syn-family-b06-089"
+  },
+  "syn-train-b06-090": {
+    "cluster_id": "c0083",
+    "split": "train",
+    "family_id": "syn-family-b06-090"
+  },
+  "syn-train-b06-091": {
+    "cluster_id": "c0462",
+    "split": "train",
+    "family_id": "syn-family-b06-091"
+  },
+  "syn-train-b06-092": {
+    "cluster_id": "c0463",
+    "split": "train",
+    "family_id": "syn-family-b06-092"
+  },
+  "syn-train-b06-093": {
+    "cluster_id": "c0464",
+    "split": "train",
+    "family_id": "syn-family-b06-093"
+  },
+  "syn-train-b06-094": {
+    "cluster_id": "c0465",
+    "split": "train",
+    "family_id": "syn-family-b06-094"
+  },
+  "syn-train-b06-095": {
+    "cluster_id": "c0466",
+    "split": "train",
+    "family_id": "syn-family-b06-095"
+  },
+  "syn-train-b06-096": {
+    "cluster_id": "c0467",
+    "split": "train",
+    "family_id": "syn-family-b06-096"
+  },
+  "syn-train-b06-097": {
+    "cluster_id": "c0468",
+    "split": "train",
+    "family_id": "syn-family-b06-097"
+  },
+  "syn-train-b06-098": {
+    "cluster_id": "c0469",
+    "split": "train",
+    "family_id": "syn-family-b06-098"
+  },
+  "syn-train-b06-099": {
+    "cluster_id": "c0470",
+    "split": "train",
+    "family_id": "syn-family-b06-099"
+  },
+  "syn-train-b06-100": {
+    "cluster_id": "c0471",
+    "split": "dev",
+    "family_id": "syn-family-b06-100"
+  },
+  "syn-train-b07-001": {
+    "cluster_id": "c0472",
+    "split": "train",
+    "family_id": "syn-family-b07-001"
+  },
+  "syn-train-b07-002": {
+    "cluster_id": "c0473",
+    "split": "train",
+    "family_id": "syn-family-b07-002"
+  },
+  "syn-train-b07-003": {
+    "cluster_id": "c0474",
+    "split": "train",
+    "family_id": "syn-family-b07-003"
+  },
+  "syn-train-b07-004": {
+    "cluster_id": "c0475",
+    "split": "train",
+    "family_id": "syn-family-b07-004"
+  },
+  "syn-train-b07-005": {
+    "cluster_id": "c0476",
+    "split": "dev",
+    "family_id": "syn-family-b07-005"
+  },
+  "syn-train-b07-006": {
+    "cluster_id": "c0477",
+    "split": "train",
+    "family_id": "syn-family-b07-006"
+  },
+  "syn-train-b07-007": {
+    "cluster_id": "c0478",
+    "split": "train",
+    "family_id": "syn-family-b07-007"
+  },
+  "syn-train-b07-008": {
+    "cluster_id": "c0479",
+    "split": "train",
+    "family_id": "syn-family-b07-008"
+  },
+  "syn-train-b07-009": {
+    "cluster_id": "c0480",
+    "split": "train",
+    "family_id": "syn-family-b07-009"
+  },
+  "syn-train-b07-010": {
+    "cluster_id": "c0481",
+    "split": "train",
+    "family_id": "syn-family-b07-010"
+  },
+  "syn-train-b07-011": {
+    "cluster_id": "c0482",
+    "split": "train",
+    "family_id": "syn-family-b07-011"
+  },
+  "syn-train-b07-012": {
+    "cluster_id": "c0483",
+    "split": "train",
+    "family_id": "syn-family-b07-012"
+  },
+  "syn-train-b07-013": {
+    "cluster_id": "c0484",
+    "split": "train",
+    "family_id": "syn-family-b07-013"
+  },
+  "syn-train-b07-014": {
+    "cluster_id": "c0485",
+    "split": "train",
+    "family_id": "syn-family-b07-014"
+  },
+  "syn-train-b07-015": {
+    "cluster_id": "c0486",
+    "split": "train",
+    "family_id": "syn-family-b07-015"
+  },
+  "syn-train-b07-016": {
+    "cluster_id": "c0487",
+    "split": "train",
+    "family_id": "syn-family-b07-016"
+  },
+  "syn-train-b07-017": {
+    "cluster_id": "c0488",
+    "split": "train",
+    "family_id": "syn-family-b07-017"
+  },
+  "syn-train-b07-018": {
+    "cluster_id": "c0489",
+    "split": "train",
+    "family_id": "syn-family-b07-018"
+  },
+  "syn-train-b07-019": {
+    "cluster_id": "c0490",
+    "split": "train",
+    "family_id": "syn-family-b07-019"
+  },
+  "syn-train-b07-020": {
+    "cluster_id": "c0491",
+    "split": "train",
+    "family_id": "syn-family-b07-020"
+  },
+  "syn-train-b07-021": {
+    "cluster_id": "c0492",
+    "split": "train",
+    "family_id": "syn-family-b07-021"
+  },
+  "syn-train-b07-022": {
+    "cluster_id": "c0493",
+    "split": "train",
+    "family_id": "syn-family-b07-022"
+  },
+  "syn-train-b07-023": {
+    "cluster_id": "c0494",
+    "split": "train",
+    "family_id": "syn-family-b07-023"
+  },
+  "syn-train-b07-024": {
+    "cluster_id": "c0495",
+    "split": "train",
+    "family_id": "syn-family-b07-024"
+  },
+  "syn-train-b07-025": {
+    "cluster_id": "c0496",
+    "split": "train",
+    "family_id": "syn-family-b07-025"
+  },
+  "syn-train-b07-026": {
+    "cluster_id": "c0497",
+    "split": "dev",
+    "family_id": "syn-family-b07-026"
+  },
+  "syn-train-b07-027": {
+    "cluster_id": "c0498",
+    "split": "train",
+    "family_id": "syn-family-b07-027"
+  },
+  "syn-train-b07-028": {
+    "cluster_id": "c0499",
+    "split": "train",
+    "family_id": "syn-family-b07-028"
+  },
+  "syn-train-b07-029": {
+    "cluster_id": "c0052",
+    "split": "dev",
+    "family_id": "syn-family-b07-029"
+  },
+  "syn-train-b07-030": {
+    "cluster_id": "c0496",
+    "split": "train",
+    "family_id": "syn-family-b07-030"
+  },
+  "syn-train-b07-031": {
+    "cluster_id": "c0500",
+    "split": "train",
+    "family_id": "syn-family-b07-031"
+  },
+  "syn-train-b07-032": {
+    "cluster_id": "c0484",
+    "split": "train",
+    "family_id": "syn-family-b07-032"
+  },
+  "syn-train-b07-033": {
+    "cluster_id": "c0501",
+    "split": "train",
+    "family_id": "syn-family-b07-033"
+  },
+  "syn-train-b07-034": {
+    "cluster_id": "c0502",
+    "split": "train",
+    "family_id": "syn-family-b07-034"
+  },
+  "syn-train-b07-035": {
+    "cluster_id": "c0503",
+    "split": "train",
+    "family_id": "syn-family-b07-035"
+  },
+  "syn-train-b07-036": {
+    "cluster_id": "c0504",
+    "split": "train",
+    "family_id": "syn-family-b07-036"
+  },
+  "syn-train-b07-037": {
+    "cluster_id": "c0505",
+    "split": "train",
+    "family_id": "syn-family-b07-037"
+  },
+  "syn-train-b07-038": {
+    "cluster_id": "c0506",
+    "split": "train",
+    "family_id": "syn-family-b07-038"
+  },
+  "syn-train-b07-039": {
+    "cluster_id": "c0507",
+    "split": "train",
+    "family_id": "syn-family-b07-039"
+  },
+  "syn-train-b07-040": {
+    "cluster_id": "c0508",
+    "split": "train",
+    "family_id": "syn-family-b07-040"
+  },
+  "syn-train-b07-041": {
+    "cluster_id": "c0509",
+    "split": "train",
+    "family_id": "syn-family-b07-041"
+  },
+  "syn-train-b07-042": {
+    "cluster_id": "c0510",
+    "split": "train",
+    "family_id": "syn-family-b07-042"
+  },
+  "syn-train-b07-043": {
+    "cluster_id": "c0511",
+    "split": "train",
+    "family_id": "syn-family-b07-043"
+  },
+  "syn-train-b07-044": {
+    "cluster_id": "c0512",
+    "split": "dev",
+    "family_id": "syn-family-b07-044"
+  },
+  "syn-train-b07-045": {
+    "cluster_id": "c0513",
+    "split": "train",
+    "family_id": "syn-family-b07-045"
+  },
+  "syn-train-b07-046": {
+    "cluster_id": "c0514",
+    "split": "train",
+    "family_id": "syn-family-b07-046"
+  },
+  "syn-train-b07-047": {
+    "cluster_id": "c0515",
+    "split": "train",
+    "family_id": "syn-family-b07-047"
+  },
+  "syn-train-b07-048": {
+    "cluster_id": "c0516",
+    "split": "train",
+    "family_id": "syn-family-b07-048"
+  },
+  "syn-train-b07-049": {
+    "cluster_id": "c0517",
+    "split": "train",
+    "family_id": "syn-family-b07-049"
+  },
+  "syn-train-b07-050": {
+    "cluster_id": "c0484",
+    "split": "train",
+    "family_id": "syn-family-b07-050"
+  },
+  "syn-train-b07-051": {
+    "cluster_id": "c0518",
+    "split": "train",
+    "family_id": "syn-family-b07-051"
+  },
+  "syn-train-b07-052": {
+    "cluster_id": "c0519",
+    "split": "train",
+    "family_id": "syn-family-b07-052"
+  },
+  "syn-train-b07-053": {
+    "cluster_id": "c0520",
+    "split": "train",
+    "family_id": "syn-family-b07-053"
+  },
+  "syn-train-b07-054": {
+    "cluster_id": "c0521",
+    "split": "train",
+    "family_id": "syn-family-b07-054"
+  },
+  "syn-train-b07-055": {
+    "cluster_id": "c0522",
+    "split": "train",
+    "family_id": "syn-family-b07-055"
+  },
+  "syn-train-b07-056": {
+    "cluster_id": "c0031",
+    "split": "train",
+    "family_id": "syn-family-b07-056"
+  },
+  "syn-train-b07-057": {
+    "cluster_id": "c0060",
+    "split": "train",
+    "family_id": "syn-family-b07-057"
+  },
+  "syn-train-b07-058": {
+    "cluster_id": "c0031",
+    "split": "train",
+    "family_id": "syn-family-b07-058"
+  },
+  "syn-train-b07-059": {
+    "cluster_id": "c0523",
+    "split": "train",
+    "family_id": "syn-family-b07-059"
+  },
+  "syn-train-b07-060": {
+    "cluster_id": "c0524",
+    "split": "train",
+    "family_id": "syn-family-b07-060"
+  },
+  "syn-train-b07-061": {
+    "cluster_id": "c0311",
+    "split": "dev",
+    "family_id": "syn-family-b07-061"
+  },
+  "syn-train-b07-062": {
+    "cluster_id": "c0149",
+    "split": "dev",
+    "family_id": "syn-family-b07-062"
+  },
+  "syn-train-b07-063": {
+    "cluster_id": "c0487",
+    "split": "train",
+    "family_id": "syn-family-b07-063"
+  },
+  "syn-train-b07-064": {
+    "cluster_id": "c0525",
+    "split": "train",
+    "family_id": "syn-family-b07-064"
+  },
+  "syn-train-b07-065": {
+    "cluster_id": "c0489",
+    "split": "train",
+    "family_id": "syn-family-b07-065"
+  },
+  "syn-train-b07-066": {
+    "cluster_id": "c0526",
+    "split": "train",
+    "family_id": "syn-family-b07-066"
+  },
+  "syn-train-b07-067": {
+    "cluster_id": "c0484",
+    "split": "train",
+    "family_id": "syn-family-b07-067"
+  },
+  "syn-train-b07-068": {
+    "cluster_id": "c0512",
+    "split": "dev",
+    "family_id": "syn-family-b07-068"
+  },
+  "syn-train-b07-069": {
+    "cluster_id": "c0527",
+    "split": "train",
+    "family_id": "syn-family-b07-069"
+  },
+  "syn-train-b07-070": {
+    "cluster_id": "c0487",
+    "split": "train",
+    "family_id": "syn-family-b07-070"
+  },
+  "syn-train-b07-071": {
+    "cluster_id": "c0490",
+    "split": "train",
+    "family_id": "syn-family-b07-071"
+  },
+  "syn-train-b07-072": {
+    "cluster_id": "c0528",
+    "split": "train",
+    "family_id": "syn-family-b07-072"
+  },
+  "syn-train-b07-073": {
+    "cluster_id": "c0529",
+    "split": "train",
+    "family_id": "syn-family-b07-073"
+  },
+  "syn-train-b07-074": {
+    "cluster_id": "c0476",
+    "split": "dev",
+    "family_id": "syn-family-b07-074"
+  },
+  "syn-train-b07-075": {
+    "cluster_id": "c0488",
+    "split": "train",
+    "family_id": "syn-family-b07-075"
+  },
+  "syn-train-b07-076": {
+    "cluster_id": "c0530",
+    "split": "dev",
+    "family_id": "syn-family-b07-076"
+  },
+  "syn-train-b07-077": {
+    "cluster_id": "c0531",
+    "split": "train",
+    "family_id": "syn-family-b07-077"
+  },
+  "syn-train-b07-078": {
+    "cluster_id": "c0045",
+    "split": "train",
+    "family_id": "syn-family-b07-078"
+  },
+  "syn-train-b07-079": {
+    "cluster_id": "c0532",
+    "split": "train",
+    "family_id": "syn-family-b07-079"
+  },
+  "syn-train-b07-080": {
+    "cluster_id": "c0487",
+    "split": "train",
+    "family_id": "syn-family-b07-080"
+  },
+  "syn-train-b07-081": {
+    "cluster_id": "c0533",
+    "split": "train",
+    "family_id": "syn-family-b07-081"
+  },
+  "syn-train-b07-082": {
+    "cluster_id": "c0534",
+    "split": "train",
+    "family_id": "syn-family-b07-082"
+  },
+  "syn-train-b07-083": {
+    "cluster_id": "c0488",
+    "split": "train",
+    "family_id": "syn-family-b07-083"
+  },
+  "syn-train-b07-084": {
+    "cluster_id": "c0496",
+    "split": "train",
+    "family_id": "syn-family-b07-084"
+  },
+  "syn-train-b07-085": {
+    "cluster_id": "c0526",
+    "split": "train",
+    "family_id": "syn-family-b07-085"
+  },
+  "syn-train-b07-086": {
+    "cluster_id": "c0486",
+    "split": "train",
+    "family_id": "syn-family-b07-086"
+  },
+  "syn-train-b07-087": {
+    "cluster_id": "c0080",
+    "split": "dev",
+    "family_id": "syn-family-b07-087"
+  },
+  "syn-train-b07-088": {
+    "cluster_id": "c0535",
+    "split": "train",
+    "family_id": "syn-family-b07-088"
+  },
+  "syn-train-b07-089": {
+    "cluster_id": "c0536",
+    "split": "train",
+    "family_id": "syn-family-b07-089"
+  },
+  "syn-train-b07-090": {
+    "cluster_id": "c0537",
+    "split": "train",
+    "family_id": "syn-family-b07-090"
+  },
+  "syn-train-b07-091": {
+    "cluster_id": "c0538",
+    "split": "train",
+    "family_id": "syn-family-b07-091"
+  },
+  "syn-train-b07-092": {
+    "cluster_id": "c0539",
+    "split": "train",
+    "family_id": "syn-family-b07-092"
+  },
+  "syn-train-b07-093": {
+    "cluster_id": "c0540",
+    "split": "train",
+    "family_id": "syn-family-b07-093"
+  },
+  "syn-train-b07-094": {
+    "cluster_id": "c0541",
+    "split": "train",
+    "family_id": "syn-family-b07-094"
+  },
+  "syn-train-b07-095": {
+    "cluster_id": "c0542",
+    "split": "train",
+    "family_id": "syn-family-b07-095"
+  },
+  "syn-train-b07-096": {
+    "cluster_id": "c0543",
+    "split": "train",
+    "family_id": "syn-family-b07-096"
+  },
+  "syn-train-b07-097": {
+    "cluster_id": "c0544",
+    "split": "train",
+    "family_id": "syn-family-b07-097"
+  },
+  "syn-train-b07-098": {
+    "cluster_id": "c0545",
+    "split": "train",
+    "family_id": "syn-family-b07-098"
+  },
+  "syn-train-b07-099": {
+    "cluster_id": "c0530",
+    "split": "dev",
+    "family_id": "syn-family-b07-099"
+  },
+  "syn-train-b07-100": {
+    "cluster_id": "c0490",
+    "split": "train",
+    "family_id": "syn-family-b07-100"
+  },
+  "syn-train-b08-001": {
+    "cluster_id": "c0546",
+    "split": "train",
+    "family_id": "syn-family-b08-001"
+  },
+  "syn-train-b08-002": {
+    "cluster_id": "c0547",
+    "split": "train",
+    "family_id": "syn-family-b08-002"
+  },
+  "syn-train-b08-003": {
+    "cluster_id": "c0302",
+    "split": "train",
+    "family_id": "syn-family-b08-003"
+  },
+  "syn-train-b08-004": {
+    "cluster_id": "c0548",
+    "split": "train",
+    "family_id": "syn-family-b08-004"
+  },
+  "syn-train-b08-005": {
+    "cluster_id": "c0549",
+    "split": "train",
+    "family_id": "syn-family-b08-005"
+  },
+  "syn-train-b08-006": {
+    "cluster_id": "c0550",
+    "split": "train",
+    "family_id": "syn-family-b08-006"
+  },
+  "syn-train-b08-007": {
+    "cluster_id": "c0551",
+    "split": "train",
+    "family_id": "syn-family-b08-007"
+  },
+  "syn-train-b08-008": {
+    "cluster_id": "c0552",
+    "split": "dev",
+    "family_id": "syn-family-b08-008"
+  },
+  "syn-train-b08-009": {
+    "cluster_id": "c0553",
+    "split": "dev",
+    "family_id": "syn-family-b08-009"
+  },
+  "syn-train-b08-010": {
+    "cluster_id": "c0554",
+    "split": "train",
+    "family_id": "syn-family-b08-010"
+  },
+  "syn-train-b08-011": {
+    "cluster_id": "c0484",
+    "split": "train",
+    "family_id": "syn-family-b08-011"
+  },
+  "syn-train-b08-012": {
+    "cluster_id": "c0555",
+    "split": "train",
+    "family_id": "syn-family-b08-012"
+  },
+  "syn-train-b08-013": {
+    "cluster_id": "c0556",
+    "split": "train",
+    "family_id": "syn-family-b08-013"
+  },
+  "syn-train-b08-014": {
+    "cluster_id": "c0526",
+    "split": "train",
+    "family_id": "syn-family-b08-014"
+  },
+  "syn-train-b08-015": {
+    "cluster_id": "c0557",
+    "split": "train",
+    "family_id": "syn-family-b08-015"
+  },
+  "syn-train-b08-016": {
+    "cluster_id": "c0558",
+    "split": "train",
+    "family_id": "syn-family-b08-016"
+  },
+  "syn-train-b08-017": {
+    "cluster_id": "c0559",
+    "split": "train",
+    "family_id": "syn-family-b08-017"
+  },
+  "syn-train-b08-018": {
+    "cluster_id": "c0560",
+    "split": "train",
+    "family_id": "syn-family-b08-018"
+  },
+  "syn-train-b08-019": {
+    "cluster_id": "c0561",
+    "split": "dev",
+    "family_id": "syn-family-b08-019"
+  },
+  "syn-train-b08-020": {
+    "cluster_id": "c0562",
+    "split": "train",
+    "family_id": "syn-family-b08-020"
+  },
+  "syn-train-b08-021": {
+    "cluster_id": "c0563",
+    "split": "train",
+    "family_id": "syn-family-b08-021"
+  },
+  "syn-train-b08-022": {
+    "cluster_id": "c0564",
+    "split": "train",
+    "family_id": "syn-family-b08-022"
+  },
+  "syn-train-b08-023": {
+    "cluster_id": "c0565",
+    "split": "train",
+    "family_id": "syn-family-b08-023"
+  },
+  "syn-train-b08-024": {
+    "cluster_id": "c0566",
+    "split": "train",
+    "family_id": "syn-family-b08-024"
+  },
+  "syn-train-b08-025": {
+    "cluster_id": "c0567",
+    "split": "train",
+    "family_id": "syn-family-b08-025"
+  },
+  "syn-train-b08-026": {
+    "cluster_id": "c0061",
+    "split": "train",
+    "family_id": "syn-family-b08-026"
+  },
+  "syn-train-b08-027": {
+    "cluster_id": "c0526",
+    "split": "train",
+    "family_id": "syn-family-b08-027"
+  },
+  "syn-train-b08-028": {
+    "cluster_id": "c0552",
+    "split": "dev",
+    "family_id": "syn-family-b08-028"
+  },
+  "syn-train-b08-029": {
+    "cluster_id": "c0553",
+    "split": "dev",
+    "family_id": "syn-family-b08-029"
+  },
+  "syn-train-b08-030": {
+    "cluster_id": "c0484",
+    "split": "train",
+    "family_id": "syn-family-b08-030"
+  },
+  "syn-train-b08-031": {
+    "cluster_id": "c0568",
+    "split": "train",
+    "family_id": "syn-family-b08-031"
+  },
+  "syn-train-b08-032": {
+    "cluster_id": "c0484",
+    "split": "train",
+    "family_id": "syn-family-b08-032"
+  },
+  "syn-train-b08-033": {
+    "cluster_id": "c0518",
+    "split": "train",
+    "family_id": "syn-family-b08-033"
+  },
+  "syn-train-b08-034": {
+    "cluster_id": "c0569",
+    "split": "train",
+    "family_id": "syn-family-b08-034"
+  },
+  "syn-train-b08-035": {
+    "cluster_id": "c0570",
+    "split": "train",
+    "family_id": "syn-family-b08-035"
+  },
+  "syn-train-b08-036": {
+    "cluster_id": "c0571",
+    "split": "train",
+    "family_id": "syn-family-b08-036"
+  },
+  "syn-train-b08-037": {
+    "cluster_id": "c0572",
+    "split": "train",
+    "family_id": "syn-family-b08-037"
+  },
+  "syn-train-b08-038": {
+    "cluster_id": "c0573",
+    "split": "train",
+    "family_id": "syn-family-b08-038"
+  },
+  "syn-train-b08-039": {
+    "cluster_id": "c0302",
+    "split": "train",
+    "family_id": "syn-family-b08-039"
+  },
+  "syn-train-b08-040": {
+    "cluster_id": "c0574",
+    "split": "train",
+    "family_id": "syn-family-b08-040"
+  },
+  "syn-train-b08-041": {
+    "cluster_id": "c0575",
+    "split": "train",
+    "family_id": "syn-family-b08-041"
+  },
+  "syn-train-b08-042": {
+    "cluster_id": "c0576",
+    "split": "train",
+    "family_id": "syn-family-b08-042"
+  },
+  "syn-train-b08-043": {
+    "cluster_id": "c0577",
+    "split": "train",
+    "family_id": "syn-family-b08-043"
+  },
+  "syn-train-b08-044": {
+    "cluster_id": "c0578",
+    "split": "train",
+    "family_id": "syn-family-b08-044"
+  },
+  "syn-train-b08-045": {
+    "cluster_id": "c0561",
+    "split": "dev",
+    "family_id": "syn-family-b08-045"
+  },
+  "syn-train-b08-046": {
+    "cluster_id": "c0579",
+    "split": "train",
+    "family_id": "syn-family-b08-046"
+  },
+  "syn-train-b08-047": {
+    "cluster_id": "c0580",
+    "split": "train",
+    "family_id": "syn-family-b08-047"
+  },
+  "syn-train-b08-048": {
+    "cluster_id": "c0581",
+    "split": "train",
+    "family_id": "syn-family-b08-048"
+  },
+  "syn-train-b08-049": {
+    "cluster_id": "c0582",
+    "split": "dev",
+    "family_id": "syn-family-b08-049"
+  },
+  "syn-train-b08-050": {
+    "cluster_id": "c0583",
+    "split": "train",
+    "family_id": "syn-family-b08-050"
+  },
+  "syn-train-b08-051": {
+    "cluster_id": "c0584",
+    "split": "train",
+    "family_id": "syn-family-b08-051"
+  },
+  "syn-train-b08-052": {
+    "cluster_id": "c0585",
+    "split": "train",
+    "family_id": "syn-family-b08-052"
+  },
+  "syn-train-b08-053": {
+    "cluster_id": "c0586",
+    "split": "train",
+    "family_id": "syn-family-b08-053"
+  },
+  "syn-train-b08-054": {
+    "cluster_id": "c0587",
+    "split": "train",
+    "family_id": "syn-family-b08-054"
+  },
+  "syn-train-b08-055": {
+    "cluster_id": "c0588",
+    "split": "train",
+    "family_id": "syn-family-b08-055"
+  },
+  "syn-train-b08-056": {
+    "cluster_id": "c0031",
+    "split": "train",
+    "family_id": "syn-family-b08-056"
+  },
+  "syn-train-b08-057": {
+    "cluster_id": "c0060",
+    "split": "train",
+    "family_id": "syn-family-b08-057"
+  },
+  "syn-train-b08-058": {
+    "cluster_id": "c0031",
+    "split": "train",
+    "family_id": "syn-family-b08-058"
+  },
+  "syn-train-b08-059": {
+    "cluster_id": "c0237",
+    "split": "train",
+    "family_id": "syn-family-b08-059"
+  },
+  "syn-train-b08-060": {
+    "cluster_id": "c0589",
+    "split": "train",
+    "family_id": "syn-family-b08-060"
+  },
+  "syn-train-b08-061": {
+    "cluster_id": "c0146",
+    "split": "train",
+    "family_id": "syn-family-b08-061"
+  },
+  "syn-train-b08-062": {
+    "cluster_id": "c0061",
+    "split": "train",
+    "family_id": "syn-family-b08-062"
+  },
+  "syn-train-b08-063": {
+    "cluster_id": "c0526",
+    "split": "train",
+    "family_id": "syn-family-b08-063"
+  },
+  "syn-train-b08-064": {
+    "cluster_id": "c0590",
+    "split": "train",
+    "family_id": "syn-family-b08-064"
+  },
+  "syn-train-b08-065": {
+    "cluster_id": "c0484",
+    "split": "train",
+    "family_id": "syn-family-b08-065"
+  },
+  "syn-train-b08-066": {
+    "cluster_id": "c0302",
+    "split": "train",
+    "family_id": "syn-family-b08-066"
+  },
+  "syn-train-b08-067": {
+    "cluster_id": "c0591",
+    "split": "train",
+    "family_id": "syn-family-b08-067"
+  },
+  "syn-train-b08-068": {
+    "cluster_id": "c0518",
+    "split": "train",
+    "family_id": "syn-family-b08-068"
+  },
+  "syn-train-b08-069": {
+    "cluster_id": "c0526",
+    "split": "train",
+    "family_id": "syn-family-b08-069"
+  },
+  "syn-train-b08-070": {
+    "cluster_id": "c0592",
+    "split": "train",
+    "family_id": "syn-family-b08-070"
+  },
+  "syn-train-b08-071": {
+    "cluster_id": "c0302",
+    "split": "train",
+    "family_id": "syn-family-b08-071"
+  },
+  "syn-train-b08-072": {
+    "cluster_id": "c0593",
+    "split": "train",
+    "family_id": "syn-family-b08-072"
+  },
+  "syn-train-b08-073": {
+    "cluster_id": "c0594",
+    "split": "train",
+    "family_id": "syn-family-b08-073"
+  },
+  "syn-train-b08-074": {
+    "cluster_id": "c0595",
+    "split": "train",
+    "family_id": "syn-family-b08-074"
+  },
+  "syn-train-b08-075": {
+    "cluster_id": "c0596",
+    "split": "train",
+    "family_id": "syn-family-b08-075"
+  },
+  "syn-train-b08-076": {
+    "cluster_id": "c0302",
+    "split": "train",
+    "family_id": "syn-family-b08-076"
+  },
+  "syn-train-b08-077": {
+    "cluster_id": "c0035",
+    "split": "train",
+    "family_id": "syn-family-b08-077"
+  },
+  "syn-train-b08-078": {
+    "cluster_id": "c0597",
+    "split": "train",
+    "family_id": "syn-family-b08-078"
+  },
+  "syn-train-b08-079": {
+    "cluster_id": "c0598",
+    "split": "train",
+    "family_id": "syn-family-b08-079"
+  },
+  "syn-train-b08-080": {
+    "cluster_id": "c0302",
+    "split": "train",
+    "family_id": "syn-family-b08-080"
+  },
+  "syn-train-b08-081": {
+    "cluster_id": "c0599",
+    "split": "train",
+    "family_id": "syn-family-b08-081"
+  },
+  "syn-train-b08-082": {
+    "cluster_id": "c0600",
+    "split": "train",
+    "family_id": "syn-family-b08-082"
+  },
+  "syn-train-b08-083": {
+    "cluster_id": "c0601",
+    "split": "train",
+    "family_id": "syn-family-b08-083"
+  },
+  "syn-train-b08-084": {
+    "cluster_id": "c0602",
+    "split": "train",
+    "family_id": "syn-family-b08-084"
+  },
+  "syn-train-b08-085": {
+    "cluster_id": "c0603",
+    "split": "train",
+    "family_id": "syn-family-b08-085"
+  },
+  "syn-train-b08-086": {
+    "cluster_id": "c0604",
+    "split": "train",
+    "family_id": "syn-family-b08-086"
+  },
+  "syn-train-b08-087": {
+    "cluster_id": "c0605",
+    "split": "train",
+    "family_id": "syn-family-b08-087"
+  },
+  "syn-train-b08-088": {
+    "cluster_id": "c0606",
+    "split": "train",
+    "family_id": "syn-family-b08-088"
+  },
+  "syn-train-b08-089": {
+    "cluster_id": "c0607",
+    "split": "train",
+    "family_id": "syn-family-b08-089"
+  },
+  "syn-train-b08-090": {
+    "cluster_id": "c0608",
+    "split": "train",
+    "family_id": "syn-family-b08-090"
+  },
+  "syn-train-b08-091": {
+    "cluster_id": "c0609",
+    "split": "train",
+    "family_id": "syn-family-b08-091"
+  },
+  "syn-train-b08-092": {
+    "cluster_id": "c0610",
+    "split": "train",
+    "family_id": "syn-family-b08-092"
+  },
+  "syn-train-b08-093": {
+    "cluster_id": "c0611",
+    "split": "train",
+    "family_id": "syn-family-b08-093"
+  },
+  "syn-train-b08-094": {
+    "cluster_id": "c0612",
+    "split": "train",
+    "family_id": "syn-family-b08-094"
+  },
+  "syn-train-b08-095": {
+    "cluster_id": "c0613",
+    "split": "train",
+    "family_id": "syn-family-b08-095"
+  },
+  "syn-train-b08-096": {
+    "cluster_id": "c0614",
+    "split": "train",
+    "family_id": "syn-family-b08-096"
+  },
+  "syn-train-b08-097": {
+    "cluster_id": "c0615",
+    "split": "train",
+    "family_id": "syn-family-b08-097"
+  },
+  "syn-train-b08-098": {
+    "cluster_id": "c0616",
+    "split": "train",
+    "family_id": "syn-family-b08-098"
+  },
+  "syn-train-b08-099": {
+    "cluster_id": "c0617",
+    "split": "train",
+    "family_id": "syn-family-b08-099"
+  },
+  "syn-train-b08-100": {
+    "cluster_id": "c0618",
+    "split": "dev",
+    "family_id": "syn-family-b08-100"
+  },
+  "syn-train-b09-001": {
+    "cluster_id": "c0619",
+    "split": "dev",
+    "family_id": "syn-family-b09-001"
+  },
+  "syn-train-b09-002": {
+    "cluster_id": "c0620",
+    "split": "train",
+    "family_id": "syn-family-b09-002"
+  },
+  "syn-train-b09-003": {
+    "cluster_id": "c0621",
+    "split": "dev",
+    "family_id": "syn-family-b09-003"
+  },
+  "syn-train-b09-004": {
+    "cluster_id": "c0622",
+    "split": "train",
+    "family_id": "syn-family-b09-004"
+  },
+  "syn-train-b09-005": {
+    "cluster_id": "c0623",
+    "split": "train",
+    "family_id": "syn-family-b09-005"
+  },
+  "syn-train-b09-006": {
+    "cluster_id": "c0624",
+    "split": "dev",
+    "family_id": "syn-family-b09-006"
+  },
+  "syn-train-b09-007": {
+    "cluster_id": "c0625",
+    "split": "train",
+    "family_id": "syn-family-b09-007"
+  },
+  "syn-train-b09-008": {
+    "cluster_id": "c0626",
+    "split": "train",
+    "family_id": "syn-family-b09-008"
+  },
+  "syn-train-b09-009": {
+    "cluster_id": "c0484",
+    "split": "train",
+    "family_id": "syn-family-b09-009"
+  },
+  "syn-train-b09-010": {
+    "cluster_id": "c0627",
+    "split": "train",
+    "family_id": "syn-family-b09-010"
+  },
+  "syn-train-b09-011": {
+    "cluster_id": "c0628",
+    "split": "train",
+    "family_id": "syn-family-b09-011"
+  },
+  "syn-train-b09-012": {
+    "cluster_id": "c0629",
+    "split": "train",
+    "family_id": "syn-family-b09-012"
+  },
+  "syn-train-b09-013": {
+    "cluster_id": "c0630",
+    "split": "train",
+    "family_id": "syn-family-b09-013"
+  },
+  "syn-train-b09-014": {
+    "cluster_id": "c0631",
+    "split": "train",
+    "family_id": "syn-family-b09-014"
+  },
+  "syn-train-b09-015": {
+    "cluster_id": "c0632",
+    "split": "train",
+    "family_id": "syn-family-b09-015"
+  },
+  "syn-train-b09-016": {
+    "cluster_id": "c0633",
+    "split": "train",
+    "family_id": "syn-family-b09-016"
+  },
+  "syn-train-b09-017": {
+    "cluster_id": "c0634",
+    "split": "dev",
+    "family_id": "syn-family-b09-017"
+  },
+  "syn-train-b09-018": {
+    "cluster_id": "c0635",
+    "split": "dev",
+    "family_id": "syn-family-b09-018"
+  },
+  "syn-train-b09-019": {
+    "cluster_id": "c0636",
+    "split": "train",
+    "family_id": "syn-family-b09-019"
+  },
+  "syn-train-b09-020": {
+    "cluster_id": "c0637",
+    "split": "dev",
+    "family_id": "syn-family-b09-020"
+  },
+  "syn-train-b09-021": {
+    "cluster_id": "c0638",
+    "split": "dev",
+    "family_id": "syn-family-b09-021"
+  },
+  "syn-train-b09-022": {
+    "cluster_id": "c0639",
+    "split": "train",
+    "family_id": "syn-family-b09-022"
+  },
+  "syn-train-b09-023": {
+    "cluster_id": "c0640",
+    "split": "train",
+    "family_id": "syn-family-b09-023"
+  },
+  "syn-train-b09-024": {
+    "cluster_id": "c0641",
+    "split": "train",
+    "family_id": "syn-family-b09-024"
+  },
+  "syn-train-b09-025": {
+    "cluster_id": "c0642",
+    "split": "dev",
+    "family_id": "syn-family-b09-025"
+  },
+  "syn-train-b09-026": {
+    "cluster_id": "c0619",
+    "split": "dev",
+    "family_id": "syn-family-b09-026"
+  },
+  "syn-train-b09-027": {
+    "cluster_id": "c0624",
+    "split": "dev",
+    "family_id": "syn-family-b09-027"
+  },
+  "syn-train-b09-028": {
+    "cluster_id": "c0622",
+    "split": "train",
+    "family_id": "syn-family-b09-028"
+  },
+  "syn-train-b09-029": {
+    "cluster_id": "c0628",
+    "split": "train",
+    "family_id": "syn-family-b09-029"
+  },
+  "syn-train-b09-030": {
+    "cluster_id": "c0637",
+    "split": "dev",
+    "family_id": "syn-family-b09-030"
+  },
+  "syn-train-b09-031": {
+    "cluster_id": "c0643",
+    "split": "train",
+    "family_id": "syn-family-b09-031"
+  },
+  "syn-train-b09-032": {
+    "cluster_id": "c0484",
+    "split": "train",
+    "family_id": "syn-family-b09-032"
+  },
+  "syn-train-b09-033": {
+    "cluster_id": "c0644",
+    "split": "train",
+    "family_id": "syn-family-b09-033"
+  },
+  "syn-train-b09-034": {
+    "cluster_id": "c0645",
+    "split": "train",
+    "family_id": "syn-family-b09-034"
+  },
+  "syn-train-b09-035": {
+    "cluster_id": "c0646",
+    "split": "train",
+    "family_id": "syn-family-b09-035"
+  },
+  "syn-train-b09-036": {
+    "cluster_id": "c0647",
+    "split": "train",
+    "family_id": "syn-family-b09-036"
+  },
+  "syn-train-b09-037": {
+    "cluster_id": "c0648",
+    "split": "train",
+    "family_id": "syn-family-b09-037"
+  },
+  "syn-train-b09-038": {
+    "cluster_id": "c0649",
+    "split": "train",
+    "family_id": "syn-family-b09-038"
+  },
+  "syn-train-b09-039": {
+    "cluster_id": "c0650",
+    "split": "dev",
+    "family_id": "syn-family-b09-039"
+  },
+  "syn-train-b09-040": {
+    "cluster_id": "c0651",
+    "split": "train",
+    "family_id": "syn-family-b09-040"
+  },
+  "syn-train-b09-041": {
+    "cluster_id": "c0652",
+    "split": "train",
+    "family_id": "syn-family-b09-041"
+  },
+  "syn-train-b09-042": {
+    "cluster_id": "c0653",
+    "split": "dev",
+    "family_id": "syn-family-b09-042"
+  },
+  "syn-train-b09-043": {
+    "cluster_id": "c0654",
+    "split": "train",
+    "family_id": "syn-family-b09-043"
+  },
+  "syn-train-b09-044": {
+    "cluster_id": "c0655",
+    "split": "dev",
+    "family_id": "syn-family-b09-044"
+  },
+  "syn-train-b09-045": {
+    "cluster_id": "c0656",
+    "split": "train",
+    "family_id": "syn-family-b09-045"
+  },
+  "syn-train-b09-046": {
+    "cluster_id": "c0657",
+    "split": "train",
+    "family_id": "syn-family-b09-046"
+  },
+  "syn-train-b09-047": {
+    "cluster_id": "c0658",
+    "split": "train",
+    "family_id": "syn-family-b09-047"
+  },
+  "syn-train-b09-048": {
+    "cluster_id": "c0045",
+    "split": "train",
+    "family_id": "syn-family-b09-048"
+  },
+  "syn-train-b09-049": {
+    "cluster_id": "c0659",
+    "split": "train",
+    "family_id": "syn-family-b09-049"
+  },
+  "syn-train-b09-050": {
+    "cluster_id": "c0660",
+    "split": "train",
+    "family_id": "syn-family-b09-050"
+  },
+  "syn-train-b09-051": {
+    "cluster_id": "c0661",
+    "split": "train",
+    "family_id": "syn-family-b09-051"
+  },
+  "syn-train-b09-052": {
+    "cluster_id": "c0662",
+    "split": "dev",
+    "family_id": "syn-family-b09-052"
+  },
+  "syn-train-b09-053": {
+    "cluster_id": "c0663",
+    "split": "train",
+    "family_id": "syn-family-b09-053"
+  },
+  "syn-train-b09-054": {
+    "cluster_id": "c0664",
+    "split": "train",
+    "family_id": "syn-family-b09-054"
+  },
+  "syn-train-b09-055": {
+    "cluster_id": "c0055",
+    "split": "dev",
+    "family_id": "syn-family-b09-055"
+  },
+  "syn-train-b09-056": {
+    "cluster_id": "c0031",
+    "split": "train",
+    "family_id": "syn-family-b09-056"
+  },
+  "syn-train-b09-057": {
+    "cluster_id": "c0060",
+    "split": "train",
+    "family_id": "syn-family-b09-057"
+  },
+  "syn-train-b09-058": {
+    "cluster_id": "c0031",
+    "split": "train",
+    "family_id": "syn-family-b09-058"
+  },
+  "syn-train-b09-059": {
+    "cluster_id": "c0237",
+    "split": "train",
+    "family_id": "syn-family-b09-059"
+  },
+  "syn-train-b09-060": {
+    "cluster_id": "c0665",
+    "split": "train",
+    "family_id": "syn-family-b09-060"
+  },
+  "syn-train-b09-061": {
+    "cluster_id": "c0235",
+    "split": "train",
+    "family_id": "syn-family-b09-061"
+  },
+  "syn-train-b09-062": {
+    "cluster_id": "c0489",
+    "split": "train",
+    "family_id": "syn-family-b09-062"
+  },
+  "syn-train-b09-063": {
+    "cluster_id": "c0666",
+    "split": "train",
+    "family_id": "syn-family-b09-063"
+  },
+  "syn-train-b09-064": {
+    "cluster_id": "c0642",
+    "split": "dev",
+    "family_id": "syn-family-b09-064"
+  },
+  "syn-train-b09-065": {
+    "cluster_id": "c0484",
+    "split": "train",
+    "family_id": "syn-family-b09-065"
+  },
+  "syn-train-b09-066": {
+    "cluster_id": "c0045",
+    "split": "train",
+    "family_id": "syn-family-b09-066"
+  },
+  "syn-train-b09-067": {
+    "cluster_id": "c0667",
+    "split": "train",
+    "family_id": "syn-family-b09-067"
+  },
+  "syn-train-b09-068": {
+    "cluster_id": "c0636",
+    "split": "train",
+    "family_id": "syn-family-b09-068"
+  },
+  "syn-train-b09-069": {
+    "cluster_id": "c0621",
+    "split": "dev",
+    "family_id": "syn-family-b09-069"
+  },
+  "syn-train-b09-070": {
+    "cluster_id": "c0668",
+    "split": "train",
+    "family_id": "syn-family-b09-070"
+  },
+  "syn-train-b09-071": {
+    "cluster_id": "c0628",
+    "split": "train",
+    "family_id": "syn-family-b09-071"
+  },
+  "syn-train-b09-072": {
+    "cluster_id": "c0654",
+    "split": "train",
+    "family_id": "syn-family-b09-072"
+  },
+  "syn-train-b09-073": {
+    "cluster_id": "c0647",
+    "split": "train",
+    "family_id": "syn-family-b09-073"
+  },
+  "syn-train-b09-074": {
+    "cluster_id": "c0634",
+    "split": "dev",
+    "family_id": "syn-family-b09-074"
+  },
+  "syn-train-b09-075": {
+    "cluster_id": "c0662",
+    "split": "dev",
+    "family_id": "syn-family-b09-075"
+  },
+  "syn-train-b09-076": {
+    "cluster_id": "c0622",
+    "split": "train",
+    "family_id": "syn-family-b09-076"
+  },
+  "syn-train-b09-077": {
+    "cluster_id": "c0638",
+    "split": "dev",
+    "family_id": "syn-family-b09-077"
+  },
+  "syn-train-b09-078": {
+    "cluster_id": "c0635",
+    "split": "dev",
+    "family_id": "syn-family-b09-078"
+  },
+  "syn-train-b09-079": {
+    "cluster_id": "c0669",
+    "split": "train",
+    "family_id": "syn-family-b09-079"
+  },
+  "syn-train-b09-080": {
+    "cluster_id": "c0670",
+    "split": "train",
+    "family_id": "syn-family-b09-080"
+  },
+  "syn-train-b09-081": {
+    "cluster_id": "c0653",
+    "split": "dev",
+    "family_id": "syn-family-b09-081"
+  },
+  "syn-train-b09-082": {
+    "cluster_id": "c0650",
+    "split": "dev",
+    "family_id": "syn-family-b09-082"
+  },
+  "syn-train-b09-083": {
+    "cluster_id": "c0671",
+    "split": "train",
+    "family_id": "syn-family-b09-083"
+  },
+  "syn-train-b09-084": {
+    "cluster_id": "c0672",
+    "split": "train",
+    "family_id": "syn-family-b09-084"
+  },
+  "syn-train-b09-085": {
+    "cluster_id": "c0673",
+    "split": "train",
+    "family_id": "syn-family-b09-085"
+  },
+  "syn-train-b09-086": {
+    "cluster_id": "c0674",
+    "split": "train",
+    "family_id": "syn-family-b09-086"
+  },
+  "syn-train-b09-087": {
+    "cluster_id": "c0233",
+    "split": "dev",
+    "family_id": "syn-family-b09-087"
+  },
+  "syn-train-b09-088": {
+    "cluster_id": "c0675",
+    "split": "train",
+    "family_id": "syn-family-b09-088"
+  },
+  "syn-train-b09-089": {
+    "cluster_id": "c0676",
+    "split": "train",
+    "family_id": "syn-family-b09-089"
+  },
+  "syn-train-b09-090": {
+    "cluster_id": "c0677",
+    "split": "train",
+    "family_id": "syn-family-b09-090"
+  },
+  "syn-train-b09-091": {
+    "cluster_id": "c0678",
+    "split": "train",
+    "family_id": "syn-family-b09-091"
+  },
+  "syn-train-b09-092": {
+    "cluster_id": "c0679",
+    "split": "train",
+    "family_id": "syn-family-b09-092"
+  },
+  "syn-train-b09-093": {
+    "cluster_id": "c0636",
+    "split": "train",
+    "family_id": "syn-family-b09-093"
+  },
+  "syn-train-b09-094": {
+    "cluster_id": "c0680",
+    "split": "train",
+    "family_id": "syn-family-b09-094"
+  },
+  "syn-train-b09-095": {
+    "cluster_id": "c0681",
+    "split": "dev",
+    "family_id": "syn-family-b09-095"
+  },
+  "syn-train-b09-096": {
+    "cluster_id": "c0682",
+    "split": "train",
+    "family_id": "syn-family-b09-096"
+  },
+  "syn-train-b09-097": {
+    "cluster_id": "c0440",
+    "split": "train",
+    "family_id": "syn-family-b09-097"
+  },
+  "syn-train-b09-098": {
+    "cluster_id": "c0683",
+    "split": "train",
+    "family_id": "syn-family-b09-098"
+  },
+  "syn-train-b09-099": {
+    "cluster_id": "c0684",
+    "split": "train",
+    "family_id": "syn-family-b09-099"
+  },
+  "syn-train-b09-100": {
+    "cluster_id": "c0440",
+    "split": "train",
+    "family_id": "syn-family-b09-100"
+  }
+}

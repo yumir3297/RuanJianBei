@@ -2,6 +2,9 @@
   <section class="panel-card admin-panel">
     <h2 class="section-title">知识盲区处理</h2>
     <p class="section-subtitle">游客提问但当前资料库无法回答的问题，可补充为 FAQ 后自动解决</p>
+    <el-button v-if="guideLoopEnabled" @click="showGuideLoop = !showGuideLoop">{{ showGuideLoop ? "返回盲区列表" : "GuideLoop 试验" }}</el-button>
+    <GuideLoopPilotPanel v-if="guideLoopEnabled && showGuideLoop" />
+    <div v-else>
 
     <el-tabs v-model="activeTab" @tab-change="handleTabChange">
       <el-tab-pane label="待处理" name="open">
@@ -97,6 +100,7 @@
         <el-button type="primary" @click="submitResolve" :loading="submitting">提交</el-button>
       </template>
     </el-dialog>
+    </div>
   </section>
 </template>
 
@@ -104,7 +108,10 @@
 import { ref, computed, onMounted } from "vue";
 import { ElMessage } from "element-plus";
 import { fetchBlindSpots, resolveBlindSpotWithFAQ } from "../../api/admin";
+import GuideLoopPilotPanel from "../../components/GuideLoopPilotPanel.vue";
 
+const guideLoopEnabled = import.meta.env.DEV && import.meta.env.VITE_GUIDE_LOOP_PILOT === "1";
+const showGuideLoop = ref(false);
 const activeTab = ref("open");
 const loading = ref(false);
 const error = ref("");

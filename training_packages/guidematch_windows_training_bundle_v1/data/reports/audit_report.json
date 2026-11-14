@@ -1,0 +1,254 @@
+{
+  "reviewer": "agent:trace-script+manual",
+  "reviewed_at": "2026-11-11T15:33:19+00:00",
+  "reviewed_case_count": 900,
+  "coverage": {
+    "all": 900,
+    "clarify": 299,
+    "distinct": 300,
+    "reuse": 301,
+    "dated": 158
+  },
+  "label_distribution": {
+    "reuse": 301,
+    "distinct": 300,
+    "clarify": 299
+  },
+  "reason_distribution": {
+    "ambiguous_target": 60,
+    "cross_object": 180,
+    "different_subintent": 45,
+    "missing_reference": 239,
+    "same_target": 301,
+    "temporal_conflict": 75
+  },
+  "structural_error_count": 0,
+  "structural_errors": [],
+  "rule_check": {
+    "cases": 900,
+    "decision_distribution": {
+      "compatible": 346,
+      "conflict": 255,
+      "clarify": 299
+    },
+    "mismatch_count": 0,
+    "mismatches": []
+  },
+  "heuristic_hit_count": 42,
+  "reviewed_exception_count": 42,
+  "reviewed_exceptions": [
+    {
+      "case_id": "syn-train-b01-002",
+      "issue": "syn-train-b01-002: reuse 两侧相似度仅 0.14，需确认同一答案范围",
+      "review_reason": "一天几场 vs 一天几次，口语改写"
+    },
+    {
+      "case_id": "syn-train-b01-003",
+      "issue": "syn-train-b01-003: reuse 两侧相似度仅 0.08，需确认同一答案范围",
+      "review_reason": "有多高 vs 通高多少米，同一高度范围"
+    },
+    {
+      "case_id": "syn-train-b01-004",
+      "issue": "syn-train-b01-004: reuse 两侧相似度仅 0.12，需确认同一答案范围",
+      "review_reason": "右手含义的两种问法"
+    },
+    {
+      "case_id": "syn-train-b01-005",
+      "issue": "syn-train-b01-005: reuse 两侧相似度仅 0.00，需确认同一答案范围",
+      "review_reason": "底座小像 vs 莲花座底下人像，同一对象"
+    },
+    {
+      "case_id": "syn-train-b01-007",
+      "issue": "syn-train-b01-007: reuse 两侧相似度仅 0.13，需确认同一答案范围",
+      "review_reason": "轮椅可到性，两种问法"
+    },
+    {
+      "case_id": "syn-train-b01-008",
+      "issue": "syn-train-b01-008: reuse 两侧相似度仅 0.06，需确认同一答案范围",
+      "review_reason": "是否另购票，两种问法"
+    },
+    {
+      "case_id": "syn-train-b01-009",
+      "issue": "syn-train-b01-009: reuse 两侧相似度仅 0.12，需确认同一答案范围",
+      "review_reason": "去大佛路线，两种问法"
+    },
+    {
+      "case_id": "syn-train-b01-010",
+      "issue": "syn-train-b01-010: reuse 两侧相似度仅 0.05，需确认同一答案范围",
+      "review_reason": "接水体验，两种问法"
+    },
+    {
+      "case_id": "syn-train-b01-012",
+      "issue": "syn-train-b01-012: reuse 两侧相似度仅 0.06，需确认同一答案范围",
+      "review_reason": "手势名称，两种问法"
+    },
+    {
+      "case_id": "syn-train-b01-013",
+      "issue": "syn-train-b01-013: reuse 两侧相似度仅 0.08，需确认同一答案范围",
+      "review_reason": "莲花台能否登临，两种问法"
+    },
+    {
+      "case_id": "syn-train-b01-014",
+      "issue": "syn-train-b01-014: reuse 两侧相似度仅 0.07，需确认同一答案范围",
+      "review_reason": "有无洗手间，两种问法"
+    },
+    {
+      "case_id": "syn-train-b01-018",
+      "issue": "syn-train-b01-018: reuse 两侧相似度仅 0.12，需确认同一答案范围",
+      "review_reason": "出口选择，两种问法"
+    },
+    {
+      "case_id": "syn-train-b01-019",
+      "issue": "syn-train-b01-019: reuse 两侧相似度仅 0.12，需确认同一答案范围",
+      "review_reason": "轮椅能否进入，两种问法"
+    },
+    {
+      "case_id": "syn-train-b01-031",
+      "issue": "syn-train-b01-031: reuse 两侧相似度仅 0.12，需确认同一答案范围",
+      "review_reason": "当天开演时间，两处日期一致"
+    },
+    {
+      "case_id": "syn-train-b02-001",
+      "issue": "syn-train-b02-001: reuse 两侧相似度仅 0.06，需确认同一答案范围",
+      "review_reason": "去灌浴路线，两种问法"
+    },
+    {
+      "case_id": "syn-train-b02-002",
+      "issue": "syn-train-b02-002: reuse 两侧相似度仅 0.07，需确认同一答案范围",
+      "review_reason": "出口位置，两种问法"
+    },
+    {
+      "case_id": "syn-train-b02-006",
+      "issue": "syn-train-b02-006: reuse 两侧相似度仅 0.11，需确认同一答案范围",
+      "review_reason": "陵园路线，两种问法"
+    },
+    {
+      "case_id": "syn-train-b02-008",
+      "issue": "syn-train-b02-008: reuse 两侧相似度仅 0.07，需确认同一答案范围",
+      "review_reason": "最近厕所方向，两种问法"
+    },
+    {
+      "case_id": "syn-train-b02-009",
+      "issue": "syn-train-b02-009: reuse 两侧相似度仅 0.08，需确认同一答案范围",
+      "review_reason": "无障碍通道位置，两种问法"
+    },
+    {
+      "case_id": "syn-train-b02-010",
+      "issue": "syn-train-b02-010: reuse 两侧相似度仅 0.08，需确认同一答案范围",
+      "review_reason": "灌浴出口，两种问法"
+    },
+    {
+      "case_id": "syn-train-b02-011",
+      "issue": "syn-train-b02-011: reuse 两侧相似度仅 0.08，需确认同一答案范围",
+      "review_reason": "上大佛路线，两种问法"
+    },
+    {
+      "case_id": "syn-train-b02-012",
+      "issue": "syn-train-b02-012: reuse 两侧相似度仅 0.08，需确认同一答案范围",
+      "review_reason": "灌浴入口，两种问法"
+    },
+    {
+      "case_id": "syn-train-b02-015",
+      "issue": "syn-train-b02-015: reuse 两侧相似度仅 0.12，需确认同一答案范围",
+      "review_reason": "大佛体验有无，两种问法"
+    },
+    {
+      "case_id": "syn-train-b03-001",
+      "issue": "syn-train-b03-001: reuse 两侧相似度仅 0.13，需确认同一答案范围",
+      "review_reason": "含底座总高，两种问法"
+    },
+    {
+      "case_id": "syn-train-b03-005",
+      "issue": "syn-train-b03-005: reuse 两侧相似度仅 0.08，需确认同一答案范围",
+      "review_reason": "右手尺寸，两种问法"
+    },
+    {
+      "case_id": "syn-train-b03-007",
+      "issue": "syn-train-b03-007: reuse 两侧相似度仅 0.10，需确认同一答案范围",
+      "review_reason": "陵园占地，两种问法"
+    },
+    {
+      "case_id": "syn-train-b03-008",
+      "issue": "syn-train-b03-008: reuse 两侧相似度仅 0.12，需确认同一答案范围",
+      "review_reason": "莲花花瓣数量，两种问法"
+    },
+    {
+      "case_id": "syn-train-b03-034",
+      "issue": "syn-train-b03-034: reuse 两侧相似度仅 0.14，需确认同一答案范围",
+      "review_reason": "当天票价，两处日期一致"
+    },
+    {
+      "case_id": "syn-train-b04-002",
+      "issue": "syn-train-b04-002: reuse 两侧相似度仅 0.14，需确认同一答案范围",
+      "review_reason": "手印名称，两种问法"
+    },
+    {
+      "case_id": "syn-train-b04-005",
+      "issue": "syn-train-b04-005: reuse 两侧相似度仅 0.06，需确认同一答案范围",
+      "review_reason": "底座小像排列，两种问法"
+    },
+    {
+      "case_id": "syn-train-b04-007",
+      "issue": "syn-train-b04-007: reuse 两侧相似度仅 0.08，需确认同一答案范围",
+      "review_reason": "陵园纪念对象，两种问法"
+    },
+    {
+      "case_id": "syn-train-b04-011",
+      "issue": "syn-train-b04-011: reuse 两侧相似度仅 0.14，需确认同一答案范围",
+      "review_reason": "右手象征，两种问法"
+    },
+    {
+      "case_id": "syn-train-b04-013",
+      "issue": "syn-train-b04-013: reuse 两侧相似度仅 0.06，需确认同一答案范围",
+      "review_reason": "沿途可看内容，两种问法"
+    },
+    {
+      "case_id": "syn-train-b04-017",
+      "issue": "syn-train-b04-017: reuse 两侧相似度仅 0.11，需确认同一答案范围",
+      "review_reason": "莲花造型出处，两种问法"
+    },
+    {
+      "case_id": "syn-train-b04-031",
+      "issue": "syn-train-b04-031: reuse 两侧相似度仅 0.14，需确认同一答案范围",
+      "review_reason": "当天开演时间，两处日期一致"
+    },
+    {
+      "case_id": "syn-train-b07-030",
+      "issue": "syn-train-b07-030.left: target_id=exit_route 但文本更像 accessibility",
+      "review_reason": "问出口处坡道，scope 仍为 exit_route"
+    },
+    {
+      "case_id": "syn-train-b07-038",
+      "issue": "syn-train-b07-038.left: target_id=ticket_price 但文本更像 statue_height",
+      "review_reason": "问儿童免票身高门槛，scope 仍为 ticket_price"
+    },
+    {
+      "case_id": "syn-train-b07-038",
+      "issue": "syn-train-b07-038.right: target_id=ticket_price 但文本更像 statue_height",
+      "review_reason": "问儿童免票身高门槛，scope 仍为 ticket_price"
+    },
+    {
+      "case_id": "syn-train-b08-009",
+      "issue": "syn-train-b08-009: reuse 两侧相似度仅 0.06，需确认同一答案范围",
+      "review_reason": "灌浴沿途拍照点，两种问法"
+    },
+    {
+      "case_id": "syn-train-b08-010",
+      "issue": "syn-train-b08-010: reuse 两侧相似度仅 0.06，需确认同一答案范围",
+      "review_reason": "大佛沿途拍照点，两种问法"
+    },
+    {
+      "case_id": "syn-train-b09-050",
+      "issue": "syn-train-b09-050.left: target_id=ticket_price 但文本更像 experience",
+      "review_reason": "问团队票是否含讲解器，scope 仍为 ticket_price"
+    },
+    {
+      "case_id": "syn-train-b09-051",
+      "issue": "syn-train-b09-051.left: target_id=ticket_price 但文本更像 experience",
+      "review_reason": "问团队票是否含讲解器，scope 仍为 ticket_price"
+    }
+  ],
+  "unresolved_issue_count": 0,
+  "unresolved_issues": [],
+  "passed": true
+}

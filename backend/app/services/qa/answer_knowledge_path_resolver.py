@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
@@ -19,9 +20,10 @@ class AnswerKnowledgePathResolution:
 class AnswerKnowledgePathResolver:
     """Preserve FAQ-before-cache routing and shared-cache eligibility gates."""
 
-    def __init__(self, *, faq_matcher: FAQMatcher, cache) -> None:
+    def __init__(self, *, faq_matcher: FAQMatcher, cache, guidematch_gate=None) -> None:
         self.faq_matcher = faq_matcher
         self.cache = cache
+        self.guidematch_gate = guidematch_gate
 
     async def resolve(
         self,
@@ -37,13 +39,14 @@ class AnswerKnowledgePathResolver:
         epoch: int | None,
         epoch_is_current: Callable[[], Awaitable[bool]],
     ) -> AnswerKnowledgePathResolution:
-        faq_path = resolve_faq_path_for_request(
+        faq_path = await asyncio.to_thread(resolve_faq_path_for_request,
             self.faq_matcher,
             normalized_query,
             audience=audience,
             persona=persona,
             vision_present=vision_present,
             scoped_attraction=scoped_attraction,
+            guidematch_gate=self.guidematch_gate,
         )
         if faq_path is not None and faq_path.answer is not None:
             return AnswerKnowledgePathResolution(
@@ -52,7 +55,7 @@ class AnswerKnowledgePathResolver:
                 cached_answer=None,
             )
 
-        cache_allowed = shared_cache_allowed(
+        cache_allowed = self.guidematch_gate is None and shared_cache_allowed(
             vision_present=vision_present,
             memory_prompt=memory_prompt,
             neutral=neutral,

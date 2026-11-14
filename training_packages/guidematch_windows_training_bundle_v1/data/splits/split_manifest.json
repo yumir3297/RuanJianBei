@@ -1,0 +1,181 @@
+{
+  "source": "pairs_train.jsonl",
+  "source_sha256": "a82cc9a5ecd8ca71af6f0239928a321af413cc3d7c8b79d81eb470b850eadcfa",
+  "splitter_version": "guidematch-split-v2",
+  "splitter_script_sha256": "b8d727b92c1f8c5c4a77de74b1119a704076b0e2d940b87abdce1d0d2f90ab47",
+  "generated_at": "2026-11-12T02:32:15+00:00",
+  "passed": true,
+  "method": "record-level union-find (family_id + text similarity) + deterministic exact target construction",
+  "normalization_rule": "lowercase; remove whitespace and all non [CJK, a-z, 0-9] characters",
+  "similarity_metric": "character bigram Jaccard",
+  "similarity_threshold": 0.8,
+  "seed": "guidematch-synthetic-v1-r2",
+  "optimization_objective": "lexicographic: exact dev size 135, then min sum|reason-target|, then min sum|label-45|, then all reasons present and temporal_conflict>=9",
+  "optimization_iterations": 1,
+  "optimization_detail": {
+    "construction_steps": 74,
+    "local_swap_scans": 1,
+    "local_swap_moves": 0,
+    "final_objective": 0
+  },
+  "case_count": 900,
+  "family_count": 900,
+  "cluster_count": 685,
+  "cluster_size_distribution": {
+    "1": 573,
+    "2": 71,
+    "3": 25,
+    "4": 6,
+    "5": 3,
+    "6": 1,
+    "7": 1,
+    "9": 1,
+    "11": 2,
+    "12": 1,
+    "15": 1
+  },
+  "split_case_count": {
+    "train": 765,
+    "dev": 135
+  },
+  "split_label_distribution": {
+    "train": {
+      "reuse": 256,
+      "distinct": 255,
+      "clarify": 254
+    },
+    "dev": {
+      "reuse": 45,
+      "distinct": 45,
+      "clarify": 45
+    }
+  },
+  "split_reason_distribution": {
+    "train": {
+      "same_target": 256,
+      "cross_object": 153,
+      "different_subintent": 38,
+      "temporal_conflict": 64,
+      "missing_reference": 203,
+      "ambiguous_target": 51
+    },
+    "dev": {
+      "same_target": 45,
+      "cross_object": 27,
+      "different_subintent": 7,
+      "temporal_conflict": 11,
+      "missing_reference": 36,
+      "ambiguous_target": 9
+    }
+  },
+  "split_batch_distribution": {
+    "train": {
+      "b01": 90,
+      "b02": 81,
+      "b03": 88,
+      "b04": 87,
+      "b05": 85,
+      "b06": 79,
+      "b07": 89,
+      "b08": 92,
+      "b09": 74
+    },
+    "dev": {
+      "b01": 10,
+      "b02": 19,
+      "b03": 12,
+      "b04": 13,
+      "b05": 15,
+      "b06": 21,
+      "b07": 11,
+      "b08": 8,
+      "b09": 26
+    }
+  },
+  "split_poi_combo_distribution": {
+    "train": {
+      "bathing": 401,
+      "bathing|buddha": 77,
+      "buddha": 287
+    },
+    "dev": {
+      "bathing": 81,
+      "bathing|buddha": 13,
+      "buddha": 41
+    }
+  },
+  "split_cluster_size_distribution": {
+    "train": {
+      "1": 556,
+      "2": 18,
+      "3": 21,
+      "4": 6,
+      "5": 3,
+      "6": 1,
+      "7": 1,
+      "9": 1,
+      "11": 2,
+      "12": 1,
+      "15": 1
+    },
+    "dev": {
+      "1": 17,
+      "2": 53,
+      "3": 4
+    }
+  },
+  "target_distribution": {
+    "total": 135,
+    "label": {
+      "reuse": 45,
+      "distinct": 45,
+      "clarify": 45
+    },
+    "reason": {
+      "same_target": 45,
+      "cross_object": 27,
+      "different_subintent": 7,
+      "temporal_conflict": 11,
+      "missing_reference": 36,
+      "ambiguous_target": 9
+    }
+  },
+  "actual_deviation": {
+    "total": 0,
+    "label": {
+      "reuse": 0,
+      "distinct": 0,
+      "clarify": 0
+    },
+    "reason": {
+      "same_target": 0,
+      "cross_object": 0,
+      "different_subintent": 0,
+      "temporal_conflict": 0,
+      "missing_reference": 0,
+      "ambiguous_target": 0
+    }
+  },
+  "leakage": {
+    "cross_split_case_count": 0,
+    "cross_split_family_count": 0,
+    "cross_split_cluster_count": 0,
+    "cross_split_exact_duplicate_text_count": 0,
+    "cross_split_near_duplicate_pair_count": 0,
+    "max_cross_split_similarity": 0.777778,
+    "max_similarity_train_text": "去九龙灌浴怎么走最近？",
+    "max_similarity_dev_text": "去九龙灌浴怎么走？",
+    "zero_leakage": true,
+    "passed": true
+  },
+  "train_sha256": "f2cdd124a8de68a108506748c0fc9f62e70e4614d3173d49eff3ceee9dfd1578",
+  "dev_sha256": "914d5262a9f39e4b9a55f872206489ce8c9a68730a741a3d31605ae589436866",
+  "cluster_assignments_sha256": "acba7a6372e96bc0f820641622d176ceb5013847a771d1e81a157cb03496a0ef",
+  "warnings": [
+    "dev 与 train 同源同生成器，只能用于开发期比较，不能证明真实场景泛化。",
+    "dev 是按目标分布构造的整簇子集，不是随机抽样，报告指标时需说明选择性偏差。",
+    "未生成同源 synthetic test；最终测试必须使用独立冻结评测集。",
+    "source 文件在切分前后 SHA-256 保持一致。",
+    "所有输出均已从磁盘重新读取并验证。"
+  ]
+}

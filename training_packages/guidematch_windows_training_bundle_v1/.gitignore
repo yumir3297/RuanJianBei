@@ -1,0 +1,4 @@
+.venv-train/
+outputs/
+__pycache__/
+*.pyc

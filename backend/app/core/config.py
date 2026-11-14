@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     site_id: str = Field(default="default", min_length=1, max_length=64)
     """景区名称：平台按景区自设置的核心配置，注入提示词与欢迎语（在 .env 中按景区配置）。"""
     app_env: str = Field(default="development")
+    guide_loop_pilot_enabled: bool = False
+    guide_loop_visitor_enabled: bool = False
     app_host: str = Field(default="0.0.0.0")
     app_port: int = Field(default=8000)
     database_url: str = Field(default="postgresql+asyncpg://postgres:postgres@localhost:5432/a5_scenic_guide")
@@ -30,6 +32,11 @@ class Settings(BaseSettings):
     rag_collection_name: str = Field(default="scenic_knowledge_chunks")
     embedding_model_name: str = Field(default="BAAI/bge-small-zh-v1.5")
     faq_semantic_threshold: float = Field(default=0.60, ge=0.0, le=1.0)
+    guidematch_enabled: bool = False
+    guidematch_model_dir: str = ""
+    guidematch_device: str = Field(default="cuda", pattern="^(cuda|cpu)$")
+    guidematch_reuse_threshold: float = Field(default=0.70, ge=0, le=1)
+    guidematch_min_confidence: float = Field(default=0.40, ge=0, le=1)
     reranker_model_name: str = Field(default="BAAI/bge-reranker-base")
     reranker_batch_size: int = Field(default=8)
     reranker_max_length: int = Field(default=128)
@@ -155,6 +162,8 @@ class Settings(BaseSettings):
             failures.append("default_admin_token_secret")
         if len(self.admin_token_secret) < 32:
             failures.append("weak_admin_token_secret")
+        if self.embedding_model_name.strip() == "simple-dev-embedder":
+            failures.append("synthetic_embedding_model")
         return tuple(failures)
 
     @property

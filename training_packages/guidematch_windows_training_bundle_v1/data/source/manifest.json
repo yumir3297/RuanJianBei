@@ -1,0 +1,131 @@
+{
+  "dataset": "guidematch-synthetic-v1",
+  "revision": 3,
+  "status": "agent_review_passed_pending_human_signoff",
+  "generator": "trae-agent",
+  "prompt_version": "guidematch-synthetic-prompt@2026-11-11-r2",
+  "prompt_revision": 2,
+  "range_rules": "eval/scripts/guidematch_range_rules.py",
+  "generated_at": "2026-11-11T15:33:19+00:00",
+  "batch_files": {
+    "b01.jsonl": "fb79f59b27e2c351270527ee18373136fbd9e337090bb32a9a5bce888ebca8fe",
+    "b02.jsonl": "634a87d9484b89c264cae0e14bee1ff8709feff4aca72b2a226471135190d8ae",
+    "b03.jsonl": "12de11ac6f3b16872d25d92099fcd36785b9b361c3063f222b3b460a3dfb72dc",
+    "b04.jsonl": "dd702db94f9efb1dfe2fa7dbce870655b87e839098ffe5724a8980be9f1301bd",
+    "b05.jsonl": "09d9d9bb05225c38d10aa91b905aa518b7ce37939f2b5416f99faa3d065cf8f3",
+    "b06.jsonl": "03188402c5250accfe831d320f8448eaa13a62e85f48b2189bc3366a3a2a2186",
+    "b07.jsonl": "d5c5e672c8958b16d1e42b2c40c3420796404db0a04c4964c26cd13d6f8c6f43",
+    "b08.jsonl": "8a72ee23a031b7d3c41ae3c908bc72eed68f13833ccb8fe5991bba92cb7073fb",
+    "b09.jsonl": "7be6595a41e3fbb5e1297ff2b1dfdb6540478980ceecdf5d032c39e6a75a92ba"
+  },
+  "batch_config": {
+    "b01": {
+      "simulated_today": "2026-11-12",
+      "date_range": [
+        "2026-11-10",
+        "2026-11-20"
+      ]
+    },
+    "b02": {
+      "simulated_today": "2026-11-11",
+      "date_range": [
+        "2026-11-10",
+        "2026-11-28"
+      ]
+    },
+    "b03": {
+      "simulated_today": "2026-11-12",
+      "date_range": [
+        "2026-11-10",
+        "2026-11-28"
+      ]
+    },
+    "b04": {
+      "simulated_today": "2026-11-13",
+      "date_range": [
+        "2026-11-10",
+        "2026-11-28"
+      ]
+    },
+    "b05": {
+      "simulated_today": "2026-11-14",
+      "date_range": [
+        "2026-11-10",
+        "2026-11-28"
+      ]
+    },
+    "b06": {
+      "simulated_today": "2026-11-15",
+      "date_range": [
+        "2026-11-10",
+        "2026-11-28"
+      ]
+    },
+    "b07": {
+      "simulated_today": "2026-11-16",
+      "date_range": [
+        "2026-11-10",
+        "2026-11-28"
+      ]
+    },
+    "b08": {
+      "simulated_today": "2026-11-17",
+      "date_range": [
+        "2026-11-10",
+        "2026-11-28"
+      ]
+    },
+    "b09": {
+      "simulated_today": "2026-11-18",
+      "date_range": [
+        "2026-11-10",
+        "2026-11-28"
+      ]
+    }
+  },
+  "raw_case_count": 900,
+  "valid_case_count": 900,
+  "deduped_case_count": 900,
+  "duplicate_count": 0,
+  "family_count": 900,
+  "audited_case_count": 0,
+  "self_check": {
+    "clarify_reviewed": 299,
+    "hard_conflict_reviewed": 300,
+    "dated_case_reviewed": 158
+  },
+  "label_distribution": {
+    "reuse": 301,
+    "distinct": 300,
+    "clarify": 299
+  },
+  "reason_distribution": {
+    "ambiguous_target": 60,
+    "cross_object": 180,
+    "different_subintent": 45,
+    "missing_reference": 239,
+    "same_target": 301,
+    "temporal_conflict": 75
+  },
+  "output_file": "pairs_train.jsonl",
+  "output_sha256": "a82cc9a5ecd8ca71af6f0239928a321af413cc3d7c8b79d81eb470b850eadcfa",
+  "notes": [
+    "全部为合成数据，仅用于离线训练候选，不代表真实游客问句分布。",
+    "尚未完成人工抽检，audited_case_count 为 0，不得直接用于训练或对外报告。",
+    "self_check 为脚本与生成器的自查覆盖数，不等同于人工审核。",
+    "queried_date 与 SIMULATED_TODAY 均为合成时钟，不代表真实活动或营业安排。",
+    "冻结评测集 pairs_dev/pairs_test/replay 未参与生成、校验与合并。",
+    "仓库当前不存在上述冻结集文件；本流程未创建或改写任何评测文件。",
+    "部分拍照/体验类问句只能挂到对象级 target（目录无专门媒体 target），需人工复核 target 语义。",
+    "每条标签均由 guidematch_range_rules.decide() 复跑硬约束；规则为 compatible 时仍允许不同子意图。",
+    "train/dev 切分按重复问句聚类隔离，见 splits/split_manifest.json；同源 dev 不能替代冻结集。",
+    "agent 全检覆盖 900 条，启发式命中逐条复核并记录在 audit_report.json；人工审核数仍为 0，不等于人工签核。"
+  ],
+  "agent_reviewed_case_count": 900,
+  "agent_review_rule_mismatch_count": 0,
+  "agent_review_unresolved_issue_count": 0,
+  "agent_review_passed": true,
+  "agent_review_report": "audit_report.json",
+  "agent_review_exception_count": 42,
+  "human_audited_case_count": 0
+}

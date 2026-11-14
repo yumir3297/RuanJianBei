@@ -111,13 +111,19 @@ class QAPipeline:
         speech_profile: dict | None = None,
         vision_catalog=None,
         vision_site_id: str | None = None,
+        guide_loop_session=None,
+        guidematch_gate=None,
+        guide_loop_visitor_enabled=False,
     ) -> None:
         self.query_rewriter = query_rewriter
+        self.guide_loop_session = guide_loop_session
+        self.guide_loop_visitor_enabled = guide_loop_visitor_enabled
         self.faq_matcher = faq_matcher
         self.qa_cache = qa_cache
         self.answer_knowledge_path_resolver = AnswerKnowledgePathResolver(
             faq_matcher=self.faq_matcher,
             cache=self.qa_cache,
+            guidematch_gate=guidematch_gate,
         )
         self.rag_service = rag_service
         self.llm_service = llm_service
@@ -301,7 +307,26 @@ class QAPipeline:
         assert query_context is not None
         vision = request.vision_context
 
-        yield StreamEvent(type="context", data=resolved.to_event_data())
+        guide_loop_result = None
+        if self.guide_loop_session is not None and request.guide_loop is not None:
+            from app.services.guide_loop.publication import resolve_public_answer
+            guide_loop_result = await resolve_public_answer(
+                self.guide_loop_session, poi_id=request.guide_loop.poi_id, query=request.query,
+            )
+        elif self.guide_loop_session is not None and self.guide_loop_visitor_enabled and resolved.scope and resolved.scope.source_entry_id:
+            from app.services.guide_loop.publication import resolve_visitor_answer
+            guide_loop_result = await resolve_visitor_answer(
+                self.guide_loop_session, entry_id=resolved.scope.source_entry_id, query=request.query,
+                guidematch_gate=self.answer_knowledge_path_resolver.guidematch_gate,
+            )
+        context_event = resolved.to_event_data()
+        if guide_loop_result is not None:
+            context_event["guide_loop"] = {
+                "decision": guide_loop_result["decision"],
+                "revision_id": guide_loop_result.get("revision_id"),
+                "check_id": guide_loop_result.get("check_id"),
+            }
+        yield StreamEvent(type="context", data=context_event)
         yield StreamEvent(
             type="emotion",
             data={
@@ -314,6 +339,16 @@ class QAPipeline:
         retrieval_query = query_context.retrieval_query
         normalized_query = query_context.normalized_query
         intent_decision = query_context.intent_decision
+        if guide_loop_result and guide_loop_result["decision"] in {"answer", "clarify", "unavailable"}:
+            async with aclosing(self.fast_path_answer_factory.events(
+                request=request, normalized_query=normalized_query,
+                answer=guide_loop_result["answer"], sources=guide_loop_result.get("sources", []),
+                hit_level=f"guide_loop_{guide_loop_result['decision']}", start=start,
+                resolved=resolved, response_policy=self._active_response_policy, expected_epoch=request_epoch,
+            )) as answer_events:
+                async for event in answer_events:
+                    yield event
+            return
         yield StreamEvent(
             type="intent",
             data={

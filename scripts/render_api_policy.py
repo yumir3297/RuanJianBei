@@ -24,7 +24,7 @@ def policy_for(route: dict) -> tuple[str, list[str]]:
         return "internal", ["gateway"]
     if file == "auth.py":
         return "anonymous", ["admin"]
-    if file == "admin.py" or file in {"knowledge.py", "knowledge_imports.py", "knowledge_publications.py"}:
+    if file == "admin.py" or file in {"guide_loop.py", "knowledge.py", "knowledge_imports.py", "knowledge_publications.py"}:
         return "admin-token", ["admin"]
     if file == "insights.py":
         if handler == "submit_feedback":

@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "../api/http";
+import { API_BASE_URL } from "../api/transport.js";
 
 function parseEventBlock(block) {
   let event = "message";
@@ -42,7 +42,7 @@ export function useSSEStream() {
     try {
       const response = await fetch(`${API_BASE_URL}${path}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+        headers: { "Content-Type": "application/json", Accept: "text/event-stream", ...(options.headers || {}) },
         body: JSON.stringify(payload),
         signal: controller.signal,
       });
