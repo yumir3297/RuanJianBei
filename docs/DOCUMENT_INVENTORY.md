@@ -70,9 +70,6 @@
 | [superpowers/plans/2026-10-27-knowledge-workspace.md](superpowers/plans/2026-10-27-knowledge-workspace.md) | Knowledge Workspace Implementation Plan | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-28-ai-stream-validation.md](superpowers/plans/2026-10-28-ai-stream-validation.md) | AI 工作台弱网与流式链路验收记录 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-28-k01-stream-integration.patch](superpowers/plans/2026-10-28-k01-stream-integration.patch) | 非 Markdown 资源（patch） | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
-| [superpowers/plans/2026-10-29-v01-editable-itinerary.md](superpowers/plans/2026-10-29-v01-editable-itinerary.md) | V01 可验证的连续伴游规划实施计划 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
-| [superpowers/plans/2026-10-29-w01-tour-session-workspace.md](superpowers/plans/2026-10-29-w01-tour-session-workspace.md) | W01 游客游览任务与成果基础实施计划 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
-| [superpowers/plans/2026-10-29-w02-durable-execution.md](superpowers/plans/2026-10-29-w02-durable-execution.md) | W02 Durable Execution Implementation Plan | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-11-10-guideloop-pilot.md](superpowers/plans/2026-11-10-guideloop-pilot.md) | GuideLoop 两景点知识演化原型实施与测试计划 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/specs/2026-10-02-multi-scenic-guide-proposal.md](superpowers/specs/2026-10-02-multi-scenic-guide-proposal.md) | 多景区数字人导览平台改造方案（草案） | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/specs/2026-10-27-knowledge-workspace-design.md](superpowers/specs/2026-10-27-knowledge-workspace-design.md) | 知识草稿工作区与发布设计 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
@@ -110,6 +107,7 @@
 
 | 移除的历史文件 | 保留内容及原因 |
 |---|---|
+| `docs/superpowers/plans/2026-10-29-v01-editable-itinerary.md`、`2026-10-29-w01-tour-session-workspace.md`、`2026-10-29-w02-durable-execution.md` | 旧任务步骤由对应 V01/W01/W02 设计保留目标与契约，[验收总表](testing/TESTING_AND_ACCEPTANCE.md)保留浏览器与并发边界；原阶段测试和详细步骤可通过 `git show 1d7eb67:docs/superpowers/plans/<文件名>` 查阅。 |
 | `docs/superpowers/plans/2026-10-29-judge-experience-acceptance.md`、`2026-10-29-w02-execution-ledger.md` | 桌面预览范围与限制归入[验收总表](testing/TESTING_AND_ACCEPTANCE.md)；W02 后续实现与验证由[集成记录](development/W02_INTEGRATION.md)承接。原始阶段记录可通过 `git show 9f01fc2:docs/superpowers/plans/<文件名>` 查阅。 |
 | `docs/workspace-materials/reports/vision-evidence-gap.md`、`w02-merge-analysis.md`、`w02-postgres.md`、`w02-runtime-review.md` | 消息级引用与识景追溯边界归入[验收总表](testing/TESTING_AND_ACCEPTANCE.md)；W02 历史缺陷、后续 PostgreSQL 实验及旧库迁移风险归入 [W02 集成记录](development/W02_INTEGRATION.md)。旧合并建议只是当时方案，与后来迁移更正不同；原文可用 `git show 111ce18:docs/workspace-materials/reports/<文件名>` 查阅。 |
 | `docs/workspace-materials/reports/flagship-gap.md`、`framework-research.md`、`real-eval-readiness.md`、`vision-confirm-ui.md` | 行程指标归入[创新证据](competition/INNOVATION.md)，框架选型保留在[框架调研](architecture/FRAMEWORK_RESEARCH.md)，评测限制归入[评测入口](../eval/README.md)，识景交互与测试分别归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)和[验收总表](testing/TESTING_AND_ACCEPTANCE.md)。原历史报告可通过 `git show 5f7365d:docs/workspace-materials/reports/<文件名>` 查阅。 |
