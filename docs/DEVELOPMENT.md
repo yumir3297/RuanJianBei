@@ -1,6 +1,6 @@
 # 跨系统开发与验证
 
-核验于 2026-10-28。所有命令标明 cwd；仓库相对路径适用于不同机器。
+初版核验于 2026-10-28，后续补充见各段日期及 [统一验收总表](testing/TESTING_AND_ACCEPTANCE.md)。所有命令标明 cwd；仓库相对路径适用于不同机器。
 本页区分“可执行命令”和“已执行结果”：本次地图建设没有安装或启动业务环境。
 
 ## 1. 工具与运行条件
@@ -8,7 +8,7 @@
 | 项目 | 要求及已知边界 |
 |---|---|
 | Node | [锁文件](../frontend/package-lock.json) 中 Vite/plugin-vue 要求 `^20.19.0 || >=22.12.0`；README 旧 `v20+` 条件过宽 |
-| Python | README 以 3.13+ 为基线；原生包 wheel 是否支持所选 Python/OS/架构须另外核验，不能推导任意新版本都可装 |
+| Python | 候选后端镜像使用 Python 3.13；原生包 wheel 是否支持所选 Python/OS/架构须另外核验，不能推导任意新版本都可装 |
 | 后端依赖 | [requirements.txt](../backend/requirements.txt)；包含锁定的 `torch==2.12.0+cpu` 和 CPU 索引，macOS/ARM 等平台未验证能原样安装；如无匹配 wheel，应记录依赖兼容问题后另行调整，不擅自跳过依赖或替换版本 |
 | 数据库 | [config.py](../backend/app/core/config.py) 默认 PostgreSQL；[session.py](../backend/app/db/session.py) 对 SQLite 有兼容分支，仍需分别验证迁移/查询 |
 | 模型/数据 | 本地 embedding、reranker 缓存及处理数据不等于 Git 克隆内容；main lifespan 会预热模型 |
@@ -24,8 +24,7 @@ FAQ 资料已写入但刷新失败时，后台会提示先核对保存结果，�
 ## 2. 打开正确工作目录
 
 建议把 `RuanJianBei` 仓库根目录作为 Codex 本地项目目录，从该目录开启新开发 chat。
-当前 ChatGPT 项目外层目录和代码仓库是两层：外层 `sources/` 是只读同步参考；代码位于 `code/RuanJianBei/`。
-如果仍从外层发起任务，应明确先读取仓库 `AGENTS.md` 以及所改目录的 AGENTS.md，不能假设后代文件会在启动时自动发现。
+本文件中的 `backend/`、`frontend/` 均相对于仓库根目录。使用外层项目或其他 worktree 时先确认该目录的 Git 根、分支和未提交改动，并读取仓库 `AGENTS.md` 及所改目录的 AGENTS.md；旧环境的 `code/RuanJianBei/` 不作为通用路径。
 
 根 AGENTS.md 仅作短入口；[功能地图](REPO_MAP.md)、[架构](ARCHITECTURE.md)、[兼容性](COMPATIBILITY.md) 按任务读取。
 其他 AI 工具可直接读取相同 Markdown；不要求安装 Codex 插件或专用索引服务。

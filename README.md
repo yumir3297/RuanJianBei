@@ -68,11 +68,12 @@
 │   └── package.json
 ├── data/              # 景区原始数据
 ├── docs/              # 开发文档 & 启动指南
-├── 设计文档/           # 架构设计文档
 ├── eval/              # 评测脚本 & 数据集
+├── evaluation/        # 历史评测脚本及报告
+├── training_packages/ # GuideMatch 训练交接包
+├── blender/           # 数字人制作辅助资源
 ├── scripts/           # 辅助脚本
 ├── deploy/            # Compose、NGINX 模板与独立发布/备份脚本
-├── assets/            # UI 设计稿
 └── kb/                # 知识库索引
     └── faq_index/     # FAQ 语义索引
 ```
@@ -83,4 +84,4 @@
 
 ## 后续改进方向
 
-当前已整合知识发布、可编辑行程及持久提案执行；真实模型、手机、弱网和完整浏览器链路尚待验收。当前功能、证据与缺口见[开发进度](./docs/development/PROGRESS.md)、[评分矩阵](./docs/competition/SCORE_MATRIX.md)和[架构选择](./docs/architecture/TARGET.md)。历史路线图和方案仅供追溯，不作为当前需求清单。
+当前已整合知识发布、可编辑行程及持久提案执行；真实模型、手机、弱网和完整浏览器链路尚待验收。当前功能、证据与缺口见[统一验收总表](./docs/testing/TESTING_AND_ACCEPTANCE.md)；[开发进度](./docs/development/PROGRESS.md)、[评分矩阵](./docs/competition/SCORE_MATRIX.md)和[架构选择](./docs/architecture/TARGET.md)包含历史记录与规划。历史路线图和方案仅供追溯，不作为当前需求清单。
