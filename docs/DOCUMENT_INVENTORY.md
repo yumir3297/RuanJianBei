@@ -55,6 +55,7 @@
 | [research/2026-11-07-k02-source-research.md](research/2026-11-07-k02-source-research.md) | 多源知识资料场景与技术调研 | 保留：旧知识工作树的独特设计与来源；未完成项属目标 | 技术总览／知识模块记录 |
 | [research/CONTINUOUS_NARRATION_DESIGN.md](research/CONTINUOUS_NARRATION_DESIGN.md) | 连续导览与讲解质量来源方案整理 | 保留：多个本地试点的用户意图、方法来源及未集成边界 | 技术总览／连续导览记录 |
 | [research/SAFETY_GUARD_FUTURE_DESIGN.md](research/SAFETY_GUARD_FUTURE_DESIGN.md) | 景区安全守护与客流控制：远期设计来源 | 保留：Trae 旧草案的目标、权限与待确认边界；非当前实现 | 技术总览／CASS 设计 |
+| [research/TRAE_OPTIMIZATION_RESEARCH.md](research/TRAE_OPTIMIZATION_RESEARCH.md) | 检索、评测、语音与数字人优化研究来源 | 保留：Trae 五份未跟踪调研的方向、参考与验证边界；非已实现方案 | 技术总览 |
 | [research/2026-10-29-v01-itinerary-research.md](research/2026-10-29-v01-itinerary-research.md) | V01 可编辑行程：调研与项目接入依据 | 保留：调研依据，非验收结论 | 技术总览 |
 | [research/2026-10-29-w02-durable-execution-research.md](research/2026-10-29-w02-durable-execution-research.md) | W02 工具执行与任务恢复：调研与接入依据 | 保留：调研依据，非验收结论 | 技术总览 |
 | [research/2026-11-07-cass-competition-completion.md](research/2026-11-07-cass-competition-completion.md) | CASS 比赛版完善：技术调研与开发范围建议 | 保留：调研依据，非验收结论 | 技术总览 |
@@ -169,6 +170,8 @@
 ## 仓库其他位置的文档与许可
 
 Trae 来源工作树 `feature/offline-companion` 的 `docs/implementation/OFFLINE_AUDIT.md` 和 `docs/implementation/OFFLINE_ACCEPTANCE.md` 未纳入主线；其中用户的全屏游戏要求、交互方向和当前差距已归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)，历史验证与限制归入[离线记录](integration/OFFLINE_COMPANION.md)和[验收总表](testing/TESTING_AND_ACCEPTANCE.md)。来源含未提交改动，原文件留在来源工作区，历史测试不代表现行版本。
+
+Trae `feat/location-guide-opt` 的未提交 `docs/design/location-guide-optimization-2026-11-02.md` 的定位触发、模拟降级和播放器协作方向归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)；原文留在来源工作区，历史参数和测试不代表当前主线或现场验收。
 
 连续导览来源工作区中未进入主线的 `docs/implementation/GUIDEWEAVE_PILOT.md`、`docs/superpowers/plans/2026-11-09-tour-context-rag-pilot.md`，以及 `tour-narration-policy` 的方法库、讲解策略、分层交付和来源审查等文档，其产品意图、研究参考与试验限制归入[连续讲解设计](research/CONTINUOUS_NARRATION_DESIGN.md)。原始文件和部分未提交实验数据留在来源工作区/本地快照，不因文档归并而视为代码或全部实验已进入主线。
 
