@@ -186,6 +186,8 @@
 
 ## 仓库其他位置的文档与许可
 
+Trae 来源工作树 `feature/offline-companion` 的 `docs/implementation/OFFLINE_AUDIT.md` 和 `docs/implementation/OFFLINE_ACCEPTANCE.md` 未纳入主线；其中用户的全屏游戏要求、交互方向和当前差距已归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)，历史验证与限制归入[离线记录](integration/OFFLINE_COMPANION.md)和[验收总表](testing/TESTING_AND_ACCEPTANCE.md)。来源含未提交改动，原文件留在来源工作区，历史测试不代表现行版本。
+
 以下保留为代码所在模块的操作入口、数据血缘或资源许可；归属对应模块，不当作当前整体设计结论。
 
 | 文件 | 处置 |
