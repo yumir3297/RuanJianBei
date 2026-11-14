@@ -104,6 +104,20 @@ flowchart LR
 
 行程以版本化快照保存必去、排除和时间约束；缺失路段、时长或未解析名称须标记未核实。提案需同时展示原始需求与差异，用户确认后才生成新版本；模型推断出的操作清单不能证明完整覆盖用户要求。浏览器语音识别及部分转写可能直接提交，启发式低置信转写需确认；语音和视觉效果均受实际供应商与设备限制。更完整的功能与证据见[技术草稿](competition/TECHNICAL_DRAFT.md)。
 
+## 技术文书证据索引
+
+编写或答辩时，从对应代码和验证记录取证，区分设计目标、本地模拟及真实环境结果。下表是导航，不是全部功能已通过真实验收的证明。
+
+| 主题 | 主要代码 | 功能记录与证据 | 最重要的表述边界 |
+|---|---|---|---|
+| 双端与运营工作台 | [游客入口](../frontend/apps/tourist/main.js)、[管理入口](../frontend/apps/admin/main.js) | [双端设计](frontend/DESIGN_AND_BOUNDARIES.md)、[管理工作台](integration/ADMIN_WORKBENCH.md) | 两个前端共用后端；服务器与真实设备另验收 |
+| 问答、知识与证据 | [问答编排](../backend/app/services/qa/pipeline.py)、[知识发布](../backend/app/services/knowledge/) | [知识理解与一致性](integration/KNOWLEDGE_UNDERSTANDING.md)、[资料抽查](competition/SOURCE_REVIEW.md) | 来源标识和发布版本不自动证明内容真实 |
+| 情境与安全 | [服务端策略](../backend/app/services/guide_context/policy.py)、[事件调度](../frontend/src/guide/scheduler.js) | [CASS 功能与演示](implementation/CASS_GUIDE.md)、[专项验收](implementation/CASS_ACCEPTANCE.md) | 模拟事件不等于实时客流、后台接警或现场安全保障 |
+| 行程与恢复 | [游览 API](../backend/app/api/tour_sessions.py)、[执行器](../backend/app/services/tool_execution/) | [W02 集成记录](development/W02_INTEGRATION.md)、[本地演示](integration/LOCAL_DEMO_RUNBOOK.md) | 游客确认才应用；外部调用结果未知时不能声称恰好一次 |
+| 离线陪游 | [离线入口](../frontend/apps/tourist/offline.html)、[离线模块](../frontend/src/offline/) | [离线集成与验证](integration/OFFLINE_COMPANION.md) | 需预缓存；示意图和求助资料尚需核验，模拟断网不等于真机 |
+| 知识演化与匹配 | [GuideLoop 服务](../backend/app/services/guide_loop/)、[GuideMatch 门控](../backend/app/services/qa/guidematch_gate.py) | [GuideLoop 记录](integration/GUIDELOOP_PILOT.md)、[训练与模型记录](integration/GUIDEMATCH_TRAINING.md) | 受控开发/测试路径；合成开发集不是独立真实评测 |
+| 数字人及多模态 | [数字人组件](../frontend/src/components/ThreeAvatar.vue)、[视觉接口](../backend/app/api/vision.py)、[语音接口](../backend/app/api/voice.py) | [前端设计](frontend/DESIGN_AND_BOUNDARIES.md)、[设备兼容矩阵](COMPATIBILITY.md) | 真实供应商、手机性能及音画同步须单独验证 |
+
 ## 详细来源和状态
 
 - [比赛验收总表](integration/ACCEPTANCE.md)
