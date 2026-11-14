@@ -22,6 +22,8 @@
 
 面向缺少定制预算的景区，通用产品以中性视觉为基础；名称、Logo、背景、导游形象、文案、主题及功能由景区配置，示例景区不应固化为通用页面。户外自然光、触控、清晰中文、对比度与键盘焦点是设计目标，不能代替实际设备测试。
 
+早期产品设计要求采用清晰的中文字体与可配置主题，主要操作和正文优先考虑 14–16px、普通文字对比度目标 4.5:1、交互热区通常至少 44px；窄屏优先换行、收起或重排，不靠缩小重要文字适配。实际可访问性须按页面、设备和缩放状态验证。模块标题、启停、顺序和内容可配置，通用主题、景区数据与模块代码分别维护；空数据、长名称、加载失败和缺少素材均需有明确状态。尊重减少动态效果设置，数字人动作与面板反馈不应互相抢夺注意力。
+
 游客端以中央数字人和语音操作为焦点，导览工具与讲解设置位于两侧；记录和资料按需展开，移动端使用底部入口与弹层。背景可由运营替换，风景与人物应保持连续，功能面板承载复杂背景上的阅读内容。设计经历过无遮罩与统一深色面板两个版本；最终视觉应以现有界面及实际验收为准，不把早期固定宽度当成全设备承诺。
 
 管理端采用用户选定的**中性浅色工作台方案 A**，优先服务内容维护：以清晰的导航、知识编辑、盲区处理、数字人预览和运营分析组织页面。Logo、景区名称和主题色体现景区特征；避免装饰渐变、发光效果、英文眉题和无意义指标卡。统计只展示有真实数据来源的值；加载失败要提示并保留已有内容，不能以零值掩盖失败。编辑失败应保留输入，未保存离开需提示；未实现的预览或音色试听不能伪装可用。
@@ -55,6 +57,7 @@
 - [管理端浅色工作台实现与验证](../integration/ADMIN_WORKBENCH.md)
 - [管理端历史交互原型](../workspace-materials/output/admin-design/review-preview.html)：示例数据仅在原型中使用，不能代表当前业务；[桌面](../workspace-materials/output/admin-design/preview-1024.png)、[平板](../workspace-materials/output/admin-design/preview-736.png)和[手机](../workspace-materials/output/admin-design/preview-390.png)截图为历史设计参考。
 - [离线陪游历史桌面设计](../workspace-materials/output/offline-companion/desktop.png)和[手机设计](../workspace-materials/output/offline-companion/phone.png)：设计参考，实际功能与断网范围见[离线记录](../integration/OFFLINE_COMPANION.md)。
+- 设计审查方法参考：[Impeccable](https://github.com/pbakaus/impeccable)、[Anthropic frontend-design](https://github.com/anthropics/skills/blob/main/skills/frontend-design/SKILL.md) 和 [Microsoft frontend-design-review](https://github.com/microsoft/skills/blob/main/.github/skills/frontend-design-review/SKILL.md)。引用方法不代表已安装相关工具或已完成页面改造。
 
 ## 前端验收边界
 

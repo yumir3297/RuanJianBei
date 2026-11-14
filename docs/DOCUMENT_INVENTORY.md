@@ -102,6 +102,7 @@
 
 | 移除的历史文件 | 保留内容及原因 |
 |---|---|
+| `DESIGN.md` | 2026-10-03 的游客端设计原则、可读性目标、模块化方向和方法来源已归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)；原文可通过 `git show b863be1:DESIGN.md` 查阅。 |
 | `docs/deployment/split-v2/ASSESSMENT.md`、`IMPLEMENTATION_PLAN.md`、`REVIEW.md` | 双端及部署决策保留在[拆分设计](deployment/split-v2/DESIGN.md)、[开发边界](development/FRONTEND_BOUNDARIES.md)和[部署验收](deployment/FINAL_ACCEPTANCE.md)；设计参考链接已迁入设计稿。原阶段步骤、环境和测试证据可通过 `git show 61644ff:docs/deployment/split-v2/<文件名>` 查阅。 |
 | `docs/superpowers/plans/2026-10-27-knowledge-workspace.md`、`2026-11-10-guideloop-pilot.md` | 知识草稿和发布约束由[工作区设计](superpowers/specs/2026-10-27-knowledge-workspace-design.md)保留；GuideLoop 评测及未完成的人审计时归入[试点记录](integration/GUIDELOOP_PILOT.md)与[记忆研究](reports/2026-11-10-guide-memory-research.md)。旧步骤和阶段数据可通过 `git show c4fb1de:docs/superpowers/plans/<文件名>` 查阅。 |
 | `docs/superpowers/plans/2026-10-29-v01-editable-itinerary.md`、`2026-10-29-w01-tour-session-workspace.md`、`2026-10-29-w02-durable-execution.md` | 旧任务步骤由对应 V01/W01/W02 设计保留目标与契约，[验收总表](testing/TESTING_AND_ACCEPTANCE.md)保留浏览器与并发边界；原阶段测试和详细步骤可通过 `git show 1d7eb67:docs/superpowers/plans/<文件名>` 查阅。 |
@@ -173,7 +174,6 @@ Trae 来源工作树 `feature/offline-companion` 的 `docs/implementation/OFFLIN
 | 文件 | 处置 |
 |---|---|
 | [AGENTS.md](../AGENTS.md) | 保留：模块说明、依赖或许可 |
-| [DESIGN.md](../DESIGN.md) | 保留：模块说明、依赖或许可 |
 | [README.md](../README.md) | 保留：模块说明、依赖或许可 |
 | [backend/AGENTS.md](../backend/AGENTS.md) | 保留：模块说明、依赖或许可 |
 | [backend/requirements.txt](../backend/requirements.txt) | 保留：模块说明、依赖或许可 |
