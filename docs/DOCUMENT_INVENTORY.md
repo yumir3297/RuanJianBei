@@ -12,12 +12,6 @@
 | [REPO_MAP.md](REPO_MAP.md) | AI 数字人导览：功能与代码地图 | 保留：现行导航或整理记录 | 文档目录 |
 | [REPO_MAP_USABILITY.md](REPO_MAP_USABILITY.md) | 仓库地图可用性测试 | 保留：当前入口、规范或映射；以内容日期为准 | 文档目录 |
 | [TECHNICAL_ARCHITECTURE_AND_INNOVATION.md](TECHNICAL_ARCHITECTURE_AND_INNOVATION.md) | 技术架构与创新总览 | 保留：现行导航或整理记录 | 文档目录 |
-| [agent-operations/CURRENT_STATE.md](agent-operations/CURRENT_STATE.md) | Historical engineering state | 保留：历史交接快照，不作为当前状态 | 验收总表 |
-| [agent-operations/DECISIONS.md](agent-operations/DECISIONS.md) | Current-round decisions and held scope | 保留：历史交接快照，不作为当前状态 | 验收总表 |
-| [agent-operations/HANDOFF.md](agent-operations/HANDOFF.md) | Engineering handoff | 保留：历史交接快照，不作为当前状态 | 验收总表 |
-| [agent-operations/TASK_BOARD.md](agent-operations/TASK_BOARD.md) | Current-round task board | 保留：历史交接快照，不作为当前状态 | 验收总表 |
-| [agent-operations/TEST_STATUS.md](agent-operations/TEST_STATUS.md) | Test and validation status | 保留：历史交接快照，不作为当前状态 | 验收总表 |
-| [agent-operations/WORKTREE_INVENTORY.md](agent-operations/WORKTREE_INVENTORY.md) | Worktree and branch inventory | 保留：历史交接快照，不作为当前状态 | 验收总表 |
 | [architecture/CONTRACTS.md](architecture/CONTRACTS.md) | 当前接口与状态边界 | 保留：架构依据／历史选型 | 技术总览 |
 | [architecture/CURRENT.md](architecture/CURRENT.md) | 当前架构索引 | 保留：架构依据／历史选型 | 技术总览 |
 | [architecture/FRAMEWORK_RESEARCH.md](architecture/FRAMEWORK_RESEARCH.md) | Agent 与评测框架调研（核对于 2026-11-04） | 保留：架构依据／历史选型 | 技术总览 |
@@ -126,6 +120,7 @@
 
 | 移除的历史文件 | 保留内容及原因 |
 |---|---|
+| `docs/agent-operations/` 下六份历史交接、任务板、决策、测试及 worktree 快照 | 当时的分支和操作指令已过时；现行功能和验证由[代码地图](REPO_MAP.md)与[验收总表](testing/TESTING_AND_ACCEPTANCE.md)承接，截图中凭据的待核查事项保留在[服务器输入清单](deployment/SERVER_INVENTORY.md)。原始记录可通过 `git show ab8a2e1:docs/agent-operations/<文件名>` 查阅。 |
 | `docs/workspace-materials/reports/cleanup-scan.md`、`technical-draft-review.md`、`w02-browser.md` | 旧清理准备与草稿审阅由本索引、[技术草稿](competition/TECHNICAL_DRAFT.md)承接；行程浏览器验收场景归入[验收总表](testing/TESTING_AND_ACCEPTANCE.md)。原报告可用 `git show 1a5f4c5:docs/workspace-materials/reports/<文件名>` 查阅，旧环境状态不能代表现在。 |
 | `docs/development/PROGRESS.md`、`docs/development/WORKTREE_AUDIT_2026-11-05.md` | 逐轮过程和旧分支状态已过时；现行功能与验证见[代码地图](REPO_MAP.md)、[验收总表](testing/TESTING_AND_ACCEPTANCE.md)，迁移限制见 [W02 集成记录](development/W02_INTEGRATION.md)。原始逐路径证据及进度可分别通过 `git show 8a184a6:docs/development/WORKTREE_AUDIT_2026-11-05.md` 和 `git show 8a184a6:docs/development/PROGRESS.md` 查阅；旧审计不能证明后续全部差异已合并。 |
 | `docs/design/avatar-center-layout-2026-10-03.md`、`frontend-design-review-2026-10-03.md`、`scenic-surfaces-2026-10-03.md` | 游客端中央数字人、连续舞台、响应式交互与视觉方向归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)；阶段性样式和截图不再当作当前需求。 |

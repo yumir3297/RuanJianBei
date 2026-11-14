@@ -230,7 +230,7 @@ Task 4–5与纯业务功能可以分批推进，但不默认多人同时修改m
 
 ### Task 8：真实部署切换、回滚与交接
 
-**Files:** Create docs/deployment/ROLLOUT_RUNBOOK.md、RELEASE_MATRIX.md；真实部署后更新 docs/agent-operations/HANDOFF.md。
+**Files:** Create docs/deployment/ROLLOUT_RUNBOOK.md、RELEASE_MATRIX.md；真实部署后更新部署验收记录。
 
 **Interfaces:** 输出两个独立current/previous release、后端镜像/迁移记录、可执行回滚操作和实际验收边界。
 
