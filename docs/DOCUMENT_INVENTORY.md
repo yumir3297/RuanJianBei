@@ -108,16 +108,13 @@
 | [workspace-materials/output/offline-companion/desktop.png](workspace-materials/output/offline-companion/desktop.png) | 非 Markdown 资源（png） | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
 | [workspace-materials/output/offline-companion/landscape.png](workspace-materials/output/offline-companion/landscape.png) | 非 Markdown 资源（png） | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
 | [workspace-materials/output/offline-companion/phone.png](workspace-materials/output/offline-companion/phone.png) | 非 Markdown 资源（png） | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
-| [workspace-materials/reports/cleanup-scan.md](workspace-materials/reports/cleanup-scan.md) | Documentation & Legacy Cleanup：只读扫描 | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
 | [workspace-materials/reports/code-audit.md](workspace-materials/reports/code-audit.md) | 源码只读审计：AI、RAG、视觉、语音、数字人与数据 | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
 | [workspace-materials/reports/competition-official.md](workspace-materials/reports/competition-official.md) | 传智杯 AI WEB 赛道规则核对 | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
 | [workspace-materials/reports/flagship-gap.md](workspace-materials/reports/flagship-gap.md) | 行程旗舰链路只读审计 | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
 | [workspace-materials/reports/framework-research.md](workspace-materials/reports/framework-research.md) | 框架调研（2026-10-30） | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
 | [workspace-materials/reports/real-eval-readiness.md](workspace-materials/reports/real-eval-readiness.md) | 真实供应商评测准备（2026-10-30） | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
-| [workspace-materials/reports/technical-draft-review.md](workspace-materials/reports/technical-draft-review.md) | 技术文档工作草稿：代码一致性审阅 | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
 | [workspace-materials/reports/vision-confirm-ui.md](workspace-materials/reports/vision-confirm-ui.md) | 视觉识景：游客确认交互调查 | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
 | [workspace-materials/reports/vision-evidence-gap.md](workspace-materials/reports/vision-evidence-gap.md) | 视觉识景→RAG→答案证据关联缺口审计 | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
-| [workspace-materials/reports/w02-browser.md](workspace-materials/reports/w02-browser.md) | W02本地浏览器验收记录：浏览器环境未开放 | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
 | [workspace-materials/reports/w02-merge-analysis.md](workspace-materials/reports/w02-merge-analysis.md) | W02安全增量合入分析 | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
 | [workspace-materials/reports/w02-postgres.md](workspace-materials/reports/w02-postgres.md) | W02 PostgreSQL 隔离验证 | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
 | [workspace-materials/reports/w02-runtime-review.md](workspace-materials/reports/w02-runtime-review.md) | W02实际运行链独立安全审阅 | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
@@ -129,6 +126,7 @@
 
 | 移除的历史文件 | 保留内容及原因 |
 |---|---|
+| `docs/workspace-materials/reports/cleanup-scan.md`、`technical-draft-review.md`、`w02-browser.md` | 旧清理准备与草稿审阅由本索引、[技术草稿](competition/TECHNICAL_DRAFT.md)承接；行程浏览器验收场景归入[验收总表](testing/TESTING_AND_ACCEPTANCE.md)。原报告可用 `git show 1a5f4c5:docs/workspace-materials/reports/<文件名>` 查阅，旧环境状态不能代表现在。 |
 | `docs/development/PROGRESS.md`、`docs/development/WORKTREE_AUDIT_2026-11-05.md` | 逐轮过程和旧分支状态已过时；现行功能与验证见[代码地图](REPO_MAP.md)、[验收总表](testing/TESTING_AND_ACCEPTANCE.md)，迁移限制见 [W02 集成记录](development/W02_INTEGRATION.md)。原始逐路径证据及进度可分别通过 `git show 8a184a6:docs/development/WORKTREE_AUDIT_2026-11-05.md` 和 `git show 8a184a6:docs/development/PROGRESS.md` 查阅；旧审计不能证明后续全部差异已合并。 |
 | `docs/design/avatar-center-layout-2026-10-03.md`、`frontend-design-review-2026-10-03.md`、`scenic-surfaces-2026-10-03.md` | 游客端中央数字人、连续舞台、响应式交互与视觉方向归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)；阶段性样式和截图不再当作当前需求。 |
 | `docs/workspace-materials/output/admin-design/design.md`、`design-review.md`、`implementation-plan.md` | 管理端方案 A、真实指标、失败保留输入和视觉约束归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)；原型图片作为历史素材保留。 |
