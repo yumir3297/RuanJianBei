@@ -1,7 +1,6 @@
 # W02 工具执行与任务恢复：调研与接入依据
 
-日期：2026-10-29。状态：完成资料与局部源码阅读，未运行外部项目，未实现 W02。
-用户已选择：现有数据库 + 小型执行器。具体业务设计见 [W02 设计](../superpowers/specs/2026-10-29-w02-durable-execution-design.md)，仍待审阅。
+日期：2026-10-29。调研时仅完成资料与局部源码阅读，未运行外部项目，W02 当时尚未实现。用户选择现有数据库 + 小型执行器；后续行程提案的实际实现与限制见 [W02 集成记录](../development/W02_INTEGRATION.md) 和[验收总表](../testing/TESTING_AND_ACCEPTANCE.md)，[原设计](../superpowers/specs/2026-10-29-w02-durable-execution-design.md)保留历史决策。
 
 ## 1. 调研结论
 
