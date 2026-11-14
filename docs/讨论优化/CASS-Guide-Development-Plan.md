@@ -6,7 +6,7 @@
 > 目标仓库：`yumir3297/RuanJianBei`  
 > 讨论分支：`feat/location-guide-opt`  
 > 性质：比赛场景创新提案，不是实际已部署能力或真实安全保障承诺。  
-> 关联旧安全草案在当前仓库中不可用；本文件中的远期设想不能视为已实现。
+> 关联旧安全草案的远期设想已整理为[安全守护与客流设计来源](../research/SAFETY_GUARD_FUTURE_DESIGN.md)，不能视为已实现。
 
 ## 0. 一页摘要与边界
 
@@ -248,13 +248,13 @@ frontend/src/components/GuideSafetyNotice.vue
 
 ## 10. 文档治理与下一步
 
-本文件为**新方案基准**，旧安全草案在当前仓库中不可用；相关远期安全/客流设想以本文件为历史线索。本轮仅修订本设计稿的定位、信息流与相关首版边界，保留旧草案及业务源代码。
+本文件为 CASS 的设计基线；旧安全/客流草案的主要方向及未决事项见[远期设计整理](../research/SAFETY_GUARD_FUTURE_DESIGN.md)，原稿留在 Trae 来源工作区。本文件保留首版边界与远期设想，具体实现以代码及验收记录为准。
 
 架构升级完成后，执行文档审计：按“现行 / 待实施 / 历史草案 / 过时待归档”分类；建立单一设计索引；检查与最新实现的偏差；逐份决定保留、合并、归档或删除。所有破坏性操作先给出清单和影响说明，再执行。
 
 ## 11. 参考与技术依据
 
-- 旧安全草案当前不在仓库中，不能作为可访问的来源。
+- [安全守护与客流远期设计整理](../research/SAFETY_GUARD_FUTURE_DESIGN.md)：来源草案的意图与待确认边界。
 - 本仓库现有 `useGeolocation.js`、`MapView.vue` 与离线应急说明（实施前重新审查最新分支）。
 - W3C Geolocation API / MDN Geolocation：浏览器权限、Secure Context 与位置 API 限制，https://developer.mozilla.org/en-US/docs/Web/API/Geolocation_API 。
 - H3 官方文档（未来可选空间网格技术；本期非必需），https://h3geo.org/docs/ 。
