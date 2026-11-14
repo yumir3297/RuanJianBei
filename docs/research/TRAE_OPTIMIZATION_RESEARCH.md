@@ -2,6 +2,10 @@
 
 Trae 主仓库 `docs/optimization/` 留有五份未跟踪的研究方案，分别对照 RAGFlow、Ragas、Pipecat、TalkingHead 和 FastEmbed/ONNX。下文保留其目标、参考和验证方法；来源文档的代码基线与版本为历史快照，本次未重新验证外部源码或将方案整体接入主线。原始文件仍在 Trae 来源工作区。任何预期收益、阈值或赛题权重均不能当成已测成绩或已核实官方要求。
 
+2026-11-15 核对：这五份原文件与仓库外 `source-snapshots/trae-main/untracked.tar` 中对应文件的 SHA-256 一致。该归档属于本机工作材料，不随 GitHub 克隆提供；上述整理和外部参考已纳入主线，原工作区未修改。
+
+来源文件依次为 `01-ragflow-检索质量与引用溯源优化方案.md`、`02-ragas-评测指标体系落地方案.md`、`03-pipecat-流式语音管线与打断优化方案.md`、`04-talkinghead-数字人口型与自然度优化方案.md` 和 `05-fastembed-本地推理性能优化方案.md`，均位于来源仓库 `docs/optimization/`。
+
 | 方向与来源 | 可供后续研究的想法 | 需要核验的边界 |
 |---|---|---|
 | [RAGFlow v0.27.2](https://github.com/infiniflow/ragflow/tree/v0.27.2) 检索与引用 | 比较向量与词项召回、候选重排、分块定位和句子到证据的关联 | 不直接混合不同分数尺度；引用标记或相似度不能证明事实受证据支持；结合现有发布 revision 与可见性重新审查 |

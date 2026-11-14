@@ -171,7 +171,7 @@
 
 Trae 来源工作树 `feature/offline-companion` 的 `docs/implementation/OFFLINE_AUDIT.md` 和 `docs/implementation/OFFLINE_ACCEPTANCE.md` 未纳入主线；其中用户的全屏游戏要求、交互方向和当前差距已归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)，历史验证与限制归入[离线记录](integration/OFFLINE_COMPANION.md)和[验收总表](testing/TESTING_AND_ACCEPTANCE.md)。来源含未提交改动，原文件留在来源工作区，历史测试不代表现行版本。
 
-Trae `feat/location-guide-opt` 的未提交 `docs/design/location-guide-optimization-2026-11-02.md` 的定位触发、模拟降级和播放器协作方向归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)；原文留在来源工作区，历史参数和测试不代表当前主线或现场验收。
+Trae `feat/location-guide-opt` 的未提交 `docs/design/location-guide-optimization-2026-11-02.md` 的定位触发、模拟降级和播放器协作方向归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)；2026-11-15 核对其与仓库外 `source-snapshots/location/untracked.tar` 中的原文 SHA-256 一致。原文留在来源工作区，历史参数和测试不代表当前主线或现场验收。
 
 连续导览来源工作区中未进入主线的 `docs/implementation/GUIDEWEAVE_PILOT.md`、`docs/superpowers/plans/2026-11-09-tour-context-rag-pilot.md`，以及 `tour-narration-policy` 的方法库、讲解策略、分层交付和来源审查等文档，其产品意图、研究参考与试验限制归入[连续讲解设计](research/CONTINUOUS_NARRATION_DESIGN.md)。原始文件和部分未提交实验数据留在来源工作区/本地快照，不因文档归并而视为代码或全部实验已进入主线。
 
