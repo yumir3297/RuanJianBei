@@ -178,6 +178,9 @@ Trae 来源工作树 `feature/offline-companion` 的 `docs/implementation/OFFLIN
 | [backend/AGENTS.md](../backend/AGENTS.md) | 保留：模块说明、依赖或许可 |
 | [backend/requirements.txt](../backend/requirements.txt) | 保留：模块说明、依赖或许可 |
 | [blender/README.md](../blender/README.md) | 保留：模块说明、依赖或许可 |
+| [灵山胜境景点结构化数据集](../data/raw/灵山胜境%20景点结构化数据集.docx) | 保留：景区和景点结构化原始资料，含两张表；来源、许可与动态信息需核验，不作为已审核事实 |
+| [灵山胜境历史文化与游览指南](../data/raw/灵山胜境：历史、文化、景点特色与个性化游览指南.docx) | 保留：景区背景、景点、路线与游览信息原始资料；作者、许可及内容时效需核验，不作为已审核事实 |
+| [景点景区旅游数据行为分析数据](../data/raw/景点景区旅游数据行为分析数据.xlsx) | 保留：原始数据资源；本次未逐表审阅，不据文件名推断景区归属、授权或实时性 |
 | [eval/HUMAN_REVIEW.md](../eval/HUMAN_REVIEW.md) | 保留：模块说明、依赖或许可 |
 | [eval/README.md](../eval/README.md) | 保留：模块说明、依赖或许可 |
 | [evaluation/README.md](../evaluation/README.md) | 保留：旧评测入口；历史数字未独立复现，当前评测见 eval |
