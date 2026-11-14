@@ -28,6 +28,12 @@ class KnowledgeChunkRepository:
     async def get(self, chunk_id: str) -> KnowledgeChunk | None:
         return await self.session.get(KnowledgeChunk, chunk_id)
 
+    async def replace_all(self, chunks: list[KnowledgeChunk]) -> int:
+        await self.session.execute(delete(KnowledgeChunk))
+        self.session.add_all(chunks)
+        await self.session.flush()
+        return len(chunks)
+
     async def replace_unpublished(self, chunks: list[KnowledgeChunk]) -> int:
         if any(chunk.revision_id is not None for chunk in chunks):
             raise ValueError("仅可刷新尚未发布的知识分块")

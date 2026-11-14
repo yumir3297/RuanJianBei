@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.chat import build_pipeline
 from app.core.config import Settings
 from app.core.deps import get_app_settings, get_db_session
+from app.repositories.knowledge_generation import KnowledgeGenerationRepository
 from app.schemas.chat import ChatRequest
 from app.services.knowledge.visibility import VisibilityService
 
@@ -141,7 +142,10 @@ async def create_narration(
     voice = payload.tts_voice or settings.tts_voice
     # Unit-level callers may pass a lightweight placeholder session; production
     # requests always use AsyncSession and therefore always namespace by DB epoch.
-    epoch = await VisibilityService(session).read_epoch() if hasattr(session, "execute") else 1
+    if hasattr(session, "execute"):
+        epoch = await VisibilityService(session).read_epoch()
+    else:
+        epoch = (await KnowledgeGenerationRepository(session).get()).generation
     key = f"e{epoch}:" + _cache_key(attraction, voice, settings.llm_model or "stub")
 
     cached = _NARRATION_CACHE.get(key)

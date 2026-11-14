@@ -12,6 +12,10 @@ from app.models.knowledge import KnowledgeEntry
 from app.models.quick_topic import QuickTopic
 from app.models.visitor_feedback import VisitorFeedback
 from app.schemas.knowledge import KnowledgeCreate
+from app.repositories.knowledge_chunk import KnowledgeChunkRepository
+from app.repositories.knowledge_generation import KnowledgeGenerationRepository
+from app.repositories.qa_cache import QACacheRepository
+from app.services.data_import.chunker import KnowledgeChunker
 
 
 DEFAULT_AVATAR_CONFIGS = (
@@ -167,11 +171,23 @@ async def bootstrap_sample_data() -> None:
                 aliases=["坛城", "五印坛城"],
             ),
         ]
-        from app.services.knowledge.workspace import KnowledgeWorkspaceService
-
-        workspace = KnowledgeWorkspaceService(session)
         for item in samples:
-            await workspace.save_draft(None, item)
+            session.add(
+                KnowledgeEntry(
+                    title=item.title,
+                    category=item.category,
+                    content=item.content,
+                    source=item.source,
+                    aliases="|".join(item.aliases),
+                    metadata_json=item.metadata_json,
+                )
+            )
+        await session.flush()
+        entries = list((await session.execute(select(KnowledgeEntry))).scalars().all())
+        await KnowledgeChunkRepository(session).replace_all(KnowledgeChunker().build_chunks(entries))
+        await QACacheRepository(session).invalidate(commit=False)
+        await KnowledgeGenerationRepository(session).bump()
+        await session.commit()
 
 
 async def bootstrap_experience_demo_feedback() -> None:

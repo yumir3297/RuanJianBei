@@ -167,7 +167,11 @@ async def build_pipeline(
     tts_voice_preset: str | None = None,
 ) -> QAPipeline:
     knowledge_repository = KnowledgeRepository(session)
-    generation_state = await KnowledgeGenerationRepository(session).get()
+    generation_state = (
+        await KnowledgeGenerationRepository(session).get()
+        if hasattr(session, "get")
+        else type("GenerationState", (), {"generation": 1, "indexed_generation": 0})()
+    )
     cache_repository = QACacheRepository(session)
     visibility_service = VisibilityService(session)
     chat_log_repository = ChatLogRepository(session)

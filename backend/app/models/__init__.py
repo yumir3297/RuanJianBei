@@ -4,6 +4,7 @@ from app.models.chat_log import ChatLog
 from app.models.faq import FAQEntryRecord
 from app.models.knowledge_chunk import KnowledgeChunk
 from app.models.knowledge import KnowledgeEntry
+from app.models.knowledge_generation import KnowledgeGeneration
 from app.models.knowledge_workspace import (
     ImportConflict,
     ImportBatch,
@@ -46,6 +47,7 @@ __all__ = [
     "FAQEntryRecord",
     "KnowledgeChunk",
     "KnowledgeEntry",
+    "KnowledgeGeneration",
     "KnowledgeRevision",
     "KnowledgeState",
     "SourceDocument",

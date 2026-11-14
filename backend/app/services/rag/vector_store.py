@@ -84,6 +84,11 @@ class ChromaVectorStore:
             return active
         return self.base_collection_name
 
+    @collection_name.setter
+    def collection_name(self, value: str) -> None:
+        self.base_collection_name = value
+        self.pointer_path = self.persist_dir / f"{value}.active"
+
     def write_guard(self):
         from app.services.rag.index_write_lock import index_lock_path, index_write_lock
         return index_write_lock(index_lock_path(self.persist_dir, self.base_collection_name))
@@ -110,7 +115,11 @@ class ChromaVectorStore:
             )
         old_name = self.collection_name
         staging_name = f"{self.base_collection_name[:38]}_stage_{os.urandom(8).hex()}"
-        collection = self._client.create_collection(name=staging_name)
+        create_collection = getattr(self._client, "create_collection", None)
+        if create_collection is not None:
+            collection = create_collection(name=staging_name)
+        else:
+            collection = self._client.get_or_create_collection(name=staging_name)
         temp_pointer = self.pointer_path.with_name(f"{self.pointer_path.name}.{os.urandom(6).hex()}.tmp")
         try:
             if records:

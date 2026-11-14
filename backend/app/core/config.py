@@ -135,6 +135,8 @@ class Settings(BaseSettings):
     volcengine_asr_language: str = Field(default="zh-CN")
     volcengine_asr_packet_interval_seconds: float = Field(default=0.1, ge=0.0, le=1.0)
     qweather_api_key: str = Field(default="")
+    amap_web_service_key: str = Field(default="")
+    """高德 Web 服务 Key，仅供服务端路线规划接口使用。"""
     """和风天气 API KEY，仅在服务端使用，前端不接触。留空时接口安全降级。"""
     qweather_api_host: str = Field(default="devapi.qweather.com")
     """和风天气 API Host（控制台分配的专属域名，如 abcxyz.qweatherapi.com）。"""
