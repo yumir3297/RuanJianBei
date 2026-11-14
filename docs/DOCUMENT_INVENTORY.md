@@ -47,7 +47,6 @@
 | [integration/OFFLINE_COMPANION.md](integration/OFFLINE_COMPANION.md) | 离线陪游双端集成记录 | 保留：集成记录、操作手册及验证证据 | 验收总表 |
 | [integration/RESEARCH.md](integration/RESEARCH.md) | 集成调研记录 | 保留：集成记录、操作手册及验证证据 | 验收总表 |
 | [integration/TOUR_CONTEXT.md](integration/TOUR_CONTEXT.md) | 连续导览：已保存行程上下文 | 保留：集成记录、操作手册及验证证据 | 验收总表 |
-| [integration/WORKTREE_STATUS.md](integration/WORKTREE_STATUS.md) | 本地 worktree 与分支状态 | 保留：集成记录、操作手册及验证证据 | 验收总表 |
 | [knowledge-workspace-operations.md](knowledge-workspace-operations.md) | Knowledge workspace operations | 保留：当前入口、规范或映射；以内容日期为准 | 文档目录 |
 | [plans/2026-10-27-feature-roadmap.md](plans/2026-10-27-feature-roadmap.md) | 双端 AI 工作台：功能链路与分阶段路线图 | 保留：历史路线图和待办，非当前完成结论 | 代码地图 |
 | [plans/2026-10-28-ai-workbench-backlog.md](plans/2026-10-28-ai-workbench-backlog.md) | 双端 AI 工作台待开发清单 | 保留：历史路线图和待办，非当前完成结论 | 代码地图 |
@@ -102,6 +101,7 @@
 
 | 移除的历史文件 | 保留内容及原因 |
 |---|---|
+| `docs/integration/WORKTREE_STATUS.md` | 合并前的工作树路径、数量和处理顺序已过期；功能与来源入口见[代码地图](REPO_MAP.md)、[合并审示](integration/MERGE_READINESS.md)及各功能记录，当前分支以 Git 查询为准。原始快照可通过 `git show 9769460:docs/integration/WORKTREE_STATUS.md` 查阅。 |
 | `DESIGN.md` | 2026-10-03 的游客端设计原则、可读性目标、模块化方向和方法来源已归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)；原文可通过 `git show b863be1:DESIGN.md` 查阅。 |
 | `docs/deployment/split-v2/ASSESSMENT.md`、`IMPLEMENTATION_PLAN.md`、`REVIEW.md` | 双端及部署决策保留在[拆分设计](deployment/split-v2/DESIGN.md)、[开发边界](development/FRONTEND_BOUNDARIES.md)和[部署验收](deployment/FINAL_ACCEPTANCE.md)；设计参考链接已迁入设计稿。原阶段步骤、环境和测试证据可通过 `git show 61644ff:docs/deployment/split-v2/<文件名>` 查阅。 |
 | `docs/superpowers/plans/2026-10-27-knowledge-workspace.md`、`2026-11-10-guideloop-pilot.md` | 知识草稿和发布约束由[工作区设计](superpowers/specs/2026-10-27-knowledge-workspace-design.md)保留；GuideLoop 评测及未完成的人审计时归入[试点记录](integration/GUIDELOOP_PILOT.md)与[记忆研究](reports/2026-11-10-guide-memory-research.md)。旧步骤和阶段数据可通过 `git show c4fb1de:docs/superpowers/plans/<文件名>` 查阅。 |

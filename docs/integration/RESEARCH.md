@@ -11,7 +11,7 @@
 ## 2026-11-12：共享状态和离线缓存
 
 - [Pinia State 官方文档](https://pinia.vuejs.org/core-concepts/state.html)，2026-11-12 访问。状态在 `state()` 中定义，初始字段应显式声明，option store 的 `$reset()` 从初始状态重建。对本项目：合并时先列出状态归属和生命周期，避免运行中随意增加状态或把音频引擎对象当作跨页面持久数据。统一共享视图仍需要通过受控 action、请求版本和后端权威规则来设计，这些是本项目方案，不是 Pinia 文档本身的规定。
-- [MDN：Using Service Workers](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers)，2026-11-12 访问。Service Worker 要求安全上下文、同源路径及明确作用域；已有页面默认不会立刻受新注册 worker 控制，更新还有等待和激活阶段。对本项目：离线陪游纳入游客端构建时，验证 localhost 环境、作用域、首次安装后的控制与缓存更新，不能仅以注册成功证明断网可用。具体代码尚未接入。
+- [MDN：Using Service Workers](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers)，2026-11-12 访问。Service Worker 要求安全上下文、同源路径及明确作用域；已有页面默认不会立刻受新注册 worker 控制，更新还有等待和激活阶段。对本项目：离线陪游纳入游客端构建时，验证 localhost 环境、作用域、首次安装后的控制与缓存更新，不能仅以注册成功证明断网可用。当时尚未接入；后续实现和模拟升级边界见[离线记录](OFFLINE_COMPANION.md)。
 
 后续按功能继续补充，优先官方文档，并记录适用版本、取舍和实际结果。
 
@@ -48,6 +48,6 @@
 
 - [MDN：AudioScheduledSourceNode ended 事件](https://developer.mozilla.org/en-US/docs/Web/API/AudioScheduledSourceNode/ended_event)，2026-11-12 访问：音频自然结束或调用 stop 后都可能触发 ended。当前播放器结合自身 stop generation 区分被停止的旧会话，只有当前会话自然结束才报告完成；真实设备和媒体异常仍需验证。
 - [MDN：SpeechSynthesisUtterance end 事件](https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesisUtterance/end_event)，2026-11-12 访问：end 表示该 utterance 已结束；语音失败还有不同事件。当前浏览器朗读是可能被截短的降级方式，不能当作完整讲解已听。
-- [PyTorch：Saving and Loading Models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html)，2026-11-12 访问：恢复训练通常需要保存模型和优化器等训练状态。当前 GuideMatch 训练脚本仅在训练阶段结束写模型权重，不具备中断续训；数据、配置及早停/调度和随机状态也需结合实际训练流程设计并验证，不能只加载推理权重就声称完整续训。
+- [PyTorch：Saving and Loading Models](https://docs.pytorch.org/tutorials/beginner/saving_loading_models.html)，2026-11-12 访问：恢复训练通常需要保存模型和优化器等训练状态。当时的 GuideMatch 脚本不具备中断续训；后续增加完整 epoch 检查点并用 CPU 小模型验证，CUDA 和真实训练仍待验证，见[训练记录](GUIDEMATCH_TRAINING.md)。不能只加载推理权重就声称完整续训。
 - [Alembic：Working with Branches](https://alembic.sqlalchemy.org/en/latest/branches.html)，2026-11-12 访问：多个迁移 head 需要明确合并节点和升级路径。GuideLoop 迁移与现有集成历史分支不同，后续须保留真实历史并验证空库与既有库升级，不能只改文件头使检查通过。
 - [FastAPI：Dependencies with yield and StreamingResponse](https://fastapi.tiangolo.com/advanced/advanced-dependencies/)，2026-11-12 访问：官方文档说明 0.118.0 以前 `yield` 依赖会在发送流式响应前运行退出代码。本项目固定 FastAPI 0.116.1；本地追踪确认数据库依赖先关闭、流中操作又重新打开会话。现有聊天流在生成器 finally 显式关闭会话并释放容量，测试覆盖完整和提前关闭；仍需真实服务和部署回归。
