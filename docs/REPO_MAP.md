@@ -32,6 +32,8 @@
 `HomePage.vue`、`LandingPage.vue` 等文件的存在不代表当前有对应路由。
 当前数字人由 ThreeAvatar 使用 Three.js/VRM 实现；技术栈以当前组件与依赖为准。
 
+模型预设和资源许可边界见[数字人展示与驱动](TECHNICAL_ARCHITECTURE_AND_INNOVATION.md#数字人展示与驱动边界)及[动作资源说明](../frontend/public/motions/CREDITS.md)。仓库已跟踪的 VRM 元数据标记限制再分发和修改，是否存在额外授权尚待核对；候选动作名称不代表已自动接入。
+
 ## 游客功能
 
 | 功能 | 前端入口及状态 | 后端入口与业务 | 验证位置 |

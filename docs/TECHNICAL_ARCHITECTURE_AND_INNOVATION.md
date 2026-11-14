@@ -108,6 +108,8 @@ flowchart LR
 
 游客舞台使用 Three.js/VRM 数字人并与问答、语音播放状态协同；管理端提供形象预览与配置入口。当前已提交架构记录将口型描述为基于文本拼音的表现，不把它称为音频驱动模型或经过实测的实时唇形同步。新驱动能力应待对应代码合入、资源来源与实际设备验证后再更新此处；具体代码位置见[功能地图](REPO_MAP.md)。
 
+主线跟踪了 `frontend/public/models/` 的四个 VRM 文件及 `frontend/public/motions/` 的动作资源。2026-11-15 读取四个 VRM 内嵌元数据，均标记 `avatarPermission: onlyAuthor`、`commercialUsage: personalNonProfit`、`modification: prohibited` 和 `allowRedistribution: false`；仓库中的[动作与模型说明](../frontend/public/motions/CREDITS.md)也提示不得再分发模型或修改副本。模型目前已存在于推送过的 Git 主线，元数据本身不能判断是否另有授权；对外展示、分享或继续分发前须由资源负责人核对实际权利与许可，未核实前不能将其写成可自由使用的素材。动作资源有各自来源和许可，不能套用模型条款。
+
 ## 技术选型与功能约束
 
 采用现有 FAQ、缓存、检索、流式协议与受控任务执行器的增量方案；曾比较 LangGraph 等框架，但尚无同一真实任务链的对照证明其更优，不将选型说成性能优势。详见[框架研究](architecture/FRAMEWORK_RESEARCH.md)。
