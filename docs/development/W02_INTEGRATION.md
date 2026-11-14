@@ -46,7 +46,7 @@
 
 自动化覆盖原子回滚、租约 fence、旧版本失效、跨游览迟到响应、未知外部调用需确认重试。测试使用 fake 模型，不证明真实供应商或完整浏览器流程可用。完整的 PostgreSQL 多进程故障恢复、手机和弱网仍待验收。
 
-独立运行审阅发现并修复两个问题：调用外部服务前 worker 崩溃后重试预算耗尽，以及 SQLite CLI worker 运行结束后不退出。提交 `9e42e87` 保留中断记录并只对确认未开始外部调用的中断免计预算；CLI 退出时释放数据库连接。隔离 SQLite、fake provider 与真实子进程回归通过；后端全套 397 passed、1 skipped。此结果不代替 PostgreSQL 并发或真实供应商测试，完整复现记录见工作区 `reports/w02-runtime-review.md`。
+独立运行审阅发现并修复两个问题：调用外部服务前 worker 崩溃后重试预算耗尽，以及 SQLite CLI worker 运行结束后不退出。提交 `9e42e87` 保留中断记录并只对确认未开始外部调用的中断免计预算；CLI 退出时释放数据库连接。隔离 SQLite、fake provider 与真实子进程回归通过；后端全套 397 passed、1 skipped。此结果不代替 PostgreSQL 并发或真实供应商测试；原始复现可通过 `git show 111ce18:docs/workspace-materials/reports/w02-runtime-review.md` 查阅。
 
 2026-10-31 使用仅监听临时 Unix socket 的隔离 PostgreSQL 17，从空数据库迁移至 `f1b4c9d76e20`。真实外键约束暴露了创建任务时子记录先于父记录写入的问题；现显式先 flush 任务，仍处于同一事务内。新增 `backend/app/tests/test_tool_execution_postgres.py`：两个独立数据库会话同时领取一个任务，确认仅一个成功；模拟租约过期并维护后确认 fence 增长且旧执行结果被拒绝。该测试 1 passed，未调用真实模型，不等同于多进程压力或实际进程崩溃测试。运行时需自行建立名称以 `guide_test_` 开头、已完成迁移的专用临时数据库，并通过 `GUIDE_TEST_POSTGRES_URL` 指定 `/private/tmp/` 下的 Unix socket；默认跳过，不应指向业务数据库。测试后的临时数据库服务已停止。
 
