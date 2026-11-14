@@ -7,8 +7,12 @@
 | 范围 | 当前本地证据 | 未覆盖边界 |
 |---|---|---|
 | 双端入口与构建 | 游客/管理独立构建、边界和 build isolation 检查 | 真实 HTTPS origin、TLS、NGINX 和 CDN |
-| 知识管理 | 草稿隔离、稳定景点编号、发布 revision、游客目录和来源核对 | 真实资料、生产数据库和完整管理 UI 逐页验收 |
+| 管理端界面 | 隔离服务与本机 Chrome 检查七个路由、三种视口、导航与列表失败提示 | 实际运营数据、全部管理流程、目标手机与生产 origin |
+| 知识管理 | 草稿隔离、发布 revision、游客目录和来源核对；景点编号冲突有隔离数据库测试 | 真实资料、历史重复编号、其他写入路径及生产数据库 |
+| 文件解析与 OCR | 合成 DOCX 上传及草稿隔离、本机合成中文扫描 PDF 的 OCR 浏览器流程；XLSX 基础解析自动测试 | 真实文件、复杂版面、中文识别准确率、多进程及生产 OCR 镜像 |
 | 游客问答 | 已发布资料普通问答、来源显示、流式取消和安全暂停 | 真实模型质量、真实供应商和多设备音频 |
+| 视觉与语音输入 | 识景线索、已发布目录确认、转写和取消/幂等有代码与隔离测试 | 获授权真实照片集、视觉准确率、真实麦克风/供应商及手机权限 |
+| 定位与天气 | 定位代次隔离、模拟浏览器位置、天气有效期和模拟预警测试 | 真实 GPS 精度、现场预警源与天气供应商可靠性 |
 | CASS | 模拟预警、确认、显式恢复、迟到响应隔离 | 真实预警源、GPS、接警和现场求助 |
 | 行程提案 | 独立 worker、预览、确认保存、幂等重放和来源标识 | 真实模型、目标数据库、多实例竞争和真机弱网 |
 | 离线陪游 | 游客构建、缓存、断网、地图、求助、恢复提示 16/16 | 真机蜂窝网络、生产发布升级和代理 |
@@ -60,6 +64,8 @@ PLAYWRIGHT_EXECUTABLE_PATH='/Applications/Google Chrome.app/Contents/MacOS/Googl
 - [GuideMatch 训练验收](../integration/GUIDEMATCH_TRAINING.md)
 - [GuideLoop 受控接入](../integration/GUIDELOOP_PILOT.md)
 - [管理端工作台验证](../integration/ADMIN_WORKBENCH.md)
+- [知识格式、OCR 与预览](../integration/KNOWLEDGE_UNDERSTANDING.md)
+- [视觉资料及动态信息抽查](../competition/SOURCE_REVIEW.md)
 
 ## 2026-11-14 文档整理检查
 
