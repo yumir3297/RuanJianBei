@@ -1,5 +1,7 @@
 # 技术决策
 
+> 本页保留按日期的技术决策与当时测试结果；后续集成以当前代码、[技术总览](../TECHNICAL_ARCHITECTURE_AND_INNOVATION.md)及 [验收总表](../testing/TESTING_AND_ACCEPTANCE.md) 为准。
+
 ## 2026-11-06：把有证据回答的生成与完成组装移出 Pipeline
 
 问题：`QAPipeline._stream_chat()` 在 RAG/FAQ 证据选定后仍内联构造 `StreamAnswerGenerationFactory`、`StreamAnswerCompletionFactory` 和 `StreamAnswerRun`，并绑定 cache key、epoch、持久化、followups 与终态事件。这个阶段已不再做路由，但仍把请求级生成组合留在主业务流程中。

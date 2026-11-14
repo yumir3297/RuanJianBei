@@ -1,5 +1,7 @@
 # 当前接口与状态边界
 
+> 本页汇集截至 2026-11-06 左右的接口与状态契约及历史测试记录；以当前源码和 [代码地图](../REPO_MAP.md) 核实变化。文内“最新”测试数字仅对应当时，当前验收见 [统一验收总表](../testing/TESTING_AND_ACCEPTANCE.md)。
+
 单次生成由 `StreamGenerationRun` 独立持有 `StreamTurn`、事件 drain 与最终 outcome。它必须在所有流事件耗尽后检查 LLM/epoch 结果；有错误事件时不得定稿/进入缓存或持久化；正常完成时须使用 `finalize_stream_generation()` 将 canonical answer 和 terminal policy 一起返回，保证降级 FAQ 回到权威 FAQ 文本、RAG 中断保留 partial answer 并标 incomplete，降级结果不得进入共享缓存。`QAPipeline` 只在 outcome 正常完成后进入缓存/持久化和终态 SSE 协调。
 
 `StreamCompletionEffects` 只绑定本轮 answer 的缓存写入、聊天持久化、降级盲点记录、followups 和 done 事件元数据；是否写缓存仍由 terminal policy 决定。`StreamCompletionCoordinator` 独占这些 effects 的调用顺序与 epoch fence：音频和可选 FAQ 文本完成后才记录 fallback、缓存和持久化，持久化后再次检查 epoch，再发 final text/followups/done。effects 对象按请求创建，不得放到共享 Pipeline 状态中。

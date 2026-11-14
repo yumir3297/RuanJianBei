@@ -1,3 +1,5 @@
+> 本页为按日期追加的历史开发日志，开头和各段的“当前”均指该段记录时点；集成后的功能与验收范围见 [代码地图](../REPO_MAP.md) 和 [统一验收总表](../testing/TESTING_AND_ACCEPTANCE.md)。
+
 2026-11-05：复验 worktree 审计中的目录递归差异计数：主 checkout `frontend/tests/` 为 15 相同/1 不同/22 集成额外；W02 itinerary 为 1 相同/3 不同/3 集成额外。发现旧表漏写 W02 集成目录的 `__init__.py` 包标记，已修正并记录；主 checkout fixtures/research/selling-points、W02/W02-V01 tool_execution 目录计数复核与分类证据一致。仅改审计文档，没有碰源 worktree、快照或 `sources/`。完整细节见 [WORKTREE_AUDIT_2026-11-05.md](WORKTREE_AUDIT_2026-11-05.md)。
 
 2026-11-05：从集成 `ca577e8` 将 FAQ-before-cache 资格和读取顺序抽到 `answer_knowledge_path_resolver.py`。直接 FAQ 返回时不访问 cache；FAQ 改写路径保留原始权威答案与检索证据，再按 vision/memory/emotion 资格读取共享缓存；vision 问题跳过无 scope 绑定的 FAQ，cache 命中仍经既有 epoch 校验和 persona 润色。Pipeline 继续拥有 SSE/error/持久化及进入 RAG/generation 的流程。新增三项行为测试先因模块缺失失败，再覆盖 direct FAQ short circuit、FAQ rewrite 与 cache 同存、个性化/视觉 cache 隔离。定向 FAQ/cache/Pipeline 集 71 passed，指定 AI/流式回归 166 passed；Python 3.12 compileall 与 diff check 通过。Pipeline 从 714 降至 708 行。测试使用本地替身，不代表真实语义索引、cache store 或 provider 验收。起始集成/ref `ca577e8`；原 checkout `672a104`/95 路径，V01/W02/W02-V01 为 49/35/39；保护快照存在，phase3 prunable 未清理，`sources/` clean，node_modules 未跟踪。提交 `330e6e6` 后，原仓库同名集成 ref 已同步。
