@@ -28,7 +28,6 @@
 | [deployment/SERVER_INVENTORY.md](deployment/SERVER_INVENTORY.md) | 服务器与验收输入清单 | 保留：部署操作及放量门槛 | 验收总表 |
 | [deployment/SPLIT_INPUTS.md](deployment/SPLIT_INPUTS.md) | 管理端/游客端拆分部署输入 | 保留：部署操作及放量门槛 | 验收总表 |
 | [deployment/split-v2/DESIGN.md](deployment/split-v2/DESIGN.md) | 管理端、游客端与服务器部署设计 V2（评审草案） | 保留：历史拆分设计与实施证据 | 验收总表 |
-| [development/DECISIONS.md](development/DECISIONS.md) | 技术决策 | 保留：开发说明或带日期的记录 | 代码地图／验收总表 |
 | [development/FRONTEND_BOUNDARIES.md](development/FRONTEND_BOUNDARIES.md) | 游客端与管理端开发边界 | 保留：开发说明或带日期的记录 | 代码地图／验收总表 |
 | [development/W02_INTEGRATION.md](development/W02_INTEGRATION.md) | W02 集成记录 | 保留：开发说明或带日期的记录 | 代码地图／验收总表 |
 | [frontend/DESIGN_AND_BOUNDARIES.md](frontend/DESIGN_AND_BOUNDARIES.md) | 前端设计与双端边界 | 保留：前端设计主入口 | 前端设计 |
@@ -101,6 +100,7 @@
 
 | 移除的历史文件 | 保留内容及原因 |
 |---|---|
+| `docs/development/DECISIONS.md` | 问答编排、请求隔离、证据版本和取消边界归入[架构与业务链路](ARCHITECTURE.md)，框架选型保留在[框架调研](architecture/FRAMEWORK_RESEARCH.md)；逐轮重构、回滚提示与历史测试可通过 `git show a465ce2:docs/development/DECISIONS.md` 查阅。 |
 | `docs/integration/WORKTREE_STATUS.md` | 合并前的工作树路径、数量和处理顺序已过期；功能与来源入口见[代码地图](REPO_MAP.md)、[合并审示](integration/MERGE_READINESS.md)及各功能记录，当前分支以 Git 查询为准。原始快照可通过 `git show 9769460:docs/integration/WORKTREE_STATUS.md` 查阅。 |
 | `DESIGN.md` | 2026-10-03 的游客端设计原则、可读性目标、模块化方向和方法来源已归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)；原文可通过 `git show b863be1:DESIGN.md` 查阅。 |
 | `docs/deployment/split-v2/ASSESSMENT.md`、`IMPLEMENTATION_PLAN.md`、`REVIEW.md` | 双端及部署决策保留在[拆分设计](deployment/split-v2/DESIGN.md)、[开发边界](development/FRONTEND_BOUNDARIES.md)和[部署验收](deployment/FINAL_ACCEPTANCE.md)；设计参考链接已迁入设计稿。原阶段步骤、环境和测试证据可通过 `git show 61644ff:docs/deployment/split-v2/<文件名>` 查阅。 |

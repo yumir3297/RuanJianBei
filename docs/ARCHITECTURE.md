@@ -6,6 +6,12 @@
 > 生产环境 `APP_ENV=production` 时，管理员默认密码/签名密钥或过短值会阻止应用启动；`/ready` 同步报告配置缺项，不回显秘密。游客 API 仍公开；[CapacityLimiter](../backend/app/services/capacity.py) 只管单进程并发，不是时间窗口速率限制或多实例防刷。
 > 聊天 SSE 有心跳、连接/无数据/无进展/总时限与 `done.completion`；心跳包装器在单一生产任务内消费源生成器，保持 ContextVar 的任务上下文稳定；中断保留部分文本并停止音频。流式生成、证据、音频和 completion 各有取消/epoch 所有权；详细调用链和回归见 [功能地图](REPO_MAP.md) 与 [验收总表](testing/TESTING_AND_ACCEPTANCE.md)。
 
+## 问答链设计决策与维护边界
+
+普通问答保留显式 Pipeline 负责 FAQ、缓存、检索和证据路由；有持久恢复需求的行程提案交给独立 worker。曾比较图编排与轻量 Agent 框架，但没有同一真实任务的性能或质量对照，选型理由和适用条件见[框架调研](architecture/FRAMEWORK_RESEARCH.md)。
+
+请求级情绪、表达策略与游客记忆使用请求上下文隔离；图片候选不是事实来源，只有游客确认且发布目录版本有效时才限定检索。FAQ/缓存资格、证据与知识代次应共同检查；降级结果不能误写共享缓存。生成、音频尾段和完成副作用各有生命周期：错误或关闭时要关闭嵌套事件源并清理相关音频任务，正常完成保持来源、文本、语音与终态顺序。历史的隔离测试支持这些边界，不代表真实供应商、设备或所有并发路径已验收。逐次重构依据与当时测试可通过 `git show a465ce2:docs/development/DECISIONS.md` 查阅。
+
 当前集成分支包含 K01、W01、V01 与 W02 的主要代码；功能是否完成按相应验收边界而非分支合并判断。
 功能入口见 [REPO_MAP.md](REPO_MAP.md)，运行条件见 [DEVELOPMENT.md](DEVELOPMENT.md)。
 
