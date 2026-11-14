@@ -75,11 +75,7 @@
 | [superpowers/plans/2026-10-28-ai-stream-validation.md](superpowers/plans/2026-10-28-ai-stream-validation.md) | AI 工作台弱网与流式链路验收记录 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-28-k01-stream-integration.patch](superpowers/plans/2026-10-28-k01-stream-integration.patch) | 非 Markdown 资源（patch） | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-28-shared-playback-round1.md](superpowers/plans/2026-10-28-shared-playback-round1.md) | Shared Playback Round 1 Implementation Plan | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
-| [superpowers/plans/2026-10-29-ai-input-idempotency.md](superpowers/plans/2026-10-29-ai-input-idempotency.md) | AI 输入接口短期幂等实施计划 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
-| [superpowers/plans/2026-10-29-chat-speech-profile.md](superpowers/plans/2026-10-29-chat-speech-profile.md) | 聊天语音版本与重播缓存实施计划 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-29-judge-experience-acceptance.md](superpowers/plans/2026-10-29-judge-experience-acceptance.md) | 评委体验系统验收记录 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
-| [superpowers/plans/2026-10-29-tourist-answer-replay.md](superpowers/plans/2026-10-29-tourist-answer-replay.md) | 游客历史回答重播实施计划 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
-| [superpowers/plans/2026-10-29-tourist-speech-rate.md](superpowers/plans/2026-10-29-tourist-speech-rate.md) | Tourist Speech Rate Preference Implementation Plan | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-29-v01-editable-itinerary.md](superpowers/plans/2026-10-29-v01-editable-itinerary.md) | V01 可验证的连续伴游规划实施计划 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-29-w01-tour-session-workspace.md](superpowers/plans/2026-10-29-w01-tour-session-workspace.md) | W01 游客游览任务与成果基础实施计划 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-29-w02-durable-execution.md](superpowers/plans/2026-10-29-w02-durable-execution.md) | W02 Durable Execution Implementation Plan | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
@@ -144,6 +140,7 @@
 | `docs/workspace-materials/docs/competition/TECHNICAL_DRAFT.md` | 较早且有语音确认误述的副本，使用较完整的[比赛草稿](competition/TECHNICAL_DRAFT.md)及[技术总览](TECHNICAL_ARCHITECTURE_AND_INNOVATION.md)。 |
 | `docs/workspace-materials/docs/superpowers/plans/2026-10-27-knowledge-workspace.md` | 初始计划副本；采用保留实施记录的[知识工作区计划](superpowers/plans/2026-10-27-knowledge-workspace.md)，当前状态以验收记录为准。 |
 | `docs/workspace-materials/output/pdf/guide-technical-draft.pdf` | 2026-10-30 的两页工作草稿导出，内容已由[比赛技术草稿](competition/TECHNICAL_DRAFT.md)与[技术总览](TECHNICAL_ARCHITECTURE_AND_INNOVATION.md)承接；历史 PDF 可从 Git 恢复。 |
+| `docs/superpowers/plans/2026-10-29-ai-input-idempotency.md`、`chat-speech-profile.md`、`tourist-answer-replay.md`、`tourist-speech-rate.md`（同日期前缀） | 历史验证范围和边界归入[验收总表](testing/TESTING_AND_ACCEPTANCE.md)；对应设计仍保留在 `superpowers/specs/`，过程稿可从 Git 历史追溯。 |
 | `docs/workspace-materials/REPOSITORY.md` | 旧外层目录、分支和 PR 状态过期；当前 Git、[代码地图](REPO_MAP.md)及仓库入口为准。 |
 | `docs/workspace-materials/docs/superpowers/specs/2026-10-27-knowledge-workspace-design.md` | 与 [知识工作区设计原件](superpowers/specs/2026-10-27-knowledge-workspace-design.md) 字节一致，移除副本。 |
 
