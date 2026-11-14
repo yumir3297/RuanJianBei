@@ -58,13 +58,13 @@
 ## 统一本地演示
 
 ```sh
-DEMO_SYNTHETIC_CONFIRM=1 DEMO_ADMIN_PASSWORD='<本地演示密码>' \
+DEMO_SYNTHETIC_CONFIRM=1 DEMO_ADMIN_PASSWORD='<本地演示密码>' GUIDEMATCH_ENABLED=true \
 DEMO_PYTHON="$PWD/backend/.venv/bin/python" \
 PLAYWRIGHT_EXECUTABLE_PATH='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' \
 ./scripts/run_local_competition_demo.sh
 ```
 
-当前统一入口覆盖知识发布、普通问答、行程提案、GuideLoop、CASS 和离线陪游。它使用合成资料、stub 音频、固定哈希向量和模拟断网，不能替代真实验收。
+上述命令启用 GuideMatch，须先准备本地权重；脚本默认值为关闭，关闭时跳过模型预检和 GuideLoop 游客模型绑定检查，但仍可能输出总 PASS。确认这些专项的输出后再报告覆盖范围。统一入口使用合成资料、stub 音频、固定哈希向量和模拟断网，不能替代真实验收；准备方式见[本地演示手册](../integration/LOCAL_DEMO_RUNBOOK.md)。
 
 ## 详细证据入口
 

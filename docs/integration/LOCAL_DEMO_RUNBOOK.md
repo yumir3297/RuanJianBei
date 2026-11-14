@@ -126,13 +126,13 @@ cd backend
 在后端依赖已安装、Chrome 路径可用的机器上，可用统一入口创建临时 SQLite/Chroma，启动后端、知识 worker、行程 worker、合成 provider、游客端和管理端，并依次执行知识发布、行程提案、GuideLoop 与 CASS 检查：
 
 ```sh
-DEMO_SYNTHETIC_CONFIRM=1 DEMO_ADMIN_PASSWORD='<本地演示密码>' \
+DEMO_SYNTHETIC_CONFIRM=1 DEMO_ADMIN_PASSWORD='<本地演示密码>' GUIDEMATCH_ENABLED=true \
 DEMO_PYTHON="$PWD/backend/.venv/bin/python" \
 PLAYWRIGHT_EXECUTABLE_PATH='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' \
 ./scripts/run_local_competition_demo.sh
 ```
 
-脚本显式启用 GuideMatch 并以 CPU 预加载 `.cache/guidematch/seed13` 下的本地权重；可通过 `GUIDEMATCH_MODEL_DIR` 和 `GUIDEMATCH_DEVICE` 指定已准备的模型及设备。该目录被 Git 忽略，换机器需要从已核验的交接包恢复并安装兼容依赖。预加载失败会终止脚本。脚本通过后输出 `FULL LOCAL COMPETITION DEMO: PASS`，退出时自动清理临时目录和服务；普通游客问答会核对已发布 revision 的来源，离线检查会输出 `16/16 PASS`。2026-11-14 在本机临时 venv、SQLite、GuideMatch 权重、固定哈希演示向量和虚构资料上通过；实际 FAQ 差异另见 [GuideMatch 记录](GUIDEMATCH_TRAINING.md)。该入口使用 Playwright 模拟断网，不代表真实景区资料、真机或生产部署通过。
+上面的命令显式启用 GuideMatch，脚本默认以 CPU 预加载 `.cache/guidematch/seed13` 下的本地权重；可通过 `GUIDEMATCH_MODEL_DIR` 和 `GUIDEMATCH_DEVICE` 指定已准备的模型及设备。该目录被 Git 忽略，换机器需要从已核验的交接包恢复并安装兼容依赖。启用后预加载失败会终止脚本。**如果省略 `GUIDEMATCH_ENABLED=true`，脚本默认跳过模型预加载和 GuideLoop 游客模型绑定检查，但仍可能输出 `FULL LOCAL COMPETITION DEMO: PASS`；此时不能把总 PASS 当成模型链路通过。** 应同时检查模型预检及绑定检查的实际输出。脚本退出时自动清理临时目录和服务；普通游客问答会核对已发布 revision 的来源，离线检查会输出 `16/16 PASS`。2026-11-14 在本机临时 venv、SQLite、GuideMatch 权重、固定哈希演示向量和虚构资料上通过；实际 FAQ 差异另见 [GuideMatch 记录](GUIDEMATCH_TRAINING.md)。该入口使用 Playwright 模拟断网，不代表真实景区资料、真机或生产部署通过。
 
 ## 合成案例浏览器检查
 
