@@ -63,6 +63,9 @@
 | [plans/2026-10-27-feature-roadmap.md](plans/2026-10-27-feature-roadmap.md) | 双端 AI 工作台：功能链路与分阶段路线图 | 保留：历史路线图和待办，非当前完成结论 | 代码地图 |
 | [plans/2026-10-28-ai-workbench-backlog.md](plans/2026-10-28-ai-workbench-backlog.md) | 双端 AI 工作台待开发清单 | 保留：历史路线图和待办，非当前完成结论 | 代码地图 |
 | [reports/2026-11-10-guide-memory-research.md](reports/2026-11-10-guide-memory-research.md) | GuideLoop 场景记忆与多游客回访架构调研 | 保留：专题研究证据，按日期理解 | 技术总览 |
+| [research/2026-11-07-ai-knowledge-management-final-design.md](research/2026-11-07-ai-knowledge-management-final-design.md) | AI 全链路知识管理原始设计方案 | 保留：旧知识工作树的独特设计与来源；未完成项属目标 | 技术总览／知识模块记录 |
+| [research/2026-11-07-k02-deepseek-narration-integration.md](research/2026-11-07-k02-deepseek-narration-integration.md) | DeepSeek 知识理解与讲解融合设计 | 保留：旧知识工作树的独特设计与来源；未完成项属目标 | 技术总览／知识模块记录 |
+| [research/2026-11-07-k02-source-research.md](research/2026-11-07-k02-source-research.md) | 多源知识资料场景与技术调研 | 保留：旧知识工作树的独特设计与来源；未完成项属目标 | 技术总览／知识模块记录 |
 | [research/2026-10-29-v01-itinerary-research.md](research/2026-10-29-v01-itinerary-research.md) | V01 可编辑行程：调研与项目接入依据 | 保留：调研依据，非验收结论 | 技术总览 |
 | [research/2026-10-29-w02-durable-execution-research.md](research/2026-10-29-w02-durable-execution-research.md) | W02 工具执行与任务恢复：调研与接入依据 | 保留：调研依据，非验收结论 | 技术总览 |
 | [research/2026-11-07-cass-competition-completion.md](research/2026-11-07-cass-competition-completion.md) | CASS 比赛版完善：技术调研与开发范围建议 | 保留：调研依据，非验收结论 | 技术总览 |
