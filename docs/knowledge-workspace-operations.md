@@ -1,17 +1,19 @@
 # Knowledge workspace operations
 
+For current local integration and validation limits, see [knowledge integration](integration/KNOWLEDGE_UNDERSTANDING.md) and [acceptance](testing/TESTING_AND_ACCEPTANCE.md). Production backup and restore must follow the target environment’s [rollout runbook](deployment/ROLLOUT_RUNBOOK.md) and be verified on an isolated destination.
+
 ## What is persistent
 
 - PostgreSQL stores entries, immutable revisions, source documents and file versions, import and publication jobs, conflicts, and the retrieval epoch.
-- Original uploads live under `KNOWLEDGE_UPLOAD_DIR` (default: `backend/.uploads/knowledge`). Keep this directory with the database backup; imported revisions refer to these original files.
+- Original uploads live under `KNOWLEDGE_UPLOAD_DIR` (default: repository-root `.uploads/knowledge`, resolved from backend root as `../.uploads/knowledge`). Keep this directory with the database backup; imported revisions refer to these original files.
 - Chroma data lives under `CHROMA_PERSIST_DIR` (default: `kb/chroma_db`). The configured collection name also has a small `.active` pointer file. Back up the entire directory, including this pointer and old collections awaiting cleanup.
 - Do not automatically delete drafts, revisions, source versions, or uploaded originals by age. A draft may be the only copy of a reviewed change.
 
 ## Backup and recovery
 
 1. Put imports and publishing into maintenance mode, and take a PostgreSQL-consistent backup using the deployment's normal `pg_dump` process.
-2. Copy the complete knowledge upload directory and Chroma persistence directory from the same maintenance window. Record the configured `DATABASE_URL`, `KNOWLEDGE_UPLOAD_DIR`, `CHROMA_PERSIST_DIR`, collection name, and embedding model name in the backup manifest. Protect the manifest and backups as application data.
-3. Restore PostgreSQL first, then restore the uploaded originals and Chroma directory to their configured paths. Preserve the `.active` pointer and its referenced collection.
+2. Copy the complete knowledge upload directory and Chroma persistence directory from the same maintenance window. Record a non-secret database identifier, `KNOWLEDGE_UPLOAD_DIR`, `CHROMA_PERSIST_DIR`, collection name, and embedding model name in the backup manifest. Do not put `DATABASE_URL` or credentials in the manifest; protect the manifest and backups as application data.
+3. Restore PostgreSQL first, then restore the uploaded originals and Chroma directory to an isolated destination with matching configuration. Preserve the `.active` pointer and its referenced collection.
 4. Start one backend worker and verify pending import/publication jobs reach a terminal state. Expired worker leases are reclaimed by the lifecycle worker.
 5. If Chroma is missing or its pointer names a collection that cannot be read, rebuild the index from the database's current published chunks using **重建向量索引**. Rebuilding never publishes a draft. Keep the database and originals intact if the rebuild fails.
 6. Verify the admin workspace shows the expected published and draft counts, review pending import conflicts, then resume uploads and publishing.
