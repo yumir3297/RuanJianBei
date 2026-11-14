@@ -1,5 +1,7 @@
 # 视觉识景：游客确认交互调查
 
+> 历史调研或审计快照：其中“当前”指文中日期和所列基线；后续实现、验收或环境变化不自动改写历史结果。现行范围见 [技术总览](../../TECHNICAL_ARCHITECTURE_AND_INNOVATION.md) 和 [验收总表](../../testing/TESTING_AND_ACCEPTANCE.md)。
+
 2026-10-30；对 `integration-work/v01` 静态审查，未访问真实模型、数据库或浏览器。当前 `vision_scope_unconfirmed` 表示视觉线索尚未确认；不能把模型自报 confidence 当作准确率，也不能把视觉候选当作知识证据。
 
 ## 当前能力

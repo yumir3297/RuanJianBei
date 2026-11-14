@@ -1,5 +1,7 @@
 # W02安全增量合入分析
 
+> 历史调研或审计快照：其中“当前”指文中日期和所列基线；后续实现、验收或环境变化不自动改写历史结果。现行范围见 [技术总览](../../TECHNICAL_ARCHITECTURE_AND_INNOVATION.md) 和 [验收总表](../../testing/TESTING_AND_ACCEPTANCE.md)。
+
 2026-10-30；只读比较 `integration-work/v01` 与 `integration-work/w02-integration` 的实际文件内容，不以Git提交记录推定未提交快照。排除.git、node_modules、虚拟环境、缓存与构建产物；仅写本报告。当前V01已经包含最新主线语音/安全/媒体校验/前端恢复改动；W02携带的旧V01不可整体覆盖。
 
 ## 结论与合入边界

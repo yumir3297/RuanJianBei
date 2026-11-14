@@ -1,5 +1,7 @@
 # W02 PostgreSQL 隔离验证
 
+> 历史调研或审计快照：其中“当前”指文中日期和所列基线；后续实现、验收或环境变化不自动改写历史结果。现行范围见 [技术总览](../../TECHNICAL_ARCHITECTURE_AND_INNOVATION.md) 和 [验收总表](../../testing/TESTING_AND_ACCEPTANCE.md)。
+
 2026-10-30：验证受沙箱阻止，未能启动 PostgreSQL，未执行多 worker、租约或旧 fence 的 PostgreSQL 测试，因此不能声称这些路径已在 PostgreSQL 通过。
 
 尝试使用 `/opt/homebrew/opt/postgresql@17/bin/initdb`，数据目录为新建的 `/private/tmp/codex-w02-pg.orfaF2/data`，认证仅用于临时实例。初始化在 bootstrap 阶段失败：`could not create shared memory segment: Operation not permitted`，失败系统调用为 `shmget`；`initdb` 自动移除了未完成的数据目录。没有启动服务、分配端口、访问现有数据库、读取真实密钥或调用供应商。按任务限制停止，没有请求提权。空的临时父目录保留，未删除其他文件。

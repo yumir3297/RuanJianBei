@@ -1,5 +1,7 @@
 # W02实际运行链独立安全审阅
 
+> 历史调研或审计快照：其中“当前”指文中日期和所列基线；后续实现、验收或环境变化不自动改写历史结果。现行范围见 [技术总览](../../TECHNICAL_ARCHITECTURE_AND_INNOVATION.md) 和 [验收总表](../../testing/TESTING_AND_ACCEPTANCE.md)。
+
 审阅基线：`integration-work/v01`，HEAD `ec3f7a6`；日期2026-10-30。只新增`backend/app/tests/test_w02_runtime_review.py`及本报告，未修实现、未读真实凭据、未访问生产数据库、未调用真实模型。
 
 所有新增测试均为 **fake provider**：4种数据库场景使用pytest临时SQLite文件；worker CLI子进程使用最小环境、显式DATABASE_URL/PYTHONPATH及干净cwd，避免加载项目.env。独立CLI的review.fake工具故意未在生产registry注册，期望受控失败，绝不能把它说成真实AI供应商调用成功。真实itinerary handler路径另由现有catalog staleness测试以fake模型执行。

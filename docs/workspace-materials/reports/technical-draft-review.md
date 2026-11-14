@@ -1,5 +1,7 @@
 # 技术文档工作草稿：代码一致性审阅
 
+> 历史调研或审计快照：其中“当前”指文中日期和所列基线；后续实现、验收或环境变化不自动改写历史结果。现行范围见 [技术总览](../../TECHNICAL_ARCHITECTURE_AND_INNOVATION.md) 和 [验收总表](../../testing/TESTING_AND_ACCEPTANCE.md)。
+
 2026-10-30；审阅 `integration-work/v01/docs/competition/TECHNICAL_DRAFT.md`，源码基线 `516d987`。只读静态核对，未运行真实模型、设备或数据库，未改变仓库。草稿有明确“工作草稿”与未验收边界，不能用此报告替代完整运行验收。
 
 ## 需要修改
