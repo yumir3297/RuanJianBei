@@ -1,5 +1,7 @@
 # W02 Durable Execution Implementation Plan
 
+> 历史实施计划及阶段性验证；任务勾选、分支和实现假设不代表当前状态。当前功能与边界见 [代码地图](../../REPO_MAP.md) 和 [验收总表](../../testing/TESTING_AND_ACCEPTANCE.md)。
+
 > **For agentic workers:** This plan implements the first W02 deliverable: a persistent execution kernel that can be safely integrated with feature-owned operations. It does not claim that itinerary generation, publication, or narration has been made resumable.
 
 **Goal:** Add database-backed tool execution records, atomic job claiming, fenced leases, retry/cancel rules, and a separately run worker so approved product workflows can recover without duplicate business writes.

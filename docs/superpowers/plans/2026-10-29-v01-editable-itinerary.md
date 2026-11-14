@@ -1,5 +1,7 @@
 # V01 可验证的连续伴游规划实施计划
 
+> 历史实施计划及阶段性验证；任务勾选、分支和实现假设不代表当前状态。当前功能与边界见 [代码地图](../../REPO_MAP.md) 和 [验收总表](../../testing/TESTING_AND_ACCEPTANCE.md)。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 让游客把自然语言需求变成可编辑、可持续修改、可恢复的景区行程，并在确认后记录真实游览进度。

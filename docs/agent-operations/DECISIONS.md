@@ -1,5 +1,7 @@
 # Current-round decisions and held scope
 
+> 历史快照（2026-11-07）：其中的分支、PR、任务指令和结果仅适用于当时，不作为当前操作指引或验收结论。当前入口见 [文档目录](../README.md)、[验收总表](../testing/TESTING_AND_ACCEPTANCE.md) 与 Git 状态；历史凭据风险及未验证事项仍须按实际情况核查。
+
 Updated: 2026-11-07.
 
 | Decision | Basis | Consequence |

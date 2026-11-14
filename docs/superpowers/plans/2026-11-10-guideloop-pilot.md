@@ -1,5 +1,7 @@
 # GuideLoop 两景点知识演化原型实施与测试计划
 
+> 历史实施计划及阶段性验证；任务勾选、分支和实现假设不代表当前状态。当前功能与边界见 [代码地图](../../REPO_MAP.md) 和 [验收总表](../../testing/TESTING_AND_ACCEPTANCE.md)。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkboxes for tracking. 实施前先阅读工作区与仓库的 AGENTS.md，按 `using-git-worktrees` 隔离工作目录。
 
 **Goal:** 在九龙灌浴和灵山大佛跑通游客追问归并、管理员审核、知识发布、游客新问法复测及撤回，并独立判断 GuideMatch 值不值得接入。

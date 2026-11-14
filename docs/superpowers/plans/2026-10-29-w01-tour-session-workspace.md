@@ -1,5 +1,7 @@
 # W01 游客游览任务与成果基础实施计划
 
+> 历史实施计划及阶段性验证；任务勾选、分支和实现假设不代表当前状态。当前功能与边界见 [代码地图](../../REPO_MAP.md) 和 [验收总表](../../testing/TESTING_AND_ACCEPTANCE.md)。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 让匿名游客在同一浏览器创建、保存、恢复和删除持久游览任务，为 V01 行程编辑提供安全的数据基础。

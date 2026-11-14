@@ -1,5 +1,7 @@
 # Knowledge Workspace Implementation Plan
 
+> 历史实施计划及阶段性验证；任务勾选、分支和实现假设不代表当前状态。当前功能与边界见 [代码地图](../../REPO_MAP.md) 和 [验收总表](../../testing/TESTING_AND_ACCEPTANCE.md)。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 本计划默认在当前会话直接实施；未经用户选择不派生子代理。
 
 **Goal:** 实现永久草稿工作区，统一批量上传、文档重新导入、单条编辑、原子批量发布与立即下架。

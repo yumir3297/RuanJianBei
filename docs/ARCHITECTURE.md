@@ -1,6 +1,6 @@
 # 架构与业务链路
 
-核验于 2026-11-07，集成分支代码基线 `7ef0459`，另含本轮 K01 前端恢复接入。下文区分自动化/源码证据与真实设备、供应商、部署数据库验收；任务状态及差异见 [HANDOFF](agent-operations/HANDOFF.md)。
+核验于 2026-11-07，集成分支代码基线 `7ef0459`，另含本轮 K01 前端恢复接入。下文区分自动化/源码证据与真实设备、供应商、部署数据库验收；[HANDOFF](agent-operations/HANDOFF.md) 为历史交接快照，当前状态见 [验收总表](testing/TESTING_AND_ACCEPTANCE.md) 和 Git。
 > ASR 与视觉接口支持可选 `Idempotency-Key`，按接口、键和请求 fingerprint 做 5 分钟进程内 single-flight 与 JSON 结果缓存；同键不同请求返回 409，超过 128 条/1 MiB 响应上限时拒绝新任务或淘汰过期/最近最少使用结果。不保存上传内容；该能力不跨多 worker 或重启。
 > 默认火山 ASR 通过 WebSocket 收取分包音频；输入非 16 kHz 单声道 PCM WAV 时以受限 FFmpeg 转换。非 WAV 请求还会在占用 ASR 容量后通过 [audio_duration](../backend/app/services/audio_duration.py) 用受限 ffprobe 检查系统私有临时文件，校验音轨和时长后才调用 provider；探测文件结束后删除。该路径需部署系统安装 FFmpeg/ffprobe；游客录音器固定输出 WAV，但浏览器采样率不保证为 16 kHz。当前只检查容器探测出的时长，不承诺完整解码验证。
 > 生产环境 `APP_ENV=production` 时，管理员默认密码/签名密钥或过短值会阻止应用启动；`/ready` 同步报告配置缺项，不回显秘密。游客 API 仍公开；[CapacityLimiter](../backend/app/services/capacity.py) 只管单进程并发，不是时间窗口速率限制或多实例防刷。
