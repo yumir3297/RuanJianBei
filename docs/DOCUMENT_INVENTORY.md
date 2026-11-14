@@ -27,10 +27,7 @@
 | [deployment/RUNTIME.md](deployment/RUNTIME.md) | Linux 运行封装（候选） | 保留：部署操作及放量门槛 | 验收总表 |
 | [deployment/SERVER_INVENTORY.md](deployment/SERVER_INVENTORY.md) | 服务器与验收输入清单 | 保留：部署操作及放量门槛 | 验收总表 |
 | [deployment/SPLIT_INPUTS.md](deployment/SPLIT_INPUTS.md) | 管理端/游客端拆分部署输入 | 保留：部署操作及放量门槛 | 验收总表 |
-| [deployment/split-v2/ASSESSMENT.md](deployment/split-v2/ASSESSMENT.md) | 拆分与服务器部署复核（V2） | 保留：历史拆分设计与实施证据 | 验收总表 |
 | [deployment/split-v2/DESIGN.md](deployment/split-v2/DESIGN.md) | 管理端、游客端与服务器部署设计 V2（评审草案） | 保留：历史拆分设计与实施证据 | 验收总表 |
-| [deployment/split-v2/IMPLEMENTATION_PLAN.md](deployment/split-v2/IMPLEMENTATION_PLAN.md) | 管理端、游客端与服务器部署拆分 Implementation Plan V2（实施跟踪） | 保留：历史拆分设计与实施证据 | 验收总表 |
-| [deployment/split-v2/REVIEW.md](deployment/split-v2/REVIEW.md) | 服务器拆分V2独立审阅与修订 | 保留：历史拆分设计与实施证据 | 验收总表 |
 | [development/DECISIONS.md](development/DECISIONS.md) | 技术决策 | 保留：开发说明或带日期的记录 | 代码地图／验收总表 |
 | [development/FRONTEND_BOUNDARIES.md](development/FRONTEND_BOUNDARIES.md) | 游客端与管理端开发边界 | 保留：开发说明或带日期的记录 | 代码地图／验收总表 |
 | [development/W02_INTEGRATION.md](development/W02_INTEGRATION.md) | W02 集成记录 | 保留：开发说明或带日期的记录 | 代码地图／验收总表 |
@@ -105,6 +102,7 @@
 
 | 移除的历史文件 | 保留内容及原因 |
 |---|---|
+| `docs/deployment/split-v2/ASSESSMENT.md`、`IMPLEMENTATION_PLAN.md`、`REVIEW.md` | 双端及部署决策保留在[拆分设计](deployment/split-v2/DESIGN.md)、[开发边界](development/FRONTEND_BOUNDARIES.md)和[部署验收](deployment/FINAL_ACCEPTANCE.md)；设计参考链接已迁入设计稿。原阶段步骤、环境和测试证据可通过 `git show 61644ff:docs/deployment/split-v2/<文件名>` 查阅。 |
 | `docs/superpowers/plans/2026-10-27-knowledge-workspace.md`、`2026-11-10-guideloop-pilot.md` | 知识草稿和发布约束由[工作区设计](superpowers/specs/2026-10-27-knowledge-workspace-design.md)保留；GuideLoop 评测及未完成的人审计时归入[试点记录](integration/GUIDELOOP_PILOT.md)与[记忆研究](reports/2026-11-10-guide-memory-research.md)。旧步骤和阶段数据可通过 `git show c4fb1de:docs/superpowers/plans/<文件名>` 查阅。 |
 | `docs/superpowers/plans/2026-10-29-v01-editable-itinerary.md`、`2026-10-29-w01-tour-session-workspace.md`、`2026-10-29-w02-durable-execution.md` | 旧任务步骤由对应 V01/W01/W02 设计保留目标与契约，[验收总表](testing/TESTING_AND_ACCEPTANCE.md)保留浏览器与并发边界；原阶段测试和详细步骤可通过 `git show 1d7eb67:docs/superpowers/plans/<文件名>` 查阅。 |
 | `docs/superpowers/plans/2026-10-29-judge-experience-acceptance.md`、`2026-10-29-w02-execution-ledger.md` | 桌面预览范围与限制归入[验收总表](testing/TESTING_AND_ACCEPTANCE.md)；W02 后续实现与验证由[集成记录](development/W02_INTEGRATION.md)承接。原始阶段记录可通过 `git show 9f01fc2:docs/superpowers/plans/<文件名>` 查阅。 |

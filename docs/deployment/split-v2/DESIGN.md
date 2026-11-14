@@ -153,4 +153,12 @@ HTML与公开配置需重验证/no-store；只对构建manifest标识的hash资�
 
 最终服务器门槛：目标精确依赖安装与模型、真实发布景区知识/vector、ready、ASR→确认→聊天RAG→TTS、权限/行程CAS/重启恢复、真实手机、上传限制、磁盘与备份恢复、两个方向静态回滚及W02独立进程。全部记录实际结果；基础设施参数缺失时只完成运行包，不宣称已部署。
 
-对应实施任务及暂缓项见[新版计划](IMPLEMENTATION_PLAN.md)，源码事实与技术参考见[复核报告](ASSESSMENT.md)。
+实施状态和目标环境门槛见[部署验收](../FINAL_ACCEPTANCE.md)；旧实施步骤及独立审阅保存在 Git 历史，查阅方式见[文档索引](../../DOCUMENT_INVENTORY.md)。
+
+## 设计参考
+
+- [Vite 环境变量](https://raw.githubusercontent.com/vitejs/vite/v7.3.3/docs/guide/env-and-mode.md)：构建时环境变量和暴露范围。
+- [FastAPI 部署概念](https://fastapi.tiangolo.com/deployment/concepts/)与[容器部署](https://fastapi.tiangolo.com/deployment/docker/)：进程、启动和迁移职责。
+- [Compose 启动顺序](https://docs.docker.com/compose/how-tos/startup-order/)：运行状态与健康就绪的区别。
+- [NGINX 代理模块](https://nginx.org/en/docs/http/ngx_http_proxy_module.html)：代理缓冲、Host 与读取超时。
+- [pip 可重复安装](https://pip.pypa.io/en/stable/topics/repeatable-installs/)：完整依赖版本和哈希。
