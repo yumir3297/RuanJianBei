@@ -113,7 +113,6 @@
 | [workspace-materials/output/offline-companion/desktop.png](workspace-materials/output/offline-companion/desktop.png) | 非 Markdown 资源（png） | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
 | [workspace-materials/output/offline-companion/landscape.png](workspace-materials/output/offline-companion/landscape.png) | 非 Markdown 资源（png） | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
 | [workspace-materials/output/offline-companion/phone.png](workspace-materials/output/offline-companion/phone.png) | 非 Markdown 资源（png） | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
-| [workspace-materials/output/pdf/guide-technical-draft.pdf](workspace-materials/output/pdf/guide-technical-draft.pdf) | 非 Markdown 资源（pdf） | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
 | [workspace-materials/reports/cleanup-scan.md](workspace-materials/reports/cleanup-scan.md) | Documentation & Legacy Cleanup：只读扫描 | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
 | [workspace-materials/reports/code-audit.md](workspace-materials/reports/code-audit.md) | 源码只读审计：AI、RAG、视觉、语音、数字人与数据 | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
 | [workspace-materials/reports/competition-official.md](workspace-materials/reports/competition-official.md) | 传智杯 AI WEB 赛道规则核对 | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
@@ -144,6 +143,7 @@
 | `docs/superpowers/plans/2026-10-04-geolocation-audio-guide.md` 与对应 `specs/2026-10-04-geolocation-audio-guide-design.md` | 自动讲解的交互与降级意图归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)；旧实现步骤、阈值和机器路径由 Git 历史追溯，不作为当前代码事实。 |
 | `docs/workspace-materials/docs/competition/TECHNICAL_DRAFT.md` | 较早且有语音确认误述的副本，使用较完整的[比赛草稿](competition/TECHNICAL_DRAFT.md)及[技术总览](TECHNICAL_ARCHITECTURE_AND_INNOVATION.md)。 |
 | `docs/workspace-materials/docs/superpowers/plans/2026-10-27-knowledge-workspace.md` | 初始计划副本；采用保留实施记录的[知识工作区计划](superpowers/plans/2026-10-27-knowledge-workspace.md)，当前状态以验收记录为准。 |
+| `docs/workspace-materials/output/pdf/guide-technical-draft.pdf` | 2026-10-30 的两页工作草稿导出，内容已由[比赛技术草稿](competition/TECHNICAL_DRAFT.md)与[技术总览](TECHNICAL_ARCHITECTURE_AND_INNOVATION.md)承接；历史 PDF 可从 Git 恢复。 |
 | `docs/workspace-materials/REPOSITORY.md` | 旧外层目录、分支和 PR 状态过期；当前 Git、[代码地图](REPO_MAP.md)及仓库入口为准。 |
 | `docs/workspace-materials/docs/superpowers/specs/2026-10-27-knowledge-workspace-design.md` | 与 [知识工作区设计原件](superpowers/specs/2026-10-27-knowledge-workspace-design.md) 字节一致，移除副本。 |
 

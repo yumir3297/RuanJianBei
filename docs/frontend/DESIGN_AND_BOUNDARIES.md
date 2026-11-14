@@ -43,6 +43,8 @@
 - [开发与验证](../DEVELOPMENT.md)
 - [管理端/游客端边界](../development/FRONTEND_BOUNDARIES.md)
 - [管理端浅色工作台实现与验证](../integration/ADMIN_WORKBENCH.md)
+- [管理端历史交互原型](../workspace-materials/output/admin-design/review-preview.html)：示例数据仅在原型中使用，不能代表当前业务；[桌面](../workspace-materials/output/admin-design/preview-1024.png)、[平板](../workspace-materials/output/admin-design/preview-736.png)和[手机](../workspace-materials/output/admin-design/preview-390.png)截图为历史设计参考。
+- [离线陪游历史桌面设计](../workspace-materials/output/offline-companion/desktop.png)和[手机设计](../workspace-materials/output/offline-companion/phone.png)：设计参考，实际功能与断网范围见[离线记录](../integration/OFFLINE_COMPANION.md)。
 
 ## 前端验收边界
 
