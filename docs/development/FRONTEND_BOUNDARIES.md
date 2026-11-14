@@ -40,6 +40,6 @@ npm run check:build-isolation
 
 ## 当前不在边界承诺内
 
-- 没有 service worker，不把后台身份、API 响应、游客聊天或行程写入离线缓存。
-- CASS/离线资源若后续开发，须从游客专属入口接入，逐项定义资源许可/缓存过期/清理策略；不复制旧分支整份 ChatView，不在管理端共享离线状态。
+- 游客端已接入 Service Worker 和离线陪游；后台身份、API 响应、游客聊天和私人行程不应写入离线缓存。离线资源的许可、有效性及生产发布升级仍需核验。
+- CASS 与离线入口属于游客端；管理端不共享游客离线状态。具体验收范围见 [离线记录](../integration/OFFLINE_COMPANION.md) 和 [验收总表](../testing/TESTING_AND_ACCEPTANCE.md)。
 - 静态 manifest/自动化测试不能代替浏览器登录、游客匿名 owner 隔离、数字人渲染、麦克风、定位或目标手机验收；见 [多端矩阵](../COMPATIBILITY.md) 和 [实施计划最终验收](../deployment/split-v2/IMPLEMENTATION_PLAN.md)。

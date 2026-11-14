@@ -30,6 +30,8 @@
 
 ## AI 开发与仓库地图
 
+从[文档资源库](./docs/README.md)进入；技术文书优先查看[架构与创新总览](./docs/TECHNICAL_ARCHITECTURE_AND_INNOVATION.md)、[前端设计](./docs/frontend/DESIGN_AND_BOUNDARIES.md)和[测试验收总表](./docs/testing/TESTING_AND_ACCEPTANCE.md)。
+
 - [AGENTS.md](./AGENTS.md)：Codex 开发规则与按任务阅读入口
 - [功能地图](./docs/REPO_MAP.md)：功能 → 前端 → API → 服务/数据 → 验证位置
 - [架构链路](./docs/ARCHITECTURE.md)：聊天、语音、图像、定位与管理数据流

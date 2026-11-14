@@ -8,7 +8,7 @@
 
 **Tech Stack:** 现有 FastAPI、SQLAlchemy、Alembic、ChromaDB、Vue 3、Element Plus；pytest。PDF 文本解析依赖在实施时核对兼容性后锁定，OCR 通过独立适配器接入。
 
-**Spec:** [已确认设计](../specs/2026-10-27-knowledge-workspace-design.md)
+**Spec:** [已确认设计](../../../../superpowers/specs/2026-10-27-knowledge-workspace-design.md)
 
 ## Global Constraints
 

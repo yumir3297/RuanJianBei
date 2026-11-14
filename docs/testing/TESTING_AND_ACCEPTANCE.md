@@ -12,7 +12,7 @@
 | CASS | 模拟预警、确认、显式恢复、迟到响应隔离 | 真实预警源、GPS、接警和现场求助 |
 | 行程提案 | 独立 worker、预览、确认保存、幂等重放和来源标识 | 真实模型、目标数据库、多实例竞争和真机弱网 |
 | 离线陪游 | 游客构建、缓存、断网、地图、求助、恢复提示 16/16 | 真机蜂窝网络、生产发布升级和代理 |
-| GuideMatch | 训练包完整性、CPU 小模型续训、候选权重受限加载 | CUDA 正式训练、独立真实测试集、当前问答链路接入 |
+| GuideMatch | 训练包完整性、CPU 续训、候选权重受限加载与开发/测试环境受控接入 | 训练过程本次未复现；独立真实测试集、许可证和生产运行待验收 |
 | 数据库/部署 | SQLite/Alembic、部分临时 PostgreSQL、发布锁专项 | 目标 PostgreSQL、真实备份恢复、Docker/NGINX/服务器 |
 
 ## 验收分层
@@ -43,3 +43,7 @@ PLAYWRIGHT_EXECUTABLE_PATH='/Applications/Google Chrome.app/Contents/MacOS/Googl
 - [兼容性矩阵](../COMPATIBILITY.md)
 - [离线陪游验收](../integration/OFFLINE_COMPANION.md)
 - [GuideMatch 训练验收](../integration/GUIDEMATCH_TRAINING.md)
+
+## 2026-11-14 文档整理检查
+
+代码地图检查通过（8 个地图文档、98 条注册 HTTP 路由），`git diff --check` 通过。脚本测试 48 项中 47 项通过；`test_api_surface` 的清单一致性测试失败：注册路由含 `GET /api/admin/knowledge-index-status`，已提交的 `deploy/api-surface.json` 缺少该项（97 对 98），测试的固定数量也为 97。此项须由接口与部署策略负责人核对管理端权限、生成的网关清单及测试后修复；本次文档整理没有修改部署策略，不能据此宣称部署检查通过。

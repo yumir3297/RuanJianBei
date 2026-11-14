@@ -2,7 +2,7 @@
 
 ## 当前状态
 
-用户确认训练已完成；当前本地试接入使用下述 seed 13 候选权重，来源报告称已在 CUDA 机器训练。训练完成情况和独立真实评测尚未由本次复现验证。本次从 GuideLoop 工作区复制 `training_packages/guidematch_windows_training_bundle_v1/`，保留代码、冻结的合成数据、配置、Windows 启动脚本与校验清单；来源目录未修改。该 Windows 训练包中未发现权重，另一个交接包包含候选权重。
+用户此前说明训练尚未完成，同时确认比赛阶段采用现有候选模型。当前本地试接入使用下述 seed 13 候选权重；来源报告称其曾在 CUDA 机器训练，但训练过程和完整性尚未由本次复现，独立真实评测也未完成。本次从 GuideLoop 工作区复制 `training_packages/guidematch_windows_training_bundle_v1/`，保留代码、冻结的合成数据、配置、Windows 启动脚本与校验清单；来源目录未修改。该 Windows 训练包中未发现权重，另一个交接包包含候选权重。
 
 包声明 Windows 10/11、NVIDIA CUDA、Python 3.10/3.11；冻结训练集 765 条和开发集 135 条均为同源合成数据，没有独立真实测试集。实际训练需要其底座模型与 CUDA 环境，当前本机未运行训练。
 

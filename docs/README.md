@@ -7,7 +7,8 @@
 1. [技术架构与创新总览](TECHNICAL_ARCHITECTURE_AND_INNOVATION.md)
 2. [前端设计与双端边界](frontend/DESIGN_AND_BOUNDARIES.md)
 3. [测试、验收与边界总表](testing/TESTING_AND_ACCEPTANCE.md)
-4. [文档处置清单](DOCUMENT_LIBRARY_PLAN.md)
+4. [文档结构与处置说明](DOCUMENT_LIBRARY_PLAN.md)
+5. [逐文件索引与移除去向](DOCUMENT_INVENTORY.md)
 
 ## 现有详细资料
 

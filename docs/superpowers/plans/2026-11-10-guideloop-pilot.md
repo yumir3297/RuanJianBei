@@ -8,7 +8,7 @@
 
 **Tech Stack:** FastAPI、SQLAlchemy、Alembic、SQLite、Vue 3、现有嵌入接口、pytest、Playwright。可选模型实验使用本机 PyTorch CPU。
 
-**Spec:** [GuideLoop 调研报告](../../../reports/2026-11-10-guide-memory-research.md)。现有 [O02 待办](../../../code/RuanJianBei/docs/plans/2026-10-28-ai-workbench-backlog.md) 与 [发布链路地图](../../../code/RuanJianBei/docs/REPO_MAP.md) 是对照基线。
+**Spec:** [GuideLoop 调研报告](../../reports/2026-11-10-guide-memory-research.md)。现有 [O02 待办](../../plans/2026-10-28-ai-workbench-backlog.md) 与 [发布链路地图](../../REPO_MAP.md) 是对照基线。
 
 ## 全局约束
 
@@ -140,7 +140,7 @@ flowchart TD
 | 游客私有 | 游客明确保存的偏好、确认听过的关键讲解。按服务端验证的游客身份和景区隔离，允许关闭、查看和清除。未验证身份时只用本次游览状态。 |
 | 景区共享 | 审核发布的公共事实、FAQ 别名与讲解素材。每条记录区分现实有效期和系统发布版本；只用当前问题适用且已审核的证据。 |
 
-读取时先判定有没有必要读私有记忆，再限定对象和时效，仅选最多两条对当前回答有用的记录。游客说「这次带孩子」只影响这次，除非主动选择保存。已有 `visitor_id` 来自客户端，适合作为现有匿名偏好入口的线索；增加服务端身份校验、记录隔离和缓存隔离后，才用于跨会话私有记忆。个人偏好控制讲解深浅、顺序和是否复述，公共事实仍由发布版本决定。采用可变偏好的按需读取思想和双时间记录的思路。首版用现有数据库表和少量规则复现这两点。 [Memory Retrieval for Changing Preferences，2026 年预印本](https://arxiv.org/abs/2606.02976) · [Zep 时序记忆论文](https://arxiv.org/abs/2501.13956) · [现有游客记忆结构](../../../code/RuanJianBei/backend/app/models/visitor_memory.py) · [聊天请求](../../../code/RuanJianBei/backend/app/schemas/chat.py)
+读取时先判定有没有必要读私有记忆，再限定对象和时效，仅选最多两条对当前回答有用的记录。游客说「这次带孩子」只影响这次，除非主动选择保存。已有 `visitor_id` 来自客户端，适合作为现有匿名偏好入口的线索；增加服务端身份校验、记录隔离和缓存隔离后，才用于跨会话私有记忆。个人偏好控制讲解深浅、顺序和是否复述，公共事实仍由发布版本决定。采用可变偏好的按需读取思想和双时间记录的思路。首版用现有数据库表和少量规则复现这两点。 [Memory Retrieval for Changing Preferences，2026 年预印本](https://arxiv.org/abs/2606.02976) · [Zep 时序记忆论文](https://arxiv.org/abs/2501.13956) · [现有游客记忆结构](../../../backend/app/models/visitor_memory.py) · [聊天请求](../../../backend/app/schemas/chat.py)
 
 多人同时提问时，在服务端复用同一景区、同一对象、同一有效证据版本的公共检索结果。每次读取仍检查当前时间是否在有效区间。带私有记忆的答案和音频在请求内生成，跳过公共答案及音频缓存。发布后新请求只取新快照。发布前已开始的流有明确版本归属，另测跨撤回边界的行为；普通更新与紧急撤回分别确定策略。
 

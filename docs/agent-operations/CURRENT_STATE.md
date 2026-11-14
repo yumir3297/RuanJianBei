@@ -1,4 +1,6 @@
-# Current engineering state
+# Historical engineering state
+
+> 历史快照（2026-11-07），分支、PR 和工作区状态已过期；当前以 [文档入口](../README.md)、[验收总表](../testing/TESTING_AND_ACCEPTANCE.md) 和 Git 实际状态为准。
 
 Updated: 2026-11-07
 
