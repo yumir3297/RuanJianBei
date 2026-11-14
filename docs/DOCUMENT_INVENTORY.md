@@ -163,7 +163,7 @@
 | [blender/README.md](../blender/README.md) | 保留：模块说明、依赖或许可 |
 | [eval/HUMAN_REVIEW.md](../eval/HUMAN_REVIEW.md) | 保留：模块说明、依赖或许可 |
 | [eval/README.md](../eval/README.md) | 保留：模块说明、依赖或许可 |
-| [evaluation/README.md](../evaluation/README.md) | 保留：模块说明、依赖或许可 |
+| [evaluation/README.md](../evaluation/README.md) | 保留：旧评测入口；历史数字未独立复现，当前评测见 eval |
 | [frontend/AGENTS.md](../frontend/AGENTS.md) | 保留：模块说明、依赖或许可 |
 | [frontend/public/motions/CREDITS.md](../frontend/public/motions/CREDITS.md) | 保留：模块说明、依赖或许可 |
 | [frontend/public/motions/LICENSE-Quaternius.txt](../frontend/public/motions/LICENSE-Quaternius.txt) | 保留：模块说明、依赖或许可 |

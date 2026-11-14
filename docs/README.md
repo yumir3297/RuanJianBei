@@ -23,5 +23,6 @@
 - [GuideLoop / GuideMatch](integration/GUIDELOOP_GUIDEMATCH.md)
 - [目标服务器部署和验收](deployment/FINAL_ACCEPTANCE.md)
 - [比赛技术草稿](competition/TECHNICAL_DRAFT.md)
+- [评测方法与人工核验](../eval/README.md)
 
 总览文档只汇总可核对的实现和边界；具体测试输出、来源记录和未完成项仍以链接的详细文档为准。
