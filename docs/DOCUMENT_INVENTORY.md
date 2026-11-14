@@ -71,7 +71,6 @@
 | [selling-points/README.md](selling-points/README.md) | 卖点文书 | 保留：技术文书证据和卖点 | 技术总览 |
 | [selling-points/ai-workbench-innovation-points.md](selling-points/ai-workbench-innovation-points.md) | AI 工作台弱网与多模态链路：技术创新点 | 保留：技术文书证据和卖点 | 技术总览 |
 | [selling-points/w02-continuous-tour-recovery.md](selling-points/w02-continuous-tour-recovery.md) | 连续伴游恢复：卖点与证据规划 | 保留：技术文书证据和卖点 | 技术总览 |
-| [superpowers/plans/2026-10-04-geolocation-audio-guide.md](superpowers/plans/2026-10-04-geolocation-audio-guide.md) | 靠近景点自动讲解（讲解机）实现计划 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-27-knowledge-workspace.md](superpowers/plans/2026-10-27-knowledge-workspace.md) | Knowledge Workspace Implementation Plan | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-28-ai-stream-validation.md](superpowers/plans/2026-10-28-ai-stream-validation.md) | AI 工作台弱网与流式链路验收记录 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-28-k01-stream-integration.patch](superpowers/plans/2026-10-28-k01-stream-integration.patch) | 非 Markdown 资源（patch） | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
@@ -89,7 +88,6 @@
 | [superpowers/plans/2026-11-09-knowledge-consistency.md](superpowers/plans/2026-11-09-knowledge-consistency.md) | Knowledge Consistency Implementation Plan | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-11-10-guideloop-pilot.md](superpowers/plans/2026-11-10-guideloop-pilot.md) | GuideLoop 两景点知识演化原型实施与测试计划 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/specs/2026-10-02-multi-scenic-guide-proposal.md](superpowers/specs/2026-10-02-multi-scenic-guide-proposal.md) | 多景区数字人导览平台改造方案（草案） | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
-| [superpowers/specs/2026-10-04-geolocation-audio-guide-design.md](superpowers/specs/2026-10-04-geolocation-audio-guide-design.md) | 靠近景点自动讲解（讲解机）功能设计 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/specs/2026-10-27-knowledge-workspace-design.md](superpowers/specs/2026-10-27-knowledge-workspace-design.md) | 知识草稿工作区与发布设计 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/specs/2026-10-28-resilient-ai-stream-design.md](superpowers/specs/2026-10-28-resilient-ai-stream-design.md) | 面向景区弱网的 AI 工作台传输与恢复设计 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/specs/2026-10-29-ai-input-idempotency-design.md](superpowers/specs/2026-10-29-ai-input-idempotency-design.md) | AI 输入接口短期幂等设计 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
@@ -145,6 +143,7 @@
 | `docs/superpowers/plans/2026-10-29-nonwav-duration.md`、`2026-10-29-production-auth-hardening.md` | 已完成的小型过程清单；功能设计分别保留在对应 `specs/`，代码和验证以当前地图及测试为准。 |
 | `docs/superpowers/plans/2026-11-08-mobile-map-refactor.md` | 用户的全幅地图与单面板交互要求已归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)；来源链接与旧仿真记录可由 Git 历史追溯。 |
 | `docs/superpowers/plans/2026-10-05-分众化讲解与跨会话记忆.md` 及其可行性验证报告 | 早期计划和历史基线已过时；受众表达、记忆与隐私边界归入[技术总览](TECHNICAL_ARCHITECTURE_AND_INNOVATION.md)，详细旧记录可查 Git。 |
+| `docs/superpowers/plans/2026-10-04-geolocation-audio-guide.md` 与对应 `specs/2026-10-04-geolocation-audio-guide-design.md` | 自动讲解的交互与降级意图归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)；旧实现步骤、阈值和机器路径由 Git 历史追溯，不作为当前代码事实。 |
 | `docs/workspace-materials/REPOSITORY.md` | 旧外层目录、分支和 PR 状态过期；当前 Git、[代码地图](REPO_MAP.md)及仓库入口为准。 |
 | `docs/workspace-materials/docs/superpowers/specs/2026-10-27-knowledge-workspace-design.md` | 与 [知识工作区设计原件](superpowers/specs/2026-10-27-knowledge-workspace-design.md) 字节一致，移除副本。 |
 
