@@ -145,6 +145,41 @@
 
 仓库根目录、评测、训练包、Blender 及前端资源许可文档属于各自操作与许可入口，继续保留；不要将训练包手册或第三方许可作为过期过程稿删除。
 
+
+## 已移除文件完整路径核对
+
+以下列表以整理前基线 `8e922c5` 与整理提交对照。设计原文仍可通过 `git show 8e922c5:<路径>` 查阅；“承接”表示保留主要意图或现行资料，不代表逐字复制。
+
+| 原路径 | 现行承接位置 |
+|---|---|
+| `docs/design/avatar-center-layout-2026-10-03.md` | [前端设计](frontend/DESIGN_AND_BOUNDARIES.md) |
+| `docs/design/frontend-design-review-2026-10-03.md` | [前端设计](frontend/DESIGN_AND_BOUNDARIES.md) |
+| `docs/design/scenic-surfaces-2026-10-03.md` | [前端设计](frontend/DESIGN_AND_BOUNDARIES.md) |
+| `docs/superpowers/plans/2026-10-04-geolocation-audio-guide.md` | [前端设计](frontend/DESIGN_AND_BOUNDARIES.md) |
+| `docs/superpowers/plans/2026-10-05-分众化讲解与跨会话记忆-可行性验证报告.md` | [技术总览：分众讲解与记忆](TECHNICAL_ARCHITECTURE_AND_INNOVATION.md) |
+| `docs/superpowers/plans/2026-10-05-分众化讲解与跨会话记忆.md` | [技术总览：分众讲解与记忆](TECHNICAL_ARCHITECTURE_AND_INNOVATION.md) |
+| `docs/superpowers/plans/2026-10-28-repository-map.md` | [代码地图](REPO_MAP.md)、[开发指南](DEVELOPMENT.md) |
+| `docs/superpowers/plans/2026-10-28-resilient-ai-stream.md` | [弱网设计](superpowers/specs/2026-10-28-resilient-ai-stream-design.md)、[验收总表](testing/TESTING_AND_ACCEPTANCE.md) |
+| `docs/superpowers/plans/2026-10-28-shared-playback-round1.md` | [验收总表](testing/TESTING_AND_ACCEPTANCE.md)；相关规格保留 |
+| `docs/superpowers/plans/2026-10-29-ai-input-idempotency.md` | [验收总表](testing/TESTING_AND_ACCEPTANCE.md)；相关规格保留 |
+| `docs/superpowers/plans/2026-10-29-chat-speech-profile.md` | [验收总表](testing/TESTING_AND_ACCEPTANCE.md)；相关规格保留 |
+| `docs/superpowers/plans/2026-10-29-nonwav-duration.md` | [音频时长设计](superpowers/specs/2026-10-29-nonwav-duration-design.md) |
+| `docs/superpowers/plans/2026-10-29-production-auth-hardening.md` | [生产鉴权设计](superpowers/specs/2026-10-29-production-auth-hardening-design.md) |
+| `docs/superpowers/plans/2026-10-29-tourist-answer-replay.md` | [验收总表](testing/TESTING_AND_ACCEPTANCE.md)；相关规格保留 |
+| `docs/superpowers/plans/2026-10-29-tourist-speech-rate.md` | [验收总表](testing/TESTING_AND_ACCEPTANCE.md)；相关规格保留 |
+| `docs/superpowers/plans/2026-11-07-cass-completion.md` | [验收总表](testing/TESTING_AND_ACCEPTANCE.md)；相关规格保留 |
+| `docs/superpowers/plans/2026-11-08-mobile-map-refactor.md` | [前端设计](frontend/DESIGN_AND_BOUNDARIES.md) |
+| `docs/superpowers/plans/2026-11-09-knowledge-consistency.md` | [知识模块记录](integration/KNOWLEDGE_UNDERSTANDING.md) |
+| `docs/superpowers/specs/2026-10-04-geolocation-audio-guide-design.md` | [前端设计](frontend/DESIGN_AND_BOUNDARIES.md) |
+| `docs/workspace-materials/REPOSITORY.md` | [代码地图](REPO_MAP.md)、[开发指南](DEVELOPMENT.md) |
+| `docs/workspace-materials/docs/competition/TECHNICAL_DRAFT.md` | [比赛技术草稿](competition/TECHNICAL_DRAFT.md)、[技术总览](TECHNICAL_ARCHITECTURE_AND_INNOVATION.md) |
+| `docs/workspace-materials/docs/superpowers/plans/2026-10-27-knowledge-workspace.md` | [知识工作区计划](superpowers/plans/2026-10-27-knowledge-workspace.md) |
+| `docs/workspace-materials/docs/superpowers/specs/2026-10-27-knowledge-workspace-design.md` | [知识工作区设计](superpowers/specs/2026-10-27-knowledge-workspace-design.md) |
+| `docs/workspace-materials/output/admin-design/design-review.md` | [前端设计](frontend/DESIGN_AND_BOUNDARIES.md) |
+| `docs/workspace-materials/output/admin-design/design.md` | [前端设计](frontend/DESIGN_AND_BOUNDARIES.md) |
+| `docs/workspace-materials/output/admin-design/implementation-plan.md` | [前端设计](frontend/DESIGN_AND_BOUNDARIES.md) |
+| `docs/workspace-materials/output/pdf/guide-technical-draft.pdf` | [比赛技术草稿](competition/TECHNICAL_DRAFT.md)、[技术总览](TECHNICAL_ARCHITECTURE_AND_INNOVATION.md) |
+
 ## 仓库其他位置的文档与许可
 
 以下保留为代码所在模块的操作入口、数据血缘或资源许可；归属对应模块，不当作当前整体设计结论。
