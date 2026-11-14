@@ -66,6 +66,7 @@
 | [research/2026-11-07-ai-knowledge-management-final-design.md](research/2026-11-07-ai-knowledge-management-final-design.md) | AI 全链路知识管理原始设计方案 | 保留：旧知识工作树的独特设计与来源；未完成项属目标 | 技术总览／知识模块记录 |
 | [research/2026-11-07-k02-deepseek-narration-integration.md](research/2026-11-07-k02-deepseek-narration-integration.md) | DeepSeek 知识理解与讲解融合设计 | 保留：旧知识工作树的独特设计与来源；未完成项属目标 | 技术总览／知识模块记录 |
 | [research/2026-11-07-k02-source-research.md](research/2026-11-07-k02-source-research.md) | 多源知识资料场景与技术调研 | 保留：旧知识工作树的独特设计与来源；未完成项属目标 | 技术总览／知识模块记录 |
+| [research/CONTINUOUS_NARRATION_DESIGN.md](research/CONTINUOUS_NARRATION_DESIGN.md) | 连续导览与讲解质量来源方案整理 | 保留：多个本地试点的用户意图、方法来源及未集成边界 | 技术总览／连续导览记录 |
 | [research/2026-10-29-v01-itinerary-research.md](research/2026-10-29-v01-itinerary-research.md) | V01 可编辑行程：调研与项目接入依据 | 保留：调研依据，非验收结论 | 技术总览 |
 | [research/2026-10-29-w02-durable-execution-research.md](research/2026-10-29-w02-durable-execution-research.md) | W02 工具执行与任务恢复：调研与接入依据 | 保留：调研依据，非验收结论 | 技术总览 |
 | [research/2026-11-07-cass-competition-completion.md](research/2026-11-07-cass-competition-completion.md) | CASS 比赛版完善：技术调研与开发范围建议 | 保留：调研依据，非验收结论 | 技术总览 |
