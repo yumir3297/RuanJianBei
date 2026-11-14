@@ -2,7 +2,7 @@
 
 ## 范围与位置
 
-本接入从 `aa83aed` 出发，选择性整理 GuideLoop 和 GuideMatch。用户已选择功能整合程度最高的本地比赛集成工作区作为主线；该工作区还有其他未提交的比赛功能。来源为本地 GuideLoop 训练交接包及比赛集成工作区。
+本接入从 `aa83aed` 出发，选择性整理 GuideLoop 和 GuideMatch。用户已选择功能整合程度最高的本地比赛集成工作区作为主线；当时该工作区还有其他未提交的比赛功能，当前状态以 Git 为准。来源为本地 GuideLoop 训练交接包及比赛集成工作区。
 
 - 管理端：`frontend/src/views/admin/BlindSpotManage.vue` 中的 `GuideLoopPilotPanel.vue`，经 `frontend/src/api/guideLoop*.js` 和管理员认证接口维护观察、草稿、审核、发布、复测及确认。管理员发布须绑定当前 K01 知识版本并人工复核来源。
 - 游客端：原聊天入口 `backend/app/api/chat.py`、`backend/app/services/qa/pipeline.py`；服务端按景点知识范围选择 GuideLoop 候选，并检查当前发布版本、审核、复测、关闭状态及有效期。游客不能提交管理复测上下文；撤回或知识下架后旧答案不可用。
