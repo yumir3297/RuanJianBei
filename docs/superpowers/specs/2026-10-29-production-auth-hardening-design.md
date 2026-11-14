@@ -1,5 +1,7 @@
 # 生产环境管理员鉴权加固设计
 
+> 历史设计依据；其中的基线、待办和拟定接口按文档日期理解，不代表当前已实现或尚未实现。实际代码与验证见 [代码地图](../../REPO_MAP.md) 和 [验收总表](../../testing/TESTING_AND_ACCEPTANCE.md)。
+
 ## 发现
 
 - 管理员 API 已要求 Bearer token；token 是带时间戳的 HMAC-SHA256，但默认签名密钥固定为公开字符串 `a5-scenic-admin-secret-key`。

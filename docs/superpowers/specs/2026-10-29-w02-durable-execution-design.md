@@ -1,5 +1,7 @@
 # W02 工具执行与任务恢复设计
 
+> 历史设计依据；其中的基线、待办和拟定接口按文档日期理解，不代表当前已实现或尚未实现。实际代码与验证见 [代码地图](../../REPO_MAP.md) 和 [验收总表](../../testing/TESTING_AND_ACCEPTANCE.md)。
+
 日期：2026-10-29。状态：技术路径已选择；具体设计待用户审阅；未实现。
 依据：[调研与接入核查](../../research/2026-10-29-w02-durable-execution-research.md)、[待开发清单](../../plans/2026-10-28-ai-workbench-backlog.md)。
 

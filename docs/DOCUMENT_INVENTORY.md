@@ -7,7 +7,7 @@
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 架构与业务链路 | 保留：当前入口、规范或映射；以内容日期为准 | 文档目录 |
 | [COMPATIBILITY.md](COMPATIBILITY.md) | 多端能力与验收矩阵 | 保留：当前入口、规范或映射；以内容日期为准 | 文档目录 |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | 跨系统开发与验证 | 保留：当前入口、规范或映射；以内容日期为准 | 文档目录 |
-| [DOCUMENT_LIBRARY_PLAN.md](DOCUMENT_LIBRARY_PLAN.md) | 文档资源库整理与旧文档处置清单 | 保留：现行导航或整理记录 | 文档目录 |
+| [DOCUMENT_LIBRARY_PLAN.md](DOCUMENT_LIBRARY_PLAN.md) | 文档资源库结构与处置说明 | 保留：现行导航或整理记录 | 文档目录 |
 | [README.md](README.md) | 技术文档资源库 | 保留：现行导航或整理记录 | 文档目录 |
 | [REPO_MAP.md](REPO_MAP.md) | AI 数字人导览：功能与代码地图 | 保留：现行导航或整理记录 | 文档目录 |
 | [REPO_MAP_USABILITY.md](REPO_MAP_USABILITY.md) | 仓库地图可用性测试 | 保留：当前入口、规范或映射；以内容日期为准 | 文档目录 |
@@ -33,10 +33,10 @@
 | [deployment/RUNTIME.md](deployment/RUNTIME.md) | Linux 运行封装（候选） | 保留：部署操作及放量门槛 | 验收总表 |
 | [deployment/SERVER_INVENTORY.md](deployment/SERVER_INVENTORY.md) | 服务器与验收输入清单 | 保留：部署操作及放量门槛 | 验收总表 |
 | [deployment/SPLIT_INPUTS.md](deployment/SPLIT_INPUTS.md) | 管理端/游客端拆分部署输入 | 保留：部署操作及放量门槛 | 验收总表 |
-| [deployment/split-v2/ASSESSMENT.md](deployment/split-v2/ASSESSMENT.md) | 拆分与服务器部署复核（V2） | 保留：部署操作及放量门槛 | 验收总表 |
-| [deployment/split-v2/DESIGN.md](deployment/split-v2/DESIGN.md) | 管理端、游客端与服务器部署设计 V2（评审草案） | 保留：部署操作及放量门槛 | 验收总表 |
-| [deployment/split-v2/IMPLEMENTATION_PLAN.md](deployment/split-v2/IMPLEMENTATION_PLAN.md) | 管理端、游客端与服务器部署拆分 Implementation Plan V2（实施跟踪） | 保留：部署操作及放量门槛 | 验收总表 |
-| [deployment/split-v2/REVIEW.md](deployment/split-v2/REVIEW.md) | 服务器拆分V2独立审阅与修订 | 保留：部署操作及放量门槛 | 验收总表 |
+| [deployment/split-v2/ASSESSMENT.md](deployment/split-v2/ASSESSMENT.md) | 拆分与服务器部署复核（V2） | 保留：历史拆分设计与实施证据 | 验收总表 |
+| [deployment/split-v2/DESIGN.md](deployment/split-v2/DESIGN.md) | 管理端、游客端与服务器部署设计 V2（评审草案） | 保留：历史拆分设计与实施证据 | 验收总表 |
+| [deployment/split-v2/IMPLEMENTATION_PLAN.md](deployment/split-v2/IMPLEMENTATION_PLAN.md) | 管理端、游客端与服务器部署拆分 Implementation Plan V2（实施跟踪） | 保留：历史拆分设计与实施证据 | 验收总表 |
+| [deployment/split-v2/REVIEW.md](deployment/split-v2/REVIEW.md) | 服务器拆分V2独立审阅与修订 | 保留：历史拆分设计与实施证据 | 验收总表 |
 | [development/DECISIONS.md](development/DECISIONS.md) | 技术决策 | 保留：开发说明或带日期的记录 | 代码地图／验收总表 |
 | [development/FRONTEND_BOUNDARIES.md](development/FRONTEND_BOUNDARIES.md) | 游客端与管理端开发边界 | 保留：开发说明或带日期的记录 | 代码地图／验收总表 |
 | [development/PROGRESS.md](development/PROGRESS.md) | 开发进度 | 保留：开发说明或带日期的记录 | 代码地图／验收总表 |

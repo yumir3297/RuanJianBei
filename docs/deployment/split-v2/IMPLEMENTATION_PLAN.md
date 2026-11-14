@@ -1,5 +1,7 @@
 # 管理端、游客端与服务器部署拆分 Implementation Plan V2（实施跟踪）
 
+> 2026-11-07 起的拆分设计与实施历史；当时的工作区、进度和测试结果不是实时状态。当前双端边界见 [开发边界](../../development/FRONTEND_BOUNDARIES.md)，目标环境门槛见 [部署验收](../FINAL_ACCEPTANCE.md)。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (- [ ]) syntax for tracking. 仅在用户选择时采用多代理实施，不默认并行改共享文件。
 
 **Goal:** 在继续新增功能的同时，建立独立管理端/游客端、可复现服务器运行包、可独立发布回滚的静态站点，并保留既有导览和数据契约。
