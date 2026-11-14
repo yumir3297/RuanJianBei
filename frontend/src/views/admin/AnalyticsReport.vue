@@ -2,13 +2,7 @@
   <section class="analytics-layout">
     <header class="panel-card analytics-hero">
       <div class="hero-copy">
-        <h2>运营分析与知识盲区</h2>
-        <p>把游客问答、景点关注和知识缺口放在同一张运营视图中，便于答辩展示与后台运营闭环。</p>
-        <div class="hero-tags">
-          <span class="hero-tag">真实数据优先</span>
-          <span class="hero-tag">支持盲区补录</span>
-          <span class="hero-tag">适配答辩展示</span>
-        </div>
+        <h2>问答分析</h2>
       </div>
       <div class="hero-actions">
         <span v-if="lastUpdatedAt" class="updated-at">更新于 {{ lastUpdatedAt }}</span>
@@ -50,9 +44,9 @@
             <el-tag size="small" type="success" effect="plain">多模态情感分析</el-tag>
           </div>
           <h3>游客情绪与服务响应</h3>
-          <p>融合文字语义与语音情绪，帮助景区发现困惑、不满、焦虑及紧急需求。</p>
+        <p>展示文本与语音分析结果，以及近期需要关注的问答。</p>
         </div>
-        <span class="card-total">{{ formatNumber(emotionInsights.total_analyzed) }} 次分析</span>
+        <span class="card-total">{{ formatNumber(emotionInsights.total_analyzed, available.emotion) }} 次分析</span>
       </div>
 
       <el-skeleton v-if="loading.emotion" :rows="8" animated />
@@ -60,7 +54,7 @@
         <div class="emotion-kpi-grid">
           <article v-for="card in emotionCards" :key="card.key" class="emotion-kpi-card">
             <span>{{ card.label }}</span>
-            <strong>{{ formatNumber(card.value) }}</strong>
+            <strong>{{ formatNumber(card.value, available.emotion) }}</strong>
             <small>{{ card.note }}</small>
           </article>
         </div>
@@ -68,7 +62,7 @@
         <div class="emotion-content-grid">
           <div class="emotion-distribution-panel">
             <h4>融合情绪分布</h4>
-            <el-empty v-if="!emotionInsights.total_analyzed" description="暂无情绪分析记录" />
+            <el-empty v-if="!emotionInsights.total_analyzed" :description="available.emotion ? '暂无情绪分析记录' : '分析数据暂不可用'" />
             <div v-else class="emotion-bars">
               <div v-for="item in emotionInsights.distribution" :key="item.emotion" class="emotion-bar-row">
                 <span class="emotion-name"><i :class="['emotion-dot', `emotion-dot--${item.emotion}`]"></i>{{ item.label }}</span>
@@ -86,7 +80,7 @@
               <h4>最近分析记录</h4>
               <span>最近 {{ emotionInsights.recent.length }} 条</span>
             </div>
-            <el-empty v-if="!emotionInsights.recent.length" description="暂无最近记录" />
+            <el-empty v-if="!emotionInsights.recent.length" :description="available.emotion ? '暂无最近记录' : '分析数据暂不可用'" />
             <el-table v-else :data="emotionInsights.recent" size="small" stripe max-height="360">
               <el-table-column prop="query" label="游客问题" min-width="180" show-overflow-tooltip />
               <el-table-column label="分析模态" width="105">
@@ -123,10 +117,10 @@
             <h3>景点关注度排名</h3>
             <p>基于历史问答来源统计，帮助判断游客最关注的景点内容。</p>
           </div>
-          <span class="card-total">{{ formatNumber(spotAttentionTotal) }} 次</span>
+          <span class="card-total">{{ formatNumber(spotAttentionTotal, available.spot) }} 次</span>
         </div>
         <el-skeleton v-if="loading.spotChart" :rows="6" animated />
-        <el-empty v-else-if="!spotAttention.length" class="chart-empty" description="暂无景点关注数据" />
+        <el-empty v-else-if="!spotAttention.length" class="chart-empty" :description="available.spot ? '暂无景点关注数据' : '景点关注数据暂不可用'" />
         <div v-else ref="spotChartRef" class="chart-box" aria-label="景点关注度排名图" />
       </article>
 
@@ -136,10 +130,10 @@
             <h3>游客群体构成</h3>
             <p>来自游客画像与偏好标签，用于判断讲解内容和服务重点。</p>
           </div>
-          <span class="card-total">{{ formatNumber(visitorAudienceTotal) }} 人</span>
+          <span class="card-total">{{ formatNumber(visitorAudienceTotal, available.visitors) }} 人</span>
         </div>
         <el-skeleton v-if="loading.visitorChart" :rows="6" animated />
-        <el-empty v-else-if="!visitorAudience.length" class="chart-empty" description="暂无游客画像数据" />
+        <el-empty v-else-if="!visitorAudience.length" class="chart-empty" :description="available.visitors ? '暂无游客画像数据' : '游客画像数据暂不可用'" />
         <template v-else>
           <div ref="visitorPieRef" class="chart-box" aria-label="游客群体构成图" />
           <div v-if="topVisitorTags.length" class="tag-cloud">
@@ -163,10 +157,10 @@
             <h3>近 30 天问答量趋势</h3>
             <p>直接读取真实问答日志，用于展示近阶段服务热度与波峰变化。</p>
           </div>
-          <span class="card-total">{{ formatNumber(trendTotal) }} 次</span>
+          <span class="card-total">{{ formatNumber(trendTotal, available.trend) }} 次</span>
         </div>
         <el-skeleton v-if="loading.trendChart" :rows="6" animated />
-        <el-empty v-else-if="!trendDays.length" class="chart-empty" description="近 30 天暂无问答记录" />
+        <el-empty v-else-if="!trendDays.length" class="chart-empty" :description="available.trend ? '近 30 天暂无问答记录' : '趋势数据暂不可用'" />
         <div v-else ref="trendChartRef" class="chart-box" aria-label="近三十天问答量趋势图" />
       </article>
 
@@ -176,10 +170,10 @@
             <h3>问答路径分布</h3>
             <p>观察 FAQ、RAG 与盲区命中结构，判断知识库与回答路径的健康度。</p>
           </div>
-          <span class="card-total">{{ formatNumber(hitDistributionTotal) }} 次</span>
+          <span class="card-total">{{ formatNumber(hitDistributionTotal, available.trend) }} 次</span>
         </div>
         <el-skeleton v-if="loading.hitChart" :rows="6" animated />
-        <el-empty v-else-if="!hitDistribution.length" class="chart-empty" description="暂无问答路径数据" />
+        <el-empty v-else-if="!hitDistribution.length" class="chart-empty" :description="available.trend ? '暂无问答路径数据' : '路径数据暂不可用'" />
         <div v-else ref="hitChartRef" class="chart-box" aria-label="问答路径分布图" />
       </article>
     </div>
@@ -192,12 +186,12 @@
               <el-tag size="small" type="warning" effect="plain">待补录</el-tag>
             </div>
             <h3>知识库待补充问题 Top 10</h3>
-            <p>高频未命中问题可直接转为 FAQ，是后台运营闭环的重点入口。</p>
+            <p>按游客未命中问题的出现次数排序。</p>
           </div>
-          <span class="card-total">{{ blindSpots.length }} 项</span>
+          <span class="card-total">{{ available.blind ? `${blindSpots.length} 项` : '—' }}</span>
         </div>
         <el-skeleton v-if="loading.blindTable" :rows="5" animated />
-        <el-empty v-else-if="!blindSpots.length" description="当前没有待补问题" />
+        <el-empty v-else-if="!blindSpots.length" :description="available.blind ? '当前没有待补问题' : '盲区数据暂不可用'" />
         <el-table v-else :data="blindSpots" stripe class="blind-table">
           <el-table-column label="排名" width="88">
             <template #default="{ row }">
@@ -217,12 +211,12 @@
         <div class="card-heading">
           <div>
             <h3>运营指标快照</h3>
-            <p>用于答辩时快速说明知识资产、游客样本和后台当前服务规模。</p>
+            <p>后台统计接口提供的指标。</p>
           </div>
-          <span class="card-total">{{ analyticsItems.length }} 项</span>
+          <span class="card-total">{{ available.metrics ? `${analyticsItems.length} 项` : '—' }}</span>
         </div>
         <el-skeleton v-if="loading.metrics" :rows="5" animated />
-        <el-empty v-else-if="!analyticsItems.length" description="暂无运营指标数据" />
+        <el-empty v-else-if="!analyticsItems.length" :description="available.metrics ? '暂无运营指标数据' : '运营指标暂不可用'" />
         <div v-else class="metrics-list">
           <div
             v-for="(item, index) in analyticsItems"
@@ -278,6 +272,15 @@ const emotionInsights = ref({
   distribution: [],
   recent: [],
 });
+const available = ref({
+  overview: false,
+  metrics: false,
+  spot: false,
+  visitors: false,
+  trend: false,
+  blind: false,
+  emotion: false,
+});
 
 const loading = ref({
   page: false,
@@ -302,11 +305,12 @@ let resizeObserver = null;
 const numberFormatter = new Intl.NumberFormat("zh-CN");
 
 const avgLatency = computed(() => {
+  if (!available.value.overview) return "—";
   const avg = overview.value.avg_latency_ms ?? overview.value.avg_latency;
   if (avg != null) {
     return (Number(avg) / 1000).toFixed(1);
   }
-  return overview.value.chat_log_count > 0 ? "--" : "0.0";
+  return overview.value.chat_log_count > 0 ? "—" : "暂无样本";
 });
 
 const trendDays = computed(() =>
@@ -349,26 +353,26 @@ const emotionCards = computed(() => [
   {
     key: "analyzed",
     label: "情绪分析总量",
-    value: emotionInsights.value.total_analyzed,
-    note: "每次问答均进行文字情绪分析",
+    value: available.value.emotion ? emotionInsights.value.total_analyzed : null,
+    note: "按接口返回结果统计",
   },
   {
     key: "multimodal",
     label: "文字+语音融合",
-    value: emotionInsights.value.multimodal_count,
+    value: available.value.emotion ? emotionInsights.value.multimodal_count : null,
     note: "语音提问参与多模态融合",
   },
   {
     key: "conflict",
     label: "模态差异",
-    value: emotionInsights.value.conflict_count,
+    value: available.value.emotion ? emotionInsights.value.conflict_count : null,
     note: "文字与声音信号存在差异",
   },
   {
     key: "attention",
     label: "需关注咨询",
-    value: emotionInsights.value.attention_count,
-    note: `含紧急事件 ${formatNumber(emotionInsights.value.urgent_count)} 次`,
+    value: available.value.emotion ? emotionInsights.value.attention_count : null,
+    note: available.value.emotion ? `含紧急事件 ${formatNumber(emotionInsights.value.urgent_count)} 次` : "分析数据暂不可用",
   },
 ]);
 
@@ -397,9 +401,9 @@ const summaryCards = computed(() => [
   {
     key: "consultation",
     kicker: "",
-    label: "总咨询量",
-    value: formatNumber(overview.value.chat_log_count || 0),
-    note: "累计问答日志规模，体现导览服务使用热度。",
+    label: "问答日志",
+    value: formatNumber(overview.value.chat_log_count, available.value.overview),
+    note: "累计记录数。",
     accent: "#0f766e",
     soft: "#dff7f2",
   },
@@ -407,23 +411,17 @@ const summaryCards = computed(() => [
     key: "latency",
     kicker: "",
     label: "平均响应",
-    value: `${avgLatency.value}s`,
-    note:
-      overview.value.chat_log_count > 0
-        ? "按已记录问答日志计算的平均响应时长。"
-        : "当前还没有足够的响应时长样本。",
+    value: avgLatency.value === "—" || avgLatency.value === "暂无样本" ? avgLatency.value : `${avgLatency.value}s`,
+    note: available.value.overview ? "平均响应时长。" : "数据暂不可用。",
     accent: "#c2410c",
     soft: "#ffeadc",
   },
   {
     key: "visitor",
     kicker: "",
-    label: "活跃游客",
-    value: formatNumber(overview.value.visitor_count || 0),
-    note:
-      visitorAudience.value.length > 0
-        ? `当前已沉淀 ${visitorAudience.value.length} 类游客分层。`
-        : "等待更多游客画像与偏好数据沉淀。",
+    label: "游客画像数",
+    value: formatNumber(overview.value.visitor_count, available.value.overview),
+    note: "累计记录数。",
     accent: "#1d4ed8",
     soft: "#e3edff",
   },
@@ -431,23 +429,26 @@ const summaryCards = computed(() => [
     key: "blind-spot",
     kicker: "",
     label: "待补高频问题",
-    value: hotBlindSpot.value
-      ? formatNumber(hotBlindSpot.value.hit_count)
-      : formatNumber(blindSpots.value.length),
+    value: !available.value.blind ? "—" : hotBlindSpot.value ? formatNumber(hotBlindSpot.value.hit_count) : "0",
     note: hotBlindSpot.value
-      ? hotBlindSpot.value.query
-      : "当前没有高频待补问题。",
+      ? `最高频：${hotBlindSpot.value.query}`
+      : available.value.blind ? "当前没有待补问题。" : "数据暂不可用。",
     accent: "#a16207",
     soft: "#fff4cf",
   },
 ]);
 
-function formatNumber(value) {
-  return numberFormatter.format(Number(value) || 0);
+function formatNumber(value, isAvailable = true) {
+  if (!isAvailable || value === null || value === undefined) return "—";
+  const number = Number(value);
+  return Number.isFinite(number) ? numberFormatter.format(number) : "—";
 }
 
 function formatPercent(value) {
-  return `${Math.round((Number(value) || 0) * 100)}%`;
+  const number = Number(value);
+  return value === null || value === undefined || !Number.isFinite(number)
+    ? "—"
+    : `${Math.round(number * 100)}%`;
 }
 
 function emotionLabel(value) {
@@ -799,12 +800,14 @@ async function loadAnalytics() {
 
   if (overviewResult.status === "fulfilled") {
     overview.value = overviewResult.value || {};
+    available.value.overview = true;
   } else {
     failures.push("后台总览");
   }
 
   if (analyticsResult.status === "fulfilled") {
     analyticsItems.value = analyticsResult.value || [];
+    available.value.metrics = true;
   } else {
     failures.push("运营指标");
   }
@@ -812,6 +815,7 @@ async function loadAnalytics() {
 
   if (spotResult.status === "fulfilled") {
     spotAttention.value = spotResult.value || [];
+    available.value.spot = true;
   } else {
     failures.push("景点关注度");
   }
@@ -822,6 +826,7 @@ async function loadAnalytics() {
       audience_distribution: [],
       top_tags: [],
     };
+    available.value.visitors = true;
   } else {
     failures.push("游客群体");
   }
@@ -832,6 +837,7 @@ async function loadAnalytics() {
       daily_trend: [],
       hit_distribution: [],
     };
+    available.value.trend = true;
   } else {
     failures.push("问答趋势");
   }
@@ -840,6 +846,7 @@ async function loadAnalytics() {
 
   if (blindResult.status === "fulfilled") {
     blindSpots.value = blindResult.value || [];
+    available.value.blind = true;
   } else {
     failures.push("知识盲区");
   }
@@ -847,6 +854,7 @@ async function loadAnalytics() {
 
   if (emotionResult.status === "fulfilled") {
     emotionInsights.value = emotionResult.value || emotionInsights.value;
+    available.value.emotion = true;
   } else {
     failures.push("情绪分析");
   }

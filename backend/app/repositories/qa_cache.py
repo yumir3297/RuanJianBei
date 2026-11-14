@@ -36,13 +36,16 @@ class QACacheRepository:
         await self.session.refresh(entry)
         return entry
 
-    async def invalidate(self, normalized_query: str | None = None) -> None:
+    async def invalidate(self, normalized_query: str | None = None, *, commit: bool = True) -> None:
         if normalized_query is None:
             await self.session.execute(delete(QACacheEntry))
         else:
             stmt = delete(QACacheEntry).where(QACacheEntry.normalized_query == normalized_query)
             await self.session.execute(stmt)
-        await self.session.commit()
+        if commit:
+            await self.session.commit()
+        else:
+            await self.session.flush()
 
     async def count(self) -> int:
         result = await self.session.execute(select(func.count(QACacheEntry.id)))

@@ -556,6 +556,8 @@
   .tourist-page .tool-open .tool-dock button span { width: 2.2em; max-width: none; flex: none; line-height: 1.35; letter-spacing: 0; text-align: center; }
   .tourist-page .text-open .narration-rail { height: min(660px,calc(100dvh - 164px)); }
 }
+
+
 @media (min-width: 1000px) and (max-width: 1399px) {
   .tourist-page { padding-inline: 24px; }
   .tourist-page .guide-layout,
@@ -609,6 +611,8 @@
     border-radius: 16px 16px 0 0; padding-bottom: max(12px,env(safe-area-inset-bottom));
   }
 }
+
+
 @media (max-height: 680px) {
   .tourist-page .guide-header { height: 64px; }
   .tourist-page .avatar-stage { inset: 0 0 76px; }
@@ -665,3 +669,18 @@
   .tourist-page .guide-layout.route-tool-open .feature-rail { padding-inline: 18px; }
 }
 
+
+/* Map is a persistent workspace; only its task panel scrolls. */
+.tourist-page .guide-layout.map-open .tool-sheet.map-task[open] {
+  position: fixed; inset: 88px auto 16px 24px; width: min(66vw,1000px);
+  height: auto; max-height: none; margin: 0; padding: 0; border: 0;
+  border-radius: 16px; overflow: hidden; background: #16382b; z-index: 10;
+}
+.tourist-page .map-task .tool-sheet-header { min-height: 52px; padding: 4px 12px; }
+.tourist-page .map-task .tool-sheet-body { position: relative; flex: 1; height: auto; min-height: 0; overflow: hidden; }
+@media (max-width: 999px) {
+  .tourist-page .guide-layout.map-open .tool-sheet.map-task[open] {
+    inset: 0; width: 100%; height: 100dvh; max-height: 100dvh;
+    padding: env(safe-area-inset-top) 0 0; border-radius: 0;
+  }
+}

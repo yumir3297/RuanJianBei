@@ -74,7 +74,21 @@ class VectorBackedRAGService(BaseRAGService):
             return await self._fallback_or_empty(query, normalized, top_k, scope, "no_candidates")
 
         parsed_candidates = []
+        replacement_documents: list[RetrievedDocument] = []
         for result in candidates:
+            validator = getattr(self.fallback, "is_current_vector_result", None)
+            if validator is not None:
+                try:
+                    if not await validator(result.id, result.document):
+                        replacement = getattr(self.fallback, "current_vector_document", None)
+                        if replacement is not None:
+                            current = await replacement(result.id)
+                            if current is not None:
+                                replacement_documents.append(current)
+                        continue
+                except Exception:
+                    logger.exception("Could not validate vector result against current knowledge chunks.")
+                    continue
             raw_id = result.metadata.get("source_entry_id")
             if raw_id is not None and (isinstance(raw_id, bool) or not isinstance(raw_id, (int, str))):
                 continue
@@ -91,7 +105,7 @@ class VectorBackedRAGService(BaseRAGService):
             if entry_id is not None and result.metadata.get("revision_id")
         ]
         visible = await self.visibility.get_published_chunks(references) if self.visibility is not None else {}
-        documents: list[RetrievedDocument] = []
+        documents: list[RetrievedDocument] = list(replacement_documents)
         for result, entry_id in parsed_candidates:
             meta = result.metadata
             revision_id = meta.get("revision_id")
@@ -120,6 +134,27 @@ class VectorBackedRAGService(BaseRAGService):
                     chunk_id=result.id if meta.get("chunk_id") == result.id else None,
                 )
             )
+
+        # When the vector metadata is from an older index, the live database
+        # remains authoritative. Supplement validated vector hits with the
+        # repository result so a replacement revision is returned even when
+        # the test/legacy vector record has no revision metadata.
+        validator = getattr(self.fallback, "is_current_vector_result", None)
+        if validator is not None and self.fallback is not None:
+            try:
+                current_documents = await self.fallback.retrieve(
+                    query,
+                    normalized_query=normalized,
+                    top_k=max(top_k * 4, 10),
+                    scope=scope,
+                )
+                known = {(doc.title, doc.content, doc.source) for doc in documents}
+                documents.extend(
+                    doc for doc in current_documents
+                    if (doc.title, doc.content, doc.source) not in known
+                )
+            except Exception:
+                logger.exception("Current-knowledge retrieval failed; using validated vector results only.")
 
         if not documents:
             return await self._fallback_or_empty(query, normalized, top_k, scope, "no_published_vectors")

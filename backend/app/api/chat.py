@@ -19,6 +19,7 @@ from app.core.deps import get_app_settings, get_db_session
 from app.models.avatar_config import AvatarConfig
 from app.repositories.chat_log import ChatLogRepository
 from app.repositories.knowledge import KnowledgeRepository
+from app.repositories.knowledge_generation import KnowledgeGenerationRepository
 from app.repositories.knowledge_blind_spot import KnowledgeBlindSpotRepository
 from app.repositories.qa_cache import QACacheRepository
 from app.repositories.quick_topic import QuickTopicRepository
@@ -166,6 +167,7 @@ async def build_pipeline(
     tts_voice_preset: str | None = None,
 ) -> QAPipeline:
     knowledge_repository = KnowledgeRepository(session)
+    generation_state = await KnowledgeGenerationRepository(session).get()
     cache_repository = QACacheRepository(session)
     visibility_service = VisibilityService(session)
     chat_log_repository = ChatLogRepository(session)
@@ -200,6 +202,13 @@ async def build_pipeline(
     try:
         if embedder is None:
             raise RuntimeError("Local embedding model is unavailable.")
+        if generation_state.generation != generation_state.indexed_generation:
+            logger.info(
+                "Vector index generation %s is behind knowledge generation %s; using live database retrieval.",
+                generation_state.indexed_generation,
+                generation_state.generation,
+            )
+            raise RuntimeError("vector index generation is stale")
         rag_service = VectorBackedRAGService(
             vector_store=get_cached_vector_store(
                 str(settings.chroma_persist_root),
@@ -257,7 +266,9 @@ async def build_pipeline(
         ),
         followup_suggestions=FollowUpSuggestionService(),
         blind_spot_tracker=BlindSpotTracker(KnowledgeBlindSpotRepository(session)),
-        answer_cache_namespace=build_answer_cache_namespace(settings),
+        answer_cache_namespace=(
+            f"{build_answer_cache_namespace(settings)}|knowledge_generation={generation_state.generation}"
+        ),
         llm_provider_name=settings.llm_provider,
         intent_router=IntentRouter(),
         knowledge_repository=knowledge_repository,
