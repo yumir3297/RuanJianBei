@@ -15,8 +15,13 @@ class ApiSurfaceTests(unittest.TestCase):
         checked_in = json.loads((ROOT / "deploy/api-surface.json").read_text(encoding="utf-8"))
         expected = build_surface()
         self.assertEqual(checked_in, expected)
-        self.assertEqual(len(checked_in["routes"]), 97)
-        self.assertEqual(len({(r["method"], r["path"]) for r in checked_in["routes"]}), 97)
+        self.assertEqual(len(checked_in["routes"]), 98)
+        self.assertEqual(len({(r["method"], r["path"]) for r in checked_in["routes"]}), 98)
+
+    def test_knowledge_index_status_is_admin_only(self):
+        routes = {(r["method"], r["path"]): r for r in build_surface()["routes"]}
+        self.assertEqual(routes[("GET", "/api/admin/knowledge-index-status")]["boundary"], "admin-token")
+        self.assertEqual(routes[("GET", "/api/admin/knowledge-index-status")]["sites"], ["admin"])
 
     def test_understanding_preview_is_admin_only(self):
         routes = {(r["method"], r["path"]): r for r in build_surface()["routes"]}

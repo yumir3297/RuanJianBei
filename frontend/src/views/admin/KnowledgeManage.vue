@@ -72,7 +72,8 @@
             <p>围绕景区知识池进行检视、筛选与编辑，支撑讲解内容、游客问答与后续盲区补录。</p>
           </div>
           <div class="heading-meta">
-            <span>{{ formatNumber(filteredEntries.length) }} / {{ formatNumber(entries.length) }} 条</span>
+            <span v-if="error">{{ lastUpdatedAt ? '上次加载的快照，可能已过期' : '知识数据不可用' }}</span>
+            <span v-else>{{ formatNumber(filteredEntries.length) }} / {{ formatNumber(entries.length) }} 条</span>
             <el-tag
               v-if="activeFilterCount"
               size="small"
@@ -108,10 +109,11 @@
 
         <div class="workspace-toolbar">
           <span>{{ selectedRows.length }} 条草稿已选</span>
-          <el-button type="primary" :disabled="!selectedRows.length" :loading="publishing" @click="publishSelected">发布选中草稿</el-button>
+          <el-button type="primary" :disabled="!!error || !selectedRows.length" :loading="publishing" @click="publishSelected">发布选中草稿</el-button>
         </div>
 
         <el-skeleton v-if="loading" :rows="6" animated />
+        <el-empty v-else-if="error && !lastUpdatedAt" description="知识列表暂不可用，请重新加载" />
         <el-empty v-else-if="!entries.length" description="暂无知识条目，可先导入资料或手动新增" />
         <el-empty v-else-if="!filteredEntries.length" description="当前筛选条件下暂无符合条目" />
         <div v-else class="table-shell">
@@ -533,6 +535,7 @@ const statusSummary = computed(() => {
   if (loading.value) {
     return "加载中";
   }
+  if (error.value) return "知识数据不可用";
   if (syncing.value) {
     return "资料同步中";
   }
@@ -549,6 +552,7 @@ const statusDescription = computed(() => {
   if (loading.value) {
     return "正在读取当前知识资产快照，请稍候。";
   }
+  if (error.value) return lastUpdatedAt.value ? "显示上次加载的快照，可能已过期；请重新加载。" : "无法读取知识列表，请重新加载。";
   if (syncing.value) {
     return "资料正在导入知识池，完成后会自动刷新当前快照。";
   }

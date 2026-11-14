@@ -17,6 +17,7 @@
 
 | 问题 | 事实来源 |
 |---|---|
+| 管理端浅色工作台 | [独立布局](../frontend/apps/admin/App.vue)、[后台样式](../frontend/src/assets/admin-workbench.css)、[接入与验证](integration/ADMIN_WORKBENCH.md)；页面与 API 保持双端隔离 |
 | 应用如何挂载 | 游客端 [apps/tourist/main.js](../frontend/apps/tourist/main.js)、管理端 [apps/admin/main.js](../frontend/apps/admin/main.js)；`src/main.js` 是旧入口 |
 | 实际打开哪个页面 | 游客端 [router.js](../frontend/apps/tourist/router.js) 与管理端 [router.js](../frontend/apps/admin/router.js)；游客舞台由 [TouristView](../frontend/src/views/tourist/TouristView.vue) 挂载 [ChatView](../frontend/src/views/tourist/ChatView.vue)，旧 [router/index.js](../frontend/src/router/index.js) 为兼容入口 |
 | 地图、探索、路线、问答工具 | 旧 `/tourist/map`、`/tourist/explore`、`/tourist/routes`、`/tourist/quiz` 重定向为统一舞台 query；组件由 ChatView 按工具展开 |

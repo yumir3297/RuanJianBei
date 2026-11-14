@@ -179,6 +179,14 @@
     },
     {
       "method": "GET",
+      "path": "/api/admin/knowledge-index-status",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/admin/overview",
       "boundary": "admin-token",
       "sites": [

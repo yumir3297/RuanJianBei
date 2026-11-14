@@ -178,10 +178,38 @@
 .admin-layout :is(.el-table tr:hover > td.el-table__cell) { background: #f6f8f6; }
 .admin-layout :is(.el-empty__description p) { color: var(--admin-muted); }
 
+/* The standalone admin pages retain scoped legacy styles; these selectors
+   deliberately win over their card and button treatments. */
+.admin-layout .knowledge-layout .knowledge-hero,
+.admin-layout .dashboard-layout .dashboard-hero,
+.admin-layout .analytics-layout .analytics-hero,
+.admin-layout .avatar-admin-layout .avatar-hero,
+.admin-layout .experience-layout .experience-hero {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--admin-line);
+  border-radius: 0;
+  padding: 0 0 18px;
+}
+.admin-layout .knowledge-layout .hero-copy p,
+.admin-layout .knowledge-layout .hero-status p,
+.admin-layout .knowledge-layout .hero-status-label { color: var(--admin-muted); }
+.admin-layout .knowledge-layout .hero-status { padding: 0; background: transparent; border: 0; backdrop-filter: none; }
+.admin-layout .knowledge-layout .knowledge-hero .el-button:not(.el-button--primary) {
+  --el-button-bg-color: #fff; --el-button-border-color: var(--admin-line); --el-button-text-color: var(--admin-ink);
+  --el-button-hover-bg-color: var(--admin-selected); --el-button-hover-border-color: var(--admin-accent); --el-button-hover-text-color: var(--admin-accent);
+}
+.admin-layout .knowledge-layout .knowledge-hero .el-button--primary,
+.admin-layout .knowledge-layout .table-actions .el-button--primary {
+  --el-button-bg-color: var(--admin-accent); --el-button-border-color: var(--admin-accent); --el-button-text-color: #fff;
+  --el-button-hover-bg-color: #39745b; --el-button-hover-border-color: #39745b; --el-button-hover-text-color: #fff;
+}
+
 @media (max-width: 900px) {
   .admin-layout { height: 100dvh; }
   .admin-layout .admin-sidebar { width: 100%; background: #fff; padding: 8px 12px; border-right: 0; border-bottom: 1px solid var(--admin-line); }
   .admin-layout .sidebar-nav-link { flex-wrap: nowrap; white-space: nowrap; }
+  .admin-layout .sidebar-nav-group { display: contents; }
   .admin-layout .sidebar-section-label { display: none; }
   .admin-layout .admin-main { padding: 18px; }
 }
