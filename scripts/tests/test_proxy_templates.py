@@ -11,6 +11,13 @@ from render_api_policy import import_budget_mib, render_nginx  # noqa: E402
 
 
 class ProxyTemplateTests(unittest.TestCase):
+    def test_compose_mounts_target_rendered_sites_and_route_maps(self):
+        compose = (ROOT / "deploy/compose.yaml").read_text(encoding="utf-8")
+        for filename in ("tourist.conf", "admin.conf", "tourist-api-map.conf", "admin-api-map.conf"):
+            self.assertIn(f"${{NGINX_CONFIG_ROOT:?render target-specific NGINX config first}}/{filename}:/etc/nginx/conf.d/{filename}:ro", compose)
+        self.assertIn("${NGINX_CONFIG_ROOT:?render target-specific NGINX config first}/snippets:/etc/nginx/snippets:ro", compose)
+        self.assertNotIn("default.conf:/etc/nginx/conf.d", compose)
+
     def test_proxy_keeps_api_prefix_and_has_sse_timeout_policy(self):
         common = (ROOT / "deploy/nginx/common-api.conf").read_text(encoding="utf-8")
         self.assertIn("proxy_pass http://api:8000;", common)
@@ -28,6 +35,9 @@ class ProxyTemplateTests(unittest.TestCase):
             self.assertIn("default_type application/json;", text)
             self.assertIn("return 413", text)
             self.assertIn("try_files $uri =404;", text)
+            self.assertIn('add_header Cache-Control "public, max-age=31536000, immutable";', text)
+            self.assertIn('location = /index.html { add_header Cache-Control "no-cache";', text)
+            self.assertIn('location ^~ /models/ { add_header Cache-Control "no-cache";', text)
 
     def test_import_budget_tracks_actual_batch_file_count(self):
         file_bytes = 50 * 1024 * 1024
@@ -46,6 +56,7 @@ class ProxyTemplateTests(unittest.TestCase):
             self.assertIn("client_max_body_size 55m;", tourist)
             self.assertIn("client_max_body_size 55m;", admin)
             self.assertTrue((output / "tourist-api-map.conf").is_file())
+            self.assertTrue((output / "snippets/common-api.conf").is_file())
         with self.assertRaises(ValueError):
             render_nginx(Path(directory) / "invalid", "same.example.org", "same.example.org", 1, 100)
 

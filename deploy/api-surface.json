@@ -274,6 +274,22 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/guide/bootstrap",
+      "boundary": "anonymous",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/guide/decision",
+      "boundary": "anonymous",
+      "sites": [
+        "tourist"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/guide/narration",
       "boundary": "anonymous",
@@ -444,6 +460,22 @@
     {
       "method": "DELETE",
       "path": "/api/knowledge/{knowledge_id}/draft",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/knowledge/{knowledge_id}/source",
+      "boundary": "admin-token",
+      "sites": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/knowledge/{knowledge_id}/understanding-preview",
       "boundary": "admin-token",
       "sites": [
         "admin"

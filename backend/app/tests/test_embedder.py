@@ -5,7 +5,7 @@ from pathlib import Path
 from types import ModuleType
 
 from app.api import chat as chat_module
-from app.services.rag.embedder import SentenceTransformerEmbedder
+from app.services.rag.embedder import SentenceTransformerEmbedder, SimpleEmbedder
 
 
 class FakeSentenceTransformer:
@@ -61,3 +61,13 @@ def test_chat_cached_embedder_always_uses_local_files(monkeypatch, tmp_path: Pat
         chat_module.get_cached_embedder.cache_clear()
 
     assert calls == [("offline-model", tmp_path, True)]
+
+
+def test_chat_cached_embedder_requires_explicit_simple_demo_name(tmp_path: Path) -> None:
+    chat_module.get_cached_embedder.cache_clear()
+    try:
+        embedder = chat_module.get_cached_embedder(SimpleEmbedder.model_name, str(tmp_path))
+        assert isinstance(embedder, SimpleEmbedder)
+        assert len(embedder.embed("演示资料")) == 16
+    finally:
+        chat_module.get_cached_embedder.cache_clear()

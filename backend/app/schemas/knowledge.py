@@ -36,3 +36,7 @@ class KnowledgeRead(KnowledgeBase):
     draft_revision_id: str | None = None
     lock_version: int = 1
     withdrawn_at: datetime | None = None
+    source_document_version_id: str | None = None
+    page_start: int | None = None
+    page_end: int | None = None
+    section_path: str | None = None

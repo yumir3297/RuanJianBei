@@ -126,3 +126,6 @@ ppt-screenshots-patch.json
 
 # 最终提交压缩包可能含评审环境配置，不纳入 Git
 提交产物/
+eval/results/
+outputs/
+*.xlsx

@@ -43,7 +43,7 @@ class ItineraryStop(StrictModel):
     locked_fields: list[Literal["stop", "position", "name", "spot_code", "duration"]] = Field(
         default_factory=list, max_length=5
     )
-    created_by: Literal["manual", "ai", "template"] = "manual"
+    created_by: Literal["manual", "ai", "template", "demo_synthetic"] = "manual"
 
     @field_validator("name")
     @classmethod
@@ -102,6 +102,9 @@ class PublishedCatalogEntryRead(StrictModel):
     latitude: float | None = None
     longitude: float | None = None
     coordinate_evidence_id: str | None = None
+    coordinate_system: str | None = None
+    environment: Literal["indoor", "outdoor", "mixed", "unknown"] = "unknown"
+    environment_source_id: str | None = None
 
 
 class PublishedCatalogResponse(StrictModel):

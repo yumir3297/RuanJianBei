@@ -257,3 +257,27 @@ test('PCM rate shortens source scheduling and reports source-content progress', 
     globalThis.clearInterval = originalClearInterval;
   }
 });
+
+test('playback outcomes distinguish full audio, silent fallback, and interruption', async () => {
+  const outcomes = [];
+  const session = player.claimPlayback('outcome-test');
+  const audio = player.enqueue('AA==', 800, null, '', null, { sessionId: session.id, onOutcome: result => outcomes.push(result) });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.deepEqual(outcomes, []);
+  nodes.at(-1).onended();
+  await audio;
+  assert.deepEqual(outcomes, [{ outcome: 'completed', mode: 'audio' }]);
+  player.stop(session.id);
+
+  const silent = player.claimPlayback('silent-test');
+  await player.enqueue('', 800, null, '', null, { sessionId: silent.id, onOutcome: result => outcomes.push(result) });
+  assert.deepEqual(outcomes.at(-1), { outcome: 'unavailable', mode: 'silent' });
+  player.stop(silent.id);
+
+  const interrupted = player.claimPlayback('interrupted-test');
+  const pending = player.enqueue('AA==', 800, null, '', null, { sessionId: interrupted.id, onOutcome: result => outcomes.push(result) });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  player.stop(interrupted.id);
+  await pending;
+  assert.equal(outcomes.length, 2);
+});

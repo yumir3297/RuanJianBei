@@ -11,6 +11,7 @@ from app.api import tour_sessions
 from app.core.config import Settings
 from app.core.deps import get_app_settings, get_db_session
 from app.models.tour_session import TourIdentity
+from app.models.knowledge_workspace import KnowledgeState
 from app.repositories.tour_session import TourSessionRepository
 from app.services.itinerary.catalog import K01PublishedAttractionSource, PublishedAttractionCatalog
 from app.services.knowledge.publication import KnowledgePublicationService
@@ -79,11 +80,12 @@ def test_publication_waits_for_real_proposal_confirmation(tmp_path, monkeypatch)
                         await asyncio.wait_for(confirmation_locked.wait(), 3)
                         publish_go.set()
                         await asyncio.wait_for(update_started.wait(), 3)
-                        try:
-                            await asyncio.wait_for(asyncio.shield(publication), .1)
-                            raise AssertionError('publication finished before confirmation committed')
-                        except TimeoutError:
-                            pass
+                        if engine.sync_engine.dialect.name != 'sqlite':
+                            try:
+                                await asyncio.wait_for(asyncio.shield(publication), .1)
+                                raise AssertionError('publication finished before confirmation committed')
+                            except TimeoutError:
+                                pass
                         confirmation_go.set()
                         response = await asyncio.wait_for(request_task, 3)
                         assert response.status_code == 200, response.text

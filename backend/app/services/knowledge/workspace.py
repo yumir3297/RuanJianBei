@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -66,6 +67,19 @@ class KnowledgeWorkspaceService:
                 continue
             values[key] = "|".join(value) if key == "aliases" and value is not None else value
 
+        retain_origin = bool(base_revision and values["source"] == base_revision.source)
+        if base_revision and base_revision.source_document_version_id and not retain_origin and values["metadata_json"]:
+            try:
+                metadata = json.loads(values["metadata_json"])
+                if isinstance(metadata, dict):
+                    for key in ("source_document_id", "sha256", "section_identity", "stable_id", "extraction_method"):
+                        metadata.pop(key, None)
+                    values["metadata_json"] = json.dumps(metadata, ensure_ascii=False)
+                else:
+                    values["metadata_json"] = None
+            except (ValueError, TypeError):
+                # Opaque metadata cannot safely carry prior source attribution.
+                values["metadata_json"] = None
         revision = KnowledgeRevision(
             id=str(uuid4()),
             knowledge_entry_id=entry.id,
@@ -76,6 +90,10 @@ class KnowledgeWorkspaceService:
             source=values["source"],
             aliases=values["aliases"] or "",
             metadata_json=values["metadata_json"],
+            source_document_version_id=base_revision.source_document_version_id if retain_origin else None,
+            page_start=base_revision.page_start if retain_origin else None,
+            page_end=base_revision.page_end if retain_origin else None,
+            section_path=base_revision.section_path if retain_origin else None,
         )
         self.session.add(revision)
         await self.session.flush()
@@ -125,6 +143,16 @@ class KnowledgeWorkspaceService:
         if expected_version is not None and expected_version != entry.lock_version:
             raise AppError("This knowledge entry changed. Reload it before withdrawing.", error_code="knowledge_version_conflict", status_code=409)
 
+        dialect = self.session.bind.dialect.name if self.session.bind is not None else ""
+        if dialect == "sqlite":
+            if await self.session.get(KnowledgeState, 1) is None:
+                raise AppError("Knowledge state is unavailable; check database migrations.", error_code="knowledge_state_missing", status_code=409)
+        else:
+            result = await self.session.execute(
+                update(KnowledgeState).where(KnowledgeState.id == 1).values(epoch=KnowledgeState.epoch + 1)
+            )
+            if result.rowcount != 1:
+                raise AppError("Knowledge state is unavailable; check database migrations.", error_code="knowledge_state_missing", status_code=409)
         result = await self.session.execute(
             update(KnowledgeEntry)
             .where(KnowledgeEntry.id == entry.id, KnowledgeEntry.lock_version == entry.lock_version)
@@ -138,10 +166,9 @@ class KnowledgeWorkspaceService:
             await self.session.rollback()
             raise AppError("This knowledge entry changed. Reload it before withdrawing.", error_code="knowledge_version_conflict", status_code=409)
 
-        result = await self.session.execute(
-            update(KnowledgeState).where(KnowledgeState.id == 1).values(epoch=KnowledgeState.epoch + 1)
-        )
-        if result.rowcount == 0:
-            self.session.add(KnowledgeState(id=1, epoch=2))
         await self.session.execute(delete(QACacheEntry))
+        if dialect == "sqlite":
+            await self.session.execute(
+                update(KnowledgeState).where(KnowledgeState.id == 1).values(epoch=KnowledgeState.epoch + 1)
+            )
         await self.session.commit()

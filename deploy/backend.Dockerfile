@@ -2,6 +2,8 @@
 # wheel lock only after the target CPU/OS is confirmed; see docs/deployment/RUNTIME.md.
 ARG PYTHON_BASE_IMAGE=python:3.13.16-slim-bookworm
 FROM ${PYTHON_BASE_IMAGE}
+ARG SOURCE_SHA=unknown
+LABEL org.opencontainers.image.revision=${SOURCE_SHA}
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

@@ -54,3 +54,23 @@ test("a late image load cannot replace a newer background", async () => {
   await oldLoad;
   assert.equal(loader.currentUrl, "/new.jpg");
 });
+
+test("reselecting the current background invalidates a different pending image", async () => {
+  const resolvers = new Map();
+  const loader = createBackgroundAssetLoader({
+    resolveUrl: (url) => url,
+    preload: (url) => new Promise((resolve) => resolvers.set(url, resolve)),
+  });
+  const first = loader.load("/a.jpg");
+  resolvers.get("/a.jpg")(true);
+  await first;
+
+  const obsolete = loader.load("/b.jpg");
+  const selectedAgain = await loader.load("/a.jpg");
+  resolvers.get("/b.jpg")(true);
+  await obsolete;
+
+  assert.equal(selectedAgain.url, "/a.jpg");
+  assert.equal(loader.currentUrl, "/a.jpg");
+  assert.equal(loader.loading, false);
+});

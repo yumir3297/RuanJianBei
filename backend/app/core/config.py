@@ -13,8 +13,9 @@ class Settings(BaseSettings):
     site_id: str = Field(default="default", min_length=1, max_length=64)
     """景区名称：平台按景区自设置的核心配置，注入提示词与欢迎语（在 .env 中按景区配置）。"""
     app_env: str = Field(default="development")
-    guide_loop_pilot_enabled: bool = False
-    guide_loop_visitor_enabled: bool = False
+    guide_loop_pilot_enabled: bool = Field(default=False)
+    guide_loop_visitor_enabled: bool = Field(default=False)
+    knowledge_understanding_enabled: bool = Field(default=False)
     app_host: str = Field(default="0.0.0.0")
     app_port: int = Field(default=8000)
     database_url: str = Field(default="postgresql+asyncpg://postgres:postgres@localhost:5432/a5_scenic_guide")
@@ -85,6 +86,11 @@ class Settings(BaseSettings):
     knowledge_import_min_free_bytes: int = Field(default=100 * 1024 * 1024, ge=0)
     knowledge_import_max_pages: int = Field(default=500, ge=1, le=5000)
     knowledge_import_parse_timeout_seconds: int = Field(default=120, ge=1, le=900)
+    knowledge_ocr_enabled: bool = Field(default=False)
+    knowledge_ocr_executable: str = Field(default="")
+    knowledge_ocr_engine: str = Field(default="tesseract", pattern="^(tesseract|appleocr)$")
+    knowledge_ocr_language: str = Field(default="chi_sim", pattern="^[a-zA-Z0-9_+]{1,40}$")
+    knowledge_ocr_timeout_seconds: int = Field(default=90, ge=1, le=600)
     asr_timeout_seconds: float = Field(default=180.0, gt=0.0, le=180.0)
     asr_ffprobe_path: str = Field(default="ffprobe", min_length=1, max_length=500)
     asr_probe_timeout_seconds: float = Field(default=3.0, gt=0.0, le=15.0)
@@ -137,6 +143,8 @@ class Settings(BaseSettings):
     qweather_cache_ttl_seconds: int = Field(default=600, ge=0, le=3600)
     qweather_default_lat: float = Field(default=31.4285, ge=-90.0, le=90.0)
     qweather_default_lon: float = Field(default=120.0998, ge=-180.0, le=180.0)
+    cass_enabled: bool = False
+    cass_demo_enabled: bool = False
     competition_mode: bool = Field(default=False)
     cors_origins: str = Field(default="http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://localhost:5175")
     admin_password: str = Field(default="admin123")

@@ -30,9 +30,11 @@ export function useWeather() {
   const available = ref(false);
   const reason = ref("");
   const statusText = ref("");
+  const evidence = ref(null);
   const loading = ref(false);
   const error = ref("");
   let pollTimer = null;
+  let refreshGeneration = 0;
 
   function normalizeWeather(raw) {
     if (!raw || typeof raw !== "object") return null;
@@ -54,10 +56,19 @@ export function useWeather() {
   }
 
   async function refresh() {
+    const generation = ++refreshGeneration;
     loading.value = true;
     error.value = "";
     try {
       const data = await fetchCurrentWeather({ lat: LINGSHAN_LAT, lon: LINGSHAN_LON });
+      if (generation !== refreshGeneration) return;
+      evidence.value = {
+        source: data?.source || null,
+        fetchedAt: data?.fetched_at || null,
+        status: data?.status || (data?.available ? "available" : "unknown"),
+        weather: data?.weather || null,
+        alert: data?.alert || null,
+      };
       available.value = Boolean(data?.available);
       reason.value = data?.reason || "";
       weather.value = normalizeWeather(data?.weather);
@@ -67,15 +78,17 @@ export function useWeather() {
         ? ""
         : data?.message || "\u5929\u6c14\u6570\u636e\u6682\u4e0d\u53ef\u7528";
     } catch (e) {
+      if (generation !== refreshGeneration) return;
       available.value = false;
       reason.value = "network_error";
       weather.value = null;
       alert.value = null;
       air.value = null;
+      evidence.value = { source: null, fetchedAt: null, status: "unavailable", weather: null, alert: null };
       statusText.value = "\u5929\u6c14\u670d\u52a1\u8fde\u63a5\u5931\u8d25";
       error.value = e?.message || "\u5929\u6c14\u6570\u636e\u83b7\u53d6\u5931\u8d25";
     } finally {
-      loading.value = false;
+      if (generation === refreshGeneration) loading.value = false;
     }
   }
 
@@ -152,6 +165,7 @@ export function useWeather() {
     available,
     reason,
     statusText,
+    evidence,
     scenicColor,
     colorLabel,
     loading,

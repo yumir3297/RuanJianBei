@@ -23,7 +23,7 @@ class StoredUpload:
 
 
 class KnowledgeFileStorage:
-    ALLOWED_SUFFIXES = {".pdf", ".json"}
+    ALLOWED_SUFFIXES = {".pdf", ".json", ".docx", ".xlsx"}
 
     def __init__(self, settings: Settings) -> None:
         self.root = settings.knowledge_upload_root
@@ -34,7 +34,7 @@ class KnowledgeFileStorage:
         original_filename = self._display_filename(upload.filename or "upload")
         suffix = Path(original_filename).suffix.lower()
         if suffix not in self.ALLOWED_SUFFIXES:
-            raise AppError("Only PDF and JSON knowledge documents are supported.", error_code="unsupported_file_type", status_code=415)
+            raise AppError("Only PDF, JSON, DOCX and XLSX knowledge documents are supported.", error_code="unsupported_file_type", status_code=415)
 
         token = uuid.uuid4().hex
         self.root.mkdir(parents=True, exist_ok=True)
@@ -65,6 +65,8 @@ class KnowledgeFileStorage:
                 raise AppError("The uploaded file is empty.", error_code="empty_file", status_code=422)
             if suffix == ".pdf" and not bytes(prefix).startswith(b"%PDF-"):
                 raise AppError("The file contents are not a valid PDF document.", error_code="invalid_pdf", status_code=422)
+            if suffix in {".docx", ".xlsx"} and not bytes(prefix).startswith(b"PK\x03\x04"):
+                raise AppError("The file contents are not a valid Office document.", error_code=f"invalid_{suffix[1:]}", status_code=422)
             if suffix == ".json":
                 try:
                     temporary_path.read_text(encoding="utf-8")
@@ -75,7 +77,7 @@ class KnowledgeFileStorage:
             temporary_path.unlink(missing_ok=True)
             raise
 
-        mime_type = "application/pdf" if suffix == ".pdf" else "application/json"
+        mime_type = {".pdf": "application/pdf", ".json": "application/json", ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}[suffix]
         return StoredUpload(
             path=final_path,
             sha256=digest.hexdigest(),

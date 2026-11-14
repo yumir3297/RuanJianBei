@@ -69,6 +69,45 @@ class FakeVectorStore:
             self.records.pop(item_id, None)
 
 
+def test_duplicate_attraction_codes_do_not_publish(tmp_path):
+    from app.schemas.knowledge import KnowledgeCreate
+
+    async def scenario():
+        engine, session = await open_test_session(str(tmp_path / "duplicate.db"))
+        try:
+            session.add(KnowledgeState(id=1, epoch=1))
+            await session.commit()
+            workspace = KnowledgeWorkspaceService(session)
+            entries = []
+            for title in ("甲", "乙"):
+                entry, revision = await workspace.save_draft(None, KnowledgeCreate(
+                    title=title, category="景点信息", content="合成资料", source="合成",
+                    metadata_json='{"attraction_id":"same"}',
+                ))
+                entries.append((entry.id, revision.id, entry.lock_version))
+            service = KnowledgePublicationService(session, FakeEmbedder(), FakeVectorStore())
+            selections = [{"entry_id": i, "revision_id": r, "expected_version": v} for i, r, v in entries]
+            job = await service.create_publication(selections, idempotency_key="duplicate-batch")
+            job_id = job.id
+            await service.run_publication(job_id)
+            assert (await service.get_publication(job_id)).state == "failed"
+            for entry_id, revision_id, _ in entries:
+                entry = await session.get(KnowledgeEntry, entry_id)
+                assert entry.published_revision_id is None
+                assert entry.draft_revision_id == revision_id
+            job = await service.create_publication(selections[:1], idempotency_key="first")
+            await service.run_publication(job.id)
+            job = await service.create_publication(selections[1:], idempotency_key="duplicate-existing")
+            job_id = job.id
+            await service.run_publication(job_id)
+            assert (await service.get_publication(job_id)).state == "failed"
+            assert (await session.get(KnowledgeEntry, entries[1][0])).published_revision_id is None
+        finally:
+            await session.close()
+            await engine.dispose()
+    asyncio.run(scenario())
+
+
 def test_publication_holds_writer_guard_through_database_commit(tmp_path, monkeypatch):
     path = str(tmp_path / "guard-publication.db")
     selected = _seed_drafts(path)
@@ -221,6 +260,8 @@ def test_multiple_draft_edits_keep_published_base_for_publication(tmp_path) -> N
         try:
             from app.schemas.knowledge import KnowledgeCreate, KnowledgeUpdate
 
+            session.add(KnowledgeState(id=1, epoch=1))
+            await session.commit()
             workspace = KnowledgeWorkspaceService(session)
             entry, first = await workspace.save_draft(
                 None,

@@ -51,6 +51,13 @@ test("tourist application graph excludes admin auth, APIs, charts, and Element P
   assert.ok(!source.some((text) => /(?:from\s*|import\s*\()["'](?:element-plus|echarts)(?:\/|["'])/.test(text)));
 });
 
+test("tourist UI does not expose a navigation link to the admin application", async () => {
+  const chatView = await readFile(join(frontendRoot, "src/views/tourist/ChatView.vue"), "utf8");
+  const appLinks = await readFile(join(frontendRoot, "src/utils/appLinks.js"), "utf8");
+  assert.ok(!/运营管理|admin-entry|adminAppUrl/.test(chatView));
+  assert.ok(!/adminAppUrl|VITE_ADMIN_APP_URL/.test(appLinks));
+});
+
 test("admin graph retains avatar preview and excludes tourist conversation", async () => {
   const files = await reachableFiles("apps/admin/main.js");
   assert.ok(files.includes("src/views/admin/AvatarConfig.vue"));

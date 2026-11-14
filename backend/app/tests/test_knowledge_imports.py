@@ -157,11 +157,17 @@ def test_reimport_updates_matching_draft_and_preserves_conflicts(tmp_path) -> No
             # A later human draft wins over a source update; the imported version is retained as a conflict.
             from app.services.knowledge.workspace import KnowledgeWorkspaceService
             from app.schemas.knowledge import KnowledgeUpdate
-            await KnowledgeWorkspaceService(session).save_draft(
+            _, human_draft = await KnowledgeWorkspaceService(session).save_draft(
                 entry.id,
                 KnowledgeUpdate(content="人工编辑"),
                 expected_version=entry.lock_version,
             )
+            assert human_draft.source_document_version_id == second.jobs[0].document_version_id
+            assert human_draft.section_path == "展馆/一层"
+            from app.api.knowledge import _to_knowledge_read
+            presented = _to_knowledge_read(entry, human_draft)
+            assert presented.source_document_version_id == human_draft.source_document_version_id
+            assert presented.section_path == "展馆/一层"
             third = await service.create_import(
                 [_upload("guide.json", '{"entries":[]}|第三版'.encode())],
                 document_ids=[(await session.get(SourceDocumentVersion, second.jobs[0].document_version_id)).document_id],
@@ -196,6 +202,13 @@ def test_reimport_updates_matching_draft_and_preserves_conflicts(tmp_path) -> No
             await session.refresh(entry)
             assert entry.draft_revision_id == incoming.id
             assert (await session.get(ImportConflict, conflicts[0].id)).state == "resolved"
+            _, replaced_source = await KnowledgeWorkspaceService(session).save_draft(
+                entry.id, KnowledgeUpdate(source="人工指定的新来源"), expected_version=entry.lock_version,
+            )
+            assert replaced_source.source_document_version_id is None
+            assert replaced_source.section_path is None
+            import json
+            assert "source_document_id" not in json.loads(replaced_source.metadata_json or "{}")
         finally:
             await session.close()
             await engine.dispose()
@@ -305,6 +318,39 @@ def test_real_pdf_text_parser_preserves_page_numbers_and_flags_scan_only_files(t
     assert sections[0].content == "Hello PDF"
     assert sections[0].page_start == sections[0].page_end == 1
 
+    mixed_writer = PdfWriter()
+    mixed_writer.append(str(text_pdf))
+    mixed_writer.add_blank_page(width=612, height=792)
+    mixed_path = tmp_path / "mixed.pdf"
+    with mixed_path.open("wb") as output:
+        mixed_writer.write(output)
+    try:
+        PDFTextParser().parse(mixed_path)
+    except AppError as exc:
+        assert exc.error_code == "needs_ocr"
+        assert "2" in str(exc)
+    else:
+        raise AssertionError("a partially extractable PDF must not silently omit pages")
+
+    async def import_mixed_pdf() -> None:
+        engine, session = await open_test_session(str(tmp_path / "mixed-import.db"))
+        settings = Settings(knowledge_upload_dir=str(tmp_path / "mixed-files"))
+        try:
+            service = KnowledgeImportService(session, settings)
+            batch = await service.create_import([_upload("mixed.pdf", mixed_path.read_bytes())], idempotency_key="mixed")
+            await service.run_import(batch.jobs[0].id)
+            job = (await service.get_batch(batch.id)).jobs[0]
+            assert job.stage == "needs_ocr"
+            assert "2" in job.error
+            assert not (await session.scalars(select(KnowledgeEntry))).all()
+            version = await session.get(SourceDocumentVersion, job.document_version_id)
+            assert version.parse_status == "needs_ocr"
+            assert (settings.knowledge_upload_root / version.storage_path).is_file()
+        finally:
+            await session.close()
+            await engine.dispose()
+    asyncio.run(import_mixed_pdf())
+
     scan_writer = PdfWriter()
     scan_writer.add_blank_page(width=612, height=792)
     scan_path = tmp_path / "scan.pdf"
@@ -346,6 +392,150 @@ def test_json_parser_requires_nonempty_entries(tmp_path) -> None:
         assert exc.error_code == "empty_document"
     else:
         raise AssertionError("empty JSON must not silently succeed")
+
+
+def test_docx_import_preserves_body_and_table_order_as_unpublished_drafts(tmp_path) -> None:
+    from docx import Document
+    from app.services.knowledge.parsers import DOCXKnowledgeParser
+
+    document = Document()
+    document.add_heading("景点介绍", level=1)
+    document.add_paragraph("第一段正文")
+    table = document.add_table(rows=1, cols=2)
+    table.rows[0].cells[0].text = "开放时间"
+    table.rows[0].cells[1].text = "演示时间"
+    document.add_paragraph("表格后的正文")
+    document.add_heading("参观提示", level=1)
+    document.add_paragraph("第二节正文")
+    path = tmp_path / "source.docx"
+    document.save(path)
+    sections = DOCXKnowledgeParser().parse(path)
+    assert [item.title for item in sections] == ["景点介绍", "参观提示"]
+    assert sections[0].content == "第一段正文\n开放时间 | 演示时间\n表格后的正文"
+    assert sections[0].section_path == "正文第 1 块"
+
+    async def scenario():
+        engine, session = await open_test_session(str(tmp_path / "docx.db"))
+        try:
+            settings = Settings(knowledge_upload_dir=str(tmp_path / "docx-files"))
+            service = KnowledgeImportService(session, settings)
+            batch = await service.create_import([_upload("source.docx", path.read_bytes())], idempotency_key="docx-import")
+            await service.run_import(batch.jobs[0].id)
+            job = (await service.get_batch(batch.id)).jobs[0]
+            assert job.state == "succeeded"
+            entries = (await session.scalars(select(KnowledgeEntry).order_by(KnowledgeEntry.id))).all()
+            assert len(entries) == 2 and all(entry.published_revision_id is None for entry in entries)
+            revision = await session.get(KnowledgeRevision, entries[0].draft_revision_id)
+            assert revision.content == sections[0].content and revision.section_path == sections[0].section_path
+            assert revision.source_document_version_id == job.document_version_id
+        finally:
+            await session.close()
+            await engine.dispose()
+    asyncio.run(scenario())
+
+
+def test_docx_nested_table_is_rejected_instead_of_silently_dropped(tmp_path) -> None:
+    import pytest
+    from docx import Document
+    from app.core.exceptions import AppError
+    from app.services.knowledge.parsers import DOCXKnowledgeParser
+
+    document = Document()
+    document.add_paragraph("正文")
+    table = document.add_table(rows=1, cols=1)
+    table.cell(0, 0).add_table(rows=1, cols=1).cell(0, 0).text = "嵌套内容"
+    path = tmp_path / "nested.docx"
+    document.save(path)
+    with pytest.raises(AppError) as exc:
+        DOCXKnowledgeParser().parse(path)
+    assert exc.value.error_code == "unsupported_docx_structure"
+
+    from docx.oxml import OxmlElement
+    illustrated = Document()
+    illustrated.add_paragraph("正文").add_run()._r.append(OxmlElement("w:drawing"))
+    image_path = tmp_path / "illustrated.docx"
+    illustrated.save(image_path)
+    with pytest.raises(AppError) as image_exc:
+        DOCXKnowledgeParser().parse(image_path)
+    assert image_exc.value.error_code == "needs_ocr"
+
+    merged = Document()
+    merged.add_paragraph("正文")
+    row = merged.add_table(rows=1, cols=2).rows[0]
+    row.cells[0].merge(row.cells[1]).text = "合并内容"
+    merged_path = tmp_path / "merged.docx"
+    merged.save(merged_path)
+    with pytest.raises(AppError) as merged_exc:
+        DOCXKnowledgeParser().parse(merged_path)
+    assert merged_exc.value.error_code == "unsupported_docx_structure"
+
+
+def test_xlsx_import_preserves_rows_and_source_as_unpublished_drafts(tmp_path) -> None:
+    from openpyxl import Workbook
+    from app.services.knowledge.parsers import XLSXKnowledgeParser
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "景点"
+    sheet.append([])
+    sheet.append(["名称", "说明"])
+    sheet.append(["合成景点", "合成资料"])
+    sheet.append([])
+    sheet.append(["第二景点", "第二条资料"])
+    path = tmp_path / "source.xlsx"
+    workbook.save(path)
+    sections = XLSXKnowledgeParser().parse(path)
+    assert [section.section_path for section in sections] == ["景点!3", "景点!5"]
+    assert sections[0].content == "名称: 合成景点\n说明: 合成资料"
+
+    async def scenario():
+        engine, session = await open_test_session(str(tmp_path / "xlsx.db"))
+        try:
+            service = KnowledgeImportService(session, Settings(knowledge_upload_dir=str(tmp_path / "xlsx-files")))
+            batch = await service.create_import([_upload("source.xlsx", path.read_bytes())], idempotency_key="xlsx-import")
+            await service.run_import(batch.jobs[0].id)
+            job = (await service.get_batch(batch.id)).jobs[0]
+            assert job.state == "succeeded"
+            entries = (await session.scalars(select(KnowledgeEntry).order_by(KnowledgeEntry.id))).all()
+            assert len(entries) == 2 and all(entry.published_revision_id is None for entry in entries)
+            revision = await session.get(KnowledgeRevision, entries[0].draft_revision_id)
+            assert revision.content == sections[0].content and revision.section_path == "景点!3"
+            assert revision.source_document_version_id == job.document_version_id
+            first_draft = entries[0].draft_revision_id
+            source_version = await session.get(SourceDocumentVersion, job.document_version_id)
+            sheet.insert_rows(3)
+            sheet.cell(3, 1, "插入景点")
+            sheet.cell(3, 2, "插入资料")
+            workbook.save(path)
+            rerun = await service.create_import([_upload("source.xlsx", path.read_bytes())], document_ids=[source_version.document_id], idempotency_key="xlsx-reimport")
+            await service.run_import(rerun.jobs[0].id)
+            await session.refresh(entries[0])
+            assert entries[0].draft_revision_id == first_draft
+            assert (await session.get(KnowledgeRevision, first_draft)).content == sections[0].content
+        finally:
+            await session.close()
+            await engine.dispose()
+    asyncio.run(scenario())
+
+
+def test_xlsx_formula_merged_cells_and_unlabelled_values_are_rejected(tmp_path) -> None:
+    import pytest
+    from openpyxl import Workbook
+    from app.core.exceptions import AppError
+    from app.services.knowledge.parsers import XLSXKnowledgeParser
+
+    for kind in ("formula", "merged", "unlabelled"):
+        workbook = Workbook()
+        sheet = workbook.active
+        sheet.append(["名称", "说明" if kind != "unlabelled" else None])
+        sheet.append(["景点", "=1+1" if kind == "formula" else "资料"])
+        if kind == "merged":
+            sheet.merge_cells("A2:B2")
+        path = tmp_path / f"{kind}.xlsx"
+        workbook.save(path)
+        with pytest.raises(AppError) as exc:
+            XLSXKnowledgeParser().parse(path)
+        assert exc.value.error_code == {"formula": "unsupported_xlsx_formula", "merged": "unsupported_xlsx_structure", "unlabelled": "invalid_xlsx_header"}[kind]
 
 
 def test_scanned_pdf_is_preserved_with_needs_ocr_state(tmp_path) -> None:

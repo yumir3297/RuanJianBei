@@ -23,8 +23,8 @@ flowchart LR
   Service --> Provider[外部 AI 与天气服务]
 ```
 
-- [main.js](../frontend/src/main.js) 安装 Pinia、Router、Element Plus；[App.vue](../frontend/src/App.vue) 区分游客舞台和后台布局。
-- [router/index.js](../frontend/src/router/index.js) 决定实际页面；游客用一个持久舞台，探索/地图/路线/问答由 ChatView 展开。
+- 游客入口 [apps/tourist/main.js](../frontend/apps/tourist/main.js) 只安装 Pinia/Router 并挂游客舞台；管理入口 [apps/admin/main.js](../frontend/apps/admin/main.js) 单独安装 Element Plus。两者有独立 router、HTML、Vite 配置和 `dist` 目录。
+- 游客用一个持久舞台，探索/地图/路线/问答由 ChatView 展开；管理端保留后台布局与 avatar preview，但不挂游客对话。
 - [api/router.py](../backend/app/api/router.py) 注册完整 `/api` 前缀；业务服务不直接决定 Web URL。
 - [config.py](../backend/app/core/config.py) 是配置事实来源，设置和模型名称可被环境变量覆盖，不固定承诺某个模型版本。
 - [models](../backend/app/models/) 定义 SQL 数据，[repositories](../backend/app/repositories/) 访问数据；Chroma 是另一存储层，更新 SQL 不等于更新向量索引。
@@ -60,7 +60,13 @@ flowchart LR
 
 讲解接口复用 QA 生成文本，再合成整段音频，以景点/音色/模型缓存并合并并发；不可用时返回 `available=False`，TTS 缺失也可返回文本。触发/排队状态机在 useNarration；请求、静态简介回退和播放编排在 MapView 的 `playNarration`，浏览器朗读在 useAudioPlayer。聊天与地图通过同一个播放器按来源领取播放会话；接管会停止旧来源、忽略迟到音频，并复用游客本机语速偏好。地图讲解也会同步数字人的说话状态；提案停止等待只取消当前浏览器请求/轮询，服务端持久化任务仍可能完成，但不会自动应用或覆盖本地草稿。
 
-定位层包含真实与模拟状态，坐标变换和触发阈值见 [narration 常量](../frontend/src/constants/narration.js)。`useGeolocation` 将浏览器 `latitude/longitude` 映射到应用内部 `lat/lng`；自动讲解目前仅允许已标识的模拟坐标，真实坐标下保留手动讲解。自动化坐标测试不替代真机 GPS 精度、权限与实地验收。
+定位层包含真实与模拟状态，坐标变换和触发阈值见 [narration 常量](../frontend/src/constants/narration.js)。`useGeolocation` 将浏览器 `latitude/longitude` 映射到应用内部 `lat/lng`，另保留 WGS84 原始值与浏览器采集时间供 CASS 展示；自动讲解目前仅允许已标识的模拟坐标，真实坐标下保留手动讲解。自动化坐标测试不替代真机 GPS 精度、权限与实地验收。
+
+## 3a. CASS 情境导览
+
+游客可在 ChatView 讲解辅助栏显式开启 CASS。`GET /api/guide/bootstrap` 返回开关及当前已发布目录；`POST /api/guide/decision` 校验景点 revision/catalog digest，并在服务端读取天气与预警。情境规则独立于 LLM：不调用模型、不写行程；预算策略控制讲解长度/延后，只有来源、获取时间、预警生效时间和截止时间均有效的严重预警才产生实时安全事件。普通雨况不触发安全事件。
+
+前端 scheduler 统一安全优先级、地图隐藏时的挂起、请求取消与迟到结果隔离。设备位置仅作为情境提示，不能证明到场；模拟位置/天气不会转为实时安全证据。游客确认后，安全事件需重新核验才可继续；正常讲解仍经现有 chat → RAG → TTS 路径生成。默认 `CASS_ENABLED=false`；本地演示另需 `CASS_DEMO_ENABLED=true`。首版没有真实危险区围栏、应急调度、后台接警、离线模块或自动行程修改；演示数据仅用于可重放流程。范围见 [CASS 实现说明](implementation/CASS_GUIDE.md)。
 
 ## 4. 管理、数据与资源
 
@@ -96,8 +102,8 @@ flowchart LR
 
 ## 6. 运行与部署
 
-- `backend/main.py` 启动时执行 Alembic、bootstrap 与模型预热；先备好数据库、处理数据与模型缓存。
+- `backend/main.py` 依据 `AUTO_MIGRATE_ON_STARTUP`、`BOOTSTRAP_ON_STARTUP` 决定兼容开发启动动作，再运行 lifespan；生产模板将两项关闭，显式 CLI 负责迁移/初始化，见 [RUNTIME](deployment/RUNTIME.md)。
 - `GET /health` 是进程级响应；`GET /ready` 检查部分数据库/配置条件，两者都不等于完整外部 AI 验收。
-- Vite dev server 监听 `0.0.0.0:5173`，代理 `/api` 与 `/ui-assets` 到开发机后端；设置见 [vite.config.js](../frontend/vite.config.js)。
-- 构建后的 `frontend/dist` 存在时，FastAPI 在最后挂载 SPA；外部反代需保留 API、上传资源、静态资源、history 路由回退和 SSE 流式传输。
+- 游客与管理 Vite dev server 分别监听 `5173`/`5174`，代理 `/api` 与 `/ui-assets` 到开发机后端；同源生产代理保留 `/api` 前缀与 SSE 流式响应。
+- 生产分别部署 `dist/tourist` 与 `dist/admin` 的带 manifest 静态版本；FastAPI 不托管这两套静态站点。仅显式开启且存在旧根 `frontend/dist/index.html` 时才兼容挂载 legacy SPA。
 - 生产手机访问需安全上下文。仅开放 Vite LAN 地址不能保证相机、录音和定位可用，见 [多端矩阵](COMPATIBILITY.md)。

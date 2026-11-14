@@ -1,0 +1,25 @@
+{
+  "counts": {
+    "notices": 3,
+    "pairs_dev": 20,
+    "pairs_test": 40,
+    "replay": 18
+  },
+  "dataset_id": "guideloop-pilot-2026-11-10-v1",
+  "frozen_at": "2026-11-10",
+  "origin_policy": "All pairs and operational notices are synthetic; only the bathing statue claim references cited public gazetteer sources.",
+  "review_status": "fixture_author_reviewed",
+  "reviewer": "implementation author; synthetic fixture labels manually checked",
+  "schema_version": 1,
+  "sha256": {
+    "notices.json": "1317d15bc28bb1f26a74ead67895972a8239cefe343e2abc6124e24d961cc5e1",
+    "pairs_dev.jsonl": "2c675056652bce61b750062865bdbbc494f5eb08e7d1ce0b99c7f7bd41dbfce0",
+    "pairs_test.jsonl": "32d96fe83bdc61afacd71eef936d484457fe6bc9e8432415039d48be969d8c54",
+    "replay.jsonl": "fb0aa312e6bc6c905710dc3df74e4bd26451ce861060fa26a7d590f23dc80025"
+  },
+  "test_distribution": {
+    "clarify": 8,
+    "distinct": 12,
+    "reuse": 20
+  }
+}

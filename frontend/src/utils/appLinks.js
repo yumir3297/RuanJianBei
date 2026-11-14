@@ -11,10 +11,6 @@ function safeAppUrl(value, { developmentFallback = "" } = {}) {
   return "";
 }
 
-export const adminAppUrl = safeAppUrl(import.meta.env.VITE_ADMIN_APP_URL, {
-  developmentFallback: import.meta.env.DEV ? "http://localhost:5174" : "",
-});
-
 export const touristAppUrl = safeAppUrl(import.meta.env.VITE_TOURIST_APP_URL, {
   developmentFallback: import.meta.env.DEV ? "http://localhost:5173" : "",
 });

@@ -25,6 +25,9 @@ class PublishedAttraction:
     latitude: float | None = None
     longitude: float | None = None
     coordinate_evidence_id: str | None = None
+    coordinate_system: str | None = None
+    environment: str = "unknown"
+    environment_source_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -98,6 +101,8 @@ def build_catalog_snapshot(site_id: str, entries: Sequence[PublishedAttraction])
         "aliases": sorted(set(item.aliases)), "source_label": item.source_label,
         "latitude": item.latitude, "longitude": item.longitude,
         "coordinate_evidence_id": item.coordinate_evidence_id,
+        "coordinate_system": item.coordinate_system, "environment": item.environment,
+        "environment_source_id": item.environment_source_id,
     } for item in ordered]
     digest = hashlib.sha256(json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     return CatalogSnapshot(site_id, ordered, digest)
@@ -161,6 +166,9 @@ class K01PublishedAttractionSource:
                 latitude=latitude,
                 longitude=longitude,
                 coordinate_evidence_id=coordinate_evidence_id,
+                coordinate_system=metadata.get("coordinate_system") if metadata.get("coordinate_system") in {"WGS84", "GCJ-02"} else None,
+                environment=metadata.get("environment") if metadata.get("environment") in {"indoor", "outdoor", "mixed"} and isinstance(metadata.get("environment_source_id"), str) and metadata.get("environment_source_id").strip() else "unknown",
+                environment_source_id=metadata.get("environment_source_id").strip() if isinstance(metadata.get("environment_source_id"), str) and metadata.get("environment_source_id").strip() else None,
             ))
         return entries
 

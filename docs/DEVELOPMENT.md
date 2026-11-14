@@ -32,7 +32,7 @@ FAQ 资料已写入但刷新失败时，后台会提示先核对保存结果，�
 
 ## 3. 后端（cwd：仓库的 backend/）
 
-启动 API 会自动执行 Alembic 迁移。对已有数据库，尤其是旧 W02 数据库，先备份并在隔离副本核对结构和迁移兼容性，再决定是否启动；不可仅凭版本号升级。已知差异及实验边界见 [W02 集成记录](development/W02_INTEGRATION.md)。首次试用建议使用独立空数据库。
+开发模式保留启动时迁移和 bootstrap 的兼容默认值。生产 Compose 显式关闭自动迁移、bootstrap 和 FastAPI 静态挂载；必须先备份状态，再通过 `python -m app.cli.deployment migrate` 与 `initialize` 一次性任务完成数据库动作。对已有数据库，尤其是旧 W02 数据库，先在隔离副本核对迁移兼容性，不可仅凭版本号升级。服务端运行结构和维护命令见 [RUNTIME](deployment/RUNTIME.md)。
 
 macOS/Linux（`python3` 应指向选择的 Python 版本）：
 
@@ -73,16 +73,18 @@ Windows PowerShell 使用 `.\.venv\Scripts\python.exe -m app.services.tool_execu
 
 ## 4. 前端（另开终端，cwd：frontend/）
 
-各系统均可执行：
+各系统均可执行；游客端与后台分别启动：
 
 ```sh
 npm ci
-npm run dev
+npm run dev:tourist
+# 另一个终端启动管理端
+npm run dev:admin
 ```
 
-通常访问 `http://localhost:5173`；端口被占用时以 Vite 输出为准。
+游客端默认 `http://localhost:5173`，管理端默认 `http://localhost:5174`；端口被占用时以 Vite 输出为准。`npm run dev` 仍是游客端别名。
 现有锁文件优先用 `npm ci`；需要调整依赖时另行说明并更新锁文件。
-生产构建 `npm run build`；`npm run preview` 仅预览构建，不自动复制 Vite dev 的后端代理配置。
+分别用 `npm run build:tourist`、`npm run build:admin` 构建；`npm run build` 连续构建两端。产物分别是 `dist/tourist`、`dist/admin`。`npm run preview:tourist`、`npm run preview:admin` 预览对应应用；`npm run preview` 仅预览兼容旧包，不用于独立站点验收。入口/身份边界见[双端边界说明](development/FRONTEND_BOUNDARIES.md)。
 
 ## 5. 验证层级
 
@@ -104,7 +106,7 @@ backend 测试通常依赖 `backend/` 在模块搜索路径中，优先从 backe
 ## 6. 手机、平板访问开发机
 
 - 手机和开发机处于可互通网络，用开发机 LAN IP 访问前端；手机的 `localhost` 指手机自身。
-- Vite dev 默认代理到开发机的 `127.0.0.1:8000`，通常不用让每台手机直接连接后端端口。
+- 两个 Vite dev server 都代理 `/api`、`/ui-assets` 到开发机 `127.0.0.1:8000`，通常不用让每台手机直接连接后端端口。
 - HTTP LAN 页面可能能显示文本 UI，但不能据此验收相机/录音/定位。需要浏览器信任的 HTTPS 及对应权限。
 - 若配置 `VITE_API_BASE_URL`，值会进入前端构建，不能放秘密；跨源时同步检查 CORS、资源 URL、混合内容、SSE。
 - 正式部署在服务端配置同源 `/api` 与 `/ui-assets`，保留流式响应，避免缓冲整段 SSE。

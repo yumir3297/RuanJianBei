@@ -18,6 +18,7 @@ from app.models import (  # noqa: F401 确保所有模型注册到 Base.metadata
     KnowledgeChunk,
     KnowledgeEntry,
     KnowledgeBlindSpot,
+    GuideLoopCase, GuideLoopObservation, GuideLoopRevision, GuideLoopPointer, GuideLoopCheck,
     QACacheEntry,
     QuickTopic,
     RouteTemplate,

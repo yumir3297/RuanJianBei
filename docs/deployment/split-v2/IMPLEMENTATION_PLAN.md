@@ -1,4 +1,4 @@
-# 管理端、游客端与服务器部署拆分 Implementation Plan V2（评审草案）
+# 管理端、游客端与服务器部署拆分 Implementation Plan V2（实施跟踪）
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (- [ ]) syntax for tracking. 仅在用户选择时采用多代理实施，不默认并行改共享文件。
 
@@ -48,7 +48,7 @@
 | F 最终验收 | 7 | 目标机/域名/真实数据/设备可用时 | FINAL-ACCEPTANCE-01实际通过 |
 | G 上线回滚 | 8 | F后 | 真实切换、回滚、交接有证据 |
 
-Task 4–5与纯业务功能可以分批推进，但不默认多人同时修改main、router、ChatView、Vite和public；由同一集成者逐提交整合。实际实施方法待用户选择，本轮只交付计划。
+Task 4–5与纯业务功能可以分批推进，但不默认多人同时修改main、router、ChatView、Vite和public；由同一集成者逐提交整合。用户已授权按计划继续实施；真实生产上线仍须单独授权。
 
 ### Task 0：确认本轮基线与部署输入
 
@@ -56,12 +56,12 @@ Task 4–5与纯业务功能可以分批推进，但不默认多人同时修改m
 
 **Interfaces:** 输入确认设计；输出base SHA、隔离工作树、当前功能接口、服务器参数占位和存量身份判定。
 
-- [ ] 执行git status --short --branch、git rev-parse HEAD、git worktree list --porcelain；与7f9f443比较。本轮已干净，不再把已提交的SSE/ASR修复当未完成任务重做。
-- [ ] 若出现后续提交/脏文件，先审阅受影响路径并记录归属，不覆盖在途工作；按using-git-worktrees从确认基线创建隔离工作树。
-- [ ] 把已批准的V2设计/计划及复核资料带入新工作树docs；不只引用外层项目的不可携带路径。
-- [ ] 填部署输入：OS/CPU架构/内存/磁盘、是否已有Docker/反代、两域名/TLS、现有数据库、游客origin与匿名行程、模型和供应商可达性；未知值保留为上线输入，不阻断开发拆分。
-- [ ] 记录当前静态84条路由与单一migration head；新增自动测试以本轮真实执行结果为准，687/164仅是工程历史记录。
-- [ ] 提交仅包含本任务输入文档；不得读取/提交真实.env或密钥。
+- [x] 执行git status --short --branch、git rev-parse HEAD、git worktree list --porcelain；确认当前 HEAD `aa83aedd47a7aeb931e105d5d70930e3b18fe268` 是计划基线 `7f9f4433f85ef57feee0d1034d107dd118d5c93e` 的后代；当前部署工具和文档有未提交改动，按清单逐项保留。
+- [x] 基于已确认基线使用隔离工作树；发现当前及 CASS 工作树都有独立改动后，未覆盖或把未审阅的 CASS 改动直接搬入。
+- [x] V2设计、技术评估、拆分输入和执行计划均在本工作树的 `docs/deployment/split-v2/` 与 `docs/deployment/` 下，可随交付审阅。
+- [x] 记录服务器 OS/CPU/RAM/磁盘、容器/反代、域名/TLS、数据库、游客origin、模型及供应商连通性；未知项保留为上线输入，见 [SPLIT_INPUTS](../SPLIT_INPUTS.md)。
+- [x] 当前路由索引为88条并有地图校验结果；新增 CASS bootstrap/decision 路由均归游客匿名策略。计划记录 Alembic 单 head `91a0c5e2f347`，仍需目标 PostgreSQL 副本复核。历史测试数只作历史记录。
+- [ ] 输入文档/实现尚未提交；本沙箱对共享 worktree Git index 无写权限，未提交密钥或真实 `.env`。保留可审阅工作树，提交需在有 Git 元数据写权限的执行环境完成。
 
 ### Task 1：公开有效配置与可靠服务器读取
 
@@ -105,6 +105,7 @@ Task 4–5与纯业务功能可以分批推进，但不默认多人同时修改m
 - [x] 写tourist_never_reads_admin_token、admin_401_clears_store_and_memory、disabled_storage_keeps_current_login：即使已登录后台，游客Axios/SSE无管理Bearer；401立即失效且管理导航回登录。
 - [x] 写visible_poll_and_hidden_pause、single_flight_and_dispose、busy_to_idle_flush_without_next_fetch：fake clock覆盖60s、隐藏/恢复、旧响应、Vue watch+nextTick立即应用。
 - [x] 写same_config_does_not_reload_model、image_timeout_and_404_keep_last_good、late_onload_cannot_replace_new_background：图片URL解析/15s降级保留；忙时模型与音色不变，当前播放器所有权不变。
+- [x] 补回归：当前背景图再次被选中时会使不同的待加载图失效，迟到的旧图不能覆盖最新配置；`background-assets.test.mjs` 覆盖 A→待加载 B→重新选择 A。
 - [x] 运行四份新测试，确认缺失模块/行为失败；仅使用fake和Vite middlewareMode，不启动真实后端/供应商。
 - [x] 实现transport/token与管理API迁移；游客http保留API_BASE_URL供SSE，游客反馈与adminInsights拆开，ChatView删除对api/admin依赖。
 - [x] 实现刷新器及Vue watch接线；保留管理员invalidate兼容入口，移除游客对storage事件的跨域依赖。后台图集标明本机草稿、不清旧数据；语速/音量为本机预览。
@@ -117,7 +118,7 @@ Task 4–5与纯业务功能可以分批推进，但不默认多人同时修改m
 - Create frontend/apps/tourist/{index.html,main.js,App.vue,router.js}、apps/admin同名四文件。
 - Create frontend/vite.shared.js、vite.tourist.config.js、vite.admin.config.js；env/tourist/.env.example、env/admin/.env.example。
 - Create frontend/scripts/{prepare-public,check-app-boundaries,check-build-boundaries}.mjs。
-- Modify frontend/package.json、vite.config.js（保留legacy）、.gitignore、新游客运营入口/后台查看链接。
+- Modify frontend/package.json、vite.config.js（保留legacy）、.gitignore；游客端删除管理入口，管理端保留查看游客端链接。
 - Test frontend/tests/{app-boundaries,public-assets,build-boundaries}.test.mjs。
 
 **Interfaces:** dev默认游客，dev:tourist/dev:admin/build:tourist/build:admin；build依次构建；端口5173/5174且strictPort；产物dist/tourist、dist/admin，各含一个index入口及完整manifest/chunk。
@@ -125,11 +126,11 @@ Task 4–5与纯业务功能可以分批推进，但不默认多人同时修改m
 - [x] 写tourist_graph_excludes_admin_auth_and_charts、admin_graph_keeps_preview_without_chat：遍历相对静态/动态imports，游客不可达管理员状态/API、ElementPlus/ECharts；后台可达ThreeAvatar，不可达游客ChatView/Router。
 - [x] 写asset_allowlist、self_contained_manifest：两端排除tester，游客保留worklet，后台不含录音worklet；模型/动作和中文VRM正常；每个产物引用全部在本产物内存在。
 - [x] 运行新测试确认当前单入口不满足，然后实现独立root/router/shell，保留现有src业务路径，不整体移动目录。
-- [x] 游客保留旧/tourist工具重定向并移除管理入口；后台/到/admin/dashboard，跨端查看使用仅允许部署固定https/开发本机http的普通链接。
+- [x] 游客保留旧/tourist工具重定向并移除管理入口；后台可访问/admin/dashboard，跨端查看只允许由管理端向游客端使用固定HTTPS/开发本机HTTP普通链接。复查发现游客端旧链接曾因源码改动残留在Vite哈希资源中，现已删除该链接与配置，并把每端outDir改为安全清理本端旧资源；回归测试覆盖此边界。
 - [x] Vite7配置明确envDir、fs.allow、独立outDir，public白名单复制到每端独立staging；不复制真实.env，不通过缩小环境目录误漏必要公开配置。
 - [x] package新增两个构建/开发/预览和临时legacy命令；单端构建不得清理另一个outDir。
 - [x] 执行npm run build:tourist、npm run build:admin和边界脚本；重复只构建一端后另一端全量文件hash不变。检查模型、动作、图像与worklet存在性。
-- [ ] 浏览器手工冒烟：验证游客旧工具路由、未登录管理跳转、后台数字人预览、游客文字输入。当前自动化浏览器两次超时且环境无本地浏览器；已验证两端 dev 服务及深链接均返回200，页面交互留到浏览器可用时补验。
+- [x] 浏览器手工冒烟：桌面内置浏览器确认游客入口加载、`/tourist/map` 重定向到 `?tool=map` 且地图工具可见、数字人模型和文字输入框可用；管理端跳转到未登录页面。并行启动两端时复现共享 Vite 优化缓存导致游客懒加载 504/白屏，隔离 cacheDir 并新增回归测试后复测恢复。本轮用临时 SQLite、仅本机测试管理员口令和 LLM/ASR/VISION/TTS stub 启动本地 API：管理端登录后数字人模型可见；游客端提交“连接测试：请介绍一个景点”后收到 API 无资料兜底回答。embedding 模型不可用且无已核验景区资料，因此只证明页面/API请求响应联通，不证明 RAG/真实问答、真实LLM、TTS/ASR、HTTPS、目标浏览器或服务器行为；未保存配置、未发起语音播放。
 
 ### Task 4：生产启动职责与可复现运行包
 
@@ -148,16 +149,16 @@ Task 4–5与纯业务功能可以分批推进，但不默认多人同时修改m
 - python -m app.cli.deployment migrate|initialize；CLI不导入main，不启动API/模型/任务循环。
 - Compose运行单元gateway/api/tool-worker/migrate/initialize；postgres只由可选override增加。API/worker/CLI使用同一镜像digest和环境。
 
-- [ ] 写production_restart_does_not_migrate_seed_or_add_demo：spy验证生产false标志下不执行迁移/bootstrap；不论是否误打开bootstrap，生产都不注入sample/demo反馈，原有记录不删除；必要基础种子只由initialize执行。
-- [ ] 写unmigrated_schema_fails_without_upgrade、cli_has_no_app_startup_side_effects：schema不符直接错误，不自动upgrade；CLI仅执行选定动作，不触发预热或K01循环；兼容开发行为有独立断言。
-- [ ] 写spa_mount_requires_root_index：SERVE_FRONTEND=false不挂SPA；true且dist/index.html存在才兼容旧包；仅有dist/tourist/admin不挂根。
-- [ ] 运行新增测试确认失败，随后抽离生命周期职责；生产最小初始化quick topics/avatar，演示数据仅开发明确开启。保留K01在API、W02外部单进程。
-- [ ] 实现候选Linux运行镜像：固定基础镜像/工具版本，安装FFmpeg/ffprobe与项目锁依赖，非root、确定工作目录；排除.env、venv、node_modules、uploads、缓存、备份和测试凭据，不烘焙模型私有目录。
-- [ ] 目标架构未定时先交构建定义和静态检查。目标可用后核验现有顶层版本，解析所有传递依赖并生成含wheel hash的完整平台锁；镜像用pip --require-hashes -r完整锁安装并记录系统包/Python/平台/最终digest。同平台重建检查安装清单一致；失败单独做兼容PR，禁止换overlay冒充通过。不在此任务抢跑真实模型/供应商。
-- [ ] 制定绝对持久路径与UID/GID，Compose私网只向外开放gateway；已有数据库用外部连接，不新建同名覆盖；/health作进程检查，/ready作为后续放量检查。
-- [ ] 发布脚本顺序明确：关闭写入口→排空停止旧API/K01/W02并确认退出→一致性备份→数据库可连→本镜像migrate成功→必要initialize→新api/tool-worker/契约检查→恢复入口。初次安装也确认没有旧进程。每次后端release显式运行一次性步骤并记录镜像digest/head，不能沿用旧exited0状态；前端release不调用这些步骤。
-- [ ] 写migration_cannot_start_while_old_api_or_worker_is_running：用发布步骤spy验证停写/退出/备份在迁移之前，任一步失败后续不执行；仅静态发布不触发该维护流程。
-- [ ] 运行聚焦新增测试和test_startup_degraded、test_production_security_config、test_tool_worker_lifecycle；有Docker时docker compose config --quiet，输出不得展开秘密。提交运行封装。
+- [x] 写production_restart_does_not_migrate_seed_or_add_demo：生产false标志不执行迁移/bootstrap；显式production initialize即使误传include_demo也只写基础种子；开发sample数据有独立断言。
+- [x] 写unmigrated_schema_fails_without_upgrade、cli_has_no_app_startup_side_effects：schema不符直接错误，CLI导入不触发main/API启动；显式 `check-schema` 只读并输出核验后的当前单一head。
+- [x] 写spa_mount_requires_root_index：关闭SERVE_FRONTEND或仅有双端目录时不挂根SPA，兼容旧根index的行为有独立断言。
+- [x] 运行新增测试并抽离生命周期职责；生产只初始化quick topics/avatar，demo仅开发明确开启；K01留在API，W02单独运行。
+- [x] 实现候选Linux运行镜像：固定Python基础版本，安装FFmpeg/ffprobe，非root UID/GID、确定工作目录；构建上下文排除敏感配置/上传/缓存/测试资料，不烘焙模型私有目录。
+- [ ] 目标架构未定；linux-amd64/Python 3.13 的完整传递依赖hash锁、目标镜像digest与同平台重建还未生成/验证，必须待服务器架构确认后完成，不以候选 requirements 安装冒充生产锁。
+- [x] 制定持久目录与UID/GID，API/W02私网只由gateway对外暴露；已有数据库可走外部URL，Compose没有强制覆盖；/health进程检查、/ready内容就绪用途有文档。Docker真实解析仍待安装环境。
+- [x] 实现后端维护脚本：明确维护确认与W02 drained 输入；构建并校验镜像元数据后获取全局发布锁、停gateway/API/W02、检查进程退出、备份PostgreSQL与APP_STATE_ROOT、迁移/初始化、API/W02启动前后两次核对schema head，再做匿名/管理员边界契约检查、gateway `nginx -t` 后原子更新current backend-release。任一步失败会停止API/W02/gateway，不自动覆盖数据库。
+- [x] 写migration_cannot_start_while_old_api_or_worker_is_running：隔离fake Docker/PostgreSQL执行验证停机/备份先于迁移；进程未退出或数据库备份失败则不迁移、不恢复gateway。静态发布脚本不调用后端维护命令。
+- [x] 运行部署生命周期/SPA/startup/security/W02聚焦测试与后端全量 `app/tests`（本轮 727 passed、19 skipped）；生产自动迁移关闭时，lifespan 在模型和 worker 启动前只读校验 schema head。Compose YAML静态解析通过。当前无Docker CLI，`docker compose config --quiet`/镜像构建未执行；供应链锁和服务器恢复仍待目标机。运行封装已写入工作树。
 
 ### Task 5：代理、运行限制、独立发布与数据备份工具
 
@@ -165,7 +166,7 @@ Task 4–5与纯业务功能可以分批推进，但不默认多人同时修改m
 
 - Create deploy/api-surface.json、deploy/nginx/{tourist.conf.template,admin.conf.template,common-api.conf}。
 - Create scripts/render_api_policy.py、deploy/scripts/{publish-static,rollback-static,deploy-backend,backup-state,restore-state}.sh。
-- Create scripts/check_release_compatibility.py；Test scripts/tests/test_release_compatibility.py。
+- Create scripts/check_release_compatibility.py、scripts/package_frontend_release.py、scripts/package_backend_release.py；deploy/scripts/{static_release.py,backup_restore.py,dump_postgres.py}；Test scripts/tests/{test_release_compatibility,test_release_assets,test_backup_restore,test_deploy_backend_order,test_backend_release_package}.py。
 - Create backend/app/schemas/runtime_limits.py、frontend/src/api/adminRuntime.js；Modify backend/app/api/admin.py、frontend/src/views/admin/KnowledgeManage.vue及components/knowledge/ImportBatchPanel.vue、运行配置模板。
 - Test backend/app/tests/test_admin_runtime_limits.py、frontend/tests/import-limits.test.mjs、scripts/tests/{test_api_surface,test_proxy_templates,test_release_assets}.py。
 
@@ -173,22 +174,23 @@ Task 4–5与纯业务功能可以分批推进，但不默认多人同时修改m
 
 - GET /api/admin/runtime-limits，管理员可读，返回knowledge_import:{max_files,max_file_bytes}与display_assets:{max_image_bytes}，不返回其他配置。
 - 首发生产KNOWLEDGE_IMPORT_MAX_FILES=1，KNOWLEDGE_IMPORT_MAX_FILE_BYTES=52428800；开发默认批次数仍可保留20，UI以服务器实际返回值约束，不写死为所有环境都1。
-- api-surface逐项{method,path,boundary,sites}，覆盖新增后预期86条（以实现后的静态索引为准）；新增未分类接口拒绝发布。
+- api-surface逐项{method,path,boundary,sites}，当前覆盖88条（含CASS游客端bootstrap/decision；以实现后的静态索引为准）；新增未分类接口拒绝发布。
 - release.json包含源码SHA、应用名、构建工具、文件hash、所需后端能力；脚本只接收明确端名tourist|admin与release-id。
 - 后端能力从已部署并核验的current/backend-release.json读取，字段image_digest/source_sha/schema_head/capabilities；前端required_backend_capabilities须为当前能力子集。后端升级验证所有仍支持前端的需求，不能只检查当前单一页面。
 
 - [x] 写runtime_limits_requires_admin_and_matches_settings：匿名401，有token返回实际安全限额；测试自定义值，确认不暴露其他settings。UI限额获取失败时阻止上传并给重试，不猜默认大批量值。
 - [x] 写multi_file_selection_matches_server_max与gateway_budget_includes_multipart：生产每批1×50MiB、网关55MiB；默认20环境渲染为1009MiB，按实际批量预算设置。
-- [x] 写api_surface_complete_and_method_sensitive：insights统计GET只管理，feedback POST游客，W02 execution游客owner；86条路由全覆盖，新增未知路由导致清单检查失败。
+- [x] 写api_surface_complete_and_method_sensitive：insights统计GET只管理，feedback POST游客，W02 execution游客owner；88条路由全覆盖，新增未知路由导致清单检查失败。
 - [x] 写missing_api_asset_is_not_html、sse_no_buffer、asr_timeout_budget：静态资源404、413 JSON；SSE关闭代理缓冲；proxy_read_timeout240s，客户端 ASR 210s、供应商180s+转换语义不变。NGINX 二进制未安装，真实 `nginx -t` 留待可用环境。
-- [ ] 写publish_and_rollback_preserve_both_active_asset_sets：在临时目录完成A→B→A，两个方向旧/新manifest引用的hash文件均HTTP可达；只保留旧目录但当前路径不可达判失败；拒绝hash同名不同内容与跨端目录覆盖。
-- [ ] 写static_release_never_changes_database_or_other_app：脚本操作限制在指定端web目录，无docker全栈重启/迁移/数据卷写入；未知端名和越界release-id拒绝。
-- [ ] 写publish_and_rollback_reject_missing_backend_capability、backend_upgrade_preserves_supported_frontends：缺visitor-config-v1/admin-runtime-limits-v1或缺后端metadata即拒绝新包切换；前端回滚同样检查；后端删除仍受支持旧包需要的能力时拒绝。legacy必须有显式已确认映射，不从health推断。
-- [ ] 实现管理限额与UI、网关方法/路径策略；分别持久 web release/current/previous 目录尚待发布工具实现。Host/HTTPS信任按目标拓扑配置，不放宽Origin/CSRF；/api不剥前缀。
-- [ ] 实现静态发布前完整校验与资源保留：按仍受支持release manifest合并hash资源；回滚目标也补齐活跃hash资源。HTML不缓存、无hash资源重验证，后台私有导入文件不暴露到/ui-assets。
-- [ ] 实现check_release_compatibility并接入发布/回滚/后端升级；核对实际容器digest与schema/契约后才更新backend-release.json。字段声明不代替真实契约测试，但缺少声明不得继续切换。
-- [ ] 实现备份/恢复脚本为显式维护操作：停API/worker写入后协调SQL、manifest、uploads、Chroma；恢复只能指定隔离目标，默认不覆盖现存生产目录。迁移前必须有恢复证据。
-- [ ] 运行新增自动测试；目标NGINX可用时nginx -t，尚无NGINX则记录未执行。shell脚本先做bash -n和隔离目录演练，不操作真实服务。提交工具。
+- [x] 写publish_and_rollback_preserve_both_active_asset_sets：临时目录A→B→A验证当前web root可解析新旧manifest的文件，拒绝资源同名异内容及跨端目录；以本次游客/管理构建产物实际打包并在隔离临时目录完成两端各自A→B→A，游客63个、管理130个manifest资源齐全，切换任一端时另一端current不变；再以本机短生命周期HTTP服务逐端验证A、B、回滚后的入口和引用JS/CSS均为200。演练使用临时兼容性metadata，不代表真实后端镜像或生产部署；真实NGINX、TLS、Host和目标机访问仍待验收。
+- [x] 写static_release_never_changes_database_or_other_app：脚本只操作显式端站点目录，不调用docker/迁移；端名限制为tourist|admin、release-id阻止路径穿越。
+- [x] 写publish_and_rollback_reject_missing_backend_capability、backend_upgrade_preserves_supported_frontends：严格要求完整image digest/source SHA/schema head/capabilities；publish/rollback及backend upgrade均验证所需能力，不从health推断。
+- [x] 实现管理限额与UI、网关方法/路径策略和独立web release/current/previous目录。Host/HTTPS信任仍按目标拓扑配置，不放宽Origin/CSRF；/api不剥前缀。
+- [x] 实现静态发布前完整校验与资源保留：发布与回滚都合并当前/目标版本manifest内的非HTML资源；资源文件同名异内容拒绝，HTML no-cache、缺失资源404，私有导入文件不加入静态包。
+- [x] 修正部署发布执行路径：迁移后 schema 检查明确运行 Python CLI；未认证管理员探针使用多行有效 Python，并有脚本测试解析；发布目录/资源在严格 umask 下仍为 NGINX 可遍历、可读权限。
+- [x] 实现check_release_compatibility并接入静态发布/回滚及后端部署前检查；静态发布/回滚与后端部署用同一绝对lock互斥，后端脚本只在明确维护窗口停止服务、备份、迁移和初始化，并在停机前核验镜像ID与OCI源码SHA标签、迁移后核验schema head/API契约/NGINX语法，全部通过后才原子更新current backend-release。
+- [x] 实现显式备份/恢复工具：停写后PostgreSQL快照+APP_STATE_ROOT归档；校验内容hash；恢复只到新`restore-*`暂存目录，不覆盖生产目录。目标机的真实还原演练仍未完成。
+- [x] 跑新增自动测试、全scripts unittest（46项通过）、前端测试（214项通过）与后端全量测试（727 passed、19 skipped）、bash语法、Compose YAML解析、地图与diff检查。2026-11-09在当前工作树重新运行后，前端214项、后端727 passed/19 skipped/9 warnings、scripts 46项通过；实际打包/发布/回滚HTTP演练详见上项。当前环境无Docker/NGINX，`docker compose config`与真实`nginx -t`未执行；fake工具演练覆盖锁冲突、API镜像解析、迁移前失败、源码标签、schema/API/NGINX gate。未操作真实服务。工具已写入工作树。
 
 ### Task 6：在新边界上继续功能新增并完成开发交付
 
@@ -196,13 +198,13 @@ Task 4–5与纯业务功能可以分批推进，但不默认多人同时修改m
 
 **Interfaces:** 输出双端开发入口、共享模块归属、CASS/offline接入规则和开发验收记录；后续功能必须基于Task3或之后集成提交。
 
-- [ ] 划定入口/认证/构建文件的集成负责者；纯业务功能可继续编写，但ChatView/router/Vite/public改动按顺序合入，不建立长期互相覆盖分支。
-- [ ] CASS按既有独立计划接src/guide、useGuideContext与服务模块，不复制旧分支整个ChatView；媒体/定位仍一个来源。拆分本身不批准CASS安全数据、后台接警或离线资源。
-- [ ] 离线真正实施时仅加游客专属入口与白名单；有service worker才新增scope/缓存清理测试，管理API/身份/聊天不缓存。本轮不为未实现离线虚构通过结果。
-- [ ] 开发交付时统一跑一次frontend npm test、npm run build及边界脚本；backend使用可用已声明测试环境跑pytest app/tests -q。环境缺失如实记录，不安装临时overlay绕过目标验证。
-- [ ] 根目录跑地图检查、scripts unittest、git diff --check；记录新增测试与基线已有问题。无需每个文档改动都重跑全部业务测试。
-- [ ] 文档准确记录当前K01/W02进程、两个入口、.env模板、产物和兼容窗口；保留FINAL-ACCEPTANCE-01待最终环境集中完成，不将其作为继续新增功能的阻断。
-- [ ] 提交可评审开发交付，不自动合并master/部署生产。
+- [x] 文档和边界测试明确游客入口、管理入口、身份客户端、public 资源、两个 router/Vite 配置的归属；共享入口按单一集成者顺序合入，不建立长期互相覆盖分支。见 `docs/development/FRONTEND_BOUNDARIES.md`。
+- [x] 按既有 CASS 计划集成 `src/guide`、`useGuideContext`、后端确定性策略/API和独立组件；保留单一 ChatView、播放器、定位和 V01/W02 提案流程，只移植经审阅的功能差异，不复制整个旧 ChatView，也不修改 CASS 源工作树。CASS 默认关闭，demo 单独开关默认关闭；不代表真实安全数据、后台接警或离线资源已接入。
+- [x] 当前未引入 service worker；开发边界明确未来离线功能只归游客端，并要求未来管理 API/身份/聊天不得缓存。本轮没有虚报离线验收。
+- [x] 开发验证：前端 `npm test` 当前 214 项通过，包含游客端不暴露管理入口及双 Vite cacheDir、背景图竞态和 CASS 延迟响应回归；`npm run build`、`check:app-boundaries`、`check:build-boundaries`、`check:build-isolation` 均通过；确认单端重建清除自身旧哈希包、不触碰另一端产物。游客构建产物中未发现管理入口文案/链接或`/admin`路由。Vite preview 本机HTTP：游客端与管理端入口、引用JS/CSS均返回200。构建仍报告多个 >500 kB chunk，需后续按性能目标评估拆包。后端全量 `app/tests` 为 727 passed、19 skipped；生产 lifespan 的不匹配 schema 检查已在模型启动前验证；本机浏览器和 stub 联调范围见 Task 3，真实RAG/供应商、语音、位置与目标机仍待验。
+- [x] 根目录 `check_repo_map.py`、scripts unittest（46项）、Compose YAML parse、shell `bash -n`、`git diff --check` 通过；未安装临时 overlay。
+- [x] 开发文档现记录两个入口、K01/W02、生产显式迁移、静态版本目录及身份/origin边界；最终服务器验收继续按 Task 7/FINAL-ACCEPTANCE-01 执行。
+- [x] 可评审代码与交接文档已准备在当前 worktree；未自动合并master或部署。当前沙箱对共享 Git 元数据只读，不能写 Git index/提交。
 
 ### Task 7：目标服务器统一最终验收
 
@@ -210,6 +212,9 @@ Task 4–5与纯业务功能可以分批推进，但不默认多人同时修改m
 
 **Interfaces:** 输入真实服务器/域名/TLS/已核验资料和设备；输出精确版本/环境、逐项证据、故障恢复和放量结论。
 
+- [x] 创建 [SERVER_INVENTORY](../SERVER_INVENTORY.md) 与 [FINAL_ACCEPTANCE](../FINAL_ACCEPTANCE.md)，明确输入字段、候选阈值、Must通过规则和证据位置；服务器/设备输入仍未定，因此以下真实验收尚未开始。
+- [x] 在隔离临时 PostgreSQL 17.11 新集群上实跑生产显式 `migrate` 到 `91a0c5e2f347`，并重复 `initialize --include-demo`；只读核对基础种子稳定为 avatar_configs=3、quick_topics=8，KnowledgeEntry 与 demo feedback 均为0。仅是本机PG17新库证据，不代表目标PG版本/既有库/容器或恢复演练。
+- [x] 在第二个隔离 PostgreSQL 17.11 临时集群上完成 `pg_dump` custom archive → 仓库 `backup_restore.py` hash校验/隔离暂存 → `pg_restore` 到新库；恢复库 head 为 `91a0c5e2f347`、avatars=3、quick_topics=8，单独 app-state 测试标记一致。仅验证本地新库和通用归档流程，不含真实 revision/chunks/uploads/Chroma 一致性、既有库或目标机证据。
 - [ ] 核实目标OS/架构、镜像digest、Python和完整锁依赖安装、模型缓存/权重、FFmpeg/ffprobe；不用Mac venv或隔离overlay替代。检查API+worker+导入/预热峰值RSS/CPU/磁盘，记录实际容量，不承诺固定机器规格。
 - [ ] 在新建测试PostgreSQL或经备份的隔离副本验证迁移到唯一head、初始化只写基础种子；重启API不迁移/不demo；空库ready503但后台能导入，正式发布后ready达标。
 - [ ] 真实景区资料经导入/草稿/发布，确认返回当前revision的真实vector来源；未发布/下架内容不泄漏，不把22条示例或synthetic source当景区事实验证。
@@ -223,10 +228,11 @@ Task 4–5与纯业务功能可以分批推进，但不默认多人同时修改m
 
 ### Task 8：真实部署切换、回滚与交接
 
-**Files:** docs/deployment/ROLLOUT_RUNBOOK.md、RELEASE_MATRIX.md、agent-operations/HANDOFF.md。
+**Files:** Create docs/deployment/ROLLOUT_RUNBOOK.md、RELEASE_MATRIX.md；真实部署后更新 docs/agent-operations/HANDOFF.md。
 
 **Interfaces:** 输出两个独立current/previous release、后端镜像/迁移记录、可执行回滚操作和实际验收边界。
 
+- [x] 编写未执行的目标机操作模板与逐次发布矩阵；命令和恢复说明明确真实 restore 仍须隔离 PostgreSQL 演练。见 [ROLLOUT_RUNBOOK](../ROLLOUT_RUNBOOK.md)、[RELEASE_MATRIX](../RELEASE_MATRIX.md)。
 - [ ] 提供可审阅的真实域名/TLS/持久目录、后端配置键名和release hash；不输出密钥。只有用户明确授权实际部署后执行真实写操作，本计划请求不等于上线授权。
 - [ ] 如已有游客origin，保持它；必须换域且有匿名任务时，先完成单独身份迁移方案，不静默把旧用户送到新身份。
 - [ ] 后端兼容接口先部署；先关闭写入口、排空并确认旧API/K01/W02全部退出，再一致性备份和用本镜像显式migrate/必要initialize；启动检查成功后更新真实能力元数据、恢复入口。停止/启动窗口有记录，不运行两份API抢本地索引。
@@ -237,7 +243,7 @@ Task 4–5与纯业务功能可以分批推进，但不默认多人同时修改m
 
 ## 现在可以做与后续条件
 
-现在可执行Task0–3，在明确目标架构后准备Task4–5；Task6承接新的功能。Task7–8等待真实环境与明确部署授权，不反过来阻断开发结构拆分。服务器资源/域名未提供，不写死购买规格或承诺天数。
+Task0–6的实现与本地自动验证目前位于当前工作树，其中包含经审阅的 CASS 集成及双 Vite cacheDir 隔离修复；未提交改动仍待可写 Git 元数据的环境提交。本地临时 SQLite + stub 环境已完成管理端数字人模型预览和游客端API请求/响应冒烟；因embedding模型和核验资料缺失，RAG/真实问答未通过或未验证。真实供应商、语音播放/识别、目标平台依赖锁/真实Compose运行，以及Task7–8真实服务器、数据、域名和设备验收仍待完成。服务器条件尚未提供，不写死购买规格或承诺容量；未测项不算通过。
 
 ## 自审覆盖
 
@@ -249,6 +255,6 @@ Task 4–5与纯业务功能可以分批推进，但不默认多人同时修改m
 - 本地数据持久化/一致性备份、双向资源回滚：5/7/8。
 - 剩余真实验收集中安排、当前文档与历史测试证据区分：6/7。
 
-本轮仅制定计划；以上文件/接口/命令中标为Create的均是未来交付，不代表已经存在。
+本计划是持续实施跟踪；勾选项按当前源码和真实命令结果更新。未勾选项仍是待完成或待目标环境证据，不因计划文档存在而视为实现。
 
 已完成[只读独立审阅及修订](REVIEW.md)；最终校验仅检查文档/源码证据，不重复真实功能验收。

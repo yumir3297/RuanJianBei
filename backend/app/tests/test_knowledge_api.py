@@ -8,6 +8,7 @@ from app.api.auth import create_admin_token
 from app.core.config import get_settings
 from app.core.deps import get_db_session
 from app.core.exceptions import register_exception_handlers
+from app.models.knowledge_workspace import KnowledgeState
 from app.tests.async_db import open_test_session
 
 
@@ -21,6 +22,8 @@ def build_client(tmp_path) -> TestClient:
     async def override_db_session():
         engine, session = await open_test_session(str(db_path))
         try:
+            if await session.get(KnowledgeState, 1) is None:
+                session.add(KnowledgeState(id=1, epoch=1)); await session.commit()
             yield session
         finally:
             await session.close()

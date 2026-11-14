@@ -31,6 +31,17 @@ logger = logging.getLogger(__name__)
 LEASE_SECONDS = 900
 
 
+def _attraction_code(category: str, raw: str | None) -> str | None:
+    if category != "景点信息" or not raw:
+        return None
+    try:
+        metadata = json.loads(raw)
+    except (TypeError, ValueError):
+        return None
+    code = metadata.get("attraction_id") if isinstance(metadata, dict) else None
+    return code.strip() or None if isinstance(code, str) else None
+
+
 class KnowledgePublicationService:
     def __init__(
         self,
@@ -223,6 +234,38 @@ class KnowledgePublicationService:
         job = await self.session.get(PublicationJob, job_id)
         if job is None or job.lease_owner != owner or job.state != "preparing":
             raise AppError("Publication lease expired before commit.", error_code="publication_lease_lost", status_code=409)
+        # Serialize publication with other knowledge changes before inspecting identities.
+        dialect = self.session.bind.dialect.name if self.session.bind is not None else ""
+        if dialect == "sqlite":
+            if await self.session.get(KnowledgeState, 1) is None:
+                raise AppError("Knowledge state is unavailable; check database migrations.", error_code="knowledge_state_missing", status_code=409)
+        else:
+            state_update = await self.session.execute(
+                update(KnowledgeState).where(KnowledgeState.id == 1).values(epoch=KnowledgeState.epoch + 1)
+            )
+            if state_update.rowcount != 1:
+                raise AppError("Knowledge state is unavailable; check database migrations.", error_code="knowledge_state_missing", status_code=409)
+        selected_ids = {entry_id for _, entry_id, _, _ in original_items}
+        published = (await self.session.execute(
+            select(KnowledgeEntry.id, KnowledgeRevision.category, KnowledgeRevision.metadata_json)
+            .join(KnowledgeRevision, KnowledgeRevision.id == KnowledgeEntry.published_revision_id)
+            .where(KnowledgeEntry.withdrawn_at.is_(None))
+        )).all()
+        codes: dict[str, int] = {}
+        for entry_id, category, metadata in published:
+            if entry_id not in selected_ids:
+                code = _attraction_code(category, metadata)
+                if code:
+                    codes[code] = entry_id
+        for _, entry_id, revision_id, _ in original_items:
+            revision = await self.session.get(KnowledgeRevision, revision_id)
+            if revision is None or revision.knowledge_entry_id != entry_id:
+                raise AppError("A selected draft no longer exists.", error_code="knowledge_version_conflict", status_code=409)
+            code = _attraction_code(revision.category, revision.metadata_json)
+            if code and code in codes:
+                raise AppError("景点编号与已发布景点或本批次其他景点重复，请修改后重新发布。", error_code="duplicate_attraction_code", status_code=409)
+            if code:
+                codes[code] = entry_id
         for item_id, entry_id, revision_id, expected_lock_version in original_items:
             entry = await self.session.get(KnowledgeEntry, entry_id)
             revision = await self.session.get(KnowledgeRevision, revision_id)
@@ -285,11 +328,10 @@ class KnowledgePublicationService:
                 item.error = None
 
         self.session.add_all(chunks)
-        state_update = await self.session.execute(
-            update(KnowledgeState).where(KnowledgeState.id == 1).values(epoch=KnowledgeState.epoch + 1)
-        )
-        if state_update.rowcount == 0:
-            self.session.add(KnowledgeState(id=1, epoch=2))
+        if dialect == "sqlite":
+            await self.session.execute(
+                update(KnowledgeState).where(KnowledgeState.id == 1).values(epoch=KnowledgeState.epoch + 1)
+            )
         job.state = "committing"
         await self.session.flush()
         job.state = "succeeded"

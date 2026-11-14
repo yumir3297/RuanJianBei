@@ -31,3 +31,12 @@ def test_reimport_does_not_use_page_number_as_identity_or_remove_missing_content
     assert sum(change.kind == "added" for change in changes) == 1
     assert sum(change.kind == "unchanged" for change in changes) == 1
     assert not any(change.kind == "possibly_removed" for change in changes)
+
+
+def test_reimport_does_not_match_changed_content_by_word_block_or_spreadsheet_row() -> None:
+    for location in ("正文第 2 块", "景点!3"):
+        previous = [ParsedSection(title="原内容", content="原正文", section_path=location)]
+        incoming = [ParsedSection(title="新增内容", content="新正文", section_path=location)]
+        changes = compare_sections(previous, incoming)
+        assert not any(change.kind == "modified" for change in changes)
+        assert any(change.kind == "added" for change in changes)

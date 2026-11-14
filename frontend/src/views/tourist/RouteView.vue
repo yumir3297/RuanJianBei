@@ -41,6 +41,8 @@
             <small v-if="savedStops.some(stop => stop.locked_fields?.length)">已保存的锁定会限制编辑、删除或顺序调整；解锁后请先保存再修改。</small>
             <div v-for="(stop, index) in draft.stops" :key="stop.stop_id" class="itinerary-stop-row">
               <span>{{ index + 1 }}. {{ stop.name }}</span><small>{{ progressLabel(stop.stop_id) }}</small>
+              <small v-if="stop.created_by === 'demo_synthetic'">此停留点来自本地模拟演示</small>
+              <small v-else-if="stop.evidence?.some(item => item.label === '本地模拟建议的停留时长，需游客确认')">停留时长来自本地模拟演示</small>
               <button type="button" :disabled="tourStore.progress?.status === 'active' || !canMoveStop(draft.stops, index, -1, savedStops)" @click="moveStop(index, -1)">↑</button>
               <button type="button" :disabled="tourStore.progress?.status === 'active' || !canMoveStop(draft.stops, index, 1, savedStops)" @click="moveStop(index, 1)">↓</button>
               <button type="button" :disabled="tourStore.progress?.status === 'active' || !canDeleteStop(draft.stops, index, savedStops) || ['completed','skipped'].includes(tourStore.progress?.status_by_stop?.[stop.stop_id])" @click="draft.stops.splice(index, 1)">×</button>

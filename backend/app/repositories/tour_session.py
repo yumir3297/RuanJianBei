@@ -208,6 +208,7 @@ class TourSessionRepository:
         self, owner_id: str, session_id: str, expected_version: int, payload: dict,
         idempotency_key: str, event_type: str = "saved", allow_upgrade: bool = False,
         catalog_entries: Mapping[str, PublishedAttraction] | None = None,
+        trusted_restore: bool = False,
     ) -> dict:
         request = {"session_id": session_id, "expected_version": expected_version, "snapshot": payload}
         replay = await self._replay(owner_id, "save", idempotency_key, request)
@@ -238,7 +239,8 @@ class TourSessionRepository:
         if old_v2 and new_v2:
             before_snapshot = TourSnapshotV2.model_validate(old_raw)
             normalized = normalize_snapshot_provenance(
-                TourSnapshotV2.model_validate(payload), previous=before_snapshot,
+                TourSnapshotV2.model_validate(payload),
+                previous=TourSnapshotV2.model_validate(payload) if trusted_restore else before_snapshot,
                 catalog_entries=catalog_entries,
             )
             payload = normalized.model_dump(mode="json")
@@ -725,7 +727,7 @@ class TourSessionRepository:
                 candidate_snapshot,
                 previous=base_snapshot,
                 catalog_entries=catalog_entries,
-                new_stop_created_by="ai",
+                new_stop_created_by="demo_synthetic" if proposal_payload["validation"].get("synthetic_demo") is True else "ai",
             ).model_dump(mode="json")
             self._validate_locked_fields(current_raw, candidate)
         progress = await self.session.get(TourProgressRecord, session_id)
@@ -849,7 +851,8 @@ class TourSessionRepository:
         if source is None:
             return None
         return await self.save_revision(owner_id, session_id, expected_version,
-                                        _decode(source.snapshot_json), idempotency_key, "restored")
+                                        _decode(source.snapshot_json), idempotency_key, "restored",
+                                        trusted_restore=True)
 
     async def list_events(self, owner_id: str, session_id: str) -> list[dict] | None:
         owned = await self.session.scalar(select(TourSession.id).where(

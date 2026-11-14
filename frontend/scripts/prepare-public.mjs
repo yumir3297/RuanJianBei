@@ -16,4 +16,7 @@ await mkdir(output, { recursive: true });
 for (const name of ["assets", "models", "motions", "favicon.svg"]) {
   await cp(resolve(source, name), resolve(output, name), { recursive: true });
 }
-if (target === "tourist") await cp(resolve(source, "recorder-worklet.js"), resolve(output, "recorder-worklet.js"));
+if (target === "tourist") {
+  await cp(resolve(source, "recorder-worklet.js"), resolve(output, "recorder-worklet.js"));
+  await cp(resolve(source, "offline"), resolve(output, "offline"), { recursive: true });
+}

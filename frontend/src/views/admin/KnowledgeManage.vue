@@ -129,6 +129,8 @@
                 <div class="title-cell">
                   <strong>{{ row.title }}</strong>
                   <p>{{ summarizeContent(row.content) }}</p>
+                  <small v-if="row.source_document_version_id">来源文档版本 {{ row.source_document_version_id }}<template v-if="row.section_path"> · {{ row.section_path }}</template>；内容可能经人工修改，需核对来源。</small>
+                  <small v-if="isOcrDerived(row)">含 OCR 识别内容，可能有错漏，请对照原文件核对。</small>
                 </div>
               </template>
             </el-table-column>
@@ -166,6 +168,8 @@
               <template #default="{ row }">
                 <div class="table-actions">
                   <el-button type="primary" size="small" @click="openDialog(row)">编辑</el-button>
+                  <el-button v-if="row.source_document_version_id" size="small" @click="downloadSource(row)">下载原件</el-button>
+                  <el-button v-if="row.draft_revision_id && row.source_document_version_id" size="small" :loading="previewBusy === row.id" @click="previewUnderstanding(row)">理解预览</el-button>
                   <el-button v-if="row.draft_revision_id" size="small" type="success" plain @click="publishRows([row])">发布</el-button>
                   <el-button v-if="row.draft_revision_id" size="small" plain @click="discardDraft(row)">丢弃草稿</el-button>
                   <el-button v-if="!row.withdrawn_at" type="danger" size="small" plain @click="handleDelete(row)">下架</el-button>
@@ -272,6 +276,16 @@
       </aside>
     </div>
 
+    <el-dialog v-model="previewVisible" title="知识理解候选（待人工核对）" width="680px">
+      <el-alert type="warning" :closable="false" title="引用存在不代表候选事实正确；请逐项对照原文。此预览不会自动保存或发布。" />
+      <el-alert v-if="previewResult?.source_extraction_method === 'ocr_mixed'" type="warning" :closable="false" title="来源文字包含 OCR 识别结果，请对照原始文件核对错漏。" />
+      <p v-if="previewResult?.mode === 'synthetic_stub'">本地演示模式：仅摘录原文，未调用 AI 模型。</p>
+      <h4>候选内容</h4><p>{{ previewResult?.candidate?.content }}</p>
+      <h4>引用原文</h4><p>{{ previewResult?.candidate?.quote }}</p>
+      <h4>来源全文（{{ previewResult?.section_path }}）</h4><pre style="white-space: pre-wrap; max-height: 240px; overflow: auto">{{ previewResult?.source_text }}</pre>
+      <template #footer><el-button @click="previewVisible = false">关闭</el-button><el-button type="primary" @click="editPreview">带入编辑草稿</el-button></template>
+    </el-dialog>
+
     <el-dialog
       v-model="dialogVisible"
       :title="isEdit ? '编辑知识条目' : '新增知识条目'"
@@ -296,6 +310,11 @@
             <el-option label="实用贴士" value="实用贴士" />
             <el-option label="景区概况" value="景区概况" />
           </el-select>
+        </el-form-item>
+
+        <el-form-item v-if="form.category === '景点信息'" label="景点编号">
+          <el-input v-model="attractionCode" maxlength="100" placeholder="填写稳定的景点编号（可选）" />
+          <small>用于行程和情境导览；发布后应保持稳定，并确保与其他景点不同。</small>
         </el-form-item>
 
         <el-form-item label="内容" prop="content">
@@ -352,8 +371,10 @@ import {
   UploadFilled,
 } from "@element-plus/icons-vue";
 import { ElMessage, ElMessageBox } from "element-plus";
+import { downloadKnowledgeSource, previewKnowledgeUnderstanding } from "../../api/knowledge";
 import ImportBatchPanel from "../../components/knowledge/ImportBatchPanel.vue";
 import PublicationStatus from "../../components/knowledge/PublicationStatus.vue";
+import { changedAttractionMetadata } from "../../utils/knowledgeMetadata.js";
 
 import {
   createKnowledge,
@@ -406,9 +427,13 @@ const currentPage = ref(1);
 const pageSize = 15;
 
 const dialogVisible = ref(false);
+const previewVisible = ref(false), previewBusy = ref(null), previewResult = ref(null), previewRow = ref(null);
 const isEdit = ref(false);
 const submitting = ref(false);
 const formRef = ref(null);
+const attractionCode = ref("");
+const originalMetadata = ref(null);
+const originalAttractionCode = ref("");
 const aliasInput = ref("");
 const currentId = ref(null);
 
@@ -616,6 +641,11 @@ function isManualSource(source) {
   return !source || /管理员|手动|录入/.test(String(source));
 }
 
+function isOcrDerived(row) {
+  try { return JSON.parse(row.metadata_json || "{}").extraction_method === "ocr_mixed"; }
+  catch { return false; }
+}
+
 function sourceLabel(source) {
   return source || "管理员手动录入";
 }
@@ -648,8 +678,47 @@ async function loadEntries() {
   }
 }
 
+async function downloadSource(row) {
+  try {
+    const blob = await downloadKnowledgeSource(row.id, row.draft_revision_id || row.published_revision_id);
+    const extension = ({ "application/pdf": "pdf", "application/json": "json", "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx" })[blob.type] || "bin";
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `知识来源-${row.id}.${extension}`;
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch { ElMessage.error("无法下载来源文件，请刷新后重试。"); }
+}
+
+async function previewUnderstanding(row) {
+  if (previewBusy.value !== null) return;
+  try {
+    await ElMessageBox.confirm("将使用配置的模型服务处理该来源原文；若配置外部服务，原文会发送给该服务。继续生成待审核预览？", "确认生成候选", { type: "warning" });
+    previewBusy.value = row.id;
+    previewResult.value = await previewKnowledgeUnderstanding(row.id, { expected_version: row.lock_version, draft_revision_id: row.draft_revision_id });
+    previewRow.value = { ...row, aliases: [...(row.aliases || [])] };
+    previewVisible.value = true;
+  } catch (error) {
+    if (error !== "cancel" && error !== "close") ElMessage.error(error?.response?.data?.message || "理解预览不可用，请检查功能开关或稍后重试。");
+  } finally { previewBusy.value = null; }
+}
+function editPreview() {
+  if (!previewRow.value || !previewResult.value) return;
+  openDialog(previewRow.value);
+  form.value.content = previewResult.value.candidate.content;
+  previewVisible.value = false;
+}
+
 function openDialog(row = null) {
   isEdit.value = !!row;
+  originalMetadata.value = row?.metadata_json || null;
+  try {
+    const value = JSON.parse(originalMetadata.value || "{}").attraction_id;
+    attractionCode.value = typeof value === "string" ? value : "";
+  }
+  catch { attractionCode.value = ""; }
+  originalAttractionCode.value = attractionCode.value;
 
   if (row) {
     currentId.value = row.id;
@@ -698,6 +767,10 @@ async function submitForm() {
     submitting.value = true;
     try {
       const payload = { ...form.value };
+      if (form.value.category === "景点信息") {
+        const metadata = changedAttractionMetadata(originalMetadata.value, originalAttractionCode.value, attractionCode.value);
+        if (metadata !== undefined) payload.metadata_json = metadata;
+      }
       if (!isEdit.value) delete payload.expected_version;
       if (isEdit.value) {
         await updateKnowledge(currentId.value, payload);

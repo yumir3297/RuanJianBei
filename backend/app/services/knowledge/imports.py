@@ -30,6 +30,7 @@ from app.schemas.knowledge_workspace import ImportConflictResolution
 from app.services.knowledge.file_storage import KnowledgeFileStorage
 from app.services.knowledge.import_diff import section_identity
 from app.services.knowledge.parsers import BaseDocumentParser, parser_for_path
+from app.services.knowledge.ocr import parse_pdf_with_optional_ocr
 
 logger = logging.getLogger(__name__)
 LEASE_SECONDS = 900
@@ -287,8 +288,9 @@ class KnowledgeImportService:
                 raise AppError("The stored source file is unavailable.", error_code="source_file_missing", status_code=404)
             parser = self.parser or parser_for_path(stored_path, max_pages=self.settings.knowledge_import_max_pages)
             try:
+                parse = (lambda: parse_pdf_with_optional_ocr(parser, stored_path, self.settings)) if stored_path.suffix.lower() == ".pdf" and self.parser is None else (lambda: parser.parse(stored_path))
                 sections = await asyncio.wait_for(
-                    asyncio.to_thread(parser.parse, stored_path),
+                    asyncio.to_thread(parse),
                     timeout=self.settings.knowledge_import_parse_timeout_seconds,
                 )
             except TimeoutError as exc:
@@ -315,7 +317,9 @@ class KnowledgeImportService:
         source_revisions_result = await self.session.execute(
             select(KnowledgeRevision)
             .join(SourceDocumentVersion, KnowledgeRevision.source_document_version_id == SourceDocumentVersion.id)
-            .where(SourceDocumentVersion.document_id == version.document_id)
+            # Human edits retain their source pointer for audit, but are not
+            # source-derived baselines for automatic reimport matching.
+            .where(SourceDocumentVersion.document_id == version.document_id, KnowledgeRevision.content_hash.is_not(None))
             .order_by(KnowledgeRevision.created_at.desc())
         )
         previous_by_identity: dict[str, KnowledgeRevision] = {}
@@ -364,6 +368,7 @@ class KnowledgeImportService:
                         "sha256": version.sha256,
                         "section_identity": identity,
                         "stable_id": section.stable_id,
+                        "extraction_method": section.extraction_method,
                     },
                     ensure_ascii=False,
                 ),

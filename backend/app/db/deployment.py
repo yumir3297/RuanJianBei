@@ -40,7 +40,7 @@ def migrate_database(settings: Settings) -> None:
     command.upgrade(_alembic_config(settings), "head")
 
 
-def check_schema_head(settings: Settings) -> None:
+def check_schema_head(settings: Settings) -> str:
     """Fail closed unless the database is at the repository's single Alembic head."""
     config = _alembic_config(settings)
     script = ScriptDirectory.from_config(config)
@@ -57,6 +57,7 @@ def check_schema_head(settings: Settings) -> None:
         engine.dispose()
     if current != heads[0]:
         raise RuntimeError(f"Database schema revision {current!r} does not match application head {heads[0]!r}")
+    return current
 
 
 async def initialize_database(settings: Settings, *, include_demo: bool = False) -> None:
@@ -78,6 +79,8 @@ async def prepare_startup_database(
     """Keep the legacy development startup behavior configurable and production explicit."""
     if settings.auto_migrate_on_startup:
         (migrate or migrate_database)(settings)
+    else:
+        check_schema_head(settings)
     if settings.bootstrap_on_startup:
         initializer = initialize or initialize_database
         is_development = settings.app_env.strip().lower() in {"development", "dev", "test"}

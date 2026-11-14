@@ -271,23 +271,30 @@ export function useAudioPlayer() {
       if (!isCurrentPlaybackSession(current.playbackOptions?.sessionId)) continue;
       const audioBuffer = await base64ToAudioBuffer(current.base64);
       if (generation !== stopGeneration) break;
+      let mode = "silent";
+      let playedDuration = 0;
       if (audioBuffer) {
+        mode = "audio";
         current.playbackOptions?.onMode?.("audio");
-        await playAudioBuffer(audioBuffer, current.onProgress, current.playbackOptions);
+        playedDuration = await playAudioBuffer(audioBuffer, current.onProgress, current.playbackOptions);
       } else if (
         current.text
         && speechSynthSupported
         && current.playbackOptions?.allowBrowserSpeech === true
       ) {
+        mode = "browser";
         current.playbackOptions?.onMode?.("browser");
-        await playSpeechSynthesis(current.text, current.durationMs, current.onProgress, current.playbackOptions);
+        playedDuration = await playSpeechSynthesis(current.text, current.durationMs, current.onProgress, current.playbackOptions);
       } else {
         current.playbackOptions?.onMode?.("silent");
         current.onProgress?.(0, 0, current.durationMs);
         // Invalid or missing audio must not imitate playback or delay the answer.
         current.onProgress?.(1, current.durationMs, current.durationMs);
       }
-      if (generation === stopGeneration && current.onEnded) current.onEnded();
+      if (generation === stopGeneration) {
+        try { current.playbackOptions?.onOutcome?.({ outcome: playedDuration > 0 ? "completed" : "unavailable", mode }); } catch { /* outcome observers must not strand playback */ }
+        if (current.onEnded) current.onEnded();
+      }
     }
     if (generation === stopGeneration) {
       isPlaying.value = false;

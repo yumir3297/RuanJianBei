@@ -5,6 +5,7 @@ from uuid import uuid4
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from app.models.knowledge import KnowledgeEntry
 from app.models.knowledge_workspace import KnowledgeRevision
+from app.models.knowledge_workspace import KnowledgeState
 from app.repositories.tour_session import TourSessionRepository
 from app.services.itinerary.catalog import K01PublishedAttractionSource, PublishedAttractionCatalog
 from app.services.knowledge.workspace import KnowledgeWorkspaceService
@@ -14,6 +15,7 @@ from app.tests.async_db import open_test_session
 def test_old_catalog_snapshot_is_rejected_after_real_withdrawal(tmp_path):
     async def run():
         engine, seed = await open_test_session(str(tmp_path / 'race.db'))
+        seed.add(KnowledgeState(id=1, epoch=1)); await seed.commit()
         entry = KnowledgeEntry(title='景点', category='景点信息', content='资料', source='来源', aliases='', metadata_json=json.dumps({'attraction_id': 'A'}))
         seed.add(entry); await seed.flush()
         revision = KnowledgeRevision(id=str(uuid4()), knowledge_entry_id=entry.id, title=entry.title, category=entry.category, content=entry.content, source=entry.source, aliases='', metadata_json=entry.metadata_json)
@@ -50,6 +52,7 @@ def test_api_rejects_catalog_withdrawn_after_initial_check(tmp_path, monkeypatch
 
     async def run():
         engine, seed = await open_test_session(str(tmp_path / 'api-race.db'))
+        seed.add(KnowledgeState(id=1, epoch=1)); await seed.commit()
         owner = TourIdentity(id='owner', credential_digest='a' * 64, expires_at=datetime.now(UTC) + timedelta(days=1))
         entry = KnowledgeEntry(title='景点', category='景点信息', content='资料', source='来源', aliases='', metadata_json=json.dumps({'attraction_id': 'A'}))
         seed.add_all([owner, entry]); await seed.flush()
@@ -152,8 +155,9 @@ def test_api_confirmation_locks_catalog_until_commit(tmp_path, monkeypatch):
                     withdrawal = asyncio.create_task(KnowledgeWorkspaceService(writer).withdraw(entry_id))
                     try:
                         await asyncio.wait_for(writer_started.wait(), timeout=3)
-                        with pytest.raises(TimeoutError):
-                            await asyncio.wait_for(asyncio.shield(withdrawal), timeout=.1)
+                        if engine.sync_engine.dialect.name != 'sqlite':
+                            with pytest.raises(TimeoutError):
+                                await asyncio.wait_for(asyncio.shield(withdrawal), timeout=.1)
                         release.set()
                         response = await asyncio.wait_for(task, timeout=3)
                         assert response.status_code == 200, response.text

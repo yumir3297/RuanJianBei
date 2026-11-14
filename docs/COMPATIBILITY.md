@@ -47,6 +47,7 @@ Windows/Linux 的校验命令已提供，当前仅在 macOS 主机执行；其�
 | 播放和嘴型 | [useAudioPlayer](../frontend/src/composables/useAudioPlayer.js)、[chat store](../frontend/src/stores/chat.js)、[MapView](../frontend/src/views/tourist/MapView.vue) | 聊天和地图讲解共享来源会话与游客语速；验证用户手势解锁、来源接管/停止、迟到音频、蓝牙/扬声器、切后台恢复及嘴型；语音失败时文字继续可读 |
 | 播放和嘴型 | [useAudioPlayer](../frontend/src/composables/useAudioPlayer.js)、[chat store](../frontend/src/stores/chat.js)、[游客语速偏好](../frontend/src/utils/speechRatePreference.js)、[历史回答重播](../frontend/src/utils/chatReplay.js)、[重播缓存](../backend/app/services/tts/replay_cache.py) | 用户点击后解锁音频、打断、再次播放、蓝牙/扬声器、后台恢复；TTS 未配置时可用浏览器朗读；重播使用生成时音色 profile 和本机语速，缓存仅在单进程内有效，未命中时可能调用供应商 TTS；语速、重播、字幕/嘴型同步仍需真机验证 |
 | GPS/模拟 | [useGeolocation](../frontend/src/composables/useGeolocation.js)、[useNarration](../frontend/src/composables/useNarration.js) | HTTPS、权限、真实坐标、低精度/景区外、模拟状态可辨别；原生 coords 字段适配风险见架构，不能用模拟巡游代验真 GPS |
+| CASS 情境导览 | [GuideContextStatus](../frontend/src/components/guide/GuideContextStatus.vue)、[Guide scheduler](../frontend/src/guide/scheduler.js)、[MapView](../frontend/src/views/tourist/MapView.vue) 生命周期事件 | 自动化验证附近已核验景点建议、雨天讲解适配、模拟预警/客流演示、确认与恢复、原始 GPS 不上传；生产构建通过。本次未做真实浏览器布局、真机和供应商现场验收 |
 | 3D 人物 | [ThreeAvatar](../frontend/src/components/ThreeAvatar.vue)、[AvatarDisplay](../frontend/src/components/AvatarDisplay.vue) | WebGL/模型加载失败、低端机温升、切形象和多次开关工具；失败保留 SVG 降级和输入功能 |
 | 图像上传 | [vision API](../frontend/src/api/vision.js)、[vision.py](../backend/app/api/vision.py) | JPEG/PNG/WebP、空文件、超过服务端上限、相册 HEIC；不支持格式应有可恢复提示 |
 | 游客标识/游览任务身份 | [chat store](../frontend/src/stores/chat.js)、[tourSessions store](../frontend/src/stores/tourSessions.js)、[auth store](../frontend/src/stores/auth.js) | 游览任务使用 365 天 HttpOnly 匿名 cookie，仅同一浏览器恢复；测刷新/重开/服务重启、cookie 禁用、跨浏览器隔离和清除站点 cookie；不支持跨设备找回 |
@@ -87,4 +88,16 @@ ASR 当前游客录音器输出 WAV，WAV 时长由内置读取校验。默认�
 | 结果 | 通过/失败/未测，实际行为和截图或日志路径 |
 | 回归 | 问题对应的源码入口、修复后复测结果 |
 
-本次地图建设结果：源码定位已核对；地图校验与工具测试结果见本次交付；业务服务与上述终端体验均未在本次实测。
+源码、自动化与独立构建结果以当前实施记录为准；真实 provider、目标服务器、HTTPS反代及上述终端体验不能由本地自动化推断，须按本文件记录实际设备与证据。
+
+## 6. 双端服务器边界
+
+| 范围 | 验收界限 |
+|---|---|
+| 游客站点 | 独立静态根目录/HTTPS origin；匿名配置与游客 API 可用；游客客户端不得携带管理员 token |
+| 管理站点 | 独立静态根目录/HTTPS origin；新 origin 重新登录；仅管理客户端调用后台受保护接口 |
+| API 反代 | 两站点按 method/path surface 映射同一 FastAPI，保留 `/api` 前缀；SSE 不缓冲；缺失静态文件返回 404 而非 SPA HTML |
+| 游客身份 | `tour_identity`/CSRF cookie 的 Secure、SameSite、Domain、Host/HTTPS 与已存在游客身份由实际拓扑验收；更换游客 origin 前须有身份连续性方案 |
+| 静态发布 | 游客与管理 `current` 指向不同 release 根；回滚不得重启 API/W02、执行 schema migration 或变更数据库/上传/Chroma |
+
+验收时必须记录两个实际 origin、TLS 终止点、反代和 cookie 配置。目标服务器参数未定时只做候选配置和隔离目录演练，不能将其写成线上通过。

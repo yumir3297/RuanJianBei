@@ -33,5 +33,8 @@ async def get_itinerary_catalog(
             latitude=item.latitude,
             longitude=item.longitude,
             coordinate_evidence_id=item.coordinate_evidence_id,
+            coordinate_system=item.coordinate_system,
+            environment=item.environment,
+            environment_source_id=item.environment_source_id,
         ) for item in snapshot.entries],
     )

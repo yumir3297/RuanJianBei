@@ -12,6 +12,7 @@ from starlette.datastructures import Headers
 
 from app.core.config import Settings
 from app.models.knowledge import KnowledgeEntry
+from app.models.knowledge_workspace import KnowledgeState
 from app.models.knowledge_chunk import KnowledgeChunk
 from app.services.knowledge.imports import KnowledgeImportService
 from app.services.knowledge.publication import KnowledgePublicationService
@@ -61,6 +62,7 @@ def test_sample_scenic_knowledge_import_publish_visibility_round_trip(tmp_path) 
     async def scenario() -> None:
         engine, session = await open_test_session(db_path)
         try:
+            session.add(KnowledgeState(id=1, epoch=1)); await session.commit()
             settings = Settings(knowledge_upload_dir=str(tmp_path / "uploads"))
             upload = UploadFile(
                 filename=sample_path.name,

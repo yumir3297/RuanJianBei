@@ -18,7 +18,8 @@
     "preview:admin": "vite preview --config vite.admin.config.js",
     "check:app-boundaries": "node scripts/check-app-boundaries.mjs",
     "check:build-boundaries": "node scripts/check-build-boundaries.mjs",
-    "check:build-isolation": "node scripts/check-build-isolation.mjs"
+    "check:build-isolation": "node scripts/check-build-isolation.mjs",
+    "test:offline-e2e": "node tests/e2e/offline.e2e.mjs"
   },
   "dependencies": {
     "@pixiv/three-vrm": "^3.5.4",
@@ -37,7 +38,7 @@
   "devDependencies": {
     "@gltf-transform/cli": "^4.5.1",
     "@vitejs/plugin-vue": "^6.0.1",
-    "playwright-core": "^1.65.1",
+    "playwright-core": "^1.56.1",
     "vite": "^7.1.2"
   }
 }

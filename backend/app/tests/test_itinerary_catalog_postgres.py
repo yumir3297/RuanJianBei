@@ -105,6 +105,7 @@ def test_postgres_api_confirmation_locks_catalog_until_commit(tmp_path, monkeypa
         locked_read = asyncio.Event()
         release = asyncio.Event()
         writer_started = asyncio.Event()
+        state_lock_attempted = asyncio.Event()
         calls = 0
         original_catalog = PublishedAttractionCatalog.list_for_site
         async def pause_after_locked_read(self, site_id):
@@ -120,6 +121,8 @@ def test_postgres_api_confirmation_locks_catalog_until_commit(tmp_path, monkeypa
         def observe(_conn, _cursor, statement, _parameters, _context, _executemany):
             if statement.lstrip().upper().startswith('UPDATE KNOWLEDGE_ENTRIES'):
                 writer_started.set()
+            if statement.lstrip().upper().startswith('UPDATE KNOWLEDGE_STATE'):
+                state_lock_attempted.set()
         monkeypatch.setattr(tour_sessions, '_protect_write', lambda *_: None)
         app = FastAPI(); app.include_router(tour_sessions.router, prefix='/api/tour-sessions')
         async def session_dep():
@@ -135,7 +138,7 @@ def test_postgres_api_confirmation_locks_catalog_until_commit(tmp_path, monkeypa
                 async with sessions() as writer:
                     withdrawal = asyncio.create_task(KnowledgeWorkspaceService(writer).withdraw(entry_id))
                     try:
-                        await asyncio.wait_for(writer_started.wait(), timeout=3)
+                        await asyncio.wait_for(state_lock_attempted.wait(), timeout=3)
                         with pytest.raises(TimeoutError):
                             await asyncio.wait_for(asyncio.shield(withdrawal), timeout=.1)
                         release.set()

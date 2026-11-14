@@ -104,6 +104,7 @@
 
 <script setup>
 import { computed, nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from "vue";
+import { storeToRefs } from "pinia";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import GuideIcon from "../../components/GuideIcon.vue";
@@ -117,6 +118,8 @@ import { speechText } from "../../constants/narration";
 import { fetchSpotNarration } from "../../api/narration";
 import { fetchItineraryCatalog } from "../../api/itinerary";
 import { useTourSessionsStore } from "../../stores/tourSessions";
+import { useGuideLocationStore } from "../../stores/guideLocation";
+import { useGuidePlaybackStore } from "../../stores/guidePlayback";
 import { useInteractionStore } from "../../stores/interaction";
 import { createLatestRequest } from "../../utils/latestRequest";
 
@@ -129,6 +132,9 @@ const props = defineProps({
 });
 const emit = defineEmits(["ask"]);
 const tourStore = useTourSessionsStore();
+const guideLocation = useGuideLocationStore();
+const guidePlayback = useGuidePlaybackStore();
+const { completedDemoSpots } = storeToRefs(guidePlayback);
 const interactionStore = useInteractionStore();
 const itineraryCatalog = ref({ items: [] });
 const confirmedStops = computed(() => {
@@ -329,6 +335,9 @@ const filteredSpots = computed(() =>
 /* ---------- 自动讲解（讲解机） ---------- */
 const audio = useAudioPlayer();
 const geo = useGeolocation();
+watch(() => [geo.position.value, geo.mode.value], ([position, mode]) => {
+  guideLocation.update(position, mode);
+}, { immediate: true });
 const narrateOn = ref(false);
 const narrationText = ref("");
 const narrationProgress = ref(0);
@@ -344,6 +353,7 @@ const narration = useNarration({
   getSpots: () => spots,
   isBusy: () => props.busy || audio.isPlaying.value,
   onTrigger: (spot) => playNarration(spot, { automatic: true }),
+  completionState: { completed: completedDemoSpots, record: (name) => guidePlayback.recordCompletedDemoSpot(name) },
   // 排队超时只允许中断自己的地图讲解，不能停止聊天或其他媒体源。
   onInterrupt: () => {
     if (!props.busy && activeNarrationSession && audio.activePlayback.value?.id === activeNarrationSession.id) {
@@ -422,7 +432,12 @@ async function playNarration(spot, { automatic = false } = {}) {
       () => { if (request.isCurrent() && activeNarrationSession?.id === playbackSession.id) finishNarration(playbackSession.id); },
       speechText(data.text),
       (p) => { if (request.isCurrent() && activeNarrationSession?.id === playbackSession.id) narrationProgress.value = p; },
-      { allowBrowserSpeech: true, sessionId: playbackSession.id, rate: props.speechRate },
+      { allowBrowserSpeech: true, sessionId: playbackSession.id, rate: props.speechRate,
+        onOutcome: ({ outcome, mode }) => {
+          // Browser fallback reads only a shortened excerpt; count only a full
+          // audio result that belongs to the still-current automatic request.
+          if (automatic && outcome === "completed" && mode === "audio" && request.isCurrent() && activeNarrationSession?.id === playbackSession.id) narration.markCompleted(spot.name);
+        } },
     );
   } else {
     narrationDegraded.value = true;
@@ -516,6 +531,7 @@ function stopNarrationTimer() {
 function activateMapTool() {
   if (mapToolActive) return;
   mapToolActive = true;
+  guideLocation.activate(geo.position.value, geo.mode.value);
   startNarrationTimer();
   nextTick(() => map?.invalidateSize());
 }
@@ -532,6 +548,7 @@ function deactivateMapTool() {
   narrateOn.value = false;
   geo.stopWalk();
   geo.stop();
+  guideLocation.deactivate();
   walking.value = false;
   narration.reset();
 }

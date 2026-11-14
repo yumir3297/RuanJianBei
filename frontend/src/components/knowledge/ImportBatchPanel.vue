@@ -1,7 +1,7 @@
 <template>
   <article class="panel-card import-panel">
     <div class="panel-heading">
-      <div><h3>批量导入 PDF / JSON</h3><p>上传后先进入草稿区；同一来源文档可填写文档 ID 进行重导。</p></div>
+      <div><h3>批量导入 PDF / JSON / DOCX / XLSX</h3><p>上传后先进入草稿区；同一来源文档可填写文档 ID 进行重导。</p></div>
       <div class="panel-actions">
         <el-select v-if="batches.length" v-model="selectedBatchId" size="small" @change="loadSelectedBatch">
           <el-option v-for="item in batches" :key="item.id" :label="`${item.id.slice(0, 8)} · ${item.state}`" :value="item.id" />
@@ -16,10 +16,10 @@
       <p v-else-if="limits" class="limits-note">
         当前服务器每批最多 {{ limits.knowledge_import.max_files }} 个文件；单文件不超过 {{ formatBytes(limits.knowledge_import.max_file_bytes) }}。
       </p>
-      <el-upload v-model:file-list="files" drag multiple :auto-upload="false" :disabled="limitsLoading || !limits" :limit="limits?.knowledge_import.max_files || 1" :on-change="handleFileChange" :on-exceed="handleExceed" accept=".pdf,.json">
+      <el-upload v-model:file-list="files" drag multiple :auto-upload="false" :disabled="limitsLoading || !limits" :limit="limits?.knowledge_import.max_files || 1" :on-change="handleFileChange" :on-exceed="handleExceed" accept=".pdf,.json,.docx,.xlsx">
         <el-icon class="upload-icon"><UploadFilled /></el-icon>
         <div class="el-upload__text">拖放文件到此处，或 <em>点击选择</em></div>
-        <template #tip><div class="el-upload__tip">支持 PDF 和 JSON；可选文件数与大小按服务器实时限额执行。</div></template>
+        <template #tip><div class="el-upload__tip">支持 PDF、JSON、DOCX 和 XLSX；PDF 无文本页需核查或 OCR。DOCX 仅提取正文，请核对页眉页脚；图片或复杂表格需先整理。XLSX 每张表以首个非空行为表头，包含隐藏行列及工作表；公式、图片、图表和合并单元格需先人工处理。文件数与大小按服务器实时限额执行。</div></template>
       </el-upload>
       <div class="upload-actions">
         <el-input v-model="documentId" clearable placeholder="重导时填写来源文档 ID（新文档留空）" />

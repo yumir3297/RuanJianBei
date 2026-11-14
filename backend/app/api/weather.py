@@ -207,6 +207,9 @@ def _normalize_alert(payload: dict[str, Any] | None) -> dict[str, Any]:
                         "description": alert.get("description") or "",
                         "instruction": alert.get("instruction") or "",
                         "pubTime": alert.get("pubTime"),
+                        "effectiveTime": alert.get("effectiveTime") or alert.get("startTime"),
+                        "expireTime": alert.get("expireTime") or alert.get("endTime"),
+                        "status": alert.get("status") or "unknown",
                     }
                 )
     return {"hasAlert": len(items) > 0, "items": items}
@@ -245,6 +248,8 @@ def _base_response(lat: float, lon: float, now_ts: int) -> dict[str, Any]:
         "message": "",
         "source": "\u548c\u98ce\u5929\u6c14 QWeather",
         "updatedAt": now_ts,
+        "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now_ts)),
+        "status": "unknown",
         "location": {"lat": lat, "lon": lon},
         "weather": None,
         "alert": None,
@@ -310,6 +315,7 @@ async def get_current_weather(
     result["weather"] = weather
     result["alert"] = _normalize_alert(alert_payload)
     result["air"] = _normalize_air(air_payload)
+    result["status"] = "available" if weather is not None or (alert_payload is not None and isinstance(alert_payload.get("alerts"), list)) else "unavailable"
 
     if weather is not None:
         result["available"] = True

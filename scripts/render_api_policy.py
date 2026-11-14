@@ -35,7 +35,7 @@ def policy_for(route: dict) -> tuple[str, list[str]]:
     if file == "itinerary.py":
         return "anonymous", ["tourist"]
     if file in {
-        "chat.py", "display_assets.py", "guide.py", "quick_select.py", "recommend.py",
+        "chat.py", "display_assets.py", "guide.py", "guide_context.py", "quick_select.py", "recommend.py",
         "visitor_config.py", "vision.py", "voice.py", "weather.py",
     }:
         return "anonymous", ["tourist"]
@@ -96,9 +96,13 @@ def render_nginx(output_dir: Path, tourist_host: str, admin_host: str, max_files
         if "__" in rendered:
             raise ValueError(f"unresolved NGINX template marker in {template.name}")
         (output_dir / output_name).write_text(rendered, encoding="utf-8")
-    for name in ("common-api.conf", "tourist-api-map.conf", "admin-api-map.conf"):
+    for name in ("tourist-api-map.conf", "admin-api-map.conf"):
         source = ROOT / "deploy/nginx" / name
         (output_dir / name).write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+    snippets = output_dir / "snippets"
+    snippets.mkdir(exist_ok=True)
+    common_api = ROOT / "deploy/nginx/common-api.conf"
+    (snippets / "common-api.conf").write_text(common_api.read_text(encoding="utf-8"), encoding="utf-8")
 
 
 def main() -> int:

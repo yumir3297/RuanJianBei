@@ -6,7 +6,6 @@
       <div class="header-actions">
         <span v-if="weatherCaption" class="header-weather" :title="weatherColorLabel || undefined"><i class="weather-color-dot" :style="{ background: scenicColor.hex }" aria-hidden="true"></i>{{ weatherCaption }}<template v-if="weatherColorLabel">&nbsp;·&nbsp;{{ weatherColorLabel }}</template></span>
         <details class="service-menu"><summary><GuideIcon name="headphones" /><span>景区服务</span></summary><div class="service-popover"><button v-for="service in touristSettings.hotlines.filter(item => item.enabled)" :key="service.id" type="button" :disabled="inputBusy" @click="handleHotline(service.id); $event.currentTarget.closest('details').open = false"><strong>{{ service.label }}</strong><small>{{ service.number }}</small></button><p v-if="!touristSettings.hotlines.some(item => item.enabled)">暂无已配置的服务电话，请咨询景区工作人员。</p></div></details>
-        <a v-if="adminAppUrl" class="admin-entry" :href="adminAppUrl" target="_blank" rel="noopener noreferrer">运营管理</a>
       </div>
     </header>
     <main class="guide-layout" :class="{ 'tool-open': activeTool, 'route-tool-open': activeTool === 'route', 'map-open': activeTool === 'map', 'text-open': textExpanded }">
@@ -15,7 +14,7 @@
         <nav class="tool-dock" aria-label="导览工具"><button v-for="tool in tools" :id="'tool-trigger-' + tool.id" :key="tool.id" type="button" :class="{ active: activeTool === tool.id }" :aria-expanded="activeTool === tool.id" aria-controls="guide-tools" @click="setTool(tool.id)"><GuideIcon :name="tool.icon" /><span>{{ tool.title }}</span><GuideIcon name="chevron" class="dock-chevron" /></button></nav>
       <dialog ref="toolDialogRef" id="guide-tools" class="tool-sheet" aria-labelledby="tool-title" @cancel.prevent="closeTool" @click="handleDialogBackdrop($event, closeTool)">
         <header class="tool-sheet-header"><h3 ref="toolHeadingRef" id="tool-title" tabindex="-1"><GuideIcon :name="selectedTool?.icon" />{{ selectedTool?.title }}</h3><button type="button" class="icon-button" aria-label="收起导览工具" @click="closeTool"><GuideIcon name="close" /></button></header>
-        <div class="tool-sheet-body"><KeepAlive><component :is="selectedTool.component" v-if="selectedTool" :key="activeTool" :busy="inputBusy" v-bind="activeTool === 'route' ? { weather } : activeTool === 'map' ? { weather, scenicColor, colorLabel: weatherColorLabel, speechRate } : {}" @ask="handleToolQuestion" /></KeepAlive></div>
+        <div class="tool-sheet-body"><KeepAlive><component :is="selectedTool.component" v-if="selectedTool" :key="activeTool" :busy="inputBusy || guideSafety.hold" v-bind="activeTool === 'route' ? { weather } : activeTool === 'map' ? { weather, scenicColor, colorLabel: weatherColorLabel, speechRate } : {}" @ask="handleToolQuestion" /></KeepAlive></div>
       </dialog>
         <div v-if="!activeTool" class="rail-discovery"><h3>常用提问</h3><button v-for="question in touristSettings.quick_questions.slice(0, 3)" :key="question" type="button" :disabled="inputBusy" @click="handleQuickQuestion(question)">{{ question }}<GuideIcon name="chevron" /></button></div>
       </aside>
@@ -85,9 +84,12 @@
       </section>
       <aside class="narration-rail" aria-label="讲解辅助">
         <div class="rail-heading"><h2>讲解</h2><p>按你的需要调整讲解方式</p></div>
+        <GuideContextStatus :position="guideLocation.position" :location-mode="guideLocation.mode" :map-active="guideLocation.mapActive" :tour="guideTourContext" :playback-busy="chatStore.streaming || audioPlayer.isPlaying.value" @interrupt="interruptForGuideSafety" @ask="handleToolQuestion" @proposal="requestItineraryProposal" />
+        <p v-if="guideSafety.hold" role="status">安全提醒期间，普通讲解已暂停；请先处理上方提示。</p>
         <label class="explanation-select"><GuideIcon name="settings" /><span>讲解方式</span><select v-model="explanationLevel" aria-label="讲解方式"><option v-for="style in styleOptions" :key="style.key" :value="style.key">{{ style.label }}讲解</option></select></label>
         <label class="explanation-select speech-rate-select"><GuideIcon name="settings" /><span>语速</span><select v-model.number="speechRate" aria-label="语音讲解语速"><option v-for="rate in speechRateOptions" :key="rate" :value="rate">{{ rate.toFixed(1) }}×</option></select></label>
         <div class="narration-note"><h3>当前讲解</h3><p v-if="narrationSummary">{{ narrationSummary }}</p><p v-else class="narration-empty">提问后，讲解摘要会显示在这里。</p><small v-if="narrationSummary">完整内容可在文字记录中查看</small></div>
+        <div v-if="guidePlayback.completedDemoSpots.length" class="narration-note"><h3>演示景点完整播放</h3><p>{{ guidePlayback.completedDemoSpots.join('、') }}</p><small>仅记录本次页面中的演示音频，不代表实际到访或行程完成。</small></div>
         <p v-if="chatStore.errorMessage" class="rail-error" role="alert">{{ chatStore.errorMessage }} <button v-if="chatStore.retryAvailable" type="button" class="retry-btn" @click="retryLastAnswer">重新尝试</button></p>
         <button id="text-panel-trigger" type="button" class="text-panel-trigger" :aria-expanded="textExpanded" @click="toggleTextPanel"><GuideIcon name="book" />文字记录与资料<span>{{ chatStore.messages.length > 1 ? chatStore.messages.length - 1 : '' }}</span><GuideIcon name="chevron" /></button>
       <dialog ref="textDialogRef" class="conversation-panel" aria-label="文字记录与参考资料" @cancel.prevent="closeTextPanel" @click="handleDialogBackdrop($event, closeTextPanel)">
@@ -141,22 +143,23 @@
           </section>
           <section v-if="tourStore.proposal" class="itinerary-proposal" aria-label="行程修改提案">
             <header><strong>行程修改提案</strong><button type="button" @click="tourStore.cancelProposal()">关闭</button></header>
+            <p v-if="tourStore.proposal.validation?.synthetic_demo === true" role="status">本地模拟演示：此提案由固定演示规则生成，不是真实 AI 结果。</p>
             <p>“{{ tourStore.proposal.request_text }}”</p>
             <p v-if="tourStore.proposal.status === 'applied'">这份提案已应用，不会重复保存。</p>
             <p v-if="tourStore.proposalIsStale" class="itinerary-proposal-error" role="status">当前草稿已修改；这份提案仍基于修改前的行程，不能直接应用。请基于当前草稿重新生成。</p>
             <p v-if="tourStore.proposal.status === 'waiting_user'" role="status">AI 服务可能已收到上次请求，但结果未能保存。再次尝试可能重复产生调用费用；行程本身仍未改变。</p>
-            <button v-if="tourStore.proposal.status === 'waiting_user'" type="button" :disabled="tourStore.proposalLoading" @click="tourStore.retryProposal(true)">确认可能重复产生调用费用并重试</button>
+            <button v-if="tourStore.proposal.status === 'waiting_user'" type="button" :disabled="tourStore.proposalLoading || guideSafety.hold" @click="retryItineraryProposal">确认可能重复产生调用费用并重试</button>
             <p v-if="tourStore.proposal.status === 'executing'" role="status">提案正在后台生成；关闭页面或停止等待后，任务仍会继续。</p>
             <button v-if="!tourStore.proposalLoading && tourStore.proposal.status === 'executing'" type="button" @click="tourStore.resumeProposal(tourStore.proposal)">重新检查状态</button>
             <p v-if="tourStore.proposal.status === 'failed'" role="status">{{ tourStore.proposal.validation?.message || '提案未能完成，当前行程未改变。' }}</p>
             <p v-if="tourStore.proposal.status === 'needs_clarification'">{{ tourStore.proposal.clarification }} 请补充后重新提交。</p>
             <template v-else-if="tourStore.proposal.status === 'ready'">
               <ul v-if="tourStore.proposal.diff_verifiable !== false"><li v-for="(change, index) in tourStore.proposal.diff" :key="`${change.kind}-${index}`">{{ itineraryProposalDiffText(change, { beforeSnapshot: tourStore.proposalBaseSnapshot, candidateSnapshot: tourStore.proposal.candidate }) }}</li></ul>
-              <p>AI 建议的停留时长仅供参考，请结合实际情况确认。</p>
+              <p>建议的停留时长仅供参考，请结合实际情况确认。</p>
               <p v-if="tourStore.proposal.diff_verifiable === false" role="alert">这份旧提案缺少可核对的原始行程，请重新生成。</p>
               <p>{{ proposalValidationMessage(tourStore.proposal.validation?.status) }}请对照上方原始需求和修改内容，确认没有遗漏或误改。</p>
               <button type="button" :disabled="tourStore.proposalIsStale || tourStore.proposalLoading || tourStore.proposalApplying || tourStore.proposal.diff_verifiable === false || !proposalValidationAllowsConfirmation(tourStore.proposal.validation?.status)" @click="tourStore.confirmProposal()">{{ tourStore.proposalApplying ? '正在保存…' : '确认并保存新版本' }}</button>
-              <button v-if="tourStore.proposalIsStale || tourStore.proposal.diff_verifiable === false || !proposalValidationAllowsConfirmation(tourStore.proposal.validation?.status)" type="button" :disabled="tourStore.proposalLoading" @click="tourStore.requestProposal(tourStore.proposal.request_text)">按当前草稿重新生成</button>
+              <button v-if="tourStore.proposalIsStale || tourStore.proposal.diff_verifiable === false || !proposalValidationAllowsConfirmation(tourStore.proposal.validation?.status)" type="button" :disabled="tourStore.proposalLoading || guideSafety.hold" @click="requestItineraryProposal(tourStore.proposal.request_text)">按当前草稿重新生成</button>
               <button type="button" @click="tourStore.cancelProposal()">放弃</button>
             </template>
           </section>
@@ -283,6 +286,7 @@
         </div>
       </div>
     </dialog>
+    <OfflineEntryPrompt />
   </section>
 </template>
 
@@ -293,6 +297,8 @@ import { useRoute, useRouter } from "vue-router";
 import ThreeAvatar from "../../components/ThreeAvatar.vue";
 import AvatarDisplay from "../../components/AvatarDisplay.vue";
 import GuideIcon from "../../components/GuideIcon.vue";
+import OfflineEntryPrompt from "../../components/OfflineEntryPrompt.vue";
+import GuideContextStatus from "../../components/guide/GuideContextStatus.vue";
 import ExploreView from "./ExploreView.vue";
 import MapView from "./MapView.vue";
 import RouteView from "./RouteView.vue";
@@ -312,7 +318,6 @@ import { useCamera } from "../../composables/useCamera";
 import { useSpeechRecognition } from "../../composables/useSpeechRecognition";
 import { useScenicBackground } from "../../composables/useScenicBackground";
 import { useVisitorConfig } from "../../composables/useVisitorConfig.js";
-import { adminAppUrl } from "../../utils/appLinks.js";
 import { fetchWelcomeAudio, replayChatAnswer } from "../../api/chat";
 import { DEFAULT_AVATAR_PRESET } from "../../utils/avatarConfig";
 import { GUIDE_PERSONA, useAvatar } from "../../composables/useAvatar";
@@ -322,6 +327,9 @@ import { resolvePublishedAttraction } from "../../utils/toolAttraction.js";
 import { itineraryProposalDiffText } from "../../utils/itineraryProposalDiff.js";
 import { proposalValidationMessage, proposalValidationAllowsConfirmation } from "../../utils/itineraryValidation.js";
 import { useTourSessionsStore } from "../../stores/tourSessions";
+import { useGuideSafetyStore } from "../../stores/guideSafety";
+import { useGuideLocationStore } from "../../stores/guideLocation";
+import { useGuidePlaybackStore } from "../../stores/guidePlayback";
 import { getSessionId, useChatStore } from "../../stores/chat";
 import { useInteractionStore } from "../../stores/interaction";
 import { readSpeechRate, SPEECH_RATE_OPTIONS, writeSpeechRate } from "../../utils/speechRatePreference";
@@ -329,6 +337,8 @@ import { createChatReplayController } from "../../utils/chatReplay";
 
 const router = useRouter();
 const route = useRoute();
+const guideLocation = useGuideLocationStore();
+const guidePlayback = useGuidePlaybackStore();
 const feedbackReasons = [
   { value: "accuracy", label: "内容不准确" },
   { value: "detail", label: "信息不够" },
@@ -339,6 +349,8 @@ const feedbackReasons = [
 const chatStore = useChatStore();
 const interactionStore = useInteractionStore();
 const tourStore = useTourSessionsStore();
+const guideSafety = useGuideSafetyStore();
+const guideTourContext = computed(() => tourStore.current && !tourStore.progressSyncRequired ? { ...tourStore.current, progress: tourStore.progress } : null);
 const speechRate = ref(readSpeechRate());
 const speechRateOptions = SPEECH_RATE_OPTIONS;
 watch(speechRate, (rate) => writeSpeechRate(rate));
@@ -897,23 +909,31 @@ function stopAudioOutput() {
   else chatStore.stopOutput();
 }
 
+function interruptForGuideSafety() {
+  stopAudioOutput();
+  if (chatStore.streaming) chatStore.stopOutput();
+}
+
+
 function handleQuickQuestion(question) {
   submitQuery(question);
 }
 
 function retryLastAnswer() {
+  if (guideSafety.hold) return;
   return chatStore.retryLastMessage({
     ttsConfig: { playbackRate: speechRate.value },
   });
 }
 
 function replayAnswer(message) {
+  if (guideSafety.hold) return;
   return chatReplay.replay(message);
 }
 
 function submitQuery(rawQuery, extraOptions = {}) {
   const value = rawQuery.trim();
-  if (!value || chatStore.streaming) {
+  if (!value || chatStore.streaming || guideSafety.hold) {
     return;
   }
   if (!extraOptions.forceQA && isItineraryEditIntent(value)) {
@@ -1005,8 +1025,12 @@ function revealItineraryConversation() {
   textExpanded.value = true;
 }
 function requestItineraryProposal(value) {
+  if (guideSafety.hold) return;
   revealItineraryConversation();
   tourStore.requestProposal(value);
+}
+function retryItineraryProposal() {
+  if (!guideSafety.hold) tourStore.retryProposal(true);
 }
 async function toggleRecording() {
   if (chatStore.streaming || transcribing.value) {
@@ -1514,13 +1538,13 @@ function handleDialogBackdrop(event, close) {
   if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) close();
 }
 async function handleToolQuestion(payload) {
-  if (inputBusy.value) return;
+  if (inputBusy.value || guideSafety.hold) return;
   const generation = ++toolQuestionGeneration;
   const originTool = activeTool.value;
   let namedAttractionId = null;
   if (!payload.routeId && !payload.attractionId && payload.attraction) {
     namedAttractionId = await resolvePublishedAttraction(payload.attraction, interactionStore);
-    if (generation !== toolQuestionGeneration || activeTool.value !== originTool || inputBusy.value) return;
+    if (generation !== toolQuestionGeneration || activeTool.value !== originTool || inputBusy.value || guideSafety.hold) return;
   }
   interactionStore.clearSelection();
   if (payload.routeId) interactionStore.selectRoute(payload.routeId);

@@ -87,6 +87,7 @@ class ParsedSection(BaseModel):
     page_end: int | None = Field(default=None, ge=1)
     section_path: str | None = None
     stable_id: str | None = None
+    extraction_method: str | None = None
 
 
 class PublicationRead(BaseModel):

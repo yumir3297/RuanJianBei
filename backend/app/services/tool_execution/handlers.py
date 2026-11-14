@@ -1,4 +1,5 @@
 from typing import Any, Literal
+from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,6 +40,13 @@ async def _generate_itinerary_proposal(
     payload: ItineraryProposalInput, context: ToolContext,
 ) -> ItineraryProposalOutput:
     settings = get_settings()
+    synthetic = settings.llm_provider == "demo_synthetic"
+    if synthetic:
+        url = urlsplit(settings.llm_base_url)
+        if (settings.app_env.strip().lower() not in {"development", "test"}
+                or url.scheme != "http" or url.hostname != "127.0.0.1"
+                or url.username is not None or url.password is not None):
+            raise ToolStepError("provider_unavailable", external_outcome="not_started")
     if settings.llm_provider == "stub" or not all((
         settings.llm_api_key.strip(), settings.llm_base_url.strip(), settings.llm_model.strip(),
     )):
@@ -62,6 +70,8 @@ async def _generate_itinerary_proposal(
         generated = await ItineraryIntentService().propose(
             payload.request_text, snapshot, catalog, settings,
         )
+        if synthetic:
+            generated["validation"]["synthetic_demo"] = True
     except IntentUnavailable as error:
         raise ToolStepError("provider_unavailable", external_outcome="unknown") from error
     except Exception as error:

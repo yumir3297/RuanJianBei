@@ -113,3 +113,42 @@ test('asynchronous narration rejection clears its unfinished state', async () =>
     assert.equal(narration.activeSpot.value, null);
   } finally { await vite.close(); }
 });
+
+test('triggering a spot is not the same as completing its narration', async () => {
+  const vite = await createServer({ configFile: false, cacheDir: '/private/tmp/guide-vite-narration-completion', server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
+  try {
+    const { useNarration } = await vite.ssrLoadModule('/src/composables/useNarration.js');
+    const spot = { name: '景点', lat: 31, lng: 120 };
+    const narration = useNarration({ getPosition: () => spot, getSpots: () => [spot], isBusy: () => false, onTrigger: () => {} });
+    narration.trigger(spot);
+    assert.deepEqual(narration.completed.value, []);
+    assert.equal(narration.markCompleted('其他景点'), false);
+    assert.equal(narration.markCompleted(spot.name), true);
+    assert.deepEqual(narration.completed.value, ['景点']);
+    narration.reset();
+    assert.equal(narration.markCompleted(spot.name), false);
+  } finally { await vite.close(); }
+});
+
+test('completed demo playback is shared across map resets without recording a trigger', async () => {
+  const vite = await createServer({ configFile: false, cacheDir: '/private/tmp/guide-vite-shared-completion', server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent' });
+  try {
+    const { useNarration } = await vite.ssrLoadModule('/src/composables/useNarration.js');
+    const { useGuidePlaybackStore } = await vite.ssrLoadModule('/src/stores/guidePlayback.js');
+    const { createPinia, storeToRefs } = await vite.ssrLoadModule('pinia');
+    const playback = useGuidePlaybackStore(createPinia());
+    const { completedDemoSpots } = storeToRefs(playback);
+    const spot = { name: '景点', lat: 31, lng: 120 };
+    const narration = useNarration({ getPosition: () => spot, getSpots: () => [spot], isBusy: () => false, onTrigger: () => {},
+      completionState: { completed: completedDemoSpots, record: name => playback.recordCompletedDemoSpot(name) } });
+    narration.trigger(spot);
+    assert.deepEqual(playback.completedDemoSpots, []);
+    assert.equal(narration.markCompleted('其他景点'), false);
+    assert.equal(narration.markCompleted('景点'), true);
+    narration.reset();
+    assert.deepEqual(playback.completedDemoSpots, ['景点']);
+    assert.equal(narration.markCompleted('景点'), false);
+    playback.clearDemoPlayback();
+    assert.deepEqual(narration.completed.value, []);
+  } finally { await vite.close(); }
+});

@@ -43,6 +43,8 @@ def _admin_headers() -> dict[str, str]:
 def _seed_published(path: str) -> int:
     async def scenario() -> int:
         engine, session = await open_test_session(path)
+        from app.models.knowledge_workspace import KnowledgeState
+        session.add(KnowledgeState(id=1, epoch=1))
         entry = KnowledgeEntry(
             title="已发布景点",
             category="景点信息",

@@ -24,7 +24,8 @@ export function makeAppConfig({ app, port }) {
     preview: { host: "0.0.0.0", port: port + 1000, strictPort: true },
     build: {
       outDir: `${frontendRoot}/dist/${app}`,
-      emptyOutDir: false,
+      // Each app owns a separate outDir, so clear only its stale hashed assets on rebuild.
+      emptyOutDir: true,
       manifest: true,
       rollupOptions: { input: `${frontendRoot}/apps/${app}/index.html` },
     },

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from collections import Counter
 from dataclasses import dataclass
 
@@ -22,7 +23,7 @@ def section_identity(section: ParsedSection) -> str:
     # a changed section across source versions.
     if (path.startswith("第 ") and path.endswith(" 页")) or (
         path.startswith("条目 ") and path[3:].isdigit()
-    ):
+    ) or re.fullmatch(r"正文第 \d+ 块", path) or re.fullmatch(r".+!\d+", path):
         return ""
     return f"path:{path}" if path else ""
 

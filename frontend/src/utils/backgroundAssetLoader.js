@@ -51,7 +51,16 @@ export function createBackgroundAssetLoader({
       onChange(snapshot());
       return snapshot();
     }
-    if (nextUrl === currentUrl || nextUrl === pendingUrl) return snapshot();
+    if (nextUrl === currentUrl) {
+      if (pendingUrl && pendingUrl !== nextUrl) {
+        generation += 1;
+        pendingUrl = null;
+        loading = false;
+        onChange(snapshot());
+      }
+      return snapshot();
+    }
+    if (nextUrl === pendingUrl) return snapshot();
 
     const requestGeneration = ++generation;
     pendingUrl = nextUrl;

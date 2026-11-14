@@ -72,7 +72,7 @@ def test_ai_proposed_durations_are_not_attributed_to_visitor_input():
     for stop in result.stops:
         assert stop.duration_basis == "estimate"
         assert stop.evidence[0].evidence_type == "estimate"
-        assert "AI" in stop.evidence[0].label
+        assert "需游客确认" in stop.evidence[0].label
 
 
 def test_untrusted_draft_provenance_is_normalized_from_server_facts():
@@ -143,3 +143,25 @@ def test_changed_duration_and_new_route_leg_do_not_inherit_forged_evidence():
     assert normalized.legs[0].duration_minutes is None
     assert normalized.legs[0].duration_basis == "unknown"
     assert normalized.legs[0].evidence == []
+
+
+def test_synthetic_origin_is_server_owned_and_survives_unchanged_save():
+    synthetic = TourSnapshotV2.model_validate({'stops': [{
+        'kind': 'rest', 'name': '演示休息', 'duration_minutes': 10,
+        'duration_basis': 'estimate', 'created_by': 'demo_synthetic',
+        'evidence': [{'evidence_type': 'estimate', 'label': '本地模拟建议的停留时长，需游客确认'}],
+    }]})
+    incoming = synthetic.model_copy(deep=True)
+    incoming.stops[0].created_by = 'manual'
+    incoming.stops[0].evidence = []
+    preserved = normalize_snapshot_provenance(incoming, previous=synthetic)
+    assert preserved.stops[0].created_by == 'demo_synthetic'
+    assert '本地模拟' in preserved.stops[0].evidence[0].label
+    incoming.stops[0].duration_minutes = 15
+    changed = normalize_snapshot_provenance(incoming, previous=synthetic)
+    assert changed.stops[0].created_by == 'demo_synthetic'
+    assert changed.stops[0].duration_basis == 'user'
+    assert changed.stops[0].evidence[0].evidence_type == 'visitor_input'
+    forged = normalize_snapshot_provenance(synthetic)
+    assert forged.stops[0].created_by == 'manual'
+    assert forged.stops[0].evidence[0].evidence_type == 'visitor_input'

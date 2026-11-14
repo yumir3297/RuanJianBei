@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api import admin, auth, chat, display_assets, guide, insights, itinerary, knowledge, knowledge_imports, knowledge_publications, quick_select, recommend, tool_execution, visitor_config, vision, voice, weather
+from app.api import admin, auth, chat, display_assets, guide, guide_context, insights, itinerary, knowledge, knowledge_imports, knowledge_publications, quick_select, recommend, tool_execution, visitor_config, vision, voice, weather
 from app.api import tour_sessions, guide_loop
 
 
@@ -24,3 +24,4 @@ api_router.include_router(voice.router, prefix="/asr", tags=["asr"])
 api_router.include_router(insights.router, prefix="/insights", tags=["insights"])
 api_router.include_router(weather.router, prefix="/weather", tags=["weather"])
 api_router.include_router(guide.router, prefix="/guide", tags=["guide"])
+api_router.include_router(guide_context.router, prefix="/guide", tags=["guide-context"])

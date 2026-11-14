@@ -5,6 +5,8 @@ x-backend: &backend
   build:
     context: ..
     dockerfile: deploy/backend.Dockerfile
+    args:
+      SOURCE_SHA: ${SOURCE_SHA:?pin SOURCE_SHA to the backend source commit}
   env_file:
     - path: runtime.env
       required: true
@@ -22,7 +24,7 @@ x-backend: &backend
     UI_ASSET_UPLOAD_DIR: /var/lib/scenic-guide/uploads/ui-assets
     UI_ASSET_MANIFEST_PATH: /var/lib/scenic-guide/config/display_assets.json
   volumes:
-    - app-state:/var/lib/scenic-guide
+    - ${APP_STATE_ROOT:-../var/lib/scenic-guide}:/var/lib/scenic-guide
     - model-cache:/var/cache/huggingface
   networks: [private]
 
@@ -35,9 +37,13 @@ services:
     ports:
       - "${GATEWAY_HTTP_PORT:-8080}:80"
     volumes:
-      - ../deploy/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - ../frontend/dist/tourist:/usr/share/nginx/html/tourist:ro
-      - ../frontend/dist/admin:/usr/share/nginx/html/admin:ro
+      - ${NGINX_CONFIG_ROOT:?render target-specific NGINX config first}/tourist.conf:/etc/nginx/conf.d/tourist.conf:ro
+      - ${NGINX_CONFIG_ROOT:?render target-specific NGINX config first}/admin.conf:/etc/nginx/conf.d/admin.conf:ro
+      - ${NGINX_CONFIG_ROOT:?render target-specific NGINX config first}/tourist-api-map.conf:/etc/nginx/conf.d/tourist-api-map.conf:ro
+      - ${NGINX_CONFIG_ROOT:?render target-specific NGINX config first}/admin-api-map.conf:/etc/nginx/conf.d/admin-api-map.conf:ro
+      - ${NGINX_CONFIG_ROOT:?render target-specific NGINX config first}/snippets:/etc/nginx/snippets:ro
+      - ${TOURIST_WEB_ROOT:-../var/www/tourist}:/var/www/tourist:ro
+      - ${ADMIN_WEB_ROOT:-../var/www/admin}:/var/www/admin:ro
     networks: [private]
     restart: unless-stopped
 
@@ -71,7 +77,6 @@ services:
     restart: "no"
 
 volumes:
-  app-state:
   model-cache:
 
 networks:

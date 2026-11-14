@@ -38,20 +38,21 @@ export function useGeolocation() {
   const accuracyPoor = ref(false);
 
   let watchId = null;
+  let watchGeneration = 0;
   let walkTimer = null;
   let walkPath = [];
   let walkIndex = 0;
   let walkSegmentProgress = 0;
 
-  function setPosition(lat, lng, accuracy = 0) {
-    position.value = { lat, lng, accuracy, ts: Date.now() };
+  function setPosition(lat, lng, accuracy = 0, evidence = {}) {
+    position.value = { lat, lng, accuracy, ts: evidence.observedAt ?? Date.now(), ...evidence };
   }
 
   function setSimulated(lat, lng) {
     setPosition(lat, lng, 5);
   }
 
-  function evaluate(raw) {
+  function evaluate(raw, timestamp) {
     const { latitude, longitude, accuracy } = raw || {};
     if (!Number.isFinite(latitude) || Math.abs(latitude) > 90
         || !Number.isFinite(longitude) || Math.abs(longitude) > 180
@@ -63,7 +64,13 @@ export function useGeolocation() {
       return;
     }
     const fixed = wgs84ToGcj02(latitude, longitude);
-    setPosition(fixed.lat, fixed.lng, accuracy);
+    const observedAt = Number.isFinite(timestamp) ? timestamp : Date.now();
+    setPosition(fixed.lat, fixed.lng, accuracy, {
+      wgs84: { lat: latitude, lng: longitude },
+      coordinateSystem: "GCJ-02",
+      observedAt,
+      source: "browser_geolocation",
+    });
 
     if (haversineMeters(fixed, CENTER) > OUT_OF_AREA_M) {
       accuracyPoor.value = false;
@@ -84,7 +91,7 @@ export function useGeolocation() {
 
   function onSuccess(pos) {
     if (mode.value === "sim") return; // 手动切到模拟后忽略真实回调
-    evaluate(pos?.coords);
+    evaluate(pos?.coords, pos?.timestamp);
   }
 
   function onError(err) {
@@ -96,6 +103,7 @@ export function useGeolocation() {
   }
 
   function startReal() {
+    clearLocationWatch();
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       mode.value = "unsupported";
       startSimulated();
@@ -104,18 +112,26 @@ export function useGeolocation() {
     }
     stopWalk();
     mode.value = "real";
-    watchId = navigator.geolocation.watchPosition(onSuccess, onError, {
+    const currentGeneration = watchGeneration;
+    watchId = navigator.geolocation.watchPosition(
+      (position) => { if (currentGeneration === watchGeneration && enabled.value) onSuccess(position); },
+      (error) => { if (currentGeneration === watchGeneration && enabled.value) onError(error); }, {
       enableHighAccuracy: true,
       timeout: 10000,
       maximumAge: 5000,
     });
   }
 
-  function startSimulated(lat, lng) {
+  function clearLocationWatch() {
+    watchGeneration += 1;
     if (watchId !== null && typeof navigator !== "undefined" && navigator.geolocation) {
       navigator.geolocation.clearWatch(watchId);
       watchId = null;
     }
+  }
+
+  function startSimulated(lat, lng) {
+    clearLocationWatch();
     mode.value = "sim";
     error.value = "";
     accuracyPoor.value = false;
@@ -168,10 +184,7 @@ export function useGeolocation() {
 
   function stop() {
     enabled.value = false;
-    if (watchId !== null && typeof navigator !== "undefined" && navigator.geolocation) {
-      navigator.geolocation.clearWatch(watchId);
-      watchId = null;
-    }
+    clearLocationWatch();
     stopWalk();
     position.value = null;
     mode.value = "idle";

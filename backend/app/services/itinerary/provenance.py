@@ -44,7 +44,7 @@ def normalize_snapshot_provenance(
     *,
     previous: TourSnapshotV2 | None = None,
     catalog_entries: Mapping[str, PublishedAttraction] | None = None,
-    new_stop_created_by: Literal["manual", "ai", "template"] = "manual",
+    new_stop_created_by: Literal["manual", "ai", "template", "demo_synthetic"] = "manual",
 ) -> TourSnapshotV2:
     """Replace client claims about sources/evidence with facts derived by the server.
 
@@ -138,9 +138,10 @@ def _set_submitted_duration_provenance(stop, actor: str) -> None:
     if stop.duration_minutes is None:
         stop.duration_basis = "unknown"
         stop.evidence = []
-    elif actor == "ai":
+    elif actor in ("ai", "demo_synthetic"):
         stop.duration_basis = "estimate"
-        stop.evidence = [EvidenceReference(evidence_type="estimate", label="AI 建议的停留时长，需游客确认")]
+        label = "本地模拟建议的停留时长，需游客确认" if actor == "demo_synthetic" else "建议的停留时长，需游客确认"
+        stop.evidence = [EvidenceReference(evidence_type="estimate", label=label)]
     else:
         stop.duration_basis = "user"
         stop.evidence = [EvidenceReference(evidence_type="visitor_input", label="游客填写的停留时长")]

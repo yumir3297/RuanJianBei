@@ -6,9 +6,9 @@ import { haversineMeters, findNearestSpot, TRIGGER_RADIUS_M, EXIT_RADIUS_M, COOL
  * 忙时不打断，记入 pendingSpot；空闲后补播前会重测距离，走远则丢弃。
  * 若排队等待超过 PENDING_MAX_WAIT_MS（当前播放卡住或过长），中断后补播，避免功能被永久阻塞。
  */
-export function useNarration({ getPosition, getSpots, isBusy, onTrigger, onInterrupt, maxPendingWaitMs = PENDING_MAX_WAIT_MS }) {
+export function useNarration({ getPosition, getSpots, isBusy, onTrigger, onInterrupt, completionState, maxPendingWaitMs = PENDING_MAX_WAIT_MS }) {
   const activeSpot = ref(null);
-  const completed = ref([]);
+  const completed = completionState?.completed || ref([]);
   const status = ref("idle");
   const lastTriggeredAt = ref(0);
 
@@ -71,13 +71,11 @@ export function useNarration({ getPosition, getSpots, isBusy, onTrigger, onInter
   function fire(spot) {
     const currentGeneration = ++generation;
     activeSpot.value = spot;
-    if (!completed.value.includes(spot.name)) completed.value = [...completed.value, spot.name];
     status.value = "playing";
     const failed = () => {
       if (currentGeneration !== generation) return;
       insideNames.delete(`${spot.name}__done`);
       lastTriggeredAt.value = 0;
-      completed.value = completed.value.filter(name => name !== spot.name);
       activeSpot.value = null;
       status.value = "idle";
     };
@@ -88,6 +86,13 @@ export function useNarration({ getPosition, getSpots, isBusy, onTrigger, onInter
     } catch {
       failed();
     }
+  }
+
+  function markCompleted(spotName) {
+    if (!spotName || activeSpot.value?.name !== spotName) return false;
+    if (completionState) completionState.record(spotName);
+    else if (!completed.value.includes(spotName)) completed.value = [...completed.value, spotName];
+    return true;
   }
 
   /** 由外部在「忙 -> 空闲」时驱动。 */
@@ -117,7 +122,7 @@ export function useNarration({ getPosition, getSpots, isBusy, onTrigger, onInter
   function reset() {
     generation += 1;
     activeSpot.value = null;
-    completed.value = [];
+    if (!completionState) completed.value = [];
     status.value = "idle";
     pendingSpot = null;
     pendingSince = 0;
@@ -125,5 +130,5 @@ export function useNarration({ getPosition, getSpots, isBusy, onTrigger, onInter
     lastTriggeredAt.value = 0;
   }
 
-  return { activeSpot, completed, status, update, drainPending, reset, fire, trigger };
+  return { activeSpot, completed, status, update, drainPending, reset, fire, trigger, markCompleted };
 }
