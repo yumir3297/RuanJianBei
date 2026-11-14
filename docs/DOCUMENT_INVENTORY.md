@@ -169,6 +169,8 @@
 
 Trae 来源工作树 `feature/offline-companion` 的 `docs/implementation/OFFLINE_AUDIT.md` 和 `docs/implementation/OFFLINE_ACCEPTANCE.md` 未纳入主线；其中用户的全屏游戏要求、交互方向和当前差距已归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)，历史验证与限制归入[离线记录](integration/OFFLINE_COMPANION.md)和[验收总表](testing/TESTING_AND_ACCEPTANCE.md)。来源含未提交改动，原文件留在来源工作区，历史测试不代表现行版本。
 
+连续导览来源工作区中未进入主线的 `docs/implementation/GUIDEWEAVE_PILOT.md`、`docs/superpowers/plans/2026-11-09-tour-context-rag-pilot.md`，以及 `tour-narration-policy` 的方法库、讲解策略、分层交付和来源审查等文档，其产品意图、研究参考与试验限制归入[连续讲解设计](research/CONTINUOUS_NARRATION_DESIGN.md)。原始文件和部分未提交实验数据留在来源工作区/本地快照，不因文档归并而视为代码或全部实验已进入主线。
+
 以下保留为代码所在模块的操作入口、数据血缘或资源许可；归属对应模块，不当作当前整体设计结论。
 
 | 文件 | 处置 |
