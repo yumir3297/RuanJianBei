@@ -84,4 +84,4 @@
 
 ## 后续改进方向
 
-当前已整合知识发布、可编辑行程及持久提案执行；真实模型、手机、弱网和完整浏览器链路尚待验收。当前功能、证据与缺口见[统一验收总表](./docs/testing/TESTING_AND_ACCEPTANCE.md)；[开发进度](./docs/development/PROGRESS.md)、[评分矩阵](./docs/competition/SCORE_MATRIX.md)和[架构选择](./docs/architecture/TARGET.md)包含历史记录与规划。历史路线图和方案仅供追溯，不作为当前需求清单。
+当前已整合知识发布、可编辑行程及持久提案执行；真实模型、手机、弱网和完整浏览器链路尚待验收。当前功能、证据与缺口见[统一验收总表](./docs/testing/TESTING_AND_ACCEPTANCE.md)；[评分矩阵](./docs/competition/SCORE_MATRIX.md)和[架构选择](./docs/architecture/TARGET.md)包含历史记录与规划。历史路线图和方案仅供追溯，不作为当前需求清单。

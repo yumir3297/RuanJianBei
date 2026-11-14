@@ -1,6 +1,6 @@
 # W02 执行记录
 
-> 历史记录：此文件保留 W02 初始开发时的状态，不是当前功能清单或约束。当前集成和验证边界见 [W02 集成记录](../../development/W02_INTEGRATION.md) 与 [开发进度](../../development/PROGRESS.md)。
+> 历史记录：此文件保留 W02 初始开发时的状态，不是当前功能清单或约束。当前集成和验证边界见 [W02 集成记录](../../development/W02_INTEGRATION.md) 与 [验收总表](../../testing/TESTING_AND_ACCEPTANCE.md)。
 
 日期：2026-10-29。分支：`codex/w02-durable-execution`。基线：W01 `a8c283771e3176f3c05fb95ef76631f57566bc15`。
 

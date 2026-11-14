@@ -39,9 +39,7 @@
 | [deployment/split-v2/REVIEW.md](deployment/split-v2/REVIEW.md) | 服务器拆分V2独立审阅与修订 | 保留：历史拆分设计与实施证据 | 验收总表 |
 | [development/DECISIONS.md](development/DECISIONS.md) | 技术决策 | 保留：开发说明或带日期的记录 | 代码地图／验收总表 |
 | [development/FRONTEND_BOUNDARIES.md](development/FRONTEND_BOUNDARIES.md) | 游客端与管理端开发边界 | 保留：开发说明或带日期的记录 | 代码地图／验收总表 |
-| [development/PROGRESS.md](development/PROGRESS.md) | 开发进度 | 保留：开发说明或带日期的记录 | 代码地图／验收总表 |
 | [development/W02_INTEGRATION.md](development/W02_INTEGRATION.md) | W02 集成记录 | 保留：开发说明或带日期的记录 | 代码地图／验收总表 |
-| [development/WORKTREE_AUDIT_2026-11-05.md](development/WORKTREE_AUDIT_2026-11-05.md) | Worktree 改动逐路径核对（2026-11-05） | 保留：开发说明或带日期的记录 | 代码地图／验收总表 |
 | [frontend/DESIGN_AND_BOUNDARIES.md](frontend/DESIGN_AND_BOUNDARIES.md) | 前端设计与双端边界 | 保留：前端设计主入口 | 前端设计 |
 | [implementation/CASS_ACCEPTANCE.md](implementation/CASS_ACCEPTANCE.md) | CASS-Guide 验收记录 | 保留：模块实现及证据 | 技术总览／验收总表 |
 | [implementation/CASS_DEMO_SCRIPT.md](implementation/CASS_DEMO_SCRIPT.md) | CASS 比赛演示脚本 | 保留：模块实现及证据 | 技术总览／验收总表 |
@@ -131,6 +129,7 @@
 
 | 移除的历史文件 | 保留内容及原因 |
 |---|---|
+| `docs/development/PROGRESS.md`、`docs/development/WORKTREE_AUDIT_2026-11-05.md` | 逐轮过程和旧分支状态已过时；现行功能与验证见[代码地图](REPO_MAP.md)、[验收总表](testing/TESTING_AND_ACCEPTANCE.md)，迁移限制见 [W02 集成记录](development/W02_INTEGRATION.md)。原始逐路径证据及进度可分别通过 `git show 8a184a6:docs/development/WORKTREE_AUDIT_2026-11-05.md` 和 `git show 8a184a6:docs/development/PROGRESS.md` 查阅；旧审计不能证明后续全部差异已合并。 |
 | `docs/design/avatar-center-layout-2026-10-03.md`、`frontend-design-review-2026-10-03.md`、`scenic-surfaces-2026-10-03.md` | 游客端中央数字人、连续舞台、响应式交互与视觉方向归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)；阶段性样式和截图不再当作当前需求。 |
 | `docs/workspace-materials/output/admin-design/design.md`、`design-review.md`、`implementation-plan.md` | 管理端方案 A、真实指标、失败保留输入和视觉约束归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)；原型图片作为历史素材保留。 |
 | `docs/superpowers/plans/2026-10-28-repository-map.md`、`2026-10-28-resilient-ai-stream.md` | 阶段任务清单已由现行代码地图、架构与验收入口承接，具体历史检查仍可由 Git 查阅。 |

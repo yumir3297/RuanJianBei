@@ -37,4 +37,4 @@ Audit date: 2026-11-07. Remote refs were fetched from `origin`; no remote branch
 
 ## Snapshot safety and migration note
 
-All listed source refs remain available on GitHub. No source worktree was modified. Integration history contains the reconciled Alembic lineage and durable proposal fields; the old W02 migration with the same revision ID but a different parent is not equivalent and cannot be overlaid safely. Historical audit evidence: `docs/development/WORKTREE_AUDIT_2026-11-05.md`; it has detailed content comparisons but also explicitly records a legacy path-count gap and device/database limitations.
+All listed source refs remain available on GitHub. No source worktree was modified. Integration history contains the reconciled Alembic lineage and durable proposal fields; the old W02 migration with the same revision ID but a different parent is not equivalent and cannot be overlaid safely. Historical audit evidence is available via `git show 8a184a6:docs/development/WORKTREE_AUDIT_2026-11-05.md`; it has detailed content comparisons but also explicitly records a legacy path-count gap and device/database limitations.
