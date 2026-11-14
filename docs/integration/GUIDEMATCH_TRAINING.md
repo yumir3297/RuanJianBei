@@ -16,6 +16,8 @@
 
 ## 验证与文档
 
+2026-11-15 文档整理复核：从仓库根目录运行 `python3 training_packages/guidematch_windows_training_bundle_v1/scripts/verify_bundle.py`，报告 41 个文件校验通过。训练包仍按冻结交接材料保留；该检查不执行训练，也不验证候选模型效果、CUDA 或数据许可。
+
 2026-11-12：`python3 scripts/verify_bundle.py` 校验 40 个文件通过；`python3 -m unittest discover -s tests -p 'test_*.py'` 通过 2 项。它们只验证交接包完整性及数据约束，不验证 CUDA 训练、训练完成或模型质量。原始使用说明在训练包 `README.md` 和 `HANDOFF.md`。PyTorch 的训练状态恢复要求见 [研究记录](RESEARCH.md)。
 
 2026-11-13：CPU 合成小模型中断恢复回归通过，包含配置变化拒绝；这不证明 CUDA 训练或模型质量。
