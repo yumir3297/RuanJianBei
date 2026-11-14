@@ -46,6 +46,7 @@
 | [implementation/CASS_ACCEPTANCE.md](implementation/CASS_ACCEPTANCE.md) | CASS-Guide 验收记录 | 保留：模块实现及证据 | 技术总览／验收总表 |
 | [implementation/CASS_DEMO_SCRIPT.md](implementation/CASS_DEMO_SCRIPT.md) | CASS 比赛演示脚本 | 保留：模块实现及证据 | 技术总览／验收总表 |
 | [implementation/CASS_GUIDE.md](implementation/CASS_GUIDE.md) | CASS-Guide：情境感知与安全协同导览 | 保留：模块实现及证据 | 技术总览／验收总表 |
+| [integration/ADMIN_WORKBENCH.md](integration/ADMIN_WORKBENCH.md) | 管理端浅色工作台接入 | 保留：管理端实现与浏览器验证记录 | 前端设计／验收总表 |
 | [integration/ACCEPTANCE.md](integration/ACCEPTANCE.md) | 比赛总集成验收与进度 | 保留：集成记录、操作手册及验证证据 | 验收总表 |
 | [integration/GUIDELOOP_GUIDEMATCH.md](integration/GUIDELOOP_GUIDEMATCH.md) | GuideLoop / GuideMatch 本地接入记录 | 保留：集成记录、操作手册及验证证据 | 验收总表 |
 | [integration/GUIDELOOP_PILOT.md](integration/GUIDELOOP_PILOT.md) | GuideLoop 双端试验集成 | 保留：集成记录、操作手册及验证证据 | 验收总表 |
@@ -71,8 +72,6 @@
 | [selling-points/ai-workbench-innovation-points.md](selling-points/ai-workbench-innovation-points.md) | AI 工作台弱网与多模态链路：技术创新点 | 保留：技术文书证据和卖点 | 技术总览 |
 | [selling-points/w02-continuous-tour-recovery.md](selling-points/w02-continuous-tour-recovery.md) | 连续伴游恢复：卖点与证据规划 | 保留：技术文书证据和卖点 | 技术总览 |
 | [superpowers/plans/2026-10-04-geolocation-audio-guide.md](superpowers/plans/2026-10-04-geolocation-audio-guide.md) | 靠近景点自动讲解（讲解机）实现计划 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
-| [superpowers/plans/2026-10-05-分众化讲解与跨会话记忆-可行性验证报告.md](superpowers/plans/2026-10-05-%E5%88%86%E4%BC%97%E5%8C%96%E8%AE%B2%E8%A7%A3%E4%B8%8E%E8%B7%A8%E4%BC%9A%E8%AF%9D%E8%AE%B0%E5%BF%86-%E5%8F%AF%E8%A1%8C%E6%80%A7%E9%AA%8C%E8%AF%81%E6%8A%A5%E5%91%8A.md) | 可行性验证报告：分众化讲解与跨会话记忆（2026-10-05） | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
-| [superpowers/plans/2026-10-05-分众化讲解与跨会话记忆.md](superpowers/plans/2026-10-05-%E5%88%86%E4%BC%97%E5%8C%96%E8%AE%B2%E8%A7%A3%E4%B8%8E%E8%B7%A8%E4%BC%9A%E8%AF%9D%E8%AE%B0%E5%BF%86.md) | 分众化讲解 + 跨会话记忆 实现计划 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-27-knowledge-workspace.md](superpowers/plans/2026-10-27-knowledge-workspace.md) | Knowledge Workspace Implementation Plan | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-28-ai-stream-validation.md](superpowers/plans/2026-10-28-ai-stream-validation.md) | AI 工作台弱网与流式链路验收记录 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-28-k01-stream-integration.patch](superpowers/plans/2026-10-28-k01-stream-integration.patch) | 非 Markdown 资源（patch） | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
@@ -145,6 +144,7 @@
 | `docs/superpowers/plans/2026-10-28-repository-map.md`、`2026-10-28-resilient-ai-stream.md` | 阶段任务清单已由现行代码地图、架构与验收入口承接，具体历史检查仍可由 Git 查阅。 |
 | `docs/superpowers/plans/2026-10-29-nonwav-duration.md`、`2026-10-29-production-auth-hardening.md` | 已完成的小型过程清单；功能设计分别保留在对应 `specs/`，代码和验证以当前地图及测试为准。 |
 | `docs/superpowers/plans/2026-11-08-mobile-map-refactor.md` | 用户的全幅地图与单面板交互要求已归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)；来源链接与旧仿真记录可由 Git 历史追溯。 |
+| `docs/superpowers/plans/2026-10-05-分众化讲解与跨会话记忆.md` 及其可行性验证报告 | 早期计划和历史基线已过时；受众表达、记忆与隐私边界归入[技术总览](TECHNICAL_ARCHITECTURE_AND_INNOVATION.md)，详细旧记录可查 Git。 |
 | `docs/workspace-materials/REPOSITORY.md` | 旧外层目录、分支和 PR 状态过期；当前 Git、[代码地图](REPO_MAP.md)及仓库入口为准。 |
 | `docs/workspace-materials/docs/superpowers/specs/2026-10-27-knowledge-workspace-design.md` | 与 [知识工作区设计原件](superpowers/specs/2026-10-27-knowledge-workspace-design.md) 字节一致，移除副本。 |
 

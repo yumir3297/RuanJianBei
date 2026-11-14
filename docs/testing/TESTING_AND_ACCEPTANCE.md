@@ -47,3 +47,5 @@ PLAYWRIGHT_EXECUTABLE_PATH='/Applications/Google Chrome.app/Contents/MacOS/Googl
 ## 2026-11-14 文档整理检查
 
 代码地图检查通过（8 个地图文档、98 条注册 HTTP 路由），`git diff --check` 通过。脚本测试 48 项中 47 项通过；`test_api_surface` 的清单一致性测试失败：注册路由含 `GET /api/admin/knowledge-index-status`，已提交的 `deploy/api-surface.json` 缺少该项（97 对 98），测试的固定数量也为 97。此项须由接口与部署策略负责人核对管理端权限、生成的网关清单及测试后修复；本次文档整理没有修改部署策略，不能据此宣称部署检查通过。
+
+2026-11-14 后续复核：提交 `fa5bf93` 补齐上述管理端路由清单、网关规则和测试；在不含工作区未提交代码的 `957b276` 导出副本中，代码地图检查通过（8 个文档、98 条路由），脚本测试 **49 项通过**。这只证明该提交的静态和脚本检查，不替代目标服务器、真实供应商或设备验收。

@@ -38,6 +38,7 @@
 - [多端能力与验收矩阵](../COMPATIBILITY.md)
 - [开发与验证](../DEVELOPMENT.md)
 - [管理端/游客端边界](../development/FRONTEND_BOUNDARIES.md)
+- [管理端浅色工作台实现与验证](../integration/ADMIN_WORKBENCH.md)
 
 ## 前端验收边界
 
