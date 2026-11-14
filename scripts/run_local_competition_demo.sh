@@ -39,7 +39,7 @@ export TTS_PROVIDER=stub ASR_PROVIDER=stub
 export LLM_PROVIDER=demo_synthetic LLM_API_KEY=synthetic LLM_MODEL=synthetic
 export LLM_BASE_URL=http://127.0.0.1:18765/v1
 export EMBEDDING_MODEL_NAME=simple-dev-embedder RERANKER_MODEL_NAME=no-model
-export GUIDEMATCH_ENABLED=true
+export GUIDEMATCH_ENABLED="${GUIDEMATCH_ENABLED:-false}"
 export GUIDEMATCH_MODEL_DIR="${GUIDEMATCH_MODEL_DIR:-$ROOT_DIR/.cache/guidematch/seed13}"
 export GUIDEMATCH_DEVICE="${GUIDEMATCH_DEVICE:-cpu}"
 export CHROMA_PERSIST_DIR="$DEMO_WORK_DIR/chroma"
@@ -53,7 +53,11 @@ export PLAYWRIGHT_EXECUTABLE_PATH="$CHROME"
 export VITE_GUIDE_LOOP_PILOT=1
 
 cd "$ROOT_DIR"
-"$PYTHON" -c 'import os; from app.services.qa.guidematch_gate import GuideMatchGate; g = GuideMatchGate(os.environ["GUIDEMATCH_MODEL_DIR"], os.environ["GUIDEMATCH_DEVICE"]); assert g.decide("大佛在哪里", "大佛在哪里") in {"reuse", "distinct", "clarify"}; print("GuideMatch model preflight: PASS")'
+if [[ "$GUIDEMATCH_ENABLED" == "true" ]]; then
+  "$PYTHON" -c 'import os; from app.services.qa.guidematch_gate import GuideMatchGate; g = GuideMatchGate(os.environ["GUIDEMATCH_MODEL_DIR"], os.environ["GUIDEMATCH_DEVICE"]); assert g.decide("大佛在哪里", "大佛在哪里") in {"reuse", "distinct", "clarify"}; print("GuideMatch model preflight: PASS")'
+else
+  echo 'GuideMatch model preflight: SKIP (training asset/model runtime not enabled)'
+fi
 "$PYTHON" -m app.cli.deployment migrate
 "$PYTHON" -m app.cli.deployment initialize
 
@@ -83,7 +87,11 @@ cd "$ROOT_DIR/frontend"
 node tests/e2e/knowledge-publish-tourist-smoke.mjs
 node tests/e2e/itinerary-real-service-smoke.mjs
 node tests/e2e/local-demo-smoke.mjs
-node tests/e2e/guide-loop-binding-smoke.mjs
+if [[ "$GUIDEMATCH_ENABLED" == "true" ]]; then
+  node tests/e2e/guide-loop-binding-smoke.mjs
+else
+  echo 'GuideLoop visitor + GuideMatch binding smoke: SKIP (GuideMatch training runtime not enabled)'
+fi
 (npm run build:tourist >/dev/null)
 export OFFLINE_EVIDENCE_DIR="$DEMO_WORK_DIR/offline-evidence"
 node tests/e2e/offline.e2e.mjs

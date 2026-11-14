@@ -84,6 +84,8 @@ let pageVisible = true;
 let avatarVisible = true;
 let gestureWaveUntil = 0;
 let activeAvatarAction = null;
+let settleState = null;
+let manualPose = null;
 let pendingAvatarActionTimer = null;
 let pendingAvatarAction = null;
 let avatarActionRequestToken = 0;
@@ -153,6 +155,16 @@ function createVrmAvatarParts(vrm) {
     rightHand: vrm.humanoid?.getNormalizedBoneNode("rightHand") || null,
   };
 
+  const restPose = {};
+  [
+    "hips", "spine", "chest", "neck", "head",
+    "leftShoulder", "leftUpperArm", "leftLowerArm", "leftHand",
+    "rightShoulder", "rightUpperArm", "rightLowerArm", "rightHand",
+  ].forEach((name) => {
+    const bone = vrm.humanoid?.getNormalizedBoneNode(name);
+    if (bone) restPose[name] = bone.rotation.clone();
+  });
+
   if (vrm.lookAt && lookAtTarget) {
     vrm.lookAt.target = lookAtTarget;
   }
@@ -163,6 +175,7 @@ function createVrmAvatarParts(vrm) {
     motionBones,
     __avatarKind: "vrm",
     __vrm: vrm,
+    __restPose: restPose,
   };
 }
 
@@ -181,8 +194,93 @@ function smoothstep(min, max, value) {
   return t * t * (3 - 2 * t);
 }
 
-function enhanceVrmMouthMaterial(vrm, preset) {
-  const profile = getAvatarMouthProfile(preset);
+const SPRING_MIN_DRAG = 0.28;
+const SPRING_MAX_STIFFNESS = 0.7;
+const springOriginals = new WeakMap();
+
+function captureSpringDefaults(vrm) {
+  const manager = vrm?.springBoneManager;
+  if (!manager) return;
+  manager.joints.forEach((joint) => {
+    if (!joint.settings || springOriginals.has(joint)) return;
+    springOriginals.set(joint, {
+      dragForce: joint.settings.dragForce,
+      stiffness: joint.settings.stiffness,
+      gravityPower: joint.settings.gravityPower,
+    });
+  });
+}
+
+function applySpringDrag(vrm, value) {
+  vrm?.springBoneManager?.joints.forEach((joint) => {
+    if (joint.settings) joint.settings.dragForce = value;
+  });
+}
+
+function tuneSpringBones(vrm) {
+  // 该模型的袖子弹簧 dragForce=0、裙摆/袖口=0.05，叠加整体放大会持续抖动。
+  vrm?.springBoneManager?.joints.forEach((joint) => {
+    const settings = joint.settings;
+    if (!settings) return;
+    const drag = Number.isFinite(settings.dragForce) ? settings.dragForce : 0.4;
+    settings.dragForce = Math.max(drag, SPRING_MIN_DRAG);
+    if (Number.isFinite(settings.stiffness)) {
+      settings.stiffness = Math.min(settings.stiffness, SPRING_MAX_STIFFNESS);
+    }
+  });
+}
+
+function exposeAvatarDebug(vrm) {
+  if (typeof window === "undefined" || !import.meta.env.DEV) return;
+  window.__avatarDebug = {
+    vrm,
+    get joints() {
+      return [...(vrm?.springBoneManager?.joints || [])];
+    },
+    setSpringDrag(value) {
+      applySpringDrag(vrm, value);
+    },
+    requestAction(name) {
+      return requestAvatarAction(name, { explicit: true });
+    },
+    cancelActions() {
+      cancelAvatarActions({ clearQueue: true });
+    },
+    clearActionCooldowns() {
+      avatarActionCooldowns.clear();
+    },
+    sampleAction(name, progress) {
+      const definition = getAvatarAction(name);
+      return definition?.keyframes
+        ? interpolateActionKeys(definition.keyframes, progress, definition.clampOvershoot)
+        : null;
+    },
+    setTestPose(pose) {
+      manualPose = pose;
+    },
+    clearTestPose() {
+      manualPose = null;
+    },
+    disableSpringBones() {
+      vrm?.springBoneManager?.joints.forEach((joint) => {
+        if (!joint.settings) return;
+        joint.settings.stiffness = 0;
+        joint.settings.gravityPower = 0;
+        joint.settings.dragForce = 1;
+      });
+    },
+    resetSpringBones() {
+      vrm?.springBoneManager?.joints.forEach((joint) => {
+        const original = springOriginals.get(joint);
+        if (!original || !joint.settings) return;
+        Object.assign(joint.settings, original);
+      });
+      tuneSpringBones(vrm);
+    },
+  };
+}
+
+function enhanceVrmMouthMaterial(vrm, preset) {  const profile = getAvatarMouthProfile(preset);
   const tint = new THREE.Color(profile.materialTint);
   const maxAnisotropy = renderer?.capabilities?.getMaxAnisotropy?.() || 1;
 
@@ -276,6 +374,9 @@ async function tryUpgradeAvatarToVrm(preset) {
     VRMUtils.rotateVRM0(vrm);
     VRMUtils.removeUnnecessaryVertices(vrm.scene);
     enhanceVrmMouthMaterial(vrm, preset);
+    captureSpringDefaults(vrm);
+    tuneSpringBones(vrm);
+    exposeAvatarDebug(vrm);
 
     if (!scene || currentToken !== avatarLoadToken) {
       disposeObject(vrm.scene);
@@ -384,30 +485,61 @@ function cacheAvatarDefaults(parts) {
   ].forEach(cachePartTransform);
 }
 
-function interpolateActionKeys(keyframes, progress) {
+function interpolateActionKeys(keyframes, progress, clampOvershoot = false) {
   if (!keyframes?.length) return {};
   if (progress <= keyframes[0].t) return { ...keyframes[0] };
-  for (let index = keyframes.length - 1; index >= 0; index -= 1) {
-    if (progress < keyframes[index].t) continue;
-    if (index === keyframes.length - 1) return { ...keyframes[index] };
-    const previous = keyframes[index];
-    const next = keyframes[index + 1];
-    const local = THREE.MathUtils.clamp(
-      (progress - previous.t) / (next.t - previous.t || 1),
-      0,
-      1,
-    );
-    const eased = local < 0.5
-      ? 2 * local * local
-      : 1 - Math.pow(-2 * local + 2, 2) / 2;
-    const values = {};
-    Object.keys(previous).forEach((key) => {
-      if (key === "t") return;
-      values[key] = THREE.MathUtils.lerp(previous[key] || 0, next[key] || 0, eased);
+
+  // 按通道收集关键帧，使用 Catmull-Rom / Hermite 插值。
+  // 逐段 ease-in-out 会让速度在每个关键帧归零，动作看起来一顿一顿；
+  // Catmull-Rom 保持速度连续，才能做出“甩出去再收回来”的流畅感。
+  const channels = new Map();
+  keyframes.forEach((frame) => {
+    Object.entries(frame).forEach(([key, value]) => {
+      if (key === "t" || typeof value !== "number") return;
+      if (!channels.has(key)) channels.set(key, []);
+      channels.get(key).push({ t: frame.t, v: value });
     });
-    return values;
-  }
-  return { ...keyframes[0] };
+  });
+
+  const result = {};
+  channels.forEach((points, key) => {
+    if (points.length === 1) {
+      result[key] = points[0].v;
+      return;
+    }
+    let right = 0;
+    while (right < points.length && points[right].t <= progress) right += 1;
+    if (right === 0) {
+      result[key] = points[0].v;
+      return;
+    }
+    if (right >= points.length) {
+      result[key] = points[points.length - 1].v;
+      return;
+    }
+
+    const p1 = points[right - 1];
+    const p2 = points[right];
+    const p0 = points[right - 2] || p1;
+    const p3 = points[right + 1] || p2;
+    const dt = Math.max(p2.t - p1.t, 1e-6);
+    const local = THREE.MathUtils.clamp((progress - p1.t) / dt, 0, 1);
+    const m1 = ((p2.v - p0.v) / Math.max(p2.t - p0.t, 1e-6)) * dt;
+    const m2 = ((p3.v - p1.v) / Math.max(p3.t - p1.t, 1e-6)) * dt;
+    const t2 = local * local;
+    const t3 = t2 * local;
+    result[key] =
+      (2 * t3 - 3 * t2 + 1) * p1.v +
+      (t3 - 2 * t2 + local) * m1 +
+      (-2 * t3 + 3 * t2) * p2.v +
+      (t3 - t2) * m2;
+    if (clampOvershoot) {
+      const low = Math.min(p1.v, p2.v);
+      const high = Math.max(p1.v, p2.v);
+      result[key] = Math.min(high, Math.max(low, result[key]));
+    }
+  });
+  return result;
 }
 
 function normalizeMixamoBoneName(trackName) {
@@ -519,10 +651,47 @@ function restoreAvatarActionPose(action = activeAvatarAction) {
   if (action.parts?.group) action.parts.group.rotation.y = action.groupRotationY;
 }
 
+// 动作结束后不要瞬间回正，用 260ms 插值回 rest pose，避免“啪”一下的跳变。
+function beginActionSettle(action) {
+  if (!action) return;
+  const items = [];
+  action.restBones.forEach((rest, bone) => {
+    items.push({
+      bone,
+      from: bone.quaternion.clone(),
+      to: rest.quaternion.clone(),
+    });
+  });
+  settleState = items.length
+    ? { items, startedAt: performance.now(), durationMs: 260 }
+    : null;
+}
+
+function updateActionSettle(nowMs) {
+  if (!settleState) return false;
+  const progress = THREE.MathUtils.clamp(
+    (nowMs - settleState.startedAt) / settleState.durationMs,
+    0,
+    1,
+  );
+  const eased = 1 - Math.pow(1 - progress, 3);
+  settleState.items.forEach(({ bone, from, to }) => {
+    bone.quaternion.slerpQuaternions(from, to, eased);
+  });
+  if (progress >= 1) settleState = null;
+  return true;
+}
+
 function stopAvatarAction(reason = "completed") {
   const action = activeAvatarAction;
   if (!action) return;
-  restoreAvatarActionPose(action);
+  const blendBack = reason === "completed" || reason === "interrupted" || reason === "state-changed";
+  if (blendBack) {
+    beginActionSettle(action);
+    if (action.parts?.group) action.parts.group.rotation.y = action.groupRotationY;
+  } else {
+    restoreAvatarActionPose(action);
+  }
   activeAvatarAction = null;
   activeActionName.value = "";
   naturalMotionResumeTime = performance.now() + 350;
@@ -542,6 +711,7 @@ function clearPendingAvatarAction() {
 
 function cancelAvatarActions({ clearQueue = true } = {}) {
   clearPendingAvatarAction();
+  settleState = null;
   stopAvatarAction("cancelled");
   if (clearQueue) queuedExplicitAction = "";
 }
@@ -549,6 +719,7 @@ function cancelAvatarActions({ clearQueue = true } = {}) {
 function startAvatarAction(definition, clip = null, stateKey = "") {
   const parts = avatarParts;
   if (parts?.__avatarKind !== "vrm" || !parts.__vrm?.humanoid) return false;
+  settleState = null;
 
   let samples = [];
   const actionBones = new Set();
@@ -611,7 +782,7 @@ function getAvatarActionBlend(action, elapsedMs) {
 
 function applyKeyframeAvatarAction(action, elapsedMs, blend) {
   const progress = THREE.MathUtils.clamp(elapsedMs / action.durationMs, 0, 1);
-  const values = interpolateActionKeys(action.definition.keyframes, progress);
+  const values = interpolateActionKeys(action.definition.keyframes, progress, action.definition.clampOvershoot);
   const rotations = new Map();
 
   Object.entries(values).forEach(([key, value]) => {
@@ -743,10 +914,26 @@ async function executeAvatarActionRequest(request) {
   }
 }
 
+const PRESET_APPLAUD_ACTIONS = {
+  hanfu: "applaud_hanfu",
+  modern: "applaud_modern",
+  monk: "applaud_monk",
+};
+
+function resolveAvatarActionName(name) {
+  if (name === "applaud") {
+    return PRESET_APPLAUD_ACTIONS[props.preset] || PRESET_APPLAUD_ACTIONS.hanfu;
+  }
+  if (props.preset === "hanfu" && name === "open_thinking") return "think";
+  if (props.preset === "hanfu" && name === "open_lookaround") return "look_around";
+  return name;
+}
+
 function requestAvatarAction(name, options = {}) {
-  const definition = getAvatarAction(name);
+  const resolvedName = resolveAvatarActionName(name);
+  const definition = getAvatarAction(resolvedName) || getAvatarAction(name);
   if (!definition) {
-    console.warn(`[avatar-action] 未注册的动作：${name}`);
+    console.warn(`[avatar-action] 未注册的动作：${resolvedName}`);
     return false;
   }
 
@@ -1005,8 +1192,11 @@ function updateEmotionExpressions(parts, deltaSeconds) {
 
   const head = parts.head;
   const headBase = head?.userData.baseRotation;
-  if (head && headBase && !activeAvatarAction?.restBones?.has(head)) {
-    const targetPitch = headBase.x + (targets.headPitch || 0) * profile.expressionScale;
+  if (head && headBase && !activeAvatarAction?.restBones?.has(head) && !settleState && !manualPose) {
+    // Facial selections must not move the skeleton or excite spring bones.
+    // Head posture belongs to the explicit body state, not props.emotion.
+    const bodyTargets = getAvatarExpressionTargets(resolveMotionState());
+    const targetPitch = headBase.x + (bodyTargets.headPitch || 0) * profile.expressionScale;
     head.rotation.x = dampValue(head.rotation.x, targetPitch, profile.headResponse, deltaSeconds);
   }
 
@@ -1055,7 +1245,7 @@ function resolveMotionState() {
     return "speaking";
   }
   if (props.avatarState !== "idle" && supportedStates.includes(props.avatarState)) return props.avatarState;
-  if (props.emotion === "happy" || props.emotion === "apology") return props.emotion;
+  // Body reactions are selected through avatarState; emotion is face-only.
   return "idle";
 }
 
@@ -1085,7 +1275,12 @@ function updateNaturalBodyMotion(parts, time, deltaSeconds, mouthOpen) {
   parts.group.rotation.x = (
     Math.sin(time * blend.bodySpeed * 1.07) * blend.pitch + speakingNod
   ) * scale;
-  parts.group.rotation.y = Math.sin(time * blend.bodySpeed * 0.83) * blend.yaw * scale;
+  const drift =
+    Math.sin(time * 0.23 + 1.7) * 0.35 +
+    Math.sin(time * 0.11 + 0.4) * 0.2;
+  parts.group.rotation.y = (
+    Math.sin(time * blend.bodySpeed * 0.83) * blend.yaw + drift * blend.yaw * 0.45
+  ) * scale;
   parts.group.rotation.z = (
     postureRoll + Math.sin(time * blend.bodySpeed * 0.71) * blend.roll
   ) * scale;
@@ -1104,6 +1299,31 @@ function updateNaturalBodyMotion(parts, time, deltaSeconds, mouthOpen) {
     const rightBase = parts.rightPupil?.userData.basePosition;
     if (parts.leftPupil && leftBase) parts.leftPupil.position.z = leftBase.z + pupilOffset;
     if (parts.rightPupil && rightBase) parts.rightPupil.position.z = rightBase.z + pupilOffset;
+  }
+}
+
+// 动作播放期间保留轻微呼吸，避免整个人像“冻住”一样僵硬。
+function updateActionBreathing(parts, time) {
+  const profile = getAvatarMotionProfile(props.preset);
+  parts.group.position.y = Math.sin(time * 1.08) * 0.0045 * profile.motionScale;
+}
+
+// DEV ONLY：把一组固定姿态直接套到骨骼上，用于动作设计和穿模检查。
+function applyManualPose(pose) {
+  const parts = avatarParts;
+  const humanoid = parts?.__vrm?.humanoid;
+  if (!humanoid || !parts.__restPose) return;
+  Object.entries(parts.__restPose).forEach(([name, rotation]) => {
+    const bone = humanoid.getNormalizedBoneNode(name);
+    if (bone) bone.rotation.copy(rotation);
+  });
+  Object.entries(pose || {}).forEach(([name, rotation]) => {
+    if (name.startsWith("__") || !Array.isArray(rotation)) return;
+    const bone = humanoid.getNormalizedBoneNode(name);
+    if (bone) bone.rotation.set(rotation[0] || 0, rotation[1] || 0, rotation[2] || 0);
+  });
+  if (parts.group && Number.isFinite(pose?.__groupY)) {
+    parts.group.rotation.y = pose.__groupY;
   }
 }
 
@@ -1218,10 +1438,16 @@ function animate() {
     avatarParts.mouth.scale.z = 1 + mouthForm * 0.05;
   }
 
-  const actionPlaying = updateActiveAvatarAction(performance.now());
-  if (!actionPlaying && performance.now() >= naturalMotionResumeTime) {
+  const nowMs = performance.now();
+  const actionPlaying = updateActiveAvatarAction(nowMs);
+  updateActionSettle(nowMs);
+  if (manualPose) {
+    applyManualPose(manualPose);
+  } else if (!actionPlaying && nowMs >= naturalMotionResumeTime) {
     updateNaturalBodyMotion(avatarParts, t, dt, mouthOpen);
     updateVrmArmMotion(avatarParts, t, dt);
+  } else if (actionPlaying) {
+    updateActionBreathing(avatarParts, t);
   }
   updateNaturalBlink(avatarParts, dt);
 

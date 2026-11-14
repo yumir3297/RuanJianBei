@@ -15,7 +15,7 @@ export const AVATAR_PRESETS = {
     label: "清岚",
     description: "古典优雅 · 文化叙事导览",
     presetType: "hanfu",
-    modelUrl: "/models/hanfu.vrm",
+    modelUrl: "/models/hanfu-small-sleeves.vrm",
   },
   modern: {
     key: "modern",
