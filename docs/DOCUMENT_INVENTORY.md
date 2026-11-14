@@ -103,8 +103,6 @@
 | [workspace-materials/backend-tests/test_audio_event_delivery.py](workspace-materials/backend-tests/test_audio_event_delivery.py) | 非 Markdown 资源（py） | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
 | [workspace-materials/backend-tests/test_stream_terminal_policy.py](workspace-materials/backend-tests/test_stream_terminal_policy.py) | 非 Markdown 资源（py） | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
 | [workspace-materials/docs/2026-10-29-phase3-preparation.md](workspace-materials/docs/2026-10-29-phase3-preparation.md) | 第三阶段开发准备与决策记录 | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
-| [workspace-materials/docs/competition/TECHNICAL_DRAFT.md](workspace-materials/docs/competition/TECHNICAL_DRAFT.md) | AI 数字人导游技术文档（工作草稿） | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
-| [workspace-materials/docs/superpowers/plans/2026-10-27-knowledge-workspace.md](workspace-materials/docs/superpowers/plans/2026-10-27-knowledge-workspace.md) | Knowledge Workspace Implementation Plan | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
 | [workspace-materials/output/admin-design/check.js](workspace-materials/output/admin-design/check.js) | 非 Markdown 资源（js） | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
 | [workspace-materials/output/admin-design/current-admin.png](workspace-materials/output/admin-design/current-admin.png) | 非 Markdown 资源（png） | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
 | [workspace-materials/output/admin-design/preview-1024.png](workspace-materials/output/admin-design/preview-1024.png) | 非 Markdown 资源（png） | 保留：外部材料副本、历史证据或非文档资源 | 相关功能文档 |
@@ -144,6 +142,8 @@
 | `docs/superpowers/plans/2026-11-08-mobile-map-refactor.md` | 用户的全幅地图与单面板交互要求已归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)；来源链接与旧仿真记录可由 Git 历史追溯。 |
 | `docs/superpowers/plans/2026-10-05-分众化讲解与跨会话记忆.md` 及其可行性验证报告 | 早期计划和历史基线已过时；受众表达、记忆与隐私边界归入[技术总览](TECHNICAL_ARCHITECTURE_AND_INNOVATION.md)，详细旧记录可查 Git。 |
 | `docs/superpowers/plans/2026-10-04-geolocation-audio-guide.md` 与对应 `specs/2026-10-04-geolocation-audio-guide-design.md` | 自动讲解的交互与降级意图归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)；旧实现步骤、阈值和机器路径由 Git 历史追溯，不作为当前代码事实。 |
+| `docs/workspace-materials/docs/competition/TECHNICAL_DRAFT.md` | 较早且有语音确认误述的副本，使用较完整的[比赛草稿](competition/TECHNICAL_DRAFT.md)及[技术总览](TECHNICAL_ARCHITECTURE_AND_INNOVATION.md)。 |
+| `docs/workspace-materials/docs/superpowers/plans/2026-10-27-knowledge-workspace.md` | 初始计划副本；采用保留实施记录的[知识工作区计划](superpowers/plans/2026-10-27-knowledge-workspace.md)，当前状态以验收记录为准。 |
 | `docs/workspace-materials/REPOSITORY.md` | 旧外层目录、分支和 PR 状态过期；当前 Git、[代码地图](REPO_MAP.md)及仓库入口为准。 |
 | `docs/workspace-materials/docs/superpowers/specs/2026-10-27-knowledge-workspace-design.md` | 与 [知识工作区设计原件](superpowers/specs/2026-10-27-knowledge-workspace-design.md) 字节一致，移除副本。 |
 
