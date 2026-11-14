@@ -76,14 +76,10 @@
 | [superpowers/plans/2026-10-27-knowledge-workspace.md](superpowers/plans/2026-10-27-knowledge-workspace.md) | Knowledge Workspace Implementation Plan | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-28-ai-stream-validation.md](superpowers/plans/2026-10-28-ai-stream-validation.md) | AI 工作台弱网与流式链路验收记录 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-28-k01-stream-integration.patch](superpowers/plans/2026-10-28-k01-stream-integration.patch) | 非 Markdown 资源（patch） | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
-| [superpowers/plans/2026-10-28-repository-map.md](superpowers/plans/2026-10-28-repository-map.md) | Repository Map Implementation Plan | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
-| [superpowers/plans/2026-10-28-resilient-ai-stream.md](superpowers/plans/2026-10-28-resilient-ai-stream.md) | AI 工作台弱网与流式体验 Implementation Plan | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-28-shared-playback-round1.md](superpowers/plans/2026-10-28-shared-playback-round1.md) | Shared Playback Round 1 Implementation Plan | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-29-ai-input-idempotency.md](superpowers/plans/2026-10-29-ai-input-idempotency.md) | AI 输入接口短期幂等实施计划 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-29-chat-speech-profile.md](superpowers/plans/2026-10-29-chat-speech-profile.md) | 聊天语音版本与重播缓存实施计划 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-29-judge-experience-acceptance.md](superpowers/plans/2026-10-29-judge-experience-acceptance.md) | 评委体验系统验收记录 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
-| [superpowers/plans/2026-10-29-nonwav-duration.md](superpowers/plans/2026-10-29-nonwav-duration.md) | 非 WAV 时长校验实施计划 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
-| [superpowers/plans/2026-10-29-production-auth-hardening.md](superpowers/plans/2026-10-29-production-auth-hardening.md) | 生产鉴权配置加固实施计划 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-29-tourist-answer-replay.md](superpowers/plans/2026-10-29-tourist-answer-replay.md) | 游客历史回答重播实施计划 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-29-tourist-speech-rate.md](superpowers/plans/2026-10-29-tourist-speech-rate.md) | Tourist Speech Rate Preference Implementation Plan | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-29-v01-editable-itinerary.md](superpowers/plans/2026-10-29-v01-editable-itinerary.md) | V01 可验证的连续伴游规划实施计划 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
@@ -91,7 +87,6 @@
 | [superpowers/plans/2026-10-29-w02-durable-execution.md](superpowers/plans/2026-10-29-w02-durable-execution.md) | W02 Durable Execution Implementation Plan | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-29-w02-execution-ledger.md](superpowers/plans/2026-10-29-w02-execution-ledger.md) | W02 执行记录 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-11-07-cass-completion.md](superpowers/plans/2026-11-07-cass-completion.md) | CASS Competition Completion Implementation Plan | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
-| [superpowers/plans/2026-11-08-mobile-map-refactor.md](superpowers/plans/2026-11-08-mobile-map-refactor.md) | 手机地图任务页重构 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-11-09-knowledge-consistency.md](superpowers/plans/2026-11-09-knowledge-consistency.md) | Knowledge Consistency Implementation Plan | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-11-10-guideloop-pilot.md](superpowers/plans/2026-11-10-guideloop-pilot.md) | GuideLoop 两景点知识演化原型实施与测试计划 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/specs/2026-10-02-multi-scenic-guide-proposal.md](superpowers/specs/2026-10-02-multi-scenic-guide-proposal.md) | 多景区数字人导览平台改造方案（草案） | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
@@ -147,6 +142,9 @@
 |---|---|
 | `docs/design/avatar-center-layout-2026-10-03.md`、`frontend-design-review-2026-10-03.md`、`scenic-surfaces-2026-10-03.md` | 游客端中央数字人、连续舞台、响应式交互与视觉方向归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)；阶段性样式和截图不再当作当前需求。 |
 | `docs/workspace-materials/output/admin-design/design.md`、`design-review.md`、`implementation-plan.md` | 管理端方案 A、真实指标、失败保留输入和视觉约束归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)；原型图片作为历史素材保留。 |
+| `docs/superpowers/plans/2026-10-28-repository-map.md`、`2026-10-28-resilient-ai-stream.md` | 阶段任务清单已由现行代码地图、架构与验收入口承接，具体历史检查仍可由 Git 查阅。 |
+| `docs/superpowers/plans/2026-10-29-nonwav-duration.md`、`2026-10-29-production-auth-hardening.md` | 已完成的小型过程清单；功能设计分别保留在对应 `specs/`，代码和验证以当前地图及测试为准。 |
+| `docs/superpowers/plans/2026-11-08-mobile-map-refactor.md` | 用户的全幅地图与单面板交互要求已归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)；来源链接与旧仿真记录可由 Git 历史追溯。 |
 | `docs/workspace-materials/REPOSITORY.md` | 旧外层目录、分支和 PR 状态过期；当前 Git、[代码地图](REPO_MAP.md)及仓库入口为准。 |
 | `docs/workspace-materials/docs/superpowers/specs/2026-10-27-knowledge-workspace-design.md` | 与 [知识工作区设计原件](superpowers/specs/2026-10-27-knowledge-workspace-design.md) 字节一致，移除副本。 |
 
