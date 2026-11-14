@@ -67,10 +67,8 @@
 | [selling-points/README.md](selling-points/README.md) | 卖点文书 | 保留：技术文书证据和卖点 | 技术总览 |
 | [selling-points/ai-workbench-innovation-points.md](selling-points/ai-workbench-innovation-points.md) | AI 工作台弱网与多模态链路：技术创新点 | 保留：技术文书证据和卖点 | 技术总览 |
 | [selling-points/w02-continuous-tour-recovery.md](selling-points/w02-continuous-tour-recovery.md) | 连续伴游恢复：卖点与证据规划 | 保留：技术文书证据和卖点 | 技术总览 |
-| [superpowers/plans/2026-10-27-knowledge-workspace.md](superpowers/plans/2026-10-27-knowledge-workspace.md) | Knowledge Workspace Implementation Plan | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-28-ai-stream-validation.md](superpowers/plans/2026-10-28-ai-stream-validation.md) | AI 工作台弱网与流式链路验收记录 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/plans/2026-10-28-k01-stream-integration.patch](superpowers/plans/2026-10-28-k01-stream-integration.patch) | 非 Markdown 资源（patch） | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
-| [superpowers/plans/2026-11-10-guideloop-pilot.md](superpowers/plans/2026-11-10-guideloop-pilot.md) | GuideLoop 两景点知识演化原型实施与测试计划 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/specs/2026-10-02-multi-scenic-guide-proposal.md](superpowers/specs/2026-10-02-multi-scenic-guide-proposal.md) | 多景区数字人导览平台改造方案（草案） | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/specs/2026-10-27-knowledge-workspace-design.md](superpowers/specs/2026-10-27-knowledge-workspace-design.md) | 知识草稿工作区与发布设计 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
 | [superpowers/specs/2026-10-28-resilient-ai-stream-design.md](superpowers/specs/2026-10-28-resilient-ai-stream-design.md) | 面向景区弱网的 AI 工作台传输与恢复设计 | 保留：历史方案、契约和可追溯依据 | 技术总览／代码地图 |
@@ -107,6 +105,7 @@
 
 | 移除的历史文件 | 保留内容及原因 |
 |---|---|
+| `docs/superpowers/plans/2026-10-27-knowledge-workspace.md`、`2026-11-10-guideloop-pilot.md` | 知识草稿和发布约束由[工作区设计](superpowers/specs/2026-10-27-knowledge-workspace-design.md)保留；GuideLoop 评测及未完成的人审计时归入[试点记录](integration/GUIDELOOP_PILOT.md)与[记忆研究](reports/2026-11-10-guide-memory-research.md)。旧步骤和阶段数据可通过 `git show c4fb1de:docs/superpowers/plans/<文件名>` 查阅。 |
 | `docs/superpowers/plans/2026-10-29-v01-editable-itinerary.md`、`2026-10-29-w01-tour-session-workspace.md`、`2026-10-29-w02-durable-execution.md` | 旧任务步骤由对应 V01/W01/W02 设计保留目标与契约，[验收总表](testing/TESTING_AND_ACCEPTANCE.md)保留浏览器与并发边界；原阶段测试和详细步骤可通过 `git show 1d7eb67:docs/superpowers/plans/<文件名>` 查阅。 |
 | `docs/superpowers/plans/2026-10-29-judge-experience-acceptance.md`、`2026-10-29-w02-execution-ledger.md` | 桌面预览范围与限制归入[验收总表](testing/TESTING_AND_ACCEPTANCE.md)；W02 后续实现与验证由[集成记录](development/W02_INTEGRATION.md)承接。原始阶段记录可通过 `git show 9f01fc2:docs/superpowers/plans/<文件名>` 查阅。 |
 | `docs/workspace-materials/reports/vision-evidence-gap.md`、`w02-merge-analysis.md`、`w02-postgres.md`、`w02-runtime-review.md` | 消息级引用与识景追溯边界归入[验收总表](testing/TESTING_AND_ACCEPTANCE.md)；W02 历史缺陷、后续 PostgreSQL 实验及旧库迁移风险归入 [W02 集成记录](development/W02_INTEGRATION.md)。旧合并建议只是当时方案，与后来迁移更正不同；原文可用 `git show 111ce18:docs/workspace-materials/reports/<文件名>` 查阅。 |
@@ -122,7 +121,7 @@
 | `docs/superpowers/plans/2026-10-05-分众化讲解与跨会话记忆.md` 及其可行性验证报告 | 早期计划和历史基线已过时；受众表达、记忆与隐私边界归入[技术总览](TECHNICAL_ARCHITECTURE_AND_INNOVATION.md)，详细旧记录可查 Git。 |
 | `docs/superpowers/plans/2026-10-04-geolocation-audio-guide.md` 与对应 `specs/2026-10-04-geolocation-audio-guide-design.md` | 自动讲解的交互与降级意图归入[前端设计](frontend/DESIGN_AND_BOUNDARIES.md)；旧实现步骤、阈值和机器路径由 Git 历史追溯，不作为当前代码事实。 |
 | `docs/workspace-materials/docs/competition/TECHNICAL_DRAFT.md` | 较早且有语音确认误述的副本，使用较完整的[比赛草稿](competition/TECHNICAL_DRAFT.md)及[技术总览](TECHNICAL_ARCHITECTURE_AND_INNOVATION.md)。 |
-| `docs/workspace-materials/docs/superpowers/plans/2026-10-27-knowledge-workspace.md` | 初始计划副本；采用保留实施记录的[知识工作区计划](superpowers/plans/2026-10-27-knowledge-workspace.md)，当前状态以验收记录为准。 |
+| `docs/workspace-materials/docs/superpowers/plans/2026-10-27-knowledge-workspace.md` | 初始计划副本；设计要求保留在[知识工作区设计](superpowers/specs/2026-10-27-knowledge-workspace-design.md)，当前状态以验收记录为准。 |
 | `docs/workspace-materials/output/pdf/guide-technical-draft.pdf` | 2026-10-30 的两页工作草稿导出，内容已由[比赛技术草稿](competition/TECHNICAL_DRAFT.md)与[技术总览](TECHNICAL_ARCHITECTURE_AND_INNOVATION.md)承接；历史 PDF 可从 Git 恢复。 |
 | `docs/superpowers/plans/2026-10-29-ai-input-idempotency.md`、`chat-speech-profile.md`、`tourist-answer-replay.md`、`tourist-speech-rate.md`（同日期前缀） | 历史验证范围和边界归入[验收总表](testing/TESTING_AND_ACCEPTANCE.md)；对应设计仍保留在 `superpowers/specs/`，过程稿可从 Git 历史追溯。 |
 | `docs/superpowers/plans/2026-10-28-shared-playback-round1.md`、`2026-11-07-cass-completion.md` | 实施清单由[验收总表](testing/TESTING_AND_ACCEPTANCE.md)、[CASS 功能](implementation/CASS_GUIDE.md)及[兼容性矩阵](COMPATIBILITY.md)承接，历史过程可从 Git 查看。 |
@@ -160,7 +159,7 @@
 | `docs/superpowers/specs/2026-10-04-geolocation-audio-guide-design.md` | [前端设计](frontend/DESIGN_AND_BOUNDARIES.md) |
 | `docs/workspace-materials/REPOSITORY.md` | [代码地图](REPO_MAP.md)、[开发指南](DEVELOPMENT.md) |
 | `docs/workspace-materials/docs/competition/TECHNICAL_DRAFT.md` | [比赛技术草稿](competition/TECHNICAL_DRAFT.md)、[技术总览](TECHNICAL_ARCHITECTURE_AND_INNOVATION.md) |
-| `docs/workspace-materials/docs/superpowers/plans/2026-10-27-knowledge-workspace.md` | [知识工作区计划](superpowers/plans/2026-10-27-knowledge-workspace.md) |
+| `docs/workspace-materials/docs/superpowers/plans/2026-10-27-knowledge-workspace.md` | [知识工作区设计](superpowers/specs/2026-10-27-knowledge-workspace-design.md) |
 | `docs/workspace-materials/docs/superpowers/specs/2026-10-27-knowledge-workspace-design.md` | [知识工作区设计](superpowers/specs/2026-10-27-knowledge-workspace-design.md) |
 | `docs/workspace-materials/output/admin-design/design-review.md` | [前端设计](frontend/DESIGN_AND_BOUNDARIES.md) |
 | `docs/workspace-materials/output/admin-design/design.md` | [前端设计](frontend/DESIGN_AND_BOUNDARIES.md) |
