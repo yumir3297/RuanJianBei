@@ -84,7 +84,10 @@
       </section>
       <aside class="narration-rail" aria-label="讲解辅助">
         <div class="rail-heading"><h2>讲解</h2><p>按你的需要调整讲解方式</p></div>
-        <GuideContextStatus :position="guideLocation.position" :location-mode="guideLocation.mode" :map-active="guideLocation.mapActive" :tour="guideTourContext" :playback-busy="chatStore.streaming || audioPlayer.isPlaying.value" @interrupt="interruptForGuideSafety" @ask="handleToolQuestion" @proposal="requestItineraryProposal" />
+        <button class="cass-toggle" type="button" :aria-expanded="cassExpanded" @click="cassExpanded = !cassExpanded">
+          <GuideIcon name="settings" /><span>情境导览</span><small>{{ cassExpanded ? '收起' : '按需查看' }}</small>
+        </button>
+        <GuideContextStatus v-show="cassExpanded" :position="guideLocation.position" :location-mode="guideLocation.mode" :map-active="guideLocation.mapActive" :tour="guideTourContext" :playback-busy="chatStore.streaming || audioPlayer.isPlaying.value" @interrupt="interruptForGuideSafety" @ask="handleToolQuestion" @proposal="requestItineraryProposal" />
         <p v-if="guideSafety.hold" role="status">安全提醒期间，普通讲解已暂停；请先处理上方提示。</p>
         <label class="explanation-select"><GuideIcon name="settings" /><span>讲解方式</span><select v-model="explanationLevel" aria-label="讲解方式"><option v-for="style in styleOptions" :key="style.key" :value="style.key">{{ style.label }}讲解</option></select></label>
         <label class="explanation-select speech-rate-select"><GuideIcon name="settings" /><span>语速</span><select v-model.number="speechRate" aria-label="语音讲解语速"><option v-for="rate in speechRateOptions" :key="rate" :value="rate">{{ rate.toFixed(1) }}×</option></select></label>
@@ -878,8 +881,10 @@ function handleSubmit() {
 }
 
 function handleAvatarLoadError() {
-  avatarLoaded.value = false;
-  avatarError.value = true;
+  // ThreeAvatar 在 VRM 加载失败时会保留程序化备用形象；不要把整个
+  // 画布替换成静态占位图，否则一次资源异常会让游客看到“形象不可用”。
+  avatarLoaded.value = true;
+  avatarError.value = false;
 }
 
 function handleAvatarLoaded() {
@@ -952,6 +957,7 @@ function submitQuery(rawQuery, extraOptions = {}) {
   // 改为随请求发送 audience，由服务端注入 system prompt。
   const finalQuery = value;
   avatar.setState("thinking");
+  avatar.handleUserQuery(value, avatarConfig.value.modelKey);
   try {
     chatStore.sendMessage(finalQuery, interactionStore.selectionPayload, {
       audience: explanationLevel.value,
@@ -969,7 +975,7 @@ function submitQuery(rawQuery, extraOptions = {}) {
       onThinking: () => avatar.setState("thinking"),
       onAvatar: (payload) => {
         try {
-          avatar.handleAvatarEvent(payload);
+          avatar.handleAvatarEvent(payload, avatarConfig.value.modelKey);
         } catch {
           avatarError.value = true;
         }
@@ -1441,6 +1447,7 @@ const visionDialogRef = ref(null);
 const queryInputRef = ref(null);
 const toolMedia = window.matchMedia("(min-width: 1000px)");
 const textExpanded = ref(false);
+const cassExpanded = ref(false);
 const textInputExpanded = ref(false);
 const textDialogRef = ref(null);
 const voiceStageStatus = computed(() => {
@@ -1477,6 +1484,9 @@ function syncTextDialog() {
   }
 }
 watch(textExpanded, () => nextTick(syncTextDialog));
+watch(() => guideSafety.hold, (hold) => {
+  if (hold) cassExpanded.value = true;
+});
 watch(() => [chatStore.voiceFallback, chatStore.streaming, chatStore.errorMessage], ([fallback, streaming, error]) => {
   if (!streaming && (fallback || error)) textExpanded.value = true;
 });

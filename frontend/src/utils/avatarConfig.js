@@ -1,5 +1,5 @@
-export const DEFAULT_AVATAR_PRESET = "hanfu";
-export const DEFAULT_AVATAR_VOICE = "gentle-female";
+export const DEFAULT_AVATAR_PRESET = "monk";
+export const DEFAULT_AVATAR_VOICE = "deep-male";
 
 const SUPPORTED_PRESETS = new Set(["monk", "hanfu", "modern"]);
 const SUPPORTED_VOICES = new Set([

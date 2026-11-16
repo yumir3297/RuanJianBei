@@ -1,5 +1,11 @@
 import { ref } from "vue";
-import { selectSpeakingAction } from "../components/avatar-actions.js";
+import {
+  getAvatarIntentAction,
+  getAvatarAction,
+  isFarewellText,
+  isGreetingText,
+  selectSpeakingAction,
+} from "../components/avatar-actions.js";
 
 export const GUIDE_PERSONA = {
   name: "小灵",
@@ -36,17 +42,17 @@ export function useAvatar() {
     resetIdleTimer(state);
   }
 
-  function handleAvatarEvent(payload) {
+  function handleAvatarEvent(payload, preset = "modern") {
     if (!payload || typeof payload !== "object") return;
     if (payload.action) {
-      triggerAction(payload.action);
+      triggerAction(getAvatarAction(payload.action) ? payload.action : "");
       lastSpeakingGestureAt = Date.now();
     } else if (payload.viseme_text !== undefined) {
       const now = Date.now();
       if (now - lastSpeakingGestureAt >= SPEAKING_GESTURE_INTERVAL_MS) {
         const speakingAction = selectSpeakingAction(payload.viseme_text);
         if (speakingAction) {
-          triggerAction(speakingAction);
+          triggerAction(getAvatarIntentAction("explain", preset) || speakingAction);
           lastSpeakingGestureAt = now;
         }
       }
@@ -76,6 +82,18 @@ export function useAvatar() {
         setState("speaking");
       }
     }
+  }
+
+  function handleUserQuery(text, preset = "modern") {
+    if (isGreetingText(text)) {
+      triggerAction(getAvatarIntentAction("greet", preset));
+      return "greet";
+    }
+    if (isFarewellText(text)) {
+      triggerAction(getAvatarIntentAction("farewell", preset));
+      return "farewell";
+    }
+    return "";
   }
 
   function triggerAction(action) {
@@ -119,6 +137,7 @@ export function useAvatar() {
     setState,
     triggerAction,
     handleAvatarEvent,
+    handleUserQuery,
     onAudioEnded,
   };
 }

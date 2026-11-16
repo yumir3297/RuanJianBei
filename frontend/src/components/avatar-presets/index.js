@@ -26,7 +26,8 @@ export const AVATAR_PRESETS = {
   },
 };
 
-export const DEFAULT_PRESET_KEY = "hanfu";
+// 宁灵作为默认国风导览形象，使用拱手、引景和告别动作组合。
+export const DEFAULT_PRESET_KEY = "monk";
 
 const DEFAULT_MOUTH_PROFILE = Object.freeze({
   maxOpen: 0.78,

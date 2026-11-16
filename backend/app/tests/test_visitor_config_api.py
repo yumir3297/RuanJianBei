@@ -90,7 +90,7 @@ def test_missing_avatar_and_manifest_use_public_defaults(tmp_path):
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/api/visitor-config")
             assert response.status_code == 200
-            assert response.json()["avatar"] == {"model_key": "hanfu", "voice_type": "gentle-female"}
+            assert response.json()["avatar"] == {"model_key": "monk", "voice_type": "deep-male"}
             assert response.json()["display"]["welcome_text"]
         await engine.dispose()
 

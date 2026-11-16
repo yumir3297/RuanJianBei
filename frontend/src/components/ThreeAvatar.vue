@@ -365,7 +365,9 @@ async function tryUpgradeAvatarToVrm(preset) {
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
     loader.register((parser) => new VRMLoaderPlugin(parser));
-    const gltf = await loader.loadAsync(vrmUrl);
+    // 中文文件名在部分内嵌浏览器里不会被 GLTFLoader 自动编码，显式编码
+    // 后仍保持同一个资源路径，避免宁灵模型只在特定浏览器加载失败。
+    const gltf = await loader.loadAsync(encodeURI(vrmUrl));
     const vrm = gltf.userData.vrm;
     if (!vrm) {
       throw new Error("文件中没有可用的 VRM 数据");
@@ -415,7 +417,9 @@ async function tryUpgradeAvatarToVrm(preset) {
     if (currentToken !== avatarLoadToken) return false;
     avatarStatus.value = "fallback";
     loading.value = false;
-    error.value = "VRM 模型加载失败，已显示备用形象";
+    // 程序化形象仍然在画布中可用；错误写入控制台供诊断，避免遮挡游客界面。
+    error.value = "";
+    console.warn(`[avatar] VRM 模型加载失败，已使用备用形象：${vrmUrl}`, loadError);
     emit("error", loadError);
     return false;
   }
@@ -433,16 +437,9 @@ function cancelScheduledVrmUpgrade() {
 
 function scheduleVrmUpgrade(preset) {
   cancelScheduledVrmUpgrade();
-  const load = () => {
-    idleLoadHandle = null;
-    void tryUpgradeAvatarToVrm(preset);
-  };
-
-  if ("requestIdleCallback" in window) {
-    idleLoadHandle = window.requestIdleCallback(load, { timeout: 800 });
-  } else {
-    idleLoadHandle = window.setTimeout(load, 180);
-  }
+  // 首屏必须立即尝试真实 VRM；空闲回调在部分内嵌浏览器里可能长期不执行，
+  // 导致游客一直看到程序化降级形象。
+  void tryUpgradeAvatarToVrm(preset);
 }
 
 function disposeObject(root) {

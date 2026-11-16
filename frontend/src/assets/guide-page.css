@@ -260,7 +260,7 @@
   .tool-dock { grid-template-columns: repeat(3,minmax(0,1fr)); margin: 0; gap: 8px; }
   .tool-dock button { justify-content: center; min-height: 48px; padding: 8px; border: 1px solid var(--guide-line); }
   .tool-dock .dock-chevron { display: none; }
-  .narration-rail { position: absolute; top: 20px; right: 20px; padding: 0; z-index: 4; }
+  .narration-rail { position: absolute; top: 20px; right: 20px; width: min(360px,calc(100vw - 40px)); max-width: calc(100vw - 40px); padding: 0; z-index: 4; }
   .text-panel-trigger { width: 44px; height: 44px; min-height: 44px; margin: 0; padding: 10px; border: 1px solid var(--guide-line); border-radius: 6px; background: var(--guide-surface); font-size: 0; }
   .text-panel-trigger > .guide-icon { flex: 0 0 22px; }
   .text-panel-trigger > span, .text-panel-trigger > .guide-icon:last-child { display: none; }
@@ -498,16 +498,40 @@
 .tourist-page .narration-note h3 { font-size: 12px; color: var(--guide-muted); }
 .tourist-page .narration-note p { line-height: 1.9; font-size: 14px; }
 .tourist-page .text-panel-trigger {
-  margin-top: 20px; padding: 14px 0 0; min-height: 44px; background: transparent;
-  color: var(--guide-ink); font-size: 14px; font-weight: 500; letter-spacing: .04em; border: 0;
+  position: absolute; top: 0; right: 0; z-index: 6;
+  margin: 0; padding: 10px; min-height: 44px; width: 44px;
+  border: 1px solid var(--guide-line); border-radius: 10px;
+  background: var(--guide-surface); color: var(--guide-ink); font-size: 0;
 }
-.tourist-page .text-panel-trigger:hover { color: #e4efd8; transform: translateX(2px); }
+.tourist-page .text-panel-trigger:hover { color: #e4efd8; background: var(--guide-hover); transform: translateY(-1px); }
 .tourist-page .text-panel-trigger > .guide-icon:last-child { display: none; }
+.tourist-page .cass-toggle {
+  display: flex; align-items: center; gap: 6px; width: 100%; min-height: 40px;
+  padding: 8px 10px; border: 1px solid var(--guide-line); border-radius: 10px;
+  background: var(--guide-surface); color: var(--guide-muted); font-size: 12px;
+  text-align: left;
+}
+.tourist-page .cass-toggle > .guide-icon { width: 16px; height: 16px; flex: 0 0 16px; }
+.tourist-page .cass-toggle span { color: var(--guide-ink); }
+.tourist-page .cass-toggle small { margin-left: auto; color: var(--guide-muted); }
+.tourist-page .cass-toggle:hover { color: var(--guide-green); border-color: var(--guide-green); background: var(--guide-hover); }
 .tourist-page :deep(.guide-tool-content button:disabled) { opacity: .55; color: var(--guide-muted); }
 .tourist-page .tool-sheet[open],
-.tourist-page .conversation-panel[open] { background: transparent; }
+.tourist-page .conversation-panel[open] { background: #172e26f5; }
 .tourist-page .conversation-panel[open] {
-  inset: 0; padding: 10px 6px; background: transparent; border-radius: 0;
+  inset: 0; z-index: 7; display: flex; flex-direction: column; min-width: 0;
+  margin: 0; padding: 10px 6px; border-radius: 0; overflow: hidden;
+}
+.tourist-page .conversation-panel[open] .conversation-header { flex: 0 0 auto; }
+.tourist-page .conversation-panel[open] .side-card { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.tourist-page .conversation-panel[open] .side-card-body { min-height: 0; overflow-y: auto; }
+.tourist-page .text-open .narration-rail > .cass-panel,
+.tourist-page .text-open .narration-rail > .cass-toggle,
+.tourist-page .text-open .narration-rail > p,
+.tourist-page .text-open .narration-rail > .explanation-select,
+.tourist-page .text-open .narration-rail > .narration-note,
+.tourist-page .text-open .narration-rail > .rail-error {
+  visibility: hidden; pointer-events: none;
 }
 .tourist-page .tool-sheet-header { padding-inline: 0; }
 .tourist-page .conversation-header { padding-top: 12px; }
@@ -580,6 +604,7 @@
     margin: 0; padding: 0; border: 0; background: none; box-shadow: none;
     backdrop-filter: none; -webkit-backdrop-filter: none;
   }
+  .tourist-page .cass-toggle { width: min(150px,calc(100vw - 120px)); margin-left: auto; margin-right: 52px; }
   .tourist-page .text-panel-trigger {
     margin: 0; padding: 10px; min-height: 44px; font-size: 0;
     background: transparent; border: 0; border-radius: 10px;
@@ -599,7 +624,7 @@
   .tourist-page .service-menu summary { min-width: 32px; }
   .tourist-page .scene-heading { top: 12px; left: 12px; transform: none; padding: 0; }
   .tourist-page .guide-presence { top: 62px; left: 14px; transform: none; }
-  .tourist-page .narration-rail { top: 12px; right: 12px; }
+  .tourist-page .narration-rail { top: 12px; right: 12px; width: min(360px,calc(100vw - 24px)); max-width: calc(100vw - 24px); }
   .tourist-page .avatar-stage { inset: 64px 0 136px; }
   .tourist-page .composer { width: calc(100% - 8px); padding: 10px; }
   .tourist-page .voice-primary { font-size: 15px; padding: 10px 8px; }

@@ -17,7 +17,7 @@ LEGACY_VOICE_TYPES = {
     "male_enthusiastic": "deep-male",
 }
 VALID_VOICE_TYPES = {"gentle-female", "calm-female", "deep-male", "lively-female"}
-DEFAULT_AVATAR = PublicAvatarConfig(model_key="hanfu", voice_type="gentle-female")
+DEFAULT_AVATAR = PublicAvatarConfig(model_key="monk", voice_type="deep-male")
 
 
 def _public_model_key(model_path: str) -> str:
@@ -25,7 +25,7 @@ def _public_model_key(model_path: str) -> str:
     for model_key in ("monk", "hanfu", "modern"):
         if model_key in lowered:
             return model_key
-    return "hanfu"
+    return "monk"
 
 
 def _public_voice_type(value: str) -> str:

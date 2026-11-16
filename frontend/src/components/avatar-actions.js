@@ -706,3 +706,36 @@ export function getAvatarAction(name) {
 export function getStateAction(state) {
   return AVATAR_STATE_ACTIONS[state] || null;
 }
+
+// 对话层只产生意图，角色层再把意图映射为实际动作文件。
+// 这样后端不需要知道游客当前选择了哪一个数字人，也不会把未兼容的
+// 角色动作直接发给 ThreeAvatar。
+const PRESET_INTENT_ACTIONS = Object.freeze({
+  modern: Object.freeze({
+    greet: "greet_wave_soft",
+    explain: "jingxing_exhibit_draft",
+    farewell: "jingxing_farewell_wave_candidate",
+    remind: "jingxing_remind_draft",
+    think: "think",
+  }),
+  monk: Object.freeze({
+    greet: "ningling_cupped_greeting",
+    explain: "ningling_exhibit_draft",
+    farewell: "ningling_farewell_wave_candidate",
+    remind: "ningling_remind_draft",
+    think: "think",
+  }),
+  hanfu: Object.freeze({
+    greet: "qinglan_salute_greeting",
+    explain: "qinglan_exhibit_draft",
+    farewell: "qinglan_bow_farewell",
+    remind: "qinglan_exhibit_draft",
+    think: "think",
+  }),
+});
+
+export function getAvatarIntentAction(intent, preset = "modern") {
+  const action = PRESET_INTENT_ACTIONS[preset]?.[intent]
+    || PRESET_INTENT_ACTIONS.modern[intent];
+  return action && AVATAR_ACTIONS[action] ? action : "";
+}

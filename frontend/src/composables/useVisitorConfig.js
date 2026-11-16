@@ -2,7 +2,7 @@ import { onBeforeUnmount, ref, shallowRef, watch } from "vue";
 import { fetchVisitorConfig } from "../api/visitorConfig.js";
 import { createVisitorConfigRefresher } from "../utils/visitorConfigRefresh.js";
 
-const DEFAULT_AVATAR = Object.freeze({ model_key: "hanfu", voice_type: "gentle-female" });
+const DEFAULT_AVATAR = Object.freeze({ model_key: "monk", voice_type: "deep-male" });
 
 function sameAvatar(left, right) {
   return left?.model_key === right?.model_key && left?.voice_type === right?.voice_type;

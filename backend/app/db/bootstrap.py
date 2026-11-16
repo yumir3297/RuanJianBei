@@ -24,13 +24,6 @@ DEFAULT_AVATAR_CONFIGS = (
         "model_path": "preset:monk",
         "preview_url": "",
         "voice_type": "deep-male",
-        "is_active": False,
-    },
-    {
-        "name": "汉服导游",
-        "model_path": "preset:hanfu",
-        "preview_url": "",
-        "voice_type": "gentle-female",
         "is_active": True,
     },
     {
@@ -38,6 +31,13 @@ DEFAULT_AVATAR_CONFIGS = (
         "model_path": "preset:modern",
         "preview_url": "",
         "voice_type": "deep-male",
+        "is_active": False,
+    },
+    {
+        "name": "汉服导游",
+        "model_path": "preset:hanfu",
+        "preview_url": "",
+        "voice_type": "gentle-female",
         "is_active": False,
     },
 )
