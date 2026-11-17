@@ -12,7 +12,7 @@
       <aside class="feature-rail" aria-label="导览功能">
         <div class="rail-heading"><h2>导览</h2><p>选择内容，听导游讲解</p></div>
         <nav class="tool-dock" aria-label="导览工具"><button v-for="tool in tools" :id="'tool-trigger-' + tool.id" :key="tool.id" type="button" :class="{ active: activeTool === tool.id }" :aria-expanded="activeTool === tool.id" aria-controls="guide-tools" @click="setTool(tool.id)"><GuideIcon :name="tool.icon" /><span>{{ tool.title }}</span><GuideIcon name="chevron" class="dock-chevron" /></button></nav>
-      <dialog ref="toolDialogRef" id="guide-tools" class="tool-sheet" aria-labelledby="tool-title" @cancel.prevent="closeTool" @click="handleDialogBackdrop($event, closeTool)">
+      <dialog ref="toolDialogRef" id="guide-tools" class="tool-sheet" :class="{ 'map-task': activeTool === 'map' }" aria-labelledby="tool-title" @cancel.prevent="closeTool" @click="handleDialogBackdrop($event, closeTool)">
         <header class="tool-sheet-header"><h3 ref="toolHeadingRef" id="tool-title" tabindex="-1"><GuideIcon :name="selectedTool?.icon" />{{ selectedTool?.title }}</h3><button type="button" class="icon-button" aria-label="收起导览工具" @click="closeTool"><GuideIcon name="close" /></button></header>
         <div class="tool-sheet-body"><KeepAlive><component :is="selectedTool.component" v-if="selectedTool" :key="activeTool" :busy="inputBusy || guideSafety.hold" v-bind="activeTool === 'route' ? { weather } : activeTool === 'map' ? { weather, scenicColor, colorLabel: weatherColorLabel, speechRate } : {}" @ask="handleToolQuestion" /></KeepAlive></div>
       </dialog>

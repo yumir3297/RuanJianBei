@@ -14,3 +14,12 @@ test('desktop map tool gets a dedicated wide rail at mid-size desktop widths', (
   assert.ok(mapRuleStart > breakpointStart && (nextBreakpoint < 0 || mapRuleStart < nextBreakpoint), 'map rail override is scoped to mid-size desktops');
   assert.match(guideCss.slice(mapRuleStart), /^\.tourist-page \.guide-layout\.map-open \{ grid-template-columns: minmax\(300px,26vw\) minmax\(0,1fr\) 210px;/);
 });
+
+test('mobile map opens as a full-screen workspace with a collapsible information panel', () => {
+  assert.match(chatView, /'map-task':\s*activeTool\s*===\s*'map'/);
+  const mapView = readFileSync(new URL('../src/views/tourist/MapView.vue', import.meta.url), 'utf8');
+  assert.match(mapView, /<details[^>]*class="map-info-panel"/);
+  assert.match(mapView, /class="map-place-card"/);
+  assert.match(guideCss, /\.tourist-page \.guide-layout\.map-open \.tool-sheet\.map-task\[open\][\s\S]*?@media \(max-width: 999px\)[\s\S]*?\.tool-sheet\.map-task\[open\][\s\S]*?inset: 0;/);
+  assert.match(mapView, /\.map-tool\.map-workspace[\s\S]*?\.map-stage[\s\S]*?inset: 0;/);
+});

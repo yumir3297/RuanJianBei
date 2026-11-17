@@ -1,7 +1,5 @@
 <template>
-  <div class="guide-tool-content map-tool">
-    <p class="tool-description">地图 × 数字人导览：查看天气与演示客流，选一条路线，让导游陪你出发。</p>
-
+  <div class="guide-tool-content map-tool map-workspace">
     <div class="map-stage">
       <div ref="mapEl" class="map-canvas" aria-label="景区示意地图"></div>
       <div class="map-layer-switch" role="group" aria-label="底图切换">
@@ -15,6 +13,10 @@
         {{ narrateOn ? "关闭讲解设置" : "开启讲解设置" }}
       </button>
       <div class="map-geo-tip" v-if="narrateOn && geo.error">{{ geo.error }}</div>
+      <div v-if="selectedSpot" class="map-place-card">
+        <div><strong>{{ selectedSpot.name }}</strong><p>{{ selectedSpot.desc }}</p></div>
+        <button type="button" :disabled="busy" @click="askGuide">讲解</button>
+      </div>
       <SpotNarrationCard
         v-if="narration.activeSpot.value"
         :spot="narration.activeSpot.value"
@@ -32,6 +34,10 @@
       </div>
     </div>
 
+    <details class="map-info-panel">
+      <summary><span>路线、景点与客流</span><span aria-hidden="true">展开 / 收起</span></summary>
+      <div class="map-info-content">
+    <p class="tool-description">地图 × 数字人导览：查看天气与演示客流，选一条路线，让导游陪你出发。</p>
     <div class="map-narrate-bar" v-if="narrateOn">
       <button type="button" @click="toggleWalk">{{ walking ? "停止巡游" : "模拟巡游" }}</button>
       <span>模式：{{ modeLabel }}</span>
@@ -99,6 +105,8 @@
 
     <button type="button" class="tool-primary" :disabled="busy" @click="askGuide">{{ askLabel }} <GuideIcon name="mic" /></button>
     <p class="map-note">客流为演示数据，景点坐标包含演示值；天气信息可能不可用或有延迟，请以当地官方信息为准。</p>
+      </div>
+    </details>
   </div>
 </template>
 
@@ -325,6 +333,7 @@ watch([routeId, () => map], () => {
 /* ---------- 分区景点 ---------- */
 const zoneFilter = ref("all");
 const selectedName = ref("");
+const selectedSpot = computed(() => spotByName[selectedName.value] || null);
 const filteredSpots = computed(() =>
   spots
     .filter((spot) => zoneFilter.value === "all" || spot.zone === zoneFilter.value)
@@ -570,8 +579,8 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.map-tool { display: flex; flex-direction: column; }
-.map-stage { position: relative; height: 300px; border-radius: 10px; overflow: hidden; border: 1px solid var(--guide-line, #e3e8df); margin-bottom: 12px; background: #e7e4dc; }
+.map-tool.map-workspace { position: relative; width: 100%; height: 100%; min-height: 0; overflow: hidden; color: #203a30; }
+.map-stage { position: absolute; inset: 0; height: auto; border-radius: 0; overflow: hidden; border: 0; margin: 0; background: #e7e4dc; }
 .map-canvas { position: absolute; inset: 0; }
 .map-layer-switch { position: absolute; top: 8px; right: 8px; z-index: 400; display: flex; overflow: hidden; border-radius: 6px; border: 1px solid rgba(45, 90, 75, 0.18); background: rgba(255, 255, 255, 0.94); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); }
 .map-layer-switch button { min-height: 32px; padding: 4px 12px; border: 0; background: transparent; font-size: 12px; color: #6b7a72; }
@@ -582,6 +591,21 @@ onBeforeUnmount(() => {
 .map-color-toggle { position: absolute; top: 8px; left: 8px; z-index: 400; display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 12px; border-radius: 6px; border: 1px solid rgba(45, 90, 75, 0.18); background: rgba(255, 255, 255, 0.94); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); font-size: 12px; color: #6b7a72; }
 .map-color-toggle i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.16); }
 .map-color-toggle.active { background: #2d5a4b; border-color: #2d5a4b; color: #f3f7f4; font-weight: 600; }
+.map-tool.map-workspace :deep(.leaflet-top.leaflet-left) { top: 58px; left: auto; right: 10px; }
+.map-tool.map-workspace :deep(.leaflet-control-zoom) { border: 0; box-shadow: 0 2px 8px #17332836; }
+.map-tool.map-workspace :deep(.leaflet-control-zoom a) { width: 44px; height: 44px; line-height: 42px; font-size: 22px; color: #285a43; background: #fffffff0; }
+.map-info-panel { position: absolute; z-index: 500; left: 10px; right: 10px; bottom: max(10px,env(safe-area-inset-bottom)); max-height: min(54dvh,480px); display: flex; flex-direction: column; overflow: hidden; border: 1px solid #203a3026; border-radius: 16px; background: #f9fcf7f5; color: #203a30; box-shadow: 0 4px 24px #17332836; }
+.map-info-panel:not([open]) { max-height: none; }
+.map-info-panel > summary { min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px; cursor: pointer; list-style: none; font-weight: 600; }
+.map-info-panel > summary::-webkit-details-marker { display: none; }
+.map-info-panel > summary span:last-child { color: #60766a; font-size: 12px; font-weight: 400; }
+.map-info-panel[open] > summary { border-bottom: 1px solid #203a301a; }
+.map-info-content { min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 12px 16px max(16px,env(safe-area-inset-bottom)); }
+.map-place-card { position: absolute; z-index: 450; left: 10px; right: 10px; bottom: max(72px,calc(env(safe-area-inset-bottom) + 64px)); display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid #203a3026; border-radius: 14px; background: #fffffff2; color: #203a30; box-shadow: 0 3px 16px #17332830; }
+.map-place-card > div { flex: 1; min-width: 0; }
+.map-place-card strong { font-size: 15px; }
+.map-place-card p { margin: 2px 0 0; color: #56695f; font-size: 12px; }
+.map-place-card button { min-width: 64px; min-height: 44px; border: 0; border-radius: 10px; padding: 8px 12px; background: #285a43; color: #fff; }
 
 .map-live { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
 .map-live-item { padding: 8px 9px; border-radius: 8px; border: 1px solid rgba(45, 90, 75, 0.1); background: #f7f9f3; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
