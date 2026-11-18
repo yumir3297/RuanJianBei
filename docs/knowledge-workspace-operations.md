@@ -1,6 +1,6 @@
 # Knowledge workspace operations
 
-For current local integration and validation limits, see [knowledge integration](integration/KNOWLEDGE_UNDERSTANDING.md) and [acceptance](testing/TESTING_AND_ACCEPTANCE.md). Production backup and restore must follow the target environment’s [rollout runbook](deployment/ROLLOUT_RUNBOOK.md) and be verified on an isolated destination.
+For production deployment, see [runtime guide](deployment/RUNTIME.md).
 
 ## What is persistent
 

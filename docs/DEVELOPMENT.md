@@ -1,126 +1,36 @@
-# 跨系统开发与验证
+# 开发与运行
 
-初版核验于 2026-10-28，后续补充见各段日期及 [统一验收总表](testing/TESTING_AND_ACCEPTANCE.md)。所有命令标明 cwd；仓库相对路径适用于不同机器。
-本页区分“可执行命令”和“已执行结果”：本次地图建设没有安装或启动业务环境。
+## 环境
 
-## 1. 工具与运行条件
+前端使用 Node.js `^20.19.0 || >=22.12.0`；后端使用 Python 3.13、PostgreSQL。模型和外部语音服务通过环境变量配置，配置项见 `backend/.env.example`，前端模板位于 `frontend/env/`。
 
-| 项目 | 要求及已知边界 |
-|---|---|
-| Node | [锁文件](../frontend/package-lock.json) 中 Vite/plugin-vue 要求 `^20.19.0 || >=22.12.0`；README 旧 `v20+` 条件过宽 |
-| Python | 候选后端镜像使用 Python 3.13；原生包 wheel 是否支持所选 Python/OS/架构须另外核验，不能推导任意新版本都可装 |
-| 后端依赖 | [requirements.txt](../backend/requirements.txt)；包含锁定的 `torch==2.12.0+cpu` 和 CPU 索引，macOS/ARM 等平台未验证能原样安装；如无匹配 wheel，应记录依赖兼容问题后另行调整，不擅自跳过依赖或替换版本 |
-| 数据库 | [config.py](../backend/app/core/config.py) 默认 PostgreSQL；[session.py](../backend/app/db/session.py) 对 SQLite 有兼容分支，仍需分别验证迁移/查询 |
-| 模型/数据 | 本地 embedding、reranker 缓存及处理数据不等于 Git 克隆内容；main lifespan 会预热模型 |
-| ASR | 默认云端语音使用火山 WebSocket ASR；非 16 kHz WAV 转换需要 FFmpeg。旧 Bailian 文件识别需公网音频 URL。本地 SenseVoice 默认路径为 Windows `D:/...`；其他机器通过 `ASR_LOCAL_MODEL_DIR` 指向已准备好的模型目录 |
-| 配置 | [backend/.env.example](../backend/.env.example) 为模板；实际 provider、数据库、模型路径须按运行环境配置，真实 key 不提交 |
+## 后端
 
-2026-11-02 补充：向量模型缺失或 FAQ 语义索引预热失败时，后端允许降级启动，精确/模糊 FAQ 和数据库检索使用现有回退；这不表示真实模型、语音或资料已就绪。`GET /health` 只表示进程响应；`GET /ready` 在已检测到模型不可用、FAQ 重载失败、知识分块为空或供应商配置缺失等情况下返回 503 和原因。向量模型在启动时检查，补齐后需重启重新评估；这些检查不证明供应商真实可用或回答正确。
-
-赛事模式下若语言模型配置为 `stub`，`/ready` 返回 `llm_stub_not_competition_ready`；开发模式仍允许使用 stub。此检查只核对配置，不验证外部模型、视觉或语音服务实际可用。
-
-FAQ 资料已写入但刷新失败时，后台会提示先核对保存结果，不应重复提交。管理页面可单独执行“刷新 FAQ”，对应管理员鉴权的 `POST /api/admin/refresh-faq`；此操作只刷新处理请求的进程，不重新导入数据，也不能证明语义索引或其他 worker 已恢复。多 worker 环境须逐进程核验，涉及现有数据库时先备份并检查[迁移兼容记录](development/W02_INTEGRATION.md)。
-
-## 2. 打开正确工作目录
-
-建议把 `RuanJianBei` 仓库根目录作为 Codex 本地项目目录，从该目录开启新开发 chat。
-本文件中的 `backend/`、`frontend/` 均相对于仓库根目录。使用外层项目或其他 worktree 时先确认该目录的 Git 根、分支和未提交改动，并读取仓库 `AGENTS.md` 及所改目录的 AGENTS.md；旧环境的 `code/RuanJianBei/` 不作为通用路径。
-
-根 AGENTS.md 仅作短入口；[功能地图](REPO_MAP.md)、[架构](ARCHITECTURE.md)、[兼容性](COMPATIBILITY.md) 按任务读取。
-其他 AI 工具可直接读取相同 Markdown；不要求安装 Codex 插件或专用索引服务。
-
-## 3. 后端（cwd：仓库的 backend/）
-
-开发模式保留启动时迁移和 bootstrap 的兼容默认值。生产 Compose 显式关闭自动迁移、bootstrap 和 FastAPI 静态挂载；必须先备份状态，再通过 `python -m app.cli.deployment migrate` 与 `initialize` 一次性任务完成数据库动作。对已有数据库，尤其是旧 W02 数据库，先在隔离副本核对迁移兼容性，不可仅凭版本号升级。服务端运行结构和维护命令见 [RUNTIME](deployment/RUNTIME.md)。
-
-macOS/Linux（`python3` 应指向选择的 Python 版本）：
+在 `backend/` 目录执行：
 
 ```sh
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 cp .env.example .env
-# 编辑 .env，准备数据库/数据/模型，再启动
+# 编辑 .env，配置数据库和模型服务
 .venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
-Windows PowerShell（`python` 应指向选择的 Python 版本）：
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-Copy-Item .env.example .env
-# 编辑 .env，准备数据库/数据/模型，再启动
-.\.venv\Scripts\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8000
-```
-
-依赖安装须满足上一节的平台条件；命令不是“已保证全平台安装成功”。已有 `.env` 时跳过复制，避免覆盖。
-直接调用 venv 解释器免去 PowerShell 激活脚本策略差异。`main:app` 是当前真实入口；旧计划中的 `app.main:app` 不适用。
-启动会写数据库并加载本地模型；不要用启动来验证地图工具。
-
-内置示例服务电话默认关闭；管理员应向实际景区核实号码后，在展示设置中更新并启用。已有保存的展示配置不会被此默认值修改，也需要独立核实；本项目不提供已验证的实时救援接入。
-
-### 持久行程提案 worker
-
-行程提案由独立 worker 执行，启动 API 不会自动启动它。完成数据库迁移并配置模型后，在另一个终端、同样以 `backend/` 为工作目录启动：
+Windows 使用 `.venv\Scripts\python.exe` 代替 `.venv/bin/python`。行程提案使用独立 worker，在另一个终端、`backend/` 目录启动：
 
 ```sh
-# macOS / Linux
 .venv/bin/python -m app.services.tool_execution.worker
 ```
 
-Windows PowerShell 使用 `.\.venv\Scripts\python.exe -m app.services.tool_execution.worker`。worker 与 API 须使用相同数据库和景区配置；工作目录改变可能改变 `.env` 加载。停止 worker 时新提案会停在队列中，API 就绪不代表 worker 在线。SQLite 本地运行按单 worker 验证；PostgreSQL 多 worker 尚未验收。迁移兼容与外部调用不确定性见 [W02 集成记录](development/W02_INTEGRATION.md)。
+## 前端
 
-## 4. 前端（另开终端，cwd：frontend/）
-
-各系统均可执行；游客端与后台分别启动：
+在 `frontend/` 目录执行：
 
 ```sh
 npm ci
 npm run dev:tourist
-# 另一个终端启动管理端
+# 在另一个终端启动管理端
 npm run dev:admin
 ```
 
-游客端默认 `http://localhost:5173`，管理端默认 `http://localhost:5174`；端口被占用时以 Vite 输出为准。`npm run dev` 仍是游客端别名。
-现有锁文件优先用 `npm ci`；需要调整依赖时另行说明并更新锁文件。
-分别用 `npm run build:tourist`、`npm run build:admin` 构建；`npm run build` 连续构建两端。产物分别是 `dist/tourist`、`dist/admin`。`npm run preview:tourist`、`npm run preview:admin` 预览对应应用；`npm run preview` 仅预览兼容旧包，不用于独立站点验收。入口/身份边界见[双端边界说明](development/FRONTEND_BOUNDARIES.md)。
-
-## 5. 验证层级
-
-| 层级 | cwd 与命令 | 能证明什么 |
-|---|---|---|
-| 地图链接/API | 根目录 `python scripts/check_repo_map.py` | 指定地图文档中的本地文件链接和显式 API 引用有效；不加载业务服务 |
-| 地图工具回归 | 根目录 `python -m unittest discover -s scripts/tests -p "test_*.py"` | 工具能识别坏链接/失效 API，支持中文空格路径与 JSON 导出 |
-| 前端构建 | frontend/ `npm run build` | 打包与模块解析；不等于手机权限、布局或音频实测 |
-| 后端聚焦 | backend/ `<venv-python> -m pytest app/tests/test_chat_stream_api.py -q` | 该组测试结果；按 [功能地图](REPO_MAP.md) 换成相关文件 |
-| 后端全量 | backend/ `<venv-python> -m pytest app/tests -q` | 当前环境下业务测试基线；记录实际失败，不套用历史通过数字 |
-| 评测工具 | 根目录 `<venv-python> -m pytest eval/tests -q` | 评测工具自身回归；真实模型评测需另读脚本与服务条件 |
-| 浏览器/真机 | [兼容性矩阵](COMPATIBILITY.md) | 具体设备、浏览器、网络条件下的用户行为 |
-
-`<venv-python>` 替换为该系统虚拟环境 Python 的完整路径；`python` 是所选 Python 3，macOS/Linux 没有该命令时用 `python3`。
-backend 测试通常依赖 `backend/` 在模块搜索路径中，优先从 backend/ 执行。
-现有 [competition_check.ps1](../scripts/competition_check.ps1) 是 Windows 专用：依赖 Scripts/python.exe 和 cmd，不作为 macOS/Linux 入口。
-前端提供 `npm test`（Node 测试运行器）；当前没有 lint 脚本，不能报告运行了 `npm run lint`。
-
-## 6. 手机、平板访问开发机
-
-- 手机和开发机处于可互通网络，用开发机 LAN IP 访问前端；手机的 `localhost` 指手机自身。
-- 两个 Vite dev server 都代理 `/api`、`/ui-assets` 到开发机 `127.0.0.1:8000`，通常不用让每台手机直接连接后端端口。
-- HTTP LAN 页面可能能显示文本 UI，但不能据此验收相机/录音/定位。需要浏览器信任的 HTTPS 及对应权限。
-- 若配置 `VITE_API_BASE_URL`，值会进入前端构建，不能放秘密；跨源时同步检查 CORS、资源 URL、混合内容、SSE。
-- 正式部署在服务端配置同源 `/api` 与 `/ui-assets`，保留流式响应，避免缓冲整段 SSE。
-
-## 7. 维护地图
-
-从根目录执行；三个系统共用相同 Python 脚本，工具只使用标准库，无需 npm、数据库、模型或 key：
-
-```sh
-python scripts/check_repo_map.py
-python scripts/check_repo_map.py --json
-git diff --check
-```
-
-JSON 实时解析 API 注册与处理函数，只输出相对路径，不保存过期索引。修改地图后通过检查再交付。
-校验器只支持当前显式 APIRouter/装饰器注册模式；已知不支持的命令式 add_api_route/add_route、嵌套路由及动态路径会报错。其他注册机制改写也需人工复核并同步扩展工具，不能用静态索引替代运行时 OpenAPI。
-
-若 Python 在脚本运行前就报 `No module named encodings`，先检查 `PYTHONHOME`/`PYTHONPATH` 是否指向其他 Python 版本。可临时用 `python -E -S scripts/check_repo_map.py` 排除环境变量与 site-packages 干扰；这只适合标准库地图工具，不代替业务虚拟环境。不要直接修改全局 Python 配置来掩盖问题。
+执行 `npm run build` 可分别构建游客端和管理端。生产部署、数据库迁移和站点配置见 [服务器运行指南](deployment/RUNTIME.md)。

@@ -1,28 +1,6 @@
-# 技术文档资源库
+# 文档
 
-这是文档入口。先看技术架构与创新，再看前端设计和测试验收；历史方案、调研和工作记录按索引进入，不把过时表述当作当前实现。
-
-## 首要入口
-
-1. [技术架构与创新总览](TECHNICAL_ARCHITECTURE_AND_INNOVATION.md)
-2. [前端设计与双端边界](frontend/DESIGN_AND_BOUNDARIES.md)
-3. [测试、验收与边界总表](testing/TESTING_AND_ACCEPTANCE.md)
-4. [文档结构与处置说明](DOCUMENT_LIBRARY_PLAN.md)
-5. [逐文件索引与移除去向](DOCUMENT_INVENTORY.md)
-
-## 现有详细资料
-
-- [架构与业务链路](ARCHITECTURE.md)
-- [代码库映射](REPO_MAP.md)
-- [开发与验证](DEVELOPMENT.md)
-- [兼容性矩阵](COMPATIBILITY.md)
-- [技术卖点与评测思路](selling-points/README.md)
-- [本地比赛演示手册](integration/LOCAL_DEMO_RUNBOOK.md)
-- [CASS 功能与演示](implementation/CASS_GUIDE.md)
-- [离线陪游](integration/OFFLINE_COMPANION.md)
-- [GuideLoop / GuideMatch](integration/GUIDELOOP_GUIDEMATCH.md)
-- [目标服务器部署和验收](deployment/FINAL_ACCEPTANCE.md)
-- [比赛技术草稿](competition/TECHNICAL_DRAFT.md)
-- [评测方法与人工核验](../eval/README.md)
-
-总览文档只汇总可核对的实现和边界；具体测试输出、来源记录和未完成项仍以链接的详细文档为准。
+- [开发与运行](DEVELOPMENT.md)
+- [服务器运行与部署](deployment/RUNTIME.md)
+- [知识工作区操作](knowledge-workspace-operations.md)
+- [景区资料来源](competition/SOURCE_REVIEW.md)
