@@ -9,20 +9,15 @@ npm run dev:tourist
 ```
 
 - 游客主站：<http://localhost:5173/>
-- 自带模型测试台：<http://localhost:5173/motion-tester.html>
 
-后端未启动时，聊天 / TTS 等接口不可用；数字人预览仍受模型资源、浏览器 WebGL 和配置影响。具体形象与实际接入以当前代码、资源许可和 [代码地图](../docs/REPO_MAP.md) 为准。
+## 动作制作
 
-## Blender
+游客端使用 `frontend/public/` 中的模型与动作。Blender 工程与制作脚本用于编辑源素材。复作宁灵拱手动作时，从历史版本导出制作脚本所需的源场景，在运行脚本前设置环境变量（从仓库根目录执行）：
 
-历史工程包含：
-
-- `blender/vrm/hanfu.vrm`：解压过 `EXT_meshopt_compression` 的模型（保留 VRM 1.0 全部扩展）
-- `blender/hanfu.blend`：已导入并配置相机/灯光的 Blender 工程
-
-### 模型转换和导入
-
-本目录包含历史导出的 VRM、Blender 工程和动作试验；部分名称带 `trial`、`draft` 或 `candidate`，不表示已经接入游客端。早期记录中的 `tools/decompress-vrm.mjs` 和 `tools/import_vrm_to_blend.py` 不在当前跟踪仓库中，不能直接照旧命令运行；需要重新转换时应先准备并核实相应工具及其许可。原始模型的 `EXT_meshopt_compression` 与 `EXT_texture_webp` 兼容性、VRM 扩展及材质导入需在实际 Blender/插件版本中验证。
+```sh
+export NINGLING_GREETING_SOURCE="$(mktemp -d)/greeting-source.blend"
+git show cbe74bf:blender/ningling-cupped-greeting-before-lift-fix.blend > "$NINGLING_GREETING_SOURCE"
+```
 
 ### 历史导入结果
 

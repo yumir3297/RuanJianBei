@@ -22,7 +22,9 @@ arm.animation_data_clear()
 scene.render.fps = 30
 scene.frame_start, scene.frame_end = 1, 111
 # Preserve the previously accepted baked pose from frame 42 onward exactly.
-previous_path = ROOT/'blender/ningling-cupped-greeting-before-lift-fix.blend'
+# Supply the source scene when reproducing the historical gesture.
+import os
+previous_path = Path(os.environ["NINGLING_GREETING_SOURCE"])
 accepted = {}
 first_version_wrists = {}
 with bpy.data.libraries.load(str(previous_path), link=False) as (source, loaded):
