@@ -15,7 +15,7 @@
 
 ## 安装与运行
 
-请先阅读[开发运行指南](docs/DEVELOPMENT.md)，按模板配置数据库、模型服务和环境变量。游客端默认地址为 `http://localhost:5173`，管理端为 `http://localhost:5174`。部署说明见[服务器运行指南](docs/deployment/RUNTIME.md)。
+按[开发运行指南](docs/DEVELOPMENT.md)安装依赖、配置数据库并准备检索模型。在 `backend/` 首次执行 `import_official_data.py` 导入景区资料，然后分别启动 API 和行程 worker。在 `frontend/` 执行 `npm ci`，用两个终端分别运行 `npm run dev:tourist` 和 `npm run dev:admin`。游客端默认地址为 `http://localhost:5173`，管理端为 `http://localhost:5174`。部署说明见[服务器运行指南](docs/deployment/RUNTIME.md)。
 
 ## 目录
 
